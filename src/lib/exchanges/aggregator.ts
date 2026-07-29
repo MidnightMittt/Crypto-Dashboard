@@ -29,6 +29,8 @@ import { ADAPTER_TIMEOUT_MS, withDeadline } from "../net/timeout";
 import { swr } from "../cache/swr";
 import { computeBasisPct } from "../providers/dexscreener";
 import { resolveSpotWithConfidence } from "../providers/spotPrice";
+import { fetchJlpExposure } from "../providers/jlpExposure";
+import { PoolExposureSummary } from "@/types/market";
 import { LiveAdapter } from "./adapters/types";
 import { fundingPer8h } from "../utils/format";
 import { MarketDataProvider } from "../providers/types";
@@ -385,8 +387,11 @@ async function withRecordedHistory(
       priceChange24hPct: agg.priceChange24hPct,
     });
 
+  const poolExposure = await buildPoolExposure(asset, agg.exchanges);
+
   return {
     ...agg,
+    poolExposure,
     oiChange24hPct,
     oiPercentile,
     leverageHeatScore,
@@ -482,6 +487,7 @@ function buildAggregate(
       basisPct: null,
       spotDisagreementPct: null,
       spotSourceCount: 0,
+      poolExposure: null,
       history: [],
       historyHours: 0,
       updatedAt: now,
@@ -581,6 +587,8 @@ function buildAggregate(
     basisPct: null,
     spotDisagreementPct: null,
     spotSourceCount: 0,
+    // Filled in by withRecordedHistory, which is where the async work lives.
+    poolExposure: null,
     history: [],
     historyHours: 0,
     updatedAt: now,
@@ -595,6 +603,41 @@ function buildAggregate(
  * venues) is ranked against it — comparing a full 8-venue total against a
  * 3-venue history would pin the result at 100.
  */
+
+/**
+ * Notional positioning across peer-to-pool venues.
+ *
+ * Only venues where the pool takes the other side can report this — at an
+ * order book, long notional always equals short notional. Jupiter is the
+ * only one wired in so far; GMX and Synthetix work the same way and would
+ * slot in here once their subgraphs are configured.
+ *
+ * Whole-market mode is skipped: summing notional skew across ten assets
+ * would net SOL longs against BTC shorts and report a number about nothing.
+ */
+async function buildPoolExposure(
+  asset: AssetSymbol | "MARKET",
+  exchanges: ExchangeSnapshot[]
+): Promise<PoolExposureSummary | null> {
+  if (asset === "MARKET") return null;
+
+  const jupiter = exchanges.find((e) => e.exchangeId === "jupiter");
+  if (!jupiter || jupiter.price <= 0) return null;
+
+  const exposure = await fetchJlpExposure(asset, jupiter.price).catch(() => null);
+  if (!exposure) return null;
+
+  const total = exposure.longUsd + exposure.shortUsd;
+  if (total <= 0) return null;
+
+  return {
+    longUsd: exposure.longUsd,
+    shortUsd: exposure.shortUsd,
+    netSkewPct: ((exposure.longUsd - exposure.shortUsd) / total) * 100,
+    venues: ["jupiter"],
+  };
+}
+
 function computeAggregateOiPercentile(
   exchanges: ExchangeSnapshot[],
   _totalOi: number

@@ -1,5 +1,7 @@
 import { AssetSymbol, ExchangeSnapshot } from "@/types/market";
 import { fetchJson, safeNumber } from "./types";
+import { fetchJlpExposure } from "../../providers/jlpExposure";
+import { PROVIDER_FETCH_TIMEOUT_MS, timeoutSignal } from "../../net/timeout";
 
 /**
  * Jupiter Perps — direct adapter.
@@ -38,16 +40,17 @@ import { fetchJson, safeNumber } from "./types";
  *
  * ── Open interest ──────────────────────────────────────────────────────
  *
- * Deliberately NOT reported here. `longUtilizationPercent × liquidity` gives
- * a real per-asset long OI, but the SHORT side of the pool is shared: every
- * mint reports an identical shortUtilizationPercent because shorts are all
- * collateralised from one stablecoin pool. There is no honest way to split
- * that per asset, and reporting long-only OI would understate the venue and
- * skew every OI-weighted aggregate it feeds.
+ * This adapter previously reported no open interest, reasoning that
+ * pool-info's `shortUtilizationPercent` is identical across every mint —
+ * shorts all draw on one shared stablecoin bucket — so the short side looked
+ * unattributable per asset.
  *
- * Instead this adapter leaves openInterestUsd at 0, and the aggregator's
- * field-level merge fills it from DefiLlama/CoinGecko, which derive Jupiter's
- * true OI from on-chain state. First-hand borrow rates, provider-sourced OI.
+ * That was true of pool-info and wrong about Jupiter. `/v1/jlp-info`
+ * publishes `globalShortSizes` per custody, so both sides ARE available per
+ * asset. See providers/jlpExposure.ts for the derivation and the three
+ * independent checks it was validated against.
+ *
+ * Open interest here is therefore long + short notional, first-hand.
  */
 const BASE = "https://perps-api.jup.ag/v1";
 
@@ -77,6 +80,13 @@ function mintFor(asset: AssetSymbol): string | null {
   return DEFAULT_MINTS[asset] ?? null;
 }
 
+interface MarketStats {
+  price?: string;
+  /** Already a percentage. */
+  priceChange24H?: string;
+  volume?: string;
+}
+
 interface PoolInfo {
   longAvailableLiquidity?: string;
   longBorrowRatePercent?: string;
@@ -89,6 +99,26 @@ interface PoolInfo {
 const CACHE_MS = 15_000;
 const cache = new Map<string, { info: PoolInfo; fetchedAt: number }>();
 
+/**
+ * market-stats is cached on the same window as pool-info. Left uncached it
+ * added a live request per asset per poll, and perps-api.jup.ag slows to
+ * several seconds under the concurrency of a full fan-out — enough to blow
+ * the fetch deadline and drop Jupiter entirely on BTC and SOL.
+ */
+const statsCache = new Map<string, { stats: MarketStats | null; fetchedAt: number }>();
+
+async function getMarketStats(mint: string): Promise<MarketStats | null> {
+  const hit = statsCache.get(mint);
+  if (hit && Date.now() - hit.fetchedAt < CACHE_MS) return hit.stats;
+
+  const stats = await fetchJson<MarketStats>(`${BASE}/market-stats?mint=${mint}`, {
+    signal: timeoutSignal(PROVIDER_FETCH_TIMEOUT_MS),
+  }).catch(() => null);
+  // Cache misses too, so a failing upstream isn't retried on every asset.
+  statsCache.set(mint, { stats, fetchedAt: Date.now() });
+  return stats;
+}
+
 async function getPoolInfo(mint: string): Promise<PoolInfo> {
   const hit = cache.get(mint);
   if (hit && Date.now() - hit.fetchedAt < CACHE_MS) return hit.info;
@@ -98,6 +128,11 @@ async function getPoolInfo(mint: string): Promise<PoolInfo> {
     // The public endpoint works unauthenticated; a key from portal.jup.ag
     // only raises the rate limit.
     headers: apiKey ? { "x-api-key": apiKey } : {},
+    // perps-api.jup.ag answers in ~3s idle and slower under the concurrency
+    // of a full fan-out, which overran the standard adapter deadline and
+    // dropped Jupiter from BTC — the asset with the most venues competing.
+    // The adapter-level withDeadline still bounds the page.
+    signal: timeoutSignal(PROVIDER_FETCH_TIMEOUT_MS),
   });
 
   cache.set(mint, { info, fetchedAt: Date.now() });
@@ -109,7 +144,11 @@ export async function fetchJupiter(asset: AssetSymbol): Promise<ExchangeSnapshot
   if (!mint) return null; // Only SOL, ETH, BTC trade on Jupiter Perps.
 
   try {
-    const info = await getPoolInfo(mint);
+    const [info, stats] = await Promise.all([
+      getPoolInfo(mint),
+      // Price, 24h change and volume. pool-info carries none of these.
+      getMarketStats(mint),
+    ]);
 
     const longRate = safeNumber(info.longBorrowRatePercent, NaN);
     const shortRate = safeNumber(info.shortBorrowRatePercent, NaN);
@@ -117,6 +156,11 @@ export async function fetchJupiter(asset: AssetSymbol): Promise<ExchangeSnapshot
 
     // Already a percentage ("0.0014" means 0.0014%), so no ×100 here.
     const fundingProxyPct = longRate - shortRate;
+
+    const price = safeNumber(stats?.price);
+    // Long notional is stored in tokens, so it can't be valued without a
+    // price — no price means no open interest rather than a guess.
+    const exposure = price > 0 ? await fetchJlpExposure(asset, price) : null;
 
     const now = Date.now();
     return {
@@ -127,14 +171,18 @@ export async function fetchJupiter(asset: AssetSymbol): Promise<ExchangeSnapshot
       // published basis and the unit the rest of the app normalises from.
       fundingIntervalHours: 1,
       nextFundingAt: Math.ceil(now / 3_600_000) * 3_600_000,
-      // See the header: left for the provider layer to fill.
-      openInterestUsd: 0,
+      openInterestUsd: exposure ? exposure.longUsd + exposure.shortUsd : 0,
       openInterestChange24hPct: null,
-      volume24hUsd: 0,
+      volume24hUsd: safeNumber(stats?.volume),
+      // Jupiter's long/short skew is NOTIONAL, not the account headcount the
+      // CEXs report. Surfacing it here would let it be averaged into
+      // longShortRatio alongside OKX's account ratio, producing a figure that
+      // matches neither. It is exposed separately — see `poolExposure` on
+      // AggregateMarketData.
       longShortRatio: null,
-      // pool-info publishes no mark price. Providers supply it.
-      price: 0,
-      priceChange24hPct: 0,
+      price,
+      // Already a percentage: 1.269 against a 24h high/low range of 2.9%.
+      priceChange24hPct: safeNumber(stats?.priceChange24H),
       sparkline: [],
       fundingHistory: [],
       source: "direct",

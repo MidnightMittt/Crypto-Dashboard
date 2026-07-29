@@ -90,11 +90,36 @@ export interface AggregateMarketData {
   spotDisagreementPct: number | null;
   /** How many independent spot sources answered. */
   spotSourceCount: number;
+  /**
+   * Net positioning at peer-to-pool venues. Null when none reported.
+   *
+   * Deliberately separate from `longShortRatio`. That field is an ACCOUNT
+   * ratio — how many traders sit on each side — which is the only positioning
+   * an order book can meaningfully publish, since its notional is balanced by
+   * construction. This one is NOTIONAL: at a peer-to-pool venue the pool
+   * takes the other side, so dollars long and dollars short genuinely differ.
+   *
+   * The two answer different questions and must never be averaged.
+   */
+  poolExposure: PoolExposureSummary | null;
   /** Locally recorded time series — this app's own observations. */
   history: LocalHistoryPoint[];
   /** Hours of local history collected so far. */
   historyHours: number;
   updatedAt: number;
+}
+
+/** Notional long/short exposure aggregated across peer-to-pool venues. */
+export interface PoolExposureSummary {
+  longUsd: number;
+  shortUsd: number;
+  /**
+   * (long - short) / (long + short) * 100. Positive means the traders are
+   * net long, which is the same as saying the pool is net short.
+   */
+  netSkewPct: number;
+  /** Venue ids behind the figure, so the UI can name its sources. */
+  venues: string[];
 }
 
 /** One recorded observation from this app's own polling. */

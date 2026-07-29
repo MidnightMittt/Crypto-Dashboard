@@ -14,6 +14,7 @@ import { Leaderboards } from "@/components/dashboard/Leaderboards";
 import { AlertsPanel } from "@/components/dashboard/AlertsPanel";
 import { AiSummary } from "@/components/dashboard/AiSummary";
 import { ArbitrageScanner } from "@/components/dashboard/ArbitrageScanner";
+import { PoolExposure } from "@/components/dashboard/PoolExposure";
 import { DashboardSkeleton, LowerSkeleton, Skeleton } from "@/components/ui/Skeleton";
 import { Button } from "@/components/ui/Button";
 import { useMarketData } from "@/lib/hooks/useMarketData";
@@ -152,7 +153,13 @@ export default function DashboardPage() {
               <div className="lg:col-span-2">
                 <ArbitrageScanner exchanges={aggregate.exchanges} />
               </div>
-              <AlertsPanel aggregate={aggregate} />
+              <PoolExposure data={aggregate} />
+            </section>
+
+            <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <div className="lg:col-span-2">
+                <AlertsPanel aggregate={aggregate} />
+              </div>
             </section>
 
             <footer className="border-t border-hairline pt-6 text-[11px] leading-relaxed text-ink-faint">
