@@ -224,6 +224,37 @@ The gauge shows a **percentile against the trailing window**, not a raw dollar f
 
 A composite of OI growth, funding magnitude, price stall, and liquidation intensity — weighted toward the combination the brief cares about most: **leverage building while price goes nowhere**. That's the setup where a move in either direction cascades.
 
+### Pool net exposure — and why it isn't the Long/Short gauge
+
+These two panels look interchangeable and measure different things.
+
+**Long/Short gauge** counts **traders**. It comes from OKX's
+`long-short-account-ratio`: a headcount of accounts on each side.
+
+**Pool Net Exposure** counts **dollars**. It comes from Jupiter, GMX and
+Synthetix.
+
+The reason both exist is structural. On an order book — OKX, Binance,
+Hyperliquid, dYdX — **notional open interest is always exactly balanced**,
+because every long is matched by a short. That's what an order book *is*.
+So "long notional vs short notional" is permanently 1:1 there and tells you
+nothing; those venues publish an account ratio instead, which stays
+informative even when the dollars are level.
+
+Peer-to-pool venues are different. A liquidity pool takes the other side of
+every trade, so dollars long and dollars short genuinely diverge — and the
+gap is the pool's net exposure. That's real information no order-book venue
+can produce.
+
+**They must never be averaged.** Blending a headcount ratio with a notional
+ratio yields a number matching neither, which is why `longShortRatio` and
+`poolExposure` are separate fields and separate panels.
+
+Sources: **Jupiter** (`/v1/jlp-info`) and **GMX** (`arbitrum-api.gmxinfra.io`,
+plus Avalanche) both work with **no API key**. **Synthetix** needs
+`THE_GRAPH_API_KEY` and contributes nothing until it's set — and its path is
+untested, since no free endpoint exists to verify it against.
+
 ### Composite sentiment index
 
 0–100, blending funding (25%), open interest (20%), long/short ratio (15%), price momentum (15%), liquidations (15%), and volume turnover (10%).

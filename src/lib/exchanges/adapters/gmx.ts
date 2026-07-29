@@ -112,9 +112,14 @@ export async function fetchGmx(asset: AssetSymbol): Promise<ExchangeSnapshot | n
     openInterestUsd,
     openInterestChange24hPct: null,
     volume24hUsd: 0,
-    // GMX exposes the long/short OI split directly — a real positioning
-    // read, which most DEXs don't publish.
-    longShortRatio: shortOi > 0 ? longOi / shortOi : null,
+    // GMX does expose a long/short split, but it is NOTIONAL — dollars on
+    // each side, which a pool-based venue can have diverge. The CEX gauge
+    // aggregates an ACCOUNT ratio (how many traders per side), the only
+    // positioning an order book can meaningfully report since its notional
+    // is balanced by construction. Averaging the two produces a number that
+    // is neither, so this goes through poolExposure instead — see
+    // providers/gmxExposure.ts, which reads it keylessly over REST.
+    longShortRatio: null,
     price: 0,
     priceChange24hPct: 0,
     sparkline: [],

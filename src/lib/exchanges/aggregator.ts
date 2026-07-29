@@ -30,6 +30,8 @@ import { swr } from "../cache/swr";
 import { computeBasisPct } from "../providers/dexscreener";
 import { resolveSpotWithConfidence } from "../providers/spotPrice";
 import { fetchJlpExposure } from "../providers/jlpExposure";
+import { fetchGmxExposure } from "../providers/gmxExposure";
+import { synthetixExposure } from "./adapters/synthetix";
 import { PoolExposureSummary } from "@/types/market";
 import { LiveAdapter } from "./adapters/types";
 import { fundingPer8h } from "../utils/format";
@@ -607,13 +609,17 @@ function buildAggregate(
 /**
  * Notional positioning across peer-to-pool venues.
  *
- * Only venues where the pool takes the other side can report this — at an
- * order book, long notional always equals short notional. Jupiter is the
- * only one wired in so far; GMX and Synthetix work the same way and would
- * slot in here once their subgraphs are configured.
+ * Only venues where a pool takes the other side can report this — at an order
+ * book, long notional always equals short notional, which is why those
+ * venues publish an account headcount instead. The two are never mixed; see
+ * the note on `poolExposure` in types/market.ts.
  *
- * Whole-market mode is skipped: summing notional skew across ten assets
- * would net SOL longs against BTC shorts and report a number about nothing.
+ * Sources run concurrently and independently: Jupiter and GMX are keyless,
+ * Synthetix needs THE_GRAPH_API_KEY and contributes nothing until it's set.
+ *
+ * Whole-market mode is skipped deliberately: summing notional skew across
+ * ten assets would net SOL longs against BTC shorts and produce a number
+ * about nothing.
  */
 async function buildPoolExposure(
   asset: AssetSymbol | "MARKET",
@@ -621,20 +627,34 @@ async function buildPoolExposure(
 ): Promise<PoolExposureSummary | null> {
   if (asset === "MARKET") return null;
 
-  const jupiter = exchanges.find((e) => e.exchangeId === "jupiter");
-  if (!jupiter || jupiter.price <= 0) return null;
+  // Jupiter stores its long side in tokens, so it needs a price; the other
+  // two publish USD directly.
+  const jupiterPrice = exchanges.find((e) => e.exchangeId === "jupiter")?.price ?? 0;
 
-  const exposure = await fetchJlpExposure(asset, jupiter.price).catch(() => null);
-  if (!exposure) return null;
+  const [jupiter, gmx, synthetix] = await Promise.all([
+    jupiterPrice > 0
+      ? fetchJlpExposure(asset, jupiterPrice).catch(() => null)
+      : Promise.resolve(null),
+    fetchGmxExposure(asset).catch(() => null),
+    synthetixExposure(asset).catch(() => null),
+  ]);
 
-  const total = exposure.longUsd + exposure.shortUsd;
+  const parts: Array<{ id: string; longUsd: number; shortUsd: number }> = [];
+  if (jupiter) parts.push({ id: "jupiter", ...jupiter });
+  if (gmx) parts.push({ id: "gmx", ...gmx });
+  if (synthetix) parts.push({ id: "synthetix", ...synthetix });
+  if (parts.length === 0) return null;
+
+  const longUsd = parts.reduce((sum, p) => sum + p.longUsd, 0);
+  const shortUsd = parts.reduce((sum, p) => sum + p.shortUsd, 0);
+  const total = longUsd + shortUsd;
   if (total <= 0) return null;
 
   return {
-    longUsd: exposure.longUsd,
-    shortUsd: exposure.shortUsd,
-    netSkewPct: ((exposure.longUsd - exposure.shortUsd) / total) * 100,
-    venues: ["jupiter"],
+    longUsd,
+    shortUsd,
+    netSkewPct: ((longUsd - shortUsd) / total) * 100,
+    venues: parts.map((p) => p.id),
   };
 }
 

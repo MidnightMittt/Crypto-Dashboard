@@ -108,7 +108,13 @@ export async function fetchSynthetix(asset: AssetSymbol): Promise<ExchangeSnapsh
       openInterestUsd,
       openInterestChange24hPct: null,
       volume24hUsd: 0,
-      longShortRatio: shorts > 0 ? longs / shorts : null,
+      // NOT the account ratio the CEX gauge aggregates. Synthetix is
+      // peer-to-pool, so what it publishes is a NOTIONAL skew — dollars, not
+      // traders. Feeding it into longShortRatio would have it OI-weighted
+      // together with OKX's account headcount, producing a figure that means
+      // neither. It's surfaced through poolExposure instead; see
+      // synthetixExposure() below.
+      longShortRatio: null,
       price,
       priceChange24hPct: 0,
       sparkline: [],
@@ -118,6 +124,55 @@ export async function fetchSynthetix(asset: AssetSymbol): Promise<ExchangeSnapsh
     };
   } catch (err) {
     console.warn(`[synthetix] fetch failed for ${asset}:`, err);
+    return null;
+  }
+}
+
+/**
+ * Notional long/short exposure, for the pool-exposure metric.
+ *
+ * Synthetix publishes `marketSize` (total OI, base units) and `marketSkew`
+ * (longs - shorts, base units), so the split is recovered arithmetically:
+ *
+ *   longs  = (size + skew) / 2
+ *   shorts = (size - skew) / 2
+ *
+ * UNTESTED AGAINST LIVE DATA. This path requires THE_GRAPH_API_KEY plus a
+ * current SYNTHETIX_SUBGRAPH_ID, neither of which was available when it was
+ * written, and Synthetix publishes no free REST equivalent to check against
+ * (api.synthetix.io only serves docs). The arithmetic mirrors the adapter
+ * above, which was written against the same schema — but treat the first
+ * numbers it produces with suspicion and sanity-check the magnitudes against
+ * Synthetix's own UI before trusting them.
+ */
+export async function synthetixExposure(
+  asset: AssetSymbol
+): Promise<{ asset: AssetSymbol; longUsd: number; shortUsd: number } | null> {
+  if (!synthetixConfigured()) return null;
+
+  try {
+    const markets = await getMarkets();
+    const market = markets.find((m) => {
+      const a = (m.asset ?? "").replace(/^s/, "").toUpperCase();
+      const k = (m.marketKey ?? "").replace(/^s/, "").replace(/PERP$/i, "").toUpperCase();
+      return a === asset || k === asset;
+    });
+    if (!market) return null;
+
+    const price = safeNumber(market.price);
+    const size = safeNumber(market.marketSize);
+    const skew = safeNumber(market.marketSkew);
+    if (price <= 0 || size <= 0) return null;
+
+    const longUsd = ((size + skew) / 2) * price;
+    const shortUsd = ((size - skew) / 2) * price;
+    // A skew larger than the market size would make one side negative, which
+    // means the schema isn't what we assumed rather than a real position.
+    if (longUsd < 0 || shortUsd < 0) return null;
+
+    return { asset, longUsd, shortUsd };
+  } catch (err) {
+    console.warn(`[synthetix-exposure] failed for ${asset}:`, err);
     return null;
   }
 }
