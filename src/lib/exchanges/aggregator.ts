@@ -228,7 +228,28 @@ async function snapshotsForAsset(asset: AssetSymbol): Promise<FetchResult> {
  * `maxAgeMs` is the point where stale stops being acceptable and a caller
  * waits for real data.
  */
-const AGGREGATE_CACHE = { freshMs: 8_000, maxAgeMs: 5 * 60_000 };
+const AGGREGATE_CACHE = {
+  freshMs: 8_000,
+  maxAgeMs: 5 * 60_000,
+  /**
+   * Don't publish an obviously degraded result to the shared cache.
+   *
+   * A cold serverless instance can come back with far fewer venues than
+   * normal — connections are still warming, and whatever misses its deadline
+   * is excluded. That's fine as a one-off response, but writing it to Redis
+   * would hand the short answer to every other instance too.
+   *
+   * Two thirds is deliberately loose. Venue counts move around legitimately
+   * (an exchange rate-limits, a provider is briefly down) and this is meant
+   * to catch a cold-start collapse, not to police normal variation. It also
+   * never blocks the FIRST result, since there's nothing better to keep.
+   */
+  shouldShare: (next: AggregateMarketData, previous: AggregateMarketData | null) => {
+    if (!previous) return true;
+    if (previous.exchanges.length === 0) return true;
+    return next.exchanges.length >= previous.exchanges.length * (2 / 3);
+  },
+};
 
 /**
  * Beyond this, the perp and the spot reference are not the same asset.

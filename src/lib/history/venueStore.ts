@@ -1,6 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import { AssetSymbol, ExchangeSnapshot, FundingPoint } from "@/types/market";
+import { kvConfigured, kvGet, kvSet } from "../store/kv";
 
 /**
  * Per-venue history store.
@@ -17,7 +18,10 @@ import { AssetSymbol, ExchangeSnapshot, FundingPoint } from "@/types/market";
  * an hour, fully populated after a day. Upstream-provided history always
  * wins when present — this only fills gaps.
  *
- * Storage: .data/venues/<asset>.json, keyed by exchangeId.
+ * Storage: Redis when configured, else .data/venues/<asset>.json. Same
+ * reasoning as history/store.ts — the filesystem does not survive on
+ * serverless, so per-venue sparklines and 24h OI deltas never accumulated
+ * in production. See lib/store/kv.ts.
  */
 
 interface VenuePoint {
@@ -37,7 +41,16 @@ function fileFor(asset: AssetSymbol | "MARKET"): string {
   return path.join(DATA_DIR, `${asset}.json`);
 }
 
+function kvKey(asset: AssetSymbol | "MARKET"): string {
+  return `venue-history:${asset}`;
+}
+
 async function read(asset: AssetSymbol | "MARKET"): Promise<VenueHistory> {
+  if (kvConfigured()) {
+    const stored = await kvGet<VenueHistory>(kvKey(asset));
+    return stored && typeof stored === "object" ? stored : {};
+  }
+
   try {
     const raw = await fs.readFile(fileFor(asset), "utf8");
     const parsed = JSON.parse(raw);
@@ -78,12 +91,16 @@ export async function recordVenueHistory(
   }
 
   if (changed) {
-    try {
-      await fs.mkdir(DATA_DIR, { recursive: true });
-      await fs.writeFile(fileFor(asset), JSON.stringify(history), "utf8");
-    } catch (err) {
-      // A failed write must never break the response.
-      console.warn(`[venue-history] could not persist ${asset}:`, err);
+    if (kvConfigured()) {
+      await kvSet(kvKey(asset), history);
+    } else {
+      try {
+        await fs.mkdir(DATA_DIR, { recursive: true });
+        await fs.writeFile(fileFor(asset), JSON.stringify(history), "utf8");
+      } catch (err) {
+        // A failed write must never break the response.
+        console.warn(`[venue-history] could not persist ${asset}:`, err);
+      }
     }
   }
 

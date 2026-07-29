@@ -287,7 +287,13 @@ If no reachable venue publishes open-interest history, the app builds its own: e
 
 Just leave the server running. Delete `.data/` to reset.
 
-**Deploying:** serverless platforms (Vercel, Netlify) have an ephemeral filesystem, so these writes won't persist. Swap the read/write pair in `src/lib/history/store.ts` for Vercel KV, Upstash Redis, or Postgres — nothing else changes.
+**Deploying:** set up Redis. Serverless platforms have an ephemeral filesystem, so the local files never accumulate — the chart reads "Collecting history" forever and the OI percentile has no series to fall back on.
+
+Provision an Upstash database (Vercel dashboard → Storage → Create Database → Upstash Redis) and the credentials are injected automatically; `src/lib/store/kv.ts` picks them up with no code change. Without them the app falls back to the filesystem, which is right for local development and wrong for anything deployed.
+
+Redis fixes a second, less obvious problem at the same time. The aggregate cache was module-level memory, so **every serverless instance held its own copy** — the same URL returned 25 venues or 16 depending on which instance answered, and the gauges visibly flickered between refreshes. The cache is now two-layer: in-memory first (microseconds, absorbs repeat polls), then Redis (shared, makes every instance agree). Verified with two independent processes sharing one Redis returning byte-identical payloads.
+
+A cold instance is also stopped from publishing a degraded result: if a fresh process comes back with under two-thirds the usual venue count because connections are still warming, that answer is served to the current request but not written to the shared cache.
 
 ## Adding more exchanges
 

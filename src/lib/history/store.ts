@@ -1,6 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import { AssetSymbol } from "@/types/market";
+import { kvConfigured, kvGet, kvSet } from "../store/kv";
 
 /**
  * Local time-series store.
@@ -13,10 +14,16 @@ import { AssetSymbol } from "@/types/market";
  * boring: no database to install, survives restarts, and is trivial to
  * inspect or delete.
  *
- * NOTE FOR DEPLOYMENT: serverless platforms (Vercel, Netlify) have an
- * ephemeral filesystem — writes vanish between invocations. For a hosted
- * deployment, swap the read/write pair below for Vercel KV, Upstash Redis,
- * Postgres, or any other persistent store. The rest of the app is unaffected.
+ * STORAGE BACKEND: Redis when configured, filesystem otherwise.
+ *
+ * Serverless platforms have an ephemeral filesystem — writes vanish between
+ * invocations, so on Vercel the JSON files silently never accumulated and the
+ * chart read "Collecting history" forever. When Upstash credentials are
+ * present every read and write goes to Redis instead, which is shared across
+ * instances and survives deploys.
+ *
+ * The filesystem path is kept so local development needs no setup at all.
+ * See lib/store/kv.ts.
  */
 
 import { LocalHistoryPoint } from "@/types/market";
@@ -31,7 +38,17 @@ function fileFor(asset: AssetSymbol | "MARKET"): string {
   return path.join(DATA_DIR, `${asset}.json`);
 }
 
+/** Redis key for an asset's series. */
+function kvKey(asset: AssetSymbol | "MARKET"): string {
+  return `history:${asset}`;
+}
+
 export async function readHistory(asset: AssetSymbol | "MARKET"): Promise<HistoryPoint[]> {
+  if (kvConfigured()) {
+    const stored = await kvGet<HistoryPoint[]>(kvKey(asset));
+    return Array.isArray(stored) ? stored : [];
+  }
+
   try {
     const raw = await fs.readFile(fileFor(asset), "utf8");
     const parsed = JSON.parse(raw);
@@ -65,6 +82,13 @@ export async function recordHistory(
 
   const cutoff = point.t - RETENTION_MS;
   const next = [...existing.filter((p) => p.t >= cutoff), point];
+
+  if (kvConfigured()) {
+    // No TTL: this is storage, not cache. An evicted series would silently
+    // reset the chart and the OI percentile.
+    await kvSet(kvKey(asset), next);
+    return next;
+  }
 
   try {
     await fs.mkdir(DATA_DIR, { recursive: true });
