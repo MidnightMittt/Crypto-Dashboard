@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { Card } from "@/components/ui/Card";
+import { Sparkline } from "@/components/ui/Sparkline";
 import { ExchangeSnapshot } from "@/types/market";
 import { getExchange } from "@/lib/exchanges/registry";
 import { formatCompactUsd, formatCountdown, formatBps, formatPct, fundingPer8h, orDash } from "@/lib/utils/format";
@@ -26,7 +26,6 @@ export function ExchangeCard({
 
   const fundingTone =
     snapshot.fundingRatePct > 0.004 ? "success" : snapshot.fundingRatePct < -0.004 ? "danger" : "neutral";
-  const sparkData = snapshot.sparkline.map((v, i) => ({ i, v }));
 
   return (
     <Card className="group flex flex-col gap-3 p-4 transition-colors hover:border-cyan/30">
@@ -57,20 +56,14 @@ export function ExchangeCard({
         </span>
       </div>
 
-      {marketCount ? null : sparkData.length > 1 ? (
-        <div className="h-10 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={sparkData}>
-              <Line
-                type="monotone"
-                dataKey="v"
-                stroke={fundingTone === "success" ? "#22C55E" : fundingTone === "danger" ? "#EF4444" : "#8890A0"}
-                strokeWidth={1.75}
-                dot={false}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+      {marketCount ? null : snapshot.sparkline.length > 1 ? (
+        <Sparkline
+          className="h-10 w-full"
+          values={snapshot.sparkline}
+          stroke={
+            fundingTone === "success" ? "#22C55E" : fundingTone === "danger" ? "#EF4444" : "#8890A0"
+          }
+        />
       ) : (
         <div className="flex h-10 w-full items-center justify-center rounded border border-dashed border-hairline text-[10px] text-ink-faint">
           Collecting funding history…
@@ -88,7 +81,15 @@ export function ExchangeCard({
         ) : (
           <Stat label="Next Funding" value={countdown} mono />
         )}
-        <Stat label="Open Interest" value={formatCompactUsd(snapshot.openInterestUsd)} />
+        {/*
+          Zero means "not published", not "no open positions" — Jupiter, for
+          one, exposes borrow rates without any attributable OI. Rendering
+          "$0" would read as a real measurement of an empty venue.
+        */}
+        <Stat
+          label="Open Interest"
+          value={snapshot.openInterestUsd > 0 ? formatCompactUsd(snapshot.openInterestUsd) : "—"}
+        />
         <Stat label="OI Δ 24h" value={orDash(snapshot.openInterestChange24hPct, (v) => formatPct(v, 1))} />
         <Stat label="Volume 24h" value={snapshot.volume24hUsd > 0 ? formatCompactUsd(snapshot.volume24hUsd) : "—"} />
         <Stat label="L/S Ratio" value={orDash(snapshot.longShortRatio, (v) => v.toFixed(2))} />

@@ -28,7 +28,6 @@
     "next": "^15.5.22",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "recharts": "^2.13.0",
     "tailwind-merge": "^2.5.4",
     "zustand": "^4.5.5"
   },

@@ -5,7 +5,8 @@ import { createChart, ColorType, IChartApi, ISeriesApi, LineStyle } from "lightw
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/Tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/Select";
-import { AggregateMarketData, ExchangeSnapshot, Timeframe } from "@/types/market";
+import { AggregateMarketData, AssetSymbol, ExchangeSnapshot, Timeframe } from "@/types/market";
+import { useHistory } from "@/lib/hooks/useHistory";
 
 const TIMEFRAMES: Timeframe[] = ["15m", "1H", "4H", "12H", "1D", "1W"];
 type Overlay = "funding" | "oi";
@@ -63,6 +64,9 @@ function buildAggregateSeries(exchanges: ExchangeSnapshot[]) {
     }));
 }
 
+/** Stable identity so the series useMemo isn't invalidated every render. */
+const EMPTY_HISTORY: AggregateMarketData["history"] = [];
+
 const TF_TRAILING_POINTS: Record<Timeframe, number> = {
   "15m": 12,
   "1H": 24,
@@ -72,7 +76,19 @@ const TF_TRAILING_POINTS: Record<Timeframe, number> = {
   "1W": 91,
 };
 
-export function HistoricalChart({ data }: { data: AggregateMarketData }) {
+/**
+ * `data` is optional on purpose: the chart mounts and draws before the main
+ * market payload exists. Recorded history arrives from its own fast endpoint
+ * in milliseconds, so the chart is useful immediately and simply upgrades to
+ * deeper exchange-published history once the exchanges answer.
+ */
+export function HistoricalChart({
+  asset,
+  data,
+}: {
+  asset: AssetSymbol | "MARKET";
+  data?: AggregateMarketData;
+}) {
   const [timeframe, setTimeframe] = useState<Timeframe>("1D");
   const [overlay, setOverlay] = useState<Overlay>("funding");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -80,21 +96,28 @@ export function HistoricalChart({ data }: { data: AggregateMarketData }) {
   const priceSeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
   const overlaySeriesRef = useRef<ISeriesApi<"Area"> | null>(null);
 
-  const exchanges = data.exchanges;
+  const { data: recorded } = useHistory(asset);
+
+  const exchanges = useMemo(() => data?.exchanges ?? [], [data]);
+
+  // Recorded history comes from the fast endpoint; fall back to whatever the
+  // main payload carried if that request hasn't landed yet.
+  const localHistory = recorded?.history ?? data?.history ?? EMPTY_HISTORY;
+  const historyHours = recorded?.historyHours ?? data?.historyHours ?? 0;
 
   // Prefer exchange-published history (deeper, predates this app). Fall back
   // to what we've recorded locally when no venue supplies any.
   const series = useMemo(() => {
     const fromExchanges = buildAggregateSeries(exchanges);
     if (fromExchanges.length >= 2) return { points: fromExchanges, source: "exchange" as const };
-    const local = data.history.map((p) => ({
+    const local = localHistory.map((p) => ({
       t: p.t,
       price: p.price,
       funding: p.weightedFundingRatePct,
       oi: p.totalOpenInterestUsd,
     }));
     return { points: local, source: "local" as const };
-  }, [exchanges, data.history]);
+  }, [exchanges, localHistory]);
 
   const points = series.points;
 
@@ -208,7 +231,7 @@ export function HistoricalChart({ data }: { data: AggregateMarketData }) {
       <p className="px-4 pb-4 text-[11px] text-ink-faint">
         {series.source === "exchange"
           ? "History published by Binance, Bybit, and OKX (about 7 days hourly). Venues without history endpoints contribute only their current values."
-          : `Built from this app's own recorded snapshots — ${data.historyHours.toFixed(1)}h collected so far. Recorded every 5 minutes while the server runs.`}
+          : `Built from this app's own recorded snapshots — ${historyHours.toFixed(1)}h collected so far. Recorded every 5 minutes while the server runs.`}
       </p>
     </Card>
   );

@@ -1,4 +1,5 @@
 import { SpotPrice } from "./dexscreener";
+import { timeoutSignal } from "../net/timeout";
 
 /**
  * Jupiter Price API V3 — spot reference prices for Solana-native assets.
@@ -87,7 +88,8 @@ async function getAll(): Promise<Map<string, JupPriceEntry>> {
         // without one at lower rate limits, so it's sent only when set.
         ...(apiKey ? { "x-api-key": apiKey } : {}),
       },
-      next: { revalidate: 30 },
+      signal: timeoutSignal(),
+      cache: "no-store",
     });
 
     if (res.status === 429) throw new Error("Jupiter rate limit — set JUPITER_API_KEY");

@@ -1,5 +1,6 @@
 import { AssetSymbol, ExchangeSnapshot } from "@/types/market";
 import { MarketDataProvider, normalizeExchangeName } from "./types";
+import { PROVIDER_FETCH_TIMEOUT_MS, timeoutSignal } from "../net/timeout";
 
 /**
  * CoinGecko derivatives — free public API, no key required.
@@ -50,7 +51,9 @@ async function getRows(): Promise<GeckoDerivative[]> {
 
   const res = await fetch(`${BASE}/derivatives?include_tickers=unexpired`, {
     headers: { accept: "application/json", ...demoKeyHeader() },
-    next: { revalidate: 60 },
+    // Bulk endpoint: every derivative on every venue in one payload.
+    signal: timeoutSignal(PROVIDER_FETCH_TIMEOUT_MS),
+    cache: "no-store",
   });
 
   if (res.status === 429) {

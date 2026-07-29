@@ -4,7 +4,7 @@ A cross-exchange dashboard for perpetual futures **funding rates**, **open inter
 
 > Is the market becoming overcrowded long or short?
 
-Aggregates 23 venues (12 CEXs, 11 DEXs) across 10 assets into four animated gauges and a composite sentiment index.
+Aggregates 27 venues (14 CEXs, 13 DEXs) across 10 assets into four animated gauges and a composite sentiment index. 21 of them are queried first-hand; the rest arrive through an aggregator.
 
 ---
 
@@ -41,18 +41,27 @@ Data arrives two ways:
 
 ### 1. Direct adapters — queried at the exchange's own API
 
-Binance · Bybit · OKX · Bitget · Gate.io · Kraken · Hyperliquid · dYdX
+OKX · Bitget · Gate.io · Kraken · MEXC · HTX · KuCoin · Deribit · BitMEX · Phemex · Coinbase International
+Hyperliquid · dYdX · Aster · Backpack · Orderly · Paradex · Aevo · Jupiter · Drift · GMX · Synthetix
 
 Free public endpoints, no keys. First-hand and lowest latency.
 
+Two of these are worth knowing about:
+
+- **Deribit** is queried on both its inverse and its USDC perp and summed. The inverse book is ~30× larger, and aggregators tend to report only the linear one.
+- **BitMEX** mixes inverse and linear contracts whose `openInterest` fields use entirely different units. Each is converted by two independent derivations that must agree.
+
 ### 2. Aggregator providers — for venues that block direct access
 
-Binance, Bybit, and OKX return **HTTP 403 from some regions** (notably the US) as a regulatory compliance measure. Rather than trying to evade that — which is both a compliance control and technically brittle, since exchanges actively ban datacenter IPs — the app reads the same numbers from services that license and redistribute them.
+Binance and Bybit return **HTTP 451/403 from some regions** (notably the US) as a regulatory compliance measure. Rather than trying to evade that — which is both a compliance control and technically brittle, since exchanges actively ban datacenter IPs — the app reads the same numbers from services that license and redistribute them.
 
 | Provider | Key needed | Adds |
 | --- | --- | --- |
-| **DefiLlama** | No — free, no signup | Funding + open interest across CEXs and DEXs. Works out of the box. |
-| **Coinalyze** | Free key | The above plus **long/short ratio**, deeper OI history, and ~13 extra venues. |
+| **CoinGecko** | No — free, no signup | Funding + open interest for Binance, Bybit, BingX and other venues that can't be reached directly. |
+| **Coinalyze** | Free key | The above plus **long/short ratio** on more venues, deeper OI history, and extra venues. |
+| **DefiLlama** | ⚠️ Now paid | `yields.llama.fi/perps` answers HTTP 402 without a subscription. The provider self-disables after two rejections rather than costing latency on every poll. |
+
+**Note on open-interest conventions:** venues here report *single-sided* open interest, matching Binance/Bybit/OKX. Some aggregators sum both sides and so report roughly double — CoinGecko's Aster figure is 1.99× the venue's own. Mixing the two conventions would corrupt every OI-weighted aggregate, so direct readings are preferred wherever available.
 
 To enable Coinalyze, get a key at `coinalyze.net/account/api-key/` and set `COINALYZE_API_KEY` in `.env.local`.
 
@@ -227,10 +236,10 @@ A composite of OI growth, funding magnitude, price stall, and liquidation intens
 
 Being upfront about what this does and doesn't cover:
 
-- **Binance, Bybit, and OKX block some regions** (HTTP 403/451, notably from the US). They're also the only three that publish open-interest history and long/short positioning. When they're unreachable, the app records its own time series to `.data/` instead — see below.
-- **Long/short positioning cannot be reconstructed locally.** It's not derivable from open interest or funding, so that gauge stays blank if those three venues are blocked for you.
+- **Binance and Bybit block some regions** (HTTP 451/403, notably from the US). **OKX does not**, which matters more than it sounds: OKX's `rubik` endpoints are the app's only unauthenticated source of both long/short positioning and open-interest history. If OKX is unreachable from your location too, the OI-percentile and leverage-heat gauges fall back to locally recorded history, and the long/short gauge stays blank until you add a Coinalyze key.
+- **Long/short positioning cannot be reconstructed locally.** It's not derivable from open interest or funding — it has to come from a venue that publishes it.
 - **No liquidation data.** The earlier version of this dashboard had a liquidation feed built entirely from simulated events. It was removed rather than left in looking real. No free REST endpoint publishes cross-venue liquidations; Binance offers a WebSocket stream (`!forceOrder@arr`) if you want to build it properly.
-- **Long/short ratios come from 3 venues** (Binance, Bybit, OKX). Most DEXs publish no positioning data at all.
+- **Long/short ratios come from OKX alone** without a Coinalyze key, since Binance and Bybit are geoblocked. It's one venue's account positioning, not a market-wide reading. Most DEXs publish no positioning data at all.
 - **Timeframes shorter than 1D resample the same ~7 day window**, since that's the deepest history available from a single call.
 - **The funding spread scanner shows gross spreads.** Fees, slippage, and margin costs routinely consume a spread of the size displayed.
 - **Funding intervals differ by venue** (1h vs 8h). Everything comparing across exchanges normalizes first, but be careful if you add your own calculations.

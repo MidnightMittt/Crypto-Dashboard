@@ -17,6 +17,8 @@
  *
  * Free, no API key. Rate limit ~300 req/min on the pairs routes.
  */
+
+import { timeoutSignal } from "../net/timeout";
 const BASE = "https://api.dexscreener.com/latest/dex";
 const CACHE_MS = 60_000;
 
@@ -71,7 +73,8 @@ export async function fetchSpotPrice(asset: string): Promise<SpotPrice | null> {
   try {
     const res = await fetch(`${BASE}/search?q=${encodeURIComponent(term)}`, {
       headers: { accept: "application/json" },
-      next: { revalidate: 60 },
+      signal: timeoutSignal(),
+      cache: "no-store",
     });
     if (!res.ok) throw new Error(`DexScreener HTTP ${res.status}`);
 

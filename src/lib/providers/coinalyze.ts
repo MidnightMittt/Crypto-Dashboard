@@ -86,7 +86,7 @@ async function call<T>(path: string, params: Record<string, string>): Promise<T>
   // loggedFetch redacts api_key before printing.
   const { res, text } = await loggedFetch("coinalyze", `${BASE}${path}?${qs}`, {
     headers: { accept: "application/json" },
-    next: { revalidate: 30 },
+    cache: "no-store",
   } as RequestInit);
 
   if (res.status === 429) {

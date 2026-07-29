@@ -1,4 +1,5 @@
 import { SpotPrice } from "./dexscreener";
+import { timeoutSignal } from "../net/timeout";
 
 /**
  * Alchemy Prices API — spot reference prices.
@@ -56,7 +57,8 @@ async function getAll(symbols: string[]): Promise<Map<string, number>> {
     const list = symbols.slice(0, MAX_SYMBOLS).join(",");
     const res = await fetch(`${BASE}/${apiKey()}/tokens/by-symbol?symbols=${list}`, {
       headers: { accept: "application/json" },
-      next: { revalidate: 60 },
+      signal: timeoutSignal(),
+      cache: "no-store",
     });
 
     if (res.status === 429) {

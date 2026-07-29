@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { ARC_START_DEG, describeArc, polarToCartesian, valueToAngle } from "@/lib/utils/gaugeMath";
 
 export interface GaugeBaseProps {
@@ -48,7 +48,7 @@ const CY = 138;
 const R = 98;
 const TRACK_WIDTH = 16;
 
-export function GaugeBase({
+function GaugeBaseImpl({
   value,
   min,
   max,
@@ -60,10 +60,10 @@ export function GaugeBase({
   compact = false,
   dimmed = false,
 }: GaugeBaseProps) {
+  const reduceMotion = useReducedMotion();
   const angle = valueToAngle(value, min, max);
   const trackPath = describeArc(CX, CY, R, ARC_START_DEG, ARC_START_DEG + 270);
   const gradientId = `gauge-gradient-${gaugeId}`;
-  const glowId = `gauge-glow-${gaugeId}`;
   const needleGradId = `gauge-needle-${gaugeId}`;
 
   // Tip stops just inside the coloured track — a real gauge needle nearly
@@ -87,13 +87,6 @@ export function GaugeBase({
             <stop offset="55%" stopColor={dimmed ? "#3A3F47" : "#E8EDF2"} />
             <stop offset="100%" stopColor={dimmed ? "#2A2F38" : "#9AA3B2"} />
           </linearGradient>
-          <filter id={glowId} x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="3.5" result="blur" />
-            <feMerge>
-              <feMergeNode in="blur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
         </defs>
 
         {/* background track */}
@@ -141,10 +134,19 @@ export function GaugeBase({
           which matches the angle convention in gaugeMath.ts.
         */}
         <motion.g
-          style={{ originX: `${CX}px`, originY: `${CY}px` }}
-          initial={{ rotate: ARC_START_DEG }}
+          style={{ originX: `${CX}px`, originY: `${CY}px`, willChange: "transform" }}
+          initial={false}
           animate={{ rotate: angle }}
-          transition={{ type: "spring", stiffness: 55, damping: 11, mass: 0.9 }}
+          transition={
+            reduceMotion
+              ? { duration: 0 }
+              : // Was stiffness 55 / damping 11, which is underdamped: the
+                // needle oscillated for well over a second after every poll.
+                // With four gauges on screen re-animating every 15s that was
+                // near-continuous repainting. Critically damped and stiffer
+                // settles in roughly a third of the time.
+                { type: "spring", stiffness: 120, damping: 18, mass: 0.8 }
+          }
         >
           {/* soft shadow cast slightly down-right, sells the raised look */}
           <path
@@ -152,11 +154,26 @@ export function GaugeBase({
             fill="rgba(0,0,0,0.45)"
             opacity={dimmed ? 0.2 : 0.6}
           />
-          <path
-            d={needlePath(CX, CY, needleLen)}
-            fill={`url(#${needleGradId})`}
-            filter={dimmed ? undefined : `url(#${glowId})`}
-          />
+          {/*
+            Glow. This used to be an feGaussianBlur filter, which the browser
+            cannot GPU-composite: it re-rasterized the needle on every frame
+            of the rotation, for every gauge at once.
+
+            A wider, low-opacity copy of the same path is plain geometry —
+            it transforms with the group for free and reads almost identically
+            at this size.
+          */}
+          {!dimmed && (
+            <path
+              d={needlePath(CX, CY, needleLen)}
+              fill="none"
+              stroke="#E8EDF2"
+              strokeWidth={3}
+              strokeLinejoin="round"
+              opacity={0.18}
+            />
+          )}
+          <path d={needlePath(CX, CY, needleLen)} fill={`url(#${needleGradId})`} />
           {/* highlight along the blade's leading edge */}
           <path
             d={`M ${CX - 1} ${CY - 6} L ${CX} ${CY - needleLen + 2} L ${CX + 0.6} ${CY - 6} Z`}
@@ -188,3 +205,13 @@ export function GaugeBase({
     </div>
   );
 }
+
+/**
+ * Memoized because the dashboard re-renders on every 15s poll with a fresh
+ * payload object, which previously re-rendered all four gauges — and
+ * restarted their needle animations — even when the underlying numbers were
+ * byte-identical. Props here are all primitives except `colors`, which is a
+ * module-level constant in each gauge, so the default shallow compare is
+ * sufficient.
+ */
+export const GaugeBase = React.memo(GaugeBaseImpl);

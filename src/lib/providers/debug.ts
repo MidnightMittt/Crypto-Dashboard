@@ -13,8 +13,22 @@
  * return shapes.
  */
 
+import { PROVIDER_FETCH_TIMEOUT_MS, timeoutSignal } from "../net/timeout";
+
+/**
+ * On by default in development, off by default in production.
+ *
+ * These helpers log a 500-character preview of every upstream response body.
+ * That's invaluable when diagnosing why a provider returned nothing, and
+ * pure overhead on a deployed instance polling every 15 seconds — it burns
+ * CPU serialising strings nobody reads, and floods the platform's log
+ * quota. Set DEBUG_PROVIDERS=true to force it on anywhere.
+ */
 export function debugEnabled(): boolean {
-  return process.env.DEBUG_PROVIDERS !== "false";
+  const explicit = process.env.DEBUG_PROVIDERS;
+  if (explicit === "true") return true;
+  if (explicit === "false") return false;
+  return process.env.NODE_ENV !== "production";
 }
 
 /** Strips API keys from URLs before they reach the log. */
@@ -41,7 +55,12 @@ export async function loggedFetch(
   const started = Date.now();
   log(provider, `REQUEST  ${init?.method ?? "GET"} ${redact(url)}`);
 
-  const res = await fetch(url, init);
+  // Only providers use loggedFetch, and they fetch in bulk — so they get the
+  // longer provider deadline rather than the tight per-adapter one.
+  const res = await fetch(url, {
+    ...init,
+    signal: init?.signal ?? timeoutSignal(PROVIDER_FETCH_TIMEOUT_MS),
+  });
   const text = await res.text();
   const ms = Date.now() - started;
 

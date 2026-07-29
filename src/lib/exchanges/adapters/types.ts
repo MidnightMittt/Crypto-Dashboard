@@ -1,4 +1,5 @@
 import { AssetSymbol, ExchangeSnapshot } from "@/types/market";
+import { timeoutSignal } from "../../net/timeout";
 
 /**
  * The contract every adapter implements.
@@ -15,10 +16,19 @@ export type LiveAdapter = (asset: AssetSymbol) => Promise<ExchangeSnapshot | nul
 export async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     ...init,
-    // These run in Next.js route handlers (server-side), so there's no CORS
-    // concern. A short revalidate window keeps us well inside exchange rate
-    // limits without the data going stale.
-    next: { revalidate: 5 },
+    // Every adapter routes through here, so this is the one place a deadline
+    // needs to exist. Without it a geo-blocked venue can hang the socket
+    // indefinitely and — because the aggregator uses Promise.all — hold the
+    // whole dashboard on its skeleton. See lib/net/timeout.ts.
+    signal: init?.signal ?? timeoutSignal(),
+    // Next's data cache is deliberately bypassed. Caching is owned at a
+    // higher level now — lib/cache/swr.ts for whole aggregates, plus each
+    // adapter's own module cache — so Next's layer added nothing but a disk
+    // write per response. Worse, it serialises those writes: under the
+    // fan-out's concurrency the queue grew until requests blew their abort
+    // deadline and every venue "timed out" at once, on responses that
+    // complete in under a second when fetched directly.
+    cache: "no-store",
     headers: {
       accept: "application/json",
       ...(init?.headers ?? {}),

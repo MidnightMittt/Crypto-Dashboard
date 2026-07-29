@@ -15,6 +15,8 @@
  * in .env.local avoids a code change every time that happens.
  */
 
+import { timeoutSignal } from "../net/timeout";
+
 const GATEWAY = "https://gateway.thegraph.com/api";
 
 export interface SubgraphConfig {
@@ -58,7 +60,8 @@ export async function querySubgraph<T>(
       method: "POST",
       headers: { "content-type": "application/json", accept: "application/json" },
       body: JSON.stringify({ query, variables }),
-      next: { revalidate: 20 },
+      signal: timeoutSignal(),
+      cache: "no-store",
     });
 
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

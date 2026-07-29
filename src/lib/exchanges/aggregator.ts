@@ -13,6 +13,20 @@ import { fetchDrift } from "./adapters/drift";
 import { fetchDriftOnchain, driftOnchainConfigured } from "./adapters/driftOnchain";
 import { fetchGmx } from "./adapters/gmx";
 import { fetchSynthetix } from "./adapters/synthetix";
+import { fetchCoinbaseIntl } from "./adapters/coinbaseIntl";
+import { fetchDeribit } from "./adapters/deribit";
+import { fetchMexc } from "./adapters/mexc";
+import { fetchKucoin } from "./adapters/kucoin";
+import { fetchAster } from "./adapters/aster";
+import { fetchHtx } from "./adapters/htx";
+import { fetchParadex } from "./adapters/paradex";
+import { fetchOrderly } from "./adapters/orderly";
+import { fetchPhemex } from "./adapters/phemex";
+import { fetchBackpack } from "./adapters/backpack";
+import { fetchBitmex } from "./adapters/bitmex";
+import { fetchAevo } from "./adapters/aevo";
+import { ADAPTER_TIMEOUT_MS, withDeadline } from "../net/timeout";
+import { swr } from "../cache/swr";
 import { computeBasisPct } from "../providers/dexscreener";
 import { resolveSpotWithConfidence } from "../providers/spotPrice";
 import { LiveAdapter } from "./adapters/types";
@@ -57,11 +71,61 @@ const ADAPTER_MAP: Record<string, LiveAdapter> = {
   drift: driftOnchainConfigured() ? fetchDriftOnchain : fetchDrift,
   gmx: fetchGmx,
   synthetix: fetchSynthetix,
+  // Public market data, no key. One request covers every asset, so this is
+  // one of the cheapest venues here to poll.
+  "coinbase-intl": fetchCoinbaseIntl,
+  deribit: fetchDeribit,
+  mexc: fetchMexc,
+  kucoin: fetchKucoin,
+  aster: fetchAster,
+  htx: fetchHtx,
+  paradex: fetchParadex,
+  orderly: fetchOrderly,
+  phemex: fetchPhemex,
+  backpack: fetchBackpack,
+  bitmex: fetchBitmex,
+  aevo: fetchAevo,
 };
 
 interface FetchResult {
   snapshots: ExchangeSnapshot[];
   unavailable: string[];
+}
+
+/**
+ * Fill gaps in a first-hand snapshot from a provider's view of the same venue.
+ *
+ * WHY FIELD-LEVEL: the merge used to be all-or-nothing per venue, which
+ * forced a bad choice for any adapter that publishes some metrics but not
+ * others. Jupiter is the clear case — its public endpoint gives borrow rates
+ * but no attributable open interest, so venue-level merging either threw
+ * away the provider's complete row in favour of a partial direct one, or
+ * discarded the first-hand rates entirely.
+ *
+ * The adapter contract says `0` and `null` mean "this venue doesn't publish
+ * it", so those are exactly the gaps a provider may fill. Anything the
+ * direct adapter actually reported is kept untouched — including a genuine
+ * zero funding rate, which is why fundingRatePct is never overridden here.
+ */
+function fillGaps(direct: ExchangeSnapshot, provider: ExchangeSnapshot): ExchangeSnapshot {
+  const preferDirect = (d: number, p: number) => (d > 0 ? d : p);
+
+  return {
+    ...direct,
+    openInterestUsd: preferDirect(direct.openInterestUsd, provider.openInterestUsd),
+    price: preferDirect(direct.price, provider.price),
+    volume24hUsd: preferDirect(direct.volume24hUsd, provider.volume24hUsd),
+    // A price change is only meaningful alongside a price. If the direct
+    // adapter had no price, its 0% change is a placeholder, not an observation.
+    priceChange24hPct:
+      direct.price > 0 ? direct.priceChange24hPct : provider.priceChange24hPct,
+    openInterestChange24hPct:
+      direct.openInterestChange24hPct ?? provider.openInterestChange24hPct,
+    longShortRatio: direct.longShortRatio ?? provider.longShortRatio,
+    fundingHistory:
+      direct.fundingHistory.length > 0 ? direct.fundingHistory : provider.fundingHistory,
+    sparkline: direct.sparkline.length > 0 ? direct.sparkline : provider.sparkline,
+  };
 }
 
 /**
@@ -80,43 +144,59 @@ async function snapshotsForAsset(asset: AssetSymbol): Promise<FetchResult> {
       venues.map(async (v) => {
         const adapter = ADAPTER_MAP[v.id];
         if (!adapter) return { id: v.id, snap: null };
-        try {
-          return { id: v.id, snap: await adapter(asset) };
-        } catch {
-          return { id: v.id, snap: null };
-        }
+        // Every member of this Promise.all is a third-party API, and several
+        // geo-block by hanging rather than refusing. Without a per-adapter
+        // deadline the whole page waits on the single worst-behaved venue.
+        return withDeadline(
+          adapter(asset).catch(() => null),
+          ADAPTER_TIMEOUT_MS,
+          `${v.id}:${asset}`,
+          null
+        ).then((snap) => ({ id: v.id, snap }));
       })
     ),
     Promise.all(
-      PROVIDERS.filter((p) => p.isConfigured()).map(async (p) => {
-        try {
-          return await p.fetch(asset);
-        } catch {
-          return [];
-        }
-      })
+      PROVIDERS.filter((p) => p.isConfigured()).map((p) =>
+        withDeadline(
+          p.fetch(asset).catch(() => [] as ExchangeSnapshot[]),
+          ADAPTER_TIMEOUT_MS,
+          `provider:${p.id}:${asset}`,
+          [] as ExchangeSnapshot[]
+        )
+      )
     ),
   ]);
 
-  const merged = new Map<string, ExchangeSnapshot>();
-
-  // First-hand data wins: it's lower latency and not subject to an
-  // aggregator's own refresh cadence or venue-name mapping.
-  directResults.forEach((r) => {
-    if (r.snap) merged.set(r.id, { ...r.snap, source: "direct" });
-  });
-
-  // Providers fill the gaps — venues we couldn't reach directly. Only accept
-  // venues we actually have registry metadata for, otherwise the snapshot
-  // would have no name, colour, or card to render into.
+  // Index providers first so direct snapshots can borrow from them. Earlier
+  // providers win ties, matching the PROVIDERS ordering above.
   const registered = new Set(EXCHANGES.map((e) => e.id));
+  const byProvider = new Map<string, ExchangeSnapshot>();
   providerResults.flat().forEach((snap) => {
     if (!registered.has(snap.exchangeId)) return;
-    if (merged.has(snap.exchangeId)) return;
-    // A snapshot with no open interest can't be weighted and would drag the
-    // aggregates toward zero — skip rather than admit it.
+    if (byProvider.has(snap.exchangeId)) return;
+    byProvider.set(snap.exchangeId, snap);
+  });
+
+  const merged = new Map<string, ExchangeSnapshot>();
+
+  // First-hand data wins field by field: it's lower latency and not subject
+  // to an aggregator's own refresh cadence or venue-name mapping.
+  directResults.forEach((r) => {
+    if (!r.snap) return;
+    const direct = { ...r.snap, source: "direct" as const };
+    const fallback = byProvider.get(r.id);
+    merged.set(r.id, fallback ? fillGaps(direct, fallback) : direct);
+  });
+
+  // Venues we couldn't reach directly at all arrive whole from a provider.
+  // Only accept ones we have registry metadata for, otherwise the snapshot
+  // would have no name, colour, or card to render into.
+  byProvider.forEach((snap, id) => {
+    if (merged.has(id)) return;
+    // A provider-only snapshot with no open interest can't be weighted and
+    // would drag the aggregates toward zero — skip rather than admit it.
     if (!snap.openInterestUsd) return;
-    merged.set(snap.exchangeId, snap);
+    merged.set(id, snap);
   });
 
   const snapshots = [...merged.values()];
@@ -133,11 +213,46 @@ async function snapshotsForAsset(asset: AssetSymbol): Promise<FetchResult> {
   };
 }
 
+/**
+ * Cache windows for the full aggregation.
+ *
+ * `freshMs` sits just under the 15s client poll so a request rarely does the
+ * whole fan-out inline. Beyond it the cached value is still served
+ * immediately while a refresh runs behind it, which is what makes polling
+ * feel instant rather than costing a full round of exchange calls.
+ *
+ * `maxAgeMs` is the point where stale stops being acceptable and a caller
+ * waits for real data.
+ */
+const AGGREGATE_CACHE = { freshMs: 8_000, maxAgeMs: 5 * 60_000 };
+
+/**
+ * Beyond this, the perp and the spot reference are not the same asset.
+ *
+ * Generous on purpose — real basis is well under 1% on major venues, and even
+ * a violently dislocated market stays inside single digits. This threshold is
+ * only meant to catch a ticker collision, not to police market conditions.
+ */
+const MAX_PLAUSIBLE_BASIS_PCT = 25;
+
 export async function getAggregateForAsset(asset: AssetSymbol): Promise<AggregateMarketData> {
+  return swr(`aggregate:${asset}`, () => buildAggregateForAsset(asset), AGGREGATE_CACHE);
+}
+
+async function buildAggregateForAsset(asset: AssetSymbol): Promise<AggregateMarketData> {
+  // The spot lookup hits three independent price sources and depends on
+  // nothing in the venue fan-out — only the *basis* calculation at the end
+  // needs both. Starting it here rather than awaiting it after the fan-out
+  // overlaps the two, instead of adding spot's full latency to every load.
+  const spot = resolveSpotWithConfidence(asset).catch((err) => {
+    console.warn(`[spot] resolution failed for ${asset}:`, err);
+    return { price: null, disagreementPct: null, sourceCount: 0 };
+  });
+
   const { snapshots, unavailable } = await snapshotsForAsset(asset);
   const enriched = await withVenueHistory(asset, snapshots);
   const base = buildAggregate(asset, enriched, unavailable);
-  return withRecordedHistory(asset, base);
+  return withRecordedHistory(asset, base, spot);
 }
 
 /**
@@ -161,6 +276,10 @@ async function withVenueHistory(
 }
 
 export async function getAggregateForMarket(): Promise<AggregateMarketData> {
+  return swr("aggregate:MARKET", buildAggregateForMarket, AGGREGATE_CACHE);
+}
+
+async function buildAggregateForMarket(): Promise<AggregateMarketData> {
   const results = await Promise.all(ALL_ASSETS.map((a) => snapshotsForAsset(a)));
   const snapshots = results.flatMap((r) => r.snapshots);
   // A venue counts as unavailable market-wide only if it returned nothing
@@ -181,9 +300,13 @@ export async function getAggregateForMarket(): Promise<AggregateMarketData> {
  * these gauges work even when every history-publishing venue is unreachable
  * or geo-blocked.
  */
+type SpotResolution = Awaited<ReturnType<typeof resolveSpotWithConfidence>>;
+
 async function withRecordedHistory(
   asset: AssetSymbol | "MARKET",
-  agg: AggregateMarketData
+  agg: AggregateMarketData,
+  /** Started before the fan-out by the caller; awaited here. */
+  spot?: Promise<SpotResolution>
 ): Promise<AggregateMarketData> {
   if (agg.exchanges.length === 0) return agg;
 
@@ -205,13 +328,11 @@ async function withRecordedHistory(
   let basisPct: number | null = null;
   let spotDisagreementPct: number | null = null;
   let spotSourceCount = 0;
-  if (asset !== "MARKET") {
-    const { price: spot, disagreementPct, sourceCount } = await resolveSpotWithConfidence(asset);
+  if (asset !== "MARKET" && spot) {
+    const { price: resolved, disagreementPct, sourceCount } = await spot;
     spotSourceCount = sourceCount;
     spotDisagreementPct = disagreementPct;
-    if (spot) {
-      spotPriceUsd = spot.priceUsd;
-      spotSource = spot.source;
+    if (resolved) {
       // OI-weighted perp price across venues that report one.
       const priced = agg.exchanges.filter((e) => e.price > 0);
       const totalW = priced.reduce((sum, e) => sum + e.openInterestUsd, 0);
@@ -219,7 +340,34 @@ async function withRecordedHistory(
         totalW > 0
           ? priced.reduce((sum, e) => sum + e.price * e.openInterestUsd, 0) / totalW
           : 0;
-      basisPct = computeBasisPct(perpPrice, spot);
+
+      const candidate = computeBasisPct(perpPrice, resolved);
+
+      // Plausibility check on the spot reference.
+      //
+      // DexScreener — the last fallback — matches on ticker text, and Solana
+      // is full of worthless tokens calling themselves "BTC". When Alchemy
+      // (403 on the shared demo key) and Jupiter both fail, that fallback
+      // happily returned a $1 meme pool as the spot price for a $64,000 perp
+      // and produced a basis of 6,120,642%.
+      //
+      // Perp and spot on the same asset track within a few percent —
+      // arbitrage guarantees it, and a genuinely dislocated market is a few
+      // percent, not five orders of magnitude. A gap this large means the two
+      // sources are quoting different assets, so the reference is discarded
+      // rather than displayed. Showing "—" is correct here: we do not have a
+      // spot price we can stand behind.
+      if (candidate !== null && Math.abs(candidate) > MAX_PLAUSIBLE_BASIS_PCT) {
+        console.warn(
+          `[spot] rejecting ${resolved.source} for ${asset}: $${resolved.priceUsd} against a ` +
+            `$${perpPrice.toFixed(2)} perp mark implies ${candidate.toFixed(0)}% basis. ` +
+            `Almost certainly a different asset with the same ticker.`
+        );
+      } else {
+        spotPriceUsd = resolved.priceUsd;
+        spotSource = resolved.source;
+        basisPct = candidate;
+      }
     }
   }
 
@@ -451,25 +599,52 @@ function computeAggregateOiPercentile(
   exchanges: ExchangeSnapshot[],
   _totalOi: number
 ): number | null {
-  const contributors = exchanges.filter((e) =>
-    e.fundingHistory.some((p) => p.openInterestUsd !== undefined)
+  /*
+   * Two guards here, both learned the hard way.
+   *
+   * 1. MIN_POINTS. Any venue with even one recorded point used to qualify as
+   *    a contributor. venueStore backfills a point for every venue on every
+   *    poll, so that meant ~17 venues contributing 2 points each alongside
+   *    OKX's 720. Two points is not a distribution to rank against.
+   *
+   * 2. Buckets must be COMPLETE. Summing whatever happened to be present in
+   *    each hour compared apples to oranges across time: recent buckets held
+   *    all 18 venues (~$28B), older ones held only OKX (~$2.6B). Ranking the
+   *    current 18-venue total against a series mostly built from single-venue
+   *    sums pinned the gauge at 100 — exactly the failure the comment above
+   *    warns about, reintroduced from a different direction.
+   *
+   * Requiring every contributor in every bucket makes the series a
+   * like-for-like measurement of one fixed venue set over time, which is the
+   * only thing a percentile can honestly be computed from.
+   */
+  const MIN_POINTS = 12;
+
+  const contributors = exchanges.filter(
+    (e) => e.fundingHistory.filter((p) => p.openInterestUsd !== undefined).length >= MIN_POINTS
   );
   if (contributors.length === 0) return null;
 
-  const buckets = new Map<number, number>();
+  const buckets = new Map<number, { sum: number; venues: Set<string> }>();
   contributors.forEach((e) => {
     e.fundingHistory.forEach((p: FundingPoint) => {
       if (p.openInterestUsd === undefined) return;
       const hour = Math.floor(p.t / 3_600_000);
-      buckets.set(hour, (buckets.get(hour) ?? 0) + p.openInterestUsd);
+      const b = buckets.get(hour) ?? { sum: 0, venues: new Set<string>() };
+      // Stop a venue reporting twice in one hour from double-counting.
+      if (b.venues.has(e.exchangeId)) return;
+      b.sum += p.openInterestUsd;
+      b.venues.add(e.exchangeId);
+      buckets.set(hour, b);
     });
   });
 
   const series = [...buckets.entries()]
+    .filter(([, b]) => b.venues.size === contributors.length)
     .sort((a, b) => a[0] - b[0])
-    .map(([, v]) => ({ openInterestUsd: v }));
+    .map(([, b]) => ({ openInterestUsd: b.sum }));
 
-  if (series.length < 12) return null;
+  if (series.length < MIN_POINTS) return null;
 
   // Rank the contributors' current combined OI, not the full cross-venue total.
   const contributorCurrentOi = contributors.reduce((s, e) => s + e.openInterestUsd, 0);

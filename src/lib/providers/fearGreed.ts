@@ -11,6 +11,8 @@
  * broad sentiment is fearful while leverage positioning is crowded long —
  * that gap is itself informative.
  */
+
+import { timeoutSignal } from "../net/timeout";
 const URL = "https://api.alternative.me/fng/?limit=1";
 const CACHE_MS = 10 * 60 * 1000; // updates once daily; no need to poll hard
 
@@ -36,7 +38,8 @@ export async function fetchFearGreed(): Promise<FearGreedReading | null> {
   try {
     const res = await fetch(URL, {
       headers: { accept: "application/json" },
-      next: { revalidate: 600 },
+      signal: timeoutSignal(),
+      cache: "no-store",
     });
     if (!res.ok) throw new Error(`Fear & Greed HTTP ${res.status}`);
 

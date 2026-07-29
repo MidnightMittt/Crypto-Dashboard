@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { AlertTriangle } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { SentimentIndex } from "@/components/dashboard/SentimentIndex";
@@ -9,22 +10,37 @@ import { LeverageHeatGauge } from "@/components/gauges/LeverageHeatGauge";
 import { LongShortGauge } from "@/components/gauges/LongShortGauge";
 import { ExchangeGrid } from "@/components/dashboard/ExchangeGrid";
 import { HeatMap } from "@/components/dashboard/HeatMap";
-import { HistoricalChart } from "@/components/dashboard/HistoricalChart";
 import { Leaderboards } from "@/components/dashboard/Leaderboards";
 import { AlertsPanel } from "@/components/dashboard/AlertsPanel";
 import { AiSummary } from "@/components/dashboard/AiSummary";
 import { ArbitrageScanner } from "@/components/dashboard/ArbitrageScanner";
-import { DashboardSkeleton } from "@/components/ui/Skeleton";
+import { DashboardSkeleton, LowerSkeleton, Skeleton } from "@/components/ui/Skeleton";
 import { Button } from "@/components/ui/Button";
 import { useMarketData } from "@/lib/hooks/useMarketData";
 import { useDashboardStore } from "@/lib/store/dashboardStore";
 import { getExchange } from "@/lib/exchanges/registry";
+
+/**
+ * lightweight-charts is ~45kB and can't render server-side (it measures the
+ * DOM on construction). Loading it separately keeps it off the critical path
+ * for the gauges and cards, which are what the page is judged on first.
+ */
+const HistoricalChart = dynamic(
+  () => import("@/components/dashboard/HistoricalChart").then((m) => m.HistoricalChart),
+  { ssr: false, loading: () => <Skeleton className="h-[420px] w-full" /> }
+);
 
 export default function DashboardPage() {
   const asset = useDashboardStore((s) => s.asset);
   const { data, isLoading, isError, refetch } = useMarketData(asset);
 
   const aggregate = data?.aggregate;
+
+  // `ready` gates only the panels that need exchange data. The chart is
+  // rendered in both branches because it sources its series independently.
+  const ready = !isLoading && !!aggregate && aggregate.exchanges.length > 0;
+  const noData = !isLoading && !!aggregate && aggregate.exchanges.length === 0;
+
   const venueCount = aggregate ? new Set(aggregate.exchanges.map((e) => e.exchangeId)).size : undefined;
   const unavailable = (aggregate?.unavailableExchanges ?? [])
     .map((id) => getExchange(id)?.name ?? id);
@@ -51,9 +67,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {isLoading || !aggregate ? (
-          <DashboardSkeleton />
-        ) : aggregate.exchanges.length === 0 ? (
+        {noData ? (
           <div className="rounded-lg border border-amber/30 bg-amber/5 p-6">
             <h2 className="text-sm font-semibold text-amber">No exchange returned data</h2>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-muted">
@@ -65,6 +79,23 @@ export default function DashboardPage() {
               Retry
             </Button>
           </div>
+        ) : !ready ? (
+          <>
+            {/*
+              While the exchanges are still answering, only the panels that
+              genuinely need them are skeletons. The chart below is already
+              live — it reads recorded history from its own endpoint, which
+              resolves in milliseconds rather than waiting on 13 venues.
+            */}
+            <DashboardSkeleton />
+            <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <div className="lg:col-span-2">
+                <HistoricalChart asset={asset} />
+              </div>
+              <Skeleton className="h-[420px] w-full" />
+            </section>
+            <LowerSkeleton />
+          </>
         ) : (
           <>
             <div className="flex flex-col gap-1.5 rounded-md border border-hairline bg-white/[0.02] px-3 py-2 text-[11px] text-ink-faint">
@@ -97,7 +128,7 @@ export default function DashboardPage() {
 
             <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
               <div className="lg:col-span-2">
-                <HistoricalChart data={aggregate} />
+                <HistoricalChart asset={asset} data={aggregate} />
               </div>
               <AiSummary aggregate={aggregate} />
             </section>

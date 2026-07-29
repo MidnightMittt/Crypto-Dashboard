@@ -3,18 +3,52 @@ import { MarketDataProvider, normalizeExchangeName } from "./types";
 import { DropCounter, log, loggedFetch, loggedParse } from "./debug";
 
 /**
- * DefiLlama — free, open, no API key required.
- * https://yields.llama.fi/perps returns funding rate and open interest for
- * perpetuals across both CEXs and DEXs in a single call.
+ * DefiLlama — https://yields.llama.fi/perps
  *
- * This is the zero-config path to Binance/Bybit/OKX data from regions where
- * those exchanges block direct API access.
+ * Returns funding rate and open interest for perpetuals across both CEXs and
+ * DEXs in a single call.
+ *
+ * ⚠ NO LONGER FREE. This endpoint used to need no key and was the zero-config
+ * path to Binance/Bybit/OKX data from blocked regions. It now answers
+ * HTTP 402 Payment Required for unauthenticated callers, pointing at
+ * https://defillama.com/subscription.
+ *
+ * The provider is kept because the parsing is correct and a key makes it work
+ * again, but it self-disables after repeated payment/auth rejections — see
+ * the circuit breaker below. Without that it cost a wasted request and over a
+ * second of the fan-out budget on every single poll, forever.
  *
  * Per DefiLlama's FAQ, citing them as a source is appreciated — the UI does
  * so on any card sourced from here.
  */
 const URL = "https://yields.llama.fi/perps";
 const CACHE_MS = 30_000;
+
+/**
+ * Circuit breaker.
+ *
+ * 402/401/403 are verdicts about our credentials, not transient faults —
+ * retrying every 15s cannot change the outcome and only spends latency. Two
+ * strikes and the provider steps out of the rotation for the process
+ * lifetime, which on a serverless host means until the next cold start.
+ */
+const MAX_AUTH_FAILURES = 2;
+let authFailures = 0;
+
+function tripBreaker(status: number): void {
+  authFailures += 1;
+  if (authFailures >= MAX_AUTH_FAILURES) {
+    console.warn(
+      `[defillama] disabled after ${authFailures} rejections (HTTP ${status}). ` +
+        `This endpoint now requires a paid plan — see https://defillama.com/subscription. ` +
+        `Coverage falls back to CoinGecko and Coinalyze.`
+    );
+  }
+}
+
+function breakerOpen(): boolean {
+  return authFailures >= MAX_AUTH_FAILURES;
+}
 
 /**
  * Field names are tolerant on purpose: this endpoint's shape has shifted
@@ -59,9 +93,13 @@ async function getRows(): Promise<LlamaPerp[]> {
 
   const { res, text } = await loggedFetch("defillama", URL, {
     headers: { accept: "application/json" },
-    next: { revalidate: 30 },
+    cache: "no-store",
   } as RequestInit);
 
+  if (res.status === 402 || res.status === 401 || res.status === 403) {
+    tripBreaker(res.status);
+    throw new Error(`DefiLlama HTTP ${res.status} — endpoint now requires a paid plan`);
+  }
   if (!res.ok) throw new Error(`DefiLlama HTTP ${res.status}`);
 
   const json = loggedParse<unknown>("defillama", text);
@@ -121,7 +159,9 @@ function intervalHoursFor(exchangeId: string): number {
 export const defillamaProvider: MarketDataProvider = {
   id: "defillama",
   name: "DefiLlama",
-  isConfigured: () => true, // no key needed
+  // Was `true` unconditionally when the endpoint was free. The breaker keeps
+  // a paywalled upstream from being retried on every poll.
+  isConfigured: () => !breakerOpen(),
   fetch: async (asset: AssetSymbol): Promise<ExchangeSnapshot[]> => {
     try {
       const rows = await getRows();
