@@ -102,6 +102,20 @@ export interface AggregateMarketData {
    * The two answer different questions and must never be averaged.
    */
   poolExposure: PoolExposureSummary | null;
+  /**
+   * Percentile rank of current funding against the trailing recorded window.
+   *
+   * Available more often than `oiPercentile`: funding is an OI-weighted
+   * average so coverage changes barely move it, whereas total open interest is
+   * a sum that shifts whenever the venue set does.
+   */
+  fundingPercentile: number | null;
+  /** How much venues disagree on the cost of leverage. Null with under 2 venues. */
+  fundingDivergence: FundingDivergence | null;
+  /** Positioning split by venue type. Null unless both CEX and DEX reported. */
+  cexDex: CexDexSplit | null;
+  /** How primed the market is for a forced unwind, and on which side. */
+  squeezeRisk: SqueezeRisk | null;
   /** Locally recorded time series — this app's own observations. */
   history: LocalHistoryPoint[];
   /** Hours of local history collected so far. */
@@ -120,6 +134,60 @@ export interface PoolExposureSummary {
   netSkewPct: number;
   /** Venue ids behind the figure, so the UI can name its sources. */
   venues: string[];
+}
+
+/** Cross-venue disagreement on funding, all figures per-8h normalized. */
+export interface FundingDivergence {
+  /** OI-weighted standard deviation across venues, in bps. */
+  dispersionBps: number;
+  /** Widest gap between any two venues, in bps. */
+  spreadBps: number;
+  highestVenue: { id: string; name: string; bps: number };
+  lowestVenue: { id: string; name: string; bps: number };
+  venueCount: number;
+}
+
+/** One side of the CEX/DEX comparison. */
+export interface VenueSegment {
+  openInterestUsd: number;
+  /** OI-weighted per-8h funding for this segment, in bps. */
+  fundingBps: number;
+  venueCount: number;
+}
+
+export interface CexDexSplit {
+  cex: VenueSegment;
+  dex: VenueSegment;
+  /** CEX share of combined open interest, 0-100. */
+  cexOiSharePct: number;
+  /** DEX funding minus CEX funding, in bps. Positive = on-chain longs pay more. */
+  fundingGapBps: number;
+}
+
+/** One auditable input to the squeeze score. */
+export interface SqueezeComponent {
+  label: string;
+  /** 0-100 contribution before weighting. */
+  score: number;
+  weight: number;
+  /** Plain-language statement of what this input observed. */
+  detail: string;
+}
+
+export interface SqueezeRisk {
+  /**
+   * 0-100 heuristic score — NOT a probability.
+   *
+   * A weighted ranking of conditions that have historically preceded
+   * liquidation cascades. It has never been calibrated against outcomes, so 72
+   * means "more of the setup is present than at 50", not "72% chance".
+   * Labelling it a probability would imply a backtest that does not exist.
+   */
+  score: number;
+  /** Which side is exposed if positioning unwinds. */
+  side: "long" | "short" | "balanced";
+  /** Every input, so the score can be audited rather than trusted. */
+  components: SqueezeComponent[];
 }
 
 /** One recorded observation from this app's own polling. */

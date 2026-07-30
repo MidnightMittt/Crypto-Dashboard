@@ -56,6 +56,12 @@ const PROVIDERS: MarketDataProvider[] = [
   defillamaProvider, // DEX-leaning, no key
 ];
 import { computeCompositeSentiment, computeLeverageHeat, computeOiPercentile } from "../sentiment/compositeIndex";
+import {
+  computeCexDexSplit,
+  computeFundingDivergence,
+  computeFundingPercentile,
+  computeSqueezeRisk,
+} from "../sentiment/positioning";
 import { recordVenueHistory, enrichWithVenueHistory } from "../history/venueStore";
 import {
   HistoryPoint,
@@ -450,12 +456,39 @@ async function withRecordedHistory(
 
   const poolExposure = await buildPoolExposure(asset, agg.exchanges);
 
+  /*
+   * Ranked against `prior` — the series as it stood BEFORE this point was
+   * appended — for the same reason the OI percentile is: including the current
+   * observation in the window it's being ranked against is self-referential,
+   * and biases every reading toward the middle.
+   *
+   * agg.weightedFundingRatePct is already per-8h normalized by buildAggregate,
+   * and the history stores that same normalized figure, so the two are directly
+   * comparable.
+   */
+  const fundingPercentile = computeFundingPercentile(agg.weightedFundingRatePct, prior);
+
+  /*
+   * Computed last because it consumes the other derived figures. Deliberately a
+   * score and not a probability — see the note on SqueezeRisk in types/market.ts.
+   */
+  const squeezeRisk = computeSqueezeRisk({
+    weightedFundingRatePct: agg.weightedFundingRatePct,
+    fundingPercentile,
+    oiPercentile,
+    oiChange24hPct,
+    longShortRatio: agg.longShortRatio,
+    priceChange24hPct: agg.priceChange24hPct,
+  });
+
   return {
     ...agg,
     poolExposure,
     oiChange24hPct,
     oiPercentile,
     leverageHeatScore,
+    fundingPercentile,
+    squeezeRisk,
     spotPriceUsd,
     spotSource,
     basisPct,
@@ -543,6 +576,11 @@ function buildAggregate(
       priceChange24hPct: 0,
       exchanges: [],
       unavailableExchanges,
+      // Nothing reported, so there is nothing to derive positioning from.
+      fundingPercentile: null,
+      fundingDivergence: null,
+      cexDex: null,
+      squeezeRisk: null,
       spotPriceUsd: null,
       spotSource: null,
       basisPct: null,
@@ -629,6 +667,18 @@ function buildAggregate(
     exchanges,
   });
 
+  /*
+   * These two need only the current venue set, so they belong here. The
+   * funding percentile and squeeze score need the recorded history and are
+   * filled in by withRecordedHistory, where that read already happens.
+   *
+   * Both normalize funding to an 8h equivalent internally — `exchanges` still
+   * carries each venue's raw per-interval rate, so passing it anywhere that
+   * compares across venues without normalizing would be wrong.
+   */
+  const fundingDivergence = computeFundingDivergence(exchanges);
+  const cexDex = computeCexDexSplit(exchanges);
+
   return {
     asset,
     weightedFundingRatePct,
@@ -650,6 +700,11 @@ function buildAggregate(
     spotSourceCount: 0,
     // Filled in by withRecordedHistory, which is where the async work lives.
     poolExposure: null,
+    fundingDivergence,
+    cexDex,
+    // Both need the recorded series; see withRecordedHistory.
+    fundingPercentile: null,
+    squeezeRisk: null,
     history: [],
     historyHours: 0,
     updatedAt: now,

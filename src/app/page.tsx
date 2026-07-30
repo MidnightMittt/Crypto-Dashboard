@@ -15,6 +15,7 @@ import { AlertsPanel } from "@/components/dashboard/AlertsPanel";
 import { AiSummary } from "@/components/dashboard/AiSummary";
 import { ArbitrageScanner } from "@/components/dashboard/ArbitrageScanner";
 import { PoolExposure } from "@/components/dashboard/PoolExposure";
+import { PositioningIntelligence } from "@/components/dashboard/PositioningIntelligence";
 import { DashboardSkeleton, LowerSkeleton, Skeleton } from "@/components/ui/Skeleton";
 import { Collapsible } from "@/components/ui/Collapsible";
 import { Button } from "@/components/ui/Button";
@@ -132,7 +133,18 @@ export default function DashboardPage() {
               <div className="lg:col-span-2">
                 <HistoricalChart asset={asset} data={aggregate} />
               </div>
-              <AiSummary aggregate={aggregate} />
+              {/*
+                Positioning intelligence sits beside the chart, right after the
+                gauges: the gauges say what the reading is, this says what it
+                means and what breaks if it unwinds.
+              */}
+              <PositioningIntelligence data={aggregate} />
+            </section>
+
+            <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <div className="lg:col-span-2">
+                <AiSummary aggregate={aggregate} />
+              </div>
             </section>
 
             {/*
