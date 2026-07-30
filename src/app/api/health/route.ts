@@ -3,7 +3,7 @@ import { kvConfigured, kvGet, kvSet } from "@/lib/store/kv";
 import { readHistory } from "@/lib/history/store";
 import { ALL_ASSETS } from "@/lib/exchanges/registry";
 import { AssetSymbol } from "@/types/market";
-import { coinalyzeDiagnostics } from "@/lib/providers/coinalyze";
+import { coinalyzeDiagnostics, liquidationDiagnostics } from "@/lib/providers/coinalyze";
 
 export const dynamic = "force-dynamic";
 
@@ -149,7 +149,11 @@ export async function GET() {
           "stay empty. Attach an Upstash database and REDEPLOY.",
     },
     history: { pointsByAsset: history, totalPoints },
-    providers: { coinalyze, coinalyzeDetail: await coinalyzeDiagnostics("BTC").catch((e) => ({ error: String(e) })) },
+    providers: {
+      coinalyze,
+      coinalyzeDetail: await coinalyzeDiagnostics("BTC").catch((e) => ({ error: String(e) })),
+      liquidationDetail: await liquidationDiagnostics("BTC").catch((e) => ({ error: String(e) })),
+    },
     keysPresent,
     env: process.env.NODE_ENV,
     now: Date.now(),

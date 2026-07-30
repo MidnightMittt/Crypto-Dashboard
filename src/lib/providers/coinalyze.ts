@@ -561,3 +561,35 @@ export async function coinalyzeDiagnostics(asset: AssetSymbol): Promise<Record<s
     return { configured: true, error: err instanceof Error ? err.message : String(err) };
   }
 }
+
+/**
+ * Same purpose as coinalyzeDiagnostics, for the liquidation path: a
+ * configured key returning nothing could mean the endpoint itself is
+ * gated to a paid tier despite appearing in the shared OpenAPI spec, a
+ * parameter is malformed, the budget is exhausted, or the response shape
+ * doesn't match what was assumed from the docs. `fetchCoinalyzeLiquidations`
+ * swallows its error into a console.warn, which isn't visible from outside
+ * a deployed instance — this calls the un-swallowed path directly to
+ * surface the actual message.
+ */
+export async function liquidationDiagnostics(asset: AssetSymbol): Promise<Record<string, unknown>> {
+  if (!apiKey()) return { configured: false };
+
+  try {
+    const pairs = (await symbolsFor(asset)).slice(0, MAX_LIQUIDATION_SYMBOLS);
+    const data = await fetchLiquidationsFromApi(asset);
+    return {
+      configured: true,
+      candidateSymbols: pairs.map(([id, m]) => `${id}:${m.symbol}`),
+      budgetRemaining: budgetRemaining(),
+      venuesReturned: data.length,
+      sample: data.slice(0, 2),
+    };
+  } catch (err) {
+    return {
+      configured: true,
+      error: err instanceof Error ? err.message : String(err),
+      budgetRemaining: budgetRemaining(),
+    };
+  }
+}
