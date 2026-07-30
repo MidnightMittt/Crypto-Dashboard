@@ -385,6 +385,124 @@ async function fetchFromApi(asset: AssetSymbol): Promise<ExchangeSnapshot[]> {
   return snapshots;
 }
 
+/** One venue's raw liquidation series, already unit-converted to USD. */
+export interface VenueLiquidations {
+  venueId: string;
+  points: Array<{ t: number; longUsd: number; shortUsd: number }>;
+}
+
+interface LiquidationHistoryRow {
+  symbol: string;
+  history: Array<{ t: number; l?: number; s?: number }>;
+}
+
+/**
+ * Liquidations are billed and budgeted SEPARATELY from the funding/OI/L-S
+ * batch above, on purpose.
+ *
+ * Folding this into `fetchFromApi` as a 4th endpoint would repeat exactly the
+ * bug documented on ENDPOINTS_PER_SYMBOL above: it would shrink that batch's
+ * affordable symbol count from 11 to 8, quietly losing long/short coverage on
+ * venues nobody asked to trade off. Keeping it a separate consumer of the
+ * SAME shared token bucket (`spendBudget`/`budgetRemaining`, still one 34/min
+ * ceiling per process) means neither feature can starve the other's existing
+ * behavior — each independently degrades to fewer symbols under contention,
+ * which is the same graceful-degradation contract `fetchFromApi` already has.
+ *
+ * Fewer symbols on purpose (see MAX_LIQUIDATION_SYMBOLS below): liquidation
+ * volume concentrates on the venues with the deepest books, so there is much
+ * less value in reaching for the 11th-ranked venue here than there is for
+ * long/short ratio, where every additional venue is a genuinely independent
+ * reading.
+ */
+const LIQUIDATION_CACHE_MS = 5 * 60_000; // 5min fresh
+const LIQUIDATION_MAX_AGE_MS = 30 * 60_000; // 30min stale-tolerance
+const MAX_LIQUIDATION_SYMBOLS = 8;
+const LIQUIDATION_WINDOW_HOURS = 24;
+
+export const liquidationsConfigured = (): boolean => Boolean(apiKey());
+
+/**
+ * Raw per-venue liquidation series for one asset over the trailing 24h,
+ * hourly buckets, USD notional. Aggregation across venues into totals and a
+ * dominant-side read happens in sentiment/liquidations.ts — this function's
+ * job stops at "fetch and unit-convert", matching how the rest of this file
+ * separates API-shape concerns from derived math.
+ */
+export async function fetchCoinalyzeLiquidations(
+  asset: AssetSymbol
+): Promise<VenueLiquidations[]> {
+  if (!apiKey()) return [];
+  try {
+    return await swr(`coinalyze-liq:${asset}`, () => fetchLiquidationsFromApi(asset), {
+      freshMs: LIQUIDATION_CACHE_MS,
+      maxAgeMs: LIQUIDATION_MAX_AGE_MS,
+    });
+  } catch (err) {
+    console.warn(`[coinalyze] no liquidation data for ${asset}:`, err);
+    return [];
+  }
+}
+
+async function fetchLiquidationsFromApi(asset: AssetSymbol): Promise<VenueLiquidations[]> {
+  const pairs = (await symbolsFor(asset)).slice(0, MAX_LIQUIDATION_SYMBOLS);
+  if (pairs.length === 0) {
+    log("coinalyze", `LIQ no symbols resolved for ${asset}`);
+    return [];
+  }
+
+  // 1 call per symbol for this endpoint (no per-symbol multiplier — it's a
+  // single endpoint, not the 3-endpoint batch above).
+  const affordable = Math.min(pairs.length, budgetRemaining());
+  if (affordable < 1) {
+    // Thrown, not returned empty — same reasoning as fetchFromApi: swr must
+    // see a rejection to know to keep serving the last good value, or an
+    // exhausted budget would cache a blank and erase good data.
+    throw new Error(`Coinalyze liquidation budget exhausted (${budgetRemaining()} calls left)`);
+  }
+
+  const batch = pairs.slice(0, affordable);
+  spendBudget(batch.length);
+  log(
+    "coinalyze",
+    `LIQ spending ${batch.length} calls for ${asset} (of ${pairs.length} candidates), ` +
+      `${budgetRemaining()} remain`
+  );
+
+  const symbols = batch.map(([, m]) => m.symbol).join(",");
+  const nowSec = Math.floor(Date.now() / 1000);
+  const fromSec = nowSec - LIQUIDATION_WINDOW_HOURS * 3600;
+
+  const rows = await call<LiquidationHistoryRow[]>("/liquidation-history", {
+    symbols,
+    interval: "1hour",
+    from: String(fromSec),
+    to: String(nowSec),
+    convert_to_usd: "true",
+  });
+
+  const bySymbol = new Map(rows.map((r) => [r.symbol, r.history]));
+
+  const result: VenueLiquidations[] = [];
+  for (const [venueId, market] of batch) {
+    const history = bySymbol.get(market.symbol);
+    if (!history || history.length === 0) continue;
+    result.push({
+      venueId,
+      points: history.map((h) => ({
+        t: h.t * 1000,
+        longUsd: h.l ?? 0,
+        shortUsd: h.s ?? 0,
+      })),
+    });
+  }
+
+  log(
+    "coinalyze",
+    `LIQ result ${result.length} venues with data for ${asset} (requested ${batch.length})`
+  );
+  return result;
+}
 
 /**
  * Step-by-step report of what this provider actually does for one asset.

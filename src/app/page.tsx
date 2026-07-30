@@ -16,6 +16,7 @@ import { AiSummary } from "@/components/dashboard/AiSummary";
 import { ArbitrageScanner } from "@/components/dashboard/ArbitrageScanner";
 import { PoolExposure } from "@/components/dashboard/PoolExposure";
 import { PositioningIntelligence } from "@/components/dashboard/PositioningIntelligence";
+import { LiquidationIntelligence } from "@/components/dashboard/LiquidationIntelligence";
 import { DashboardSkeleton, LowerSkeleton, Skeleton } from "@/components/ui/Skeleton";
 import { Collapsible } from "@/components/ui/Collapsible";
 import { Button } from "@/components/ui/Button";
@@ -145,6 +146,12 @@ export default function DashboardPage() {
               <div className="lg:col-span-2">
                 <AiSummary aggregate={aggregate} />
               </div>
+              {/*
+                Backward-looking companion to the squeeze-setup badge in
+                PositioningIntelligence above: that one asks what's primed to
+                unwind next, this one shows what already got forced out.
+              */}
+              <LiquidationIntelligence data={aggregate} />
             </section>
 
             {/*

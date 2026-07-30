@@ -37,13 +37,14 @@ import { resolveSpotWithConfidence } from "../providers/spotPrice";
 import { fetchJlpExposure } from "../providers/jlpExposure";
 import { fetchGmxExposure } from "../providers/gmxExposure";
 import { synthetixExposure } from "./adapters/synthetix";
-import { PoolExposureSummary } from "@/types/market";
+import { PoolExposureSummary, LiquidationSummary } from "@/types/market";
 import { LiveAdapter } from "./adapters/types";
 import { fundingPer8h } from "../utils/format";
 import { MarketDataProvider } from "../providers/types";
 import { defillamaProvider } from "../providers/defillama";
-import { coinalyzeProvider } from "../providers/coinalyze";
+import { coinalyzeProvider, fetchCoinalyzeLiquidations } from "../providers/coinalyze";
 import { coingeckoProvider } from "../providers/coingecko";
+import { summarizeLiquidations } from "../sentiment/liquidations";
 
 /**
  * Aggregators that redistribute data for many exchanges at once. Used to
@@ -454,7 +455,12 @@ async function withRecordedHistory(
   const oiPercentile = derivedOiPercentile;
   const leverageHeatScore = derivedLeverageHeat;
 
-  const poolExposure = await buildPoolExposure(asset, agg.exchanges);
+  // Independent network calls, run concurrently rather than sequentially —
+  // neither depends on the other's result.
+  const [poolExposure, liquidations] = await Promise.all([
+    buildPoolExposure(asset, agg.exchanges),
+    buildLiquidationSummary(asset),
+  ]);
 
   /*
    * Ranked against `prior` — the series as it stood BEFORE this point was
@@ -484,6 +490,7 @@ async function withRecordedHistory(
   return {
     ...agg,
     poolExposure,
+    liquidations,
     oiChange24hPct,
     oiPercentile,
     leverageHeatScore,
@@ -581,6 +588,7 @@ function buildAggregate(
       fundingDivergence: null,
       cexDex: null,
       squeezeRisk: null,
+      liquidations: null,
       spotPriceUsd: null,
       spotSource: null,
       basisPct: null,
@@ -705,6 +713,8 @@ function buildAggregate(
     // Both need the recorded series; see withRecordedHistory.
     fundingPercentile: null,
     squeezeRisk: null,
+    // Needs its own async fetch; see withRecordedHistory.
+    liquidations: null,
     history: [],
     historyHours: 0,
     updatedAt: now,
@@ -770,6 +780,26 @@ async function buildPoolExposure(
     netSkewPct: ((longUsd - shortUsd) / total) * 100,
     venues: parts.map((p) => p.id),
   };
+}
+
+/**
+ * Observed liquidation volume, single-asset only — skipped for MARKET mode.
+ *
+ * Unlike poolExposure's netSkewPct (which cannot be summed across assets: a
+ * BTC long-skew and an ETH short-skew would cancel into a meaningless
+ * "market skew"), raw liquidation DOLLARS could in principle be summed across
+ * assets without that problem. Scoped to single-asset anyway, for now, to
+ * avoid fetching this for all 10 assets in whole-market mode — the same
+ * failure mode that took the entire provider down once already (see
+ * ENDPOINTS_PER_SYMBOL's history in coinalyze.ts). Revisit only alongside a
+ * concrete plan for the added budget draw.
+ */
+async function buildLiquidationSummary(
+  asset: AssetSymbol | "MARKET"
+): Promise<LiquidationSummary | null> {
+  if (asset === "MARKET") return null;
+  const venues = await fetchCoinalyzeLiquidations(asset).catch(() => []);
+  return summarizeLiquidations(venues);
 }
 
 function computeAggregateOiPercentile(

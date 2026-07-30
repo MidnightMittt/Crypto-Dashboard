@@ -116,11 +116,48 @@ export interface AggregateMarketData {
   cexDex: CexDexSplit | null;
   /** How primed the market is for a forced unwind, and on which side. */
   squeezeRisk: SqueezeRisk | null;
+  /**
+   * Observed forced-close volume over the trailing window. Null unless
+   * Coinalyze is configured — this is the only source in this app that
+   * publishes actual liquidation data, as opposed to `squeezeRisk`, which is
+   * a forward-looking heuristic about conditions that PRECEDE a squeeze.
+   * This is a record of unwinds that have ALREADY happened.
+   */
+  liquidations: LiquidationSummary | null;
   /** Locally recorded time series — this app's own observations. */
   history: LocalHistoryPoint[];
   /** Hours of local history collected so far. */
   historyHours: number;
   updatedAt: number;
+}
+
+/** One time bucket of forced-close volume, summed across contributing venues. */
+export interface LiquidationBucket {
+  t: number; // unix ms, start of the bucket
+  longUsd: number;
+  shortUsd: number;
+}
+
+/**
+ * Observed long vs short liquidation volume over a trailing window.
+ *
+ * "dominantSide" describes what ALREADY HAPPENED, not what's coming next —
+ * "long" means longs got forced out more (a downside flush), which is
+ * backward-looking market history, not a prediction. Pair it with
+ * `squeezeRisk` (forward-looking: how primed the market is for the NEXT
+ * unwind) rather than conflating the two.
+ */
+export interface LiquidationSummary {
+  /** Oldest first. */
+  history: LiquidationBucket[];
+  totalLongUsd: number;
+  totalShortUsd: number;
+  dominantSide: "long" | "short" | "balanced";
+  /** Longs' share of total liquidation volume, 0-100. */
+  longSharePct: number;
+  /** Venue ids behind the figure, so the UI can name its sources. */
+  venues: string[];
+  windowHours: number;
 }
 
 /** Notional long/short exposure aggregated across peer-to-pool venues. */
