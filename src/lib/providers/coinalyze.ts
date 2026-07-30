@@ -31,6 +31,22 @@ const MAX_SYMBOLS_PER_CALL = 20;
 const RATE_LIMIT_PER_MIN = 34; // headroom under the documented 40
 const rateWindow: number[] = [];
 
+/**
+ * Endpoints queried per symbol. This number IS the cost multiplier, and
+ * getting it wrong silently disables the provider.
+ *
+ * IT WAS WRONG. With 4 endpoints and a 20-symbol cap the cost was 80 against
+ * a 34/minute budget, so `spendBudget` refused every batch — for every asset,
+ * on every poll, permanently. The provider returned an empty array and looked
+ * for all the world like a bad API key. Nothing was ever fetched.
+ *
+ * `/open-interest-history` was dropped to bring this to 3. It was the least
+ * valuable of the four: OKX's rubik endpoint already supplies open-interest
+ * history for the percentile gauge, whereas the long/short ratio here is
+ * genuinely unavailable elsewhere once Binance and Bybit are geoblocked.
+ */
+const ENDPOINTS_PER_SYMBOL = 3;
+
 function budgetRemaining(): number {
   const cutoff = Date.now() - 60_000;
   while (rateWindow.length > 0 && rateWindow[0] < cutoff) rateWindow.shift();
@@ -171,7 +187,20 @@ async function symbolsFor(asset: AssetSymbol) {
     }
   }
 
-  const selected = [...byExchange.entries()].slice(0, MAX_SYMBOLS_PER_CALL);
+  /*
+   * Order by what this provider uniquely adds. Funding and open interest now
+   * come first-hand from 20 direct adapters, so a Coinalyze row for a venue
+   * we already cover contributes only its long/short ratio — and only some
+   * venues publish one. When the budget can't cover every symbol, those are
+   * the ones worth spending it on.
+   */
+  const ranked = [...byExchange.entries()].sort(([, a], [, b]) => {
+    const aLs = a.has_long_short_ratio_data ? 1 : 0;
+    const bLs = b.has_long_short_ratio_data ? 1 : 0;
+    return bLs - aLs;
+  });
+
+  const selected = ranked.slice(0, MAX_SYMBOLS_PER_CALL);
   drops.report(selected.length, candidates.length);
   log(
     "coinalyze",
@@ -204,34 +233,42 @@ export const coinalyzeProvider: MarketDataProvider = {
         return [];
       }
 
-      // Each symbol counts as a call, across 4 endpoints. Check we can
-      // afford the whole batch before starting — a half-finished batch
-      // wastes budget and still yields nothing usable.
-      const cost = pairs.length * 4;
-      if (!spendBudget(cost)) {
+      /*
+       * Trim the batch to what the budget can actually cover, rather than
+       * demanding all of it and giving up.
+       *
+       * The previous all-or-nothing check is what made this provider inert:
+       * a full batch cost more than a minute's entire allowance, so it was
+       * refused every time and no data was ever fetched. Taking as many
+       * symbols as we can afford means the highest-value venues (ranked
+       * above) come back on every cycle, and the rest arrive as budget frees
+       * up.
+       */
+      const affordable = Math.floor(budgetRemaining() / ENDPOINTS_PER_SYMBOL);
+      if (affordable < 1) {
         log(
           "coinalyze",
-          `BUDGET skipping ${asset} — needs ${cost} calls, only ${budgetRemaining()} left this minute. ` +
+          `BUDGET exhausted for ${asset} — ${budgetRemaining()} calls left this minute. ` +
             `Serving stale cache if available.`
         );
         return cached?.snapshots ?? [];
       }
-      log("coinalyze", `BUDGET spending ${cost} calls for ${asset}, ${budgetRemaining()} remain`);
 
-      const symbols = pairs.map(([, m]) => m.symbol).join(",");
+      const batch = pairs.slice(0, affordable);
+      const cost = batch.length * ENDPOINTS_PER_SYMBOL;
+      spendBudget(cost);
+      log(
+        "coinalyze",
+        `BUDGET spending ${cost} calls for ${asset} (${batch.length} of ${pairs.length} symbols), ` +
+          `${budgetRemaining()} remain`
+      );
+
+      const symbols = batch.map(([, m]) => m.symbol).join(",");
       const nowSec = Math.floor(Date.now() / 1000);
-      const dayAgoSec = nowSec - 7 * 24 * 60 * 60;
 
-      const [funding, oi, oiHist, lsHist] = await Promise.all([
+      const [funding, oi, lsHist] = await Promise.all([
         call<ValueRow[]>("/funding-rate", { symbols }),
         call<ValueRow[]>("/open-interest", { symbols, convert_to_usd: "true" }),
-        call<HistoryRow[]>("/open-interest-history", {
-          symbols,
-          interval: "1hour",
-          from: String(dayAgoSec),
-          to: String(nowSec),
-          convert_to_usd: "true",
-        }).catch(() => [] as HistoryRow[]),
         call<HistoryRow[]>("/long-short-ratio-history", {
           symbols,
           interval: "1hour",
@@ -242,19 +279,18 @@ export const coinalyzeProvider: MarketDataProvider = {
 
       log(
         "coinalyze",
-        `DATA funding=${funding.length} oi=${oi.length} oiHist=${oiHist.length} lsHist=${lsHist.length} (requested ${pairs.length} symbols)`
+        `DATA funding=${funding.length} oi=${oi.length} lsHist=${lsHist.length} (requested ${batch.length} symbols)`
       );
 
       const fundingBySymbol = new Map(funding.map((r) => [r.symbol, r.value]));
       const oiBySymbol = new Map(oi.map((r) => [r.symbol, r.value]));
-      const oiHistBySymbol = new Map(oiHist.map((r) => [r.symbol, r.history]));
       const lsBySymbol = new Map(lsHist.map((r) => [r.symbol, r.history]));
 
       const now = Date.now();
       const snapshots: ExchangeSnapshot[] = [];
 
       const dataDrops = new DropCounter("coinalyze");
-      for (const [exchangeId, market] of pairs) {
+      for (const [exchangeId, market] of batch) {
         const openInterestUsd = oiBySymbol.get(market.symbol);
         const rawFunding = fundingBySymbol.get(market.symbol);
         if (openInterestUsd === undefined || rawFunding === undefined) {
@@ -268,18 +304,11 @@ export const coinalyzeProvider: MarketDataProvider = {
         const hourly = new Set(["hyperliquid", "dydx", "kraken", "vertex", "aevo"]);
         const intervalHours = hourly.has(exchangeId) ? 1 : 8;
 
-        // OI history → 24h change + chart series.
-        const history = oiHistBySymbol.get(market.symbol) ?? [];
-        const fundingHistory: FundingPoint[] = history.map((h) => ({
-          t: h.t * 1000,
-          openInterestUsd: h.c,
-        }));
-
-        let openInterestChange24hPct: number | null = null;
-        const dayAgoPoint = history.find((h) => h.t >= nowSec - 24 * 3600);
-        if (dayAgoPoint?.c && dayAgoPoint.c > 0) {
-          openInterestChange24hPct = ((openInterestUsd - dayAgoPoint.c) / dayAgoPoint.c) * 100;
-        }
+        // No OI history from this provider — /open-interest-history was
+        // dropped to fit the rate budget. OKX supplies the series the
+        // percentile gauge needs, and venueStore backfills the 24h delta.
+        const fundingHistory: FundingPoint[] = [];
+        const openInterestChange24hPct: number | null = null;
 
         // Long/short ratio: take the most recent point.
         const lsSeries = lsBySymbol.get(market.symbol) ?? [];
@@ -317,7 +346,7 @@ export const coinalyzeProvider: MarketDataProvider = {
         });
       }
 
-      dataDrops.report(snapshots.length, pairs.length);
+      dataDrops.report(snapshots.length, batch.length);
       const withLs = snapshots.filter((s) => s.longShortRatio !== null).length;
       log(
         "coinalyze",
