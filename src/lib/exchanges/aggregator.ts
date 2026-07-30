@@ -48,7 +48,7 @@ import { fetchOkxBookDepth, fetchOkxTakerVolume } from "../providers/okxOrderFlo
 import { summarizeLiquidations } from "../sentiment/liquidations";
 import { summarizeOrderFlow } from "../sentiment/orderFlow";
 import { fetchBtcExchangeBalance } from "../providers/exchangeFlows/btc";
-import { fetchEthExchangeBalance } from "../providers/exchangeFlows/eth";
+import { fetchEthExchangeBalance, etherscanConfigured } from "../providers/exchangeFlows/eth";
 import { trackedVenues, BTC_ADDRESSES, ETH_ADDRESSES } from "../providers/exchangeFlows/addresses";
 import { classifyExchangeFlow } from "../sentiment/exchangeFlow";
 import { recordFlowBalance, balanceWindowAgo } from "../history/flowStore";
@@ -470,6 +470,11 @@ async function withRecordedHistory(
     buildOrderFlowSummary(asset),
     buildExchangeFlow(asset, point.price, point.t),
   ]);
+  // BTC's fetcher is keyless; ETH's needs ETHERSCAN_API_KEY. Computed
+  // separately from the fetch itself so the UI can tell "no key" apart
+  // from "key present, still building history" instead of guessing.
+  const exchangeFlowConfigured =
+    asset === "BTC" ? true : asset === "ETH" ? etherscanConfigured() : false;
 
   /*
    * Ranked against `prior` — the series as it stood BEFORE this point was
@@ -502,6 +507,7 @@ async function withRecordedHistory(
     liquidations,
     orderFlow,
     exchangeFlow,
+    exchangeFlowConfigured,
     oiChange24hPct,
     oiPercentile,
     leverageHeatScore,
@@ -602,6 +608,7 @@ function buildAggregate(
       liquidations: null,
       orderFlow: null,
       exchangeFlow: null,
+      exchangeFlowConfigured: false,
       spotPriceUsd: null,
       spotSource: null,
       basisPct: null,
@@ -730,6 +737,7 @@ function buildAggregate(
     liquidations: null,
     orderFlow: null,
     exchangeFlow: null,
+    exchangeFlowConfigured: false,
     history: [],
     historyHours: 0,
     updatedAt: now,

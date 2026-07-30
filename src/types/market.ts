@@ -139,6 +139,15 @@ export interface AggregateMarketData {
    * why it's a partial signal rather than a comprehensive netflow figure.
    */
   exchangeFlow: ExchangeFlowSummary | null;
+  /**
+   * Whether the balance fetcher for THIS asset is actually configured —
+   * true for BTC always (keyless), true for ETH only when ETHERSCAN_API_KEY
+   * is set. Exists so the UI can tell "no key" apart from "still building
+   * history" instead of hedging between both in one message — the ambiguity
+   * that message caused genuine confusion the first time this shipped.
+   * Meaningless (false) for every non-BTC/ETH asset.
+   */
+  exchangeFlowConfigured: boolean;
   /** Locally recorded time series — this app's own observations. */
   history: LocalHistoryPoint[];
   /** Hours of local history collected so far. */

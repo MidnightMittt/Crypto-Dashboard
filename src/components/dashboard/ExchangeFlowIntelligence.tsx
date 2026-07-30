@@ -36,8 +36,8 @@ export function ExchangeFlowIntelligence({ data }: { data: AggregateMarketData }
           </p>
         ) : !flow ? (
           <p className="text-xs leading-relaxed text-ink-muted">
-            {data.asset === "ETH"
-              ? "Needs ETHERSCAN_API_KEY (free) to read ETH balances, or is still building a day of history to compare against — check /api/health for which."
+            {!data.exchangeFlowConfigured
+              ? "Needs ETHERSCAN_API_KEY (free at etherscan.io/apidashboard) to read ETH balances."
               : "Still building a day of history to compare against. This needs a prior balance snapshot before a netflow can be computed."}
           </p>
         ) : (
