@@ -26,6 +26,11 @@ import { fetchBackpack } from "./adapters/backpack";
 import { fetchBitmex } from "./adapters/bitmex";
 import { fetchAevo } from "./adapters/aevo";
 import { ADAPTER_TIMEOUT_MS, withDeadline } from "../net/timeout";
+import {
+  ADAPTER_CONCURRENCY,
+  ASSET_CONCURRENCY,
+  mapWithConcurrency,
+} from "../net/concurrency";
 import { swr } from "../cache/swr";
 import { computeBasisPct } from "../providers/dexscreener";
 import { resolveSpotWithConfidence } from "../providers/spotPrice";
@@ -144,21 +149,23 @@ async function snapshotsForAsset(asset: AssetSymbol): Promise<FetchResult> {
   // Direct adapters and aggregator providers run concurrently — a blocked
   // exchange shouldn't delay the providers that can cover for it.
   const [directResults, providerResults] = await Promise.all([
-    Promise.all(
-      venues.map(async (v) => {
-        const adapter = ADAPTER_MAP[v.id];
-        if (!adapter) return { id: v.id, snap: null };
-        // Every member of this Promise.all is a third-party API, and several
-        // geo-block by hanging rather than refusing. Without a per-adapter
-        // deadline the whole page waits on the single worst-behaved venue.
-        return withDeadline(
-          adapter(asset).catch(() => null),
-          ADAPTER_TIMEOUT_MS,
-          `${v.id}:${asset}`,
-          null
-        ).then((snap) => ({ id: v.id, snap }));
-      })
-    ),
+    // Bounded, not all-at-once. Firing 23 adapters simultaneously made cold
+    // starts collapse — a third of the venues blew their deadline racing each
+    // other through DNS and TLS. See net/concurrency.ts.
+    mapWithConcurrency(venues, ADAPTER_CONCURRENCY, async (v) => {
+      const adapter = ADAPTER_MAP[v.id];
+      if (!adapter) return { id: v.id, snap: null };
+      // Each of these is a third-party API and several geo-block by hanging
+      // rather than refusing, so a per-adapter deadline is still needed —
+      // concurrency limiting reduces contention, it doesn't bound a stall.
+      const snap = await withDeadline(
+        adapter(asset).catch(() => null),
+        ADAPTER_TIMEOUT_MS,
+        `${v.id}:${asset}`,
+        null
+      );
+      return { id: v.id, snap };
+    }),
     Promise.all(
       PROVIDERS.filter((p) => p.isConfigured()).map((p) =>
         withDeadline(
@@ -309,7 +316,11 @@ export async function getAggregateForMarket(): Promise<AggregateMarketData> {
 }
 
 async function buildAggregateForMarket(): Promise<AggregateMarketData> {
-  const results = await Promise.all(ALL_ASSETS.map((a) => snapshotsForAsset(a)));
+  // Capped as well: ten assets x the per-asset adapter cap would be 80+
+  // concurrent requests, which is the burst the cap above exists to avoid.
+  const results = await mapWithConcurrency(ALL_ASSETS, ASSET_CONCURRENCY, (a) =>
+    snapshotsForAsset(a)
+  );
   const snapshots = results.flatMap((r) => r.snapshots);
   // A venue counts as unavailable market-wide only if it returned nothing
   // for every single asset.
