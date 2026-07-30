@@ -62,6 +62,7 @@ import {
   historySpanHours,
   oiChangeFromHistory,
   oiPercentileFromHistory,
+  readHistory,
   recordHistory,
 } from "../history/store";
 
@@ -350,6 +351,35 @@ async function withRecordedHistory(
 ): Promise<AggregateMarketData> {
   if (agg.exchanges.length === 0) return agg;
 
+  /*
+   * Derived scores are computed BEFORE the point is appended, against the
+   * PRIOR series, then stored on the point itself.
+   *
+   * Two reasons the order matters:
+   *
+   *   - The gauges plot these scores, so their trail is only available if
+   *     they're recorded. A percentile rank and a weighted composite can't be
+   *     recomputed after the fact from the raw fields, because each depends on
+   *     the trailing window and venue set as they were at that moment.
+   *
+   *   - Ranking today's open interest against a window that already contains
+   *     today is subtly self-referential. Comparing against prior observations
+   *     only is what a percentile is supposed to mean.
+   */
+  const prior = await readHistory(asset);
+
+  const derivedOiChange24hPct =
+    agg.oiChange24hPct ?? oiChangeFromHistory(prior, agg.totalOpenInterestUsd);
+  const derivedOiPercentile =
+    agg.oiPercentile ?? oiPercentileFromHistory(prior, agg.totalOpenInterestUsd);
+  const derivedLeverageHeat =
+    agg.leverageHeatScore ??
+    computeLeverageHeat({
+      weightedFundingRatePct: agg.weightedFundingRatePct,
+      oiChange24hPct: derivedOiChange24hPct,
+      priceChange24hPct: agg.priceChange24hPct,
+    });
+
   const point: HistoryPoint = {
     t: agg.updatedAt,
     totalOpenInterestUsd: agg.totalOpenInterestUsd,
@@ -357,6 +387,8 @@ async function withRecordedHistory(
     price: agg.exchanges[0]?.price ?? 0,
     longShortRatio: agg.longShortRatio,
     venueCount: agg.exchanges.length,
+    oiPercentile: derivedOiPercentile,
+    leverageHeatScore: derivedLeverageHeat,
   };
 
   const history = await recordHistory(asset, point);
@@ -411,19 +443,10 @@ async function withRecordedHistory(
     }
   }
 
-  const oiChange24hPct =
-    agg.oiChange24hPct ?? oiChangeFromHistory(history, agg.totalOpenInterestUsd);
-  const oiPercentile =
-    agg.oiPercentile ?? oiPercentileFromHistory(history, agg.totalOpenInterestUsd);
-
-  // Heat depends on the OI trend, so recompute it now that we may have one.
-  const leverageHeatScore =
-    agg.leverageHeatScore ??
-    computeLeverageHeat({
-      weightedFundingRatePct: agg.weightedFundingRatePct,
-      oiChange24hPct,
-      priceChange24hPct: agg.priceChange24hPct,
-    });
+  // Already computed above, against the prior series, and recorded on the point.
+  const oiChange24hPct = derivedOiChange24hPct;
+  const oiPercentile = derivedOiPercentile;
+  const leverageHeatScore = derivedLeverageHeat;
 
   const poolExposure = await buildPoolExposure(asset, agg.exchanges);
 

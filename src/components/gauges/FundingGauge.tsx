@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { GaugeBase } from "./GaugeBase";
@@ -8,6 +10,7 @@ import { TrendArrow } from "./TrendArrow";
 import { bandFor, FUNDING_BANDS } from "@/lib/sentiment/bands";
 import { formatFundingPct, formatPct, orDash } from "@/lib/utils/format";
 import { AggregateMarketData } from "@/types/market";
+import { gaugeTrail } from "@/lib/utils/gaugeTrail";
 
 const COLORS = ["#7A1E1E", "#EF4444", "#F59E0B", "#6B7684", "#86EFAC", "#22C55E", "#14532D"];
 
@@ -22,6 +25,13 @@ function disagreesWithFunding(basisPct: number, fundingPct: number): boolean {
 }
 
 export function FundingGauge({ data }: { data: AggregateMarketData }) {
+  /*
+   * This gauge's own recent trajectory. Memoized on `data.history`
+   * because GaugeBase is memoized — a fresh array every render would
+   * defeat that and restart the needle animation on each poll.
+   */
+  const trail = useMemo(() => gaugeTrail(data.history, (p) => p.weightedFundingRatePct), [data.history]);
+
   const band = bandFor(data.weightedFundingRatePct, FUNDING_BANDS);
   const badgeVariant =
     data.weightedFundingRatePct > 0.04 ? "success" : data.weightedFundingRatePct < -0.04 ? "danger" : "neutral";
@@ -38,6 +48,8 @@ export function FundingGauge({ data }: { data: AggregateMarketData }) {
           value={data.weightedFundingRatePct}
           min={-0.3}
           max={0.3}
+          ghostValue={trail.valueAgo}
+          trail={trail.values}
           colors={COLORS}
           centerValue={formatFundingPct(data.weightedFundingRatePct)}
           centerLabel="Funding /8h (OI-weighted)"

@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { GaugeBase } from "./GaugeBase";
@@ -8,6 +10,7 @@ import { TrendArrow } from "./TrendArrow";
 import { bandFor, OI_BANDS } from "@/lib/sentiment/bands";
 import { formatCompactUsd, formatPct, orDash } from "@/lib/utils/format";
 import { AggregateMarketData } from "@/types/market";
+import { gaugeTrail } from "@/lib/utils/gaugeTrail";
 
 const COLORS = ["#1B8A9A", "#2DD4E8", "#8890A0", "#F5A623", "#EF4444"];
 
@@ -49,6 +52,13 @@ function unavailableReason(data: AggregateMarketData): string {
 }
 
 export function OpenInterestGauge({ data }: { data: AggregateMarketData }) {
+  /*
+   * This gauge's own recent trajectory. Memoized on `data.history`
+   * because GaugeBase is memoized — a fresh array every render would
+   * defeat that and restart the needle animation on each poll.
+   */
+  const trail = useMemo(() => gaugeTrail(data.history, (p) => p.oiPercentile), [data.history]);
+
   const pctl = data.oiPercentile;
   const band = pctl !== null ? bandFor(pctl, OI_BANDS) : null;
   const badgeVariant = pctl === null ? "neutral" : pctl > 65 ? "amber" : pctl < 40 ? "cyan" : "neutral";
@@ -65,6 +75,8 @@ export function OpenInterestGauge({ data }: { data: AggregateMarketData }) {
           value={pctl ?? 50}
           min={0}
           max={100}
+          ghostValue={trail.valueAgo}
+          trail={trail.values}
           colors={COLORS}
           dimmed={pctl === null}
           centerValue={formatCompactUsd(data.totalOpenInterestUsd)}

@@ -3,6 +3,7 @@
 import * as React from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { ARC_START_DEG, describeArc, polarToCartesian, valueToAngle } from "@/lib/utils/gaugeMath";
+import { Sparkline } from "@/components/ui/Sparkline";
 
 export interface GaugeBaseProps {
   value: number;
@@ -17,6 +18,18 @@ export interface GaugeBaseProps {
   compact?: boolean;
   /** True when the underlying metric is unavailable: needle greys out. */
   dimmed?: boolean;
+  /**
+   * Where this metric sat ~24h ago, in the same units as `value`. Drawn as a
+   * dim static needle behind the live one, so the gauge shows direction of
+   * travel rather than just position. Null when history doesn't reach back.
+   */
+  ghostValue?: number | null;
+  /**
+   * This metric's own recent values, oldest first, for the trail under the
+   * dial. Must be a stable reference — GaugeBase is memoized, and a fresh
+   * array each render would defeat that and restart the needle animation.
+   */
+  trail?: number[];
 }
 
 /**
@@ -59,9 +72,15 @@ function GaugeBaseImpl({
   centerLabel,
   compact = false,
   dimmed = false,
+  ghostValue = null,
+  trail,
 }: GaugeBaseProps) {
   const reduceMotion = useReducedMotion();
   const angle = valueToAngle(value, min, max);
+  const ghostAngle =
+    ghostValue !== null && Number.isFinite(ghostValue)
+      ? valueToAngle(ghostValue, min, max)
+      : null;
   const trackPath = describeArc(CX, CY, R, ARC_START_DEG, ARC_START_DEG + 270);
   const gradientId = `gauge-gradient-${gaugeId}`;
   const needleGradId = `gauge-needle-${gaugeId}`;
@@ -123,6 +142,28 @@ function GaugeBaseImpl({
             />
           );
         })}
+
+        {/*
+          Where this metric sat 24h ago. Static and stroke-only so it reads as
+          a reference mark rather than a second reading — the eye should land
+          on the live needle first and use this for direction of travel.
+
+          Drawn before the live needle so it sits behind it, and skipped when
+          it would overlap: two needles a degree apart is visual noise, not
+          information.
+        */}
+        {ghostAngle !== null && Math.abs(ghostAngle - angle) > 2 && (
+          <g transform={`rotate(${ghostAngle} ${CX} ${CY})`}>
+            <path
+              d={needlePath(CX, CY, needleLen)}
+              fill="none"
+              stroke="#8890A0"
+              strokeWidth={1.25}
+              strokeLinejoin="round"
+              opacity={dimmed ? 0.12 : 0.32}
+            />
+          </g>
+        )}
 
         {/*
           Needle, shaped like an automotive speedometer pointer: a long
@@ -202,8 +243,35 @@ function GaugeBaseImpl({
         </div>
         <div className="mt-0.5 text-[11px] uppercase tracking-widest text-ink-muted">{centerLabel}</div>
       </div>
+
+      {/*
+        The metric's own trajectory. Deliberately unlabelled and low-contrast:
+        it answers "which way has this been moving" at a glance and shouldn't
+        compete with the reading above it. Absent entirely when there isn't
+        enough history, rather than drawing a flat line that implies stability.
+      */}
+      {trail && trail.length > 1 && (
+        <div className="mt-2 w-full px-6">
+          <Sparkline
+            values={trail}
+            stroke={trailStroke(trail, dimmed)}
+            className="h-5 w-full opacity-70"
+          />
+        </div>
+      )}
     </div>
   );
+}
+
+/** Green when the metric ended higher than it started, red lower, grey flat. */
+function trailStroke(trail: number[], dimmed: boolean): string {
+  if (dimmed) return "#4A515C";
+  const first = trail[0];
+  const last = trail[trail.length - 1];
+  const span = Math.max(...trail) - Math.min(...trail);
+  // Flat within 5% of its own range isn't a direction, it's noise.
+  if (span === 0 || Math.abs(last - first) < span * 0.05) return "#8890A0";
+  return last > first ? "#22C55E" : "#EF4444";
 }
 
 /**

@@ -130,6 +130,19 @@ export interface LocalHistoryPoint {
   price: number;
   longShortRatio: number | null;
   venueCount: number;
+  /**
+   * Recorded so the OI and Leverage Heat gauges can show their own trail.
+   *
+   * Both are DERIVED scores, not raw observations — a percentile rank and a
+   * weighted composite. Neither can be recomputed after the fact from the
+   * other fields here, because each depends on the full trailing window and
+   * the venue set as it was at the time. If they aren't stored when computed,
+   * their history is unrecoverable.
+   *
+   * Optional because points recorded before this existed don't have them.
+   */
+  oiPercentile?: number | null;
+  leverageHeatScore?: number | null;
 }
 
 export interface FearGreed {

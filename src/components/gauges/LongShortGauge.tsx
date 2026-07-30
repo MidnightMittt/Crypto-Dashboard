@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { GaugeBase } from "./GaugeBase";
@@ -7,10 +9,21 @@ import { GaugeStat } from "./GaugeStat";
 import { bandFor, LONG_SHORT_BANDS } from "@/lib/sentiment/bands";
 import { getExchange } from "@/lib/exchanges/registry";
 import { AggregateMarketData } from "@/types/market";
+import { gaugeTrail } from "@/lib/utils/gaugeTrail";
 
 const COLORS = ["#EF4444", "#8890A0", "#22C55E"];
 
 export function LongShortGauge({ data }: { data: AggregateMarketData }) {
+  /*
+   * This gauge's own recent trajectory. Memoized on `data.history`
+   * because GaugeBase is memoized — a fresh array every render would
+   * defeat that and restart the needle animation on each poll.
+   */
+  const trail = useMemo(() => gaugeTrail(data.history, (p) =>
+        p.longShortRatio !== null && p.longShortRatio !== undefined
+          ? (p.longShortRatio / (p.longShortRatio + 1)) * 100
+          : null), [data.history]);
+
   const ratio = data.longShortRatio;
   const longPct = ratio !== null ? (ratio / (ratio + 1)) * 100 : null;
   const band = longPct !== null ? bandFor(longPct, LONG_SHORT_BANDS) : null;
@@ -34,6 +47,8 @@ export function LongShortGauge({ data }: { data: AggregateMarketData }) {
           value={longPct ?? 50}
           min={0}
           max={100}
+          ghostValue={trail.valueAgo}
+          trail={trail.values}
           colors={COLORS}
           dimmed={longPct === null}
           centerValue={ratio !== null ? `${ratio.toFixed(2)}:1` : "—"}

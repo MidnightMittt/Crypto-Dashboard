@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo } from "react";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { GaugeBase } from "./GaugeBase";
@@ -7,11 +9,19 @@ import { GaugeStat } from "./GaugeStat";
 import { bandFor, LEVERAGE_HEAT_BANDS } from "@/lib/sentiment/bands";
 import { formatPct, orDash } from "@/lib/utils/format";
 import { AggregateMarketData } from "@/types/market";
+import { gaugeTrail } from "@/lib/utils/gaugeTrail";
 import { Flame } from "lucide-react";
 
 const COLORS = ["#2DD4E8", "#8890A0", "#F5A623", "#EF4444", "#7A1E1E"];
 
 export function LeverageHeatGauge({ data }: { data: AggregateMarketData }) {
+  /*
+   * This gauge's own recent trajectory. Memoized on `data.history`
+   * because GaugeBase is memoized — a fresh array every render would
+   * defeat that and restart the needle animation on each poll.
+   */
+  const trail = useMemo(() => gaugeTrail(data.history, (p) => p.leverageHeatScore), [data.history]);
+
   const heat = data.leverageHeatScore;
   const band = heat !== null ? bandFor(heat, LEVERAGE_HEAT_BANDS) : null;
   const badgeVariant = heat === null ? "neutral" : heat > 60 ? "danger" : heat < 30 ? "cyan" : "amber";
@@ -29,6 +39,8 @@ export function LeverageHeatGauge({ data }: { data: AggregateMarketData }) {
           value={heat ?? 50}
           min={0}
           max={100}
+          ghostValue={trail.valueAgo}
+          trail={trail.values}
           colors={COLORS}
           dimmed={heat === null}
           centerValue={heat === null ? "—" : String(heat)}
