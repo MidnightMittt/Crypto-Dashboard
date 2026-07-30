@@ -14,7 +14,14 @@ const BASE = "https://www.okx.com";
  */
 const ctValCache = new Map<string, { value: number; fetchedAt: number }>();
 
-async function contractValue(instId: string): Promise<number> {
+/**
+ * Exported for providers/okxOrderFlow.ts, which needs the same contracts-to-
+ * base-currency conversion for order-book depth. Kept here rather than
+ * duplicated, since this exact function already carries the fix for a real
+ * historical bug (100x volume overstatement) and duplicating it would risk
+ * that fix drifting out of sync between two copies.
+ */
+export async function contractValue(instId: string): Promise<number> {
   const cached = ctValCache.get(instId);
   // Contract specs effectively never change; cache for an hour.
   if (cached && Date.now() - cached.fetchedAt < 3_600_000) return cached.value;

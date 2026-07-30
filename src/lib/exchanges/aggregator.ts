@@ -37,14 +37,16 @@ import { resolveSpotWithConfidence } from "../providers/spotPrice";
 import { fetchJlpExposure } from "../providers/jlpExposure";
 import { fetchGmxExposure } from "../providers/gmxExposure";
 import { synthetixExposure } from "./adapters/synthetix";
-import { PoolExposureSummary, LiquidationSummary } from "@/types/market";
+import { PoolExposureSummary, LiquidationSummary, OrderFlowSummary } from "@/types/market";
 import { LiveAdapter } from "./adapters/types";
 import { fundingPer8h } from "../utils/format";
 import { MarketDataProvider } from "../providers/types";
 import { defillamaProvider } from "../providers/defillama";
 import { coinalyzeProvider, fetchCoinalyzeLiquidations } from "../providers/coinalyze";
 import { coingeckoProvider } from "../providers/coingecko";
+import { fetchOkxBookDepth, fetchOkxTakerVolume } from "../providers/okxOrderFlow";
 import { summarizeLiquidations } from "../sentiment/liquidations";
+import { summarizeOrderFlow } from "../sentiment/orderFlow";
 
 /**
  * Aggregators that redistribute data for many exchanges at once. Used to
@@ -456,10 +458,11 @@ async function withRecordedHistory(
   const leverageHeatScore = derivedLeverageHeat;
 
   // Independent network calls, run concurrently rather than sequentially —
-  // neither depends on the other's result.
-  const [poolExposure, liquidations] = await Promise.all([
+  // none depends on another's result.
+  const [poolExposure, liquidations, orderFlow] = await Promise.all([
     buildPoolExposure(asset, agg.exchanges),
     buildLiquidationSummary(asset),
+    buildOrderFlowSummary(asset),
   ]);
 
   /*
@@ -491,6 +494,7 @@ async function withRecordedHistory(
     ...agg,
     poolExposure,
     liquidations,
+    orderFlow,
     oiChange24hPct,
     oiPercentile,
     leverageHeatScore,
@@ -589,6 +593,7 @@ function buildAggregate(
       cexDex: null,
       squeezeRisk: null,
       liquidations: null,
+      orderFlow: null,
       spotPriceUsd: null,
       spotSource: null,
       basisPct: null,
@@ -713,8 +718,9 @@ function buildAggregate(
     // Both need the recorded series; see withRecordedHistory.
     fundingPercentile: null,
     squeezeRisk: null,
-    // Needs its own async fetch; see withRecordedHistory.
+    // Both need their own async fetch; see withRecordedHistory.
     liquidations: null,
+    orderFlow: null,
     history: [],
     historyHours: 0,
     updatedAt: now,
@@ -800,6 +806,26 @@ async function buildLiquidationSummary(
   if (asset === "MARKET") return null;
   const venues = await fetchCoinalyzeLiquidations(asset).catch(() => []);
   return summarizeLiquidations(venues);
+}
+
+/**
+ * Order-book depth and taker flow, single-asset only — OKX has no
+ * whole-market instrument to query, so this is skipped for MARKET mode the
+ * same way poolExposure and liquidations are.
+ *
+ * No shared rate-budget concern here unlike Coinalyze: OKX's public REST
+ * allows 5 requests per 2 seconds (150/min) per its docs, far more than the
+ * 2 calls this makes per asset per poll.
+ */
+async function buildOrderFlowSummary(
+  asset: AssetSymbol | "MARKET"
+): Promise<OrderFlowSummary | null> {
+  if (asset === "MARKET") return null;
+  const [bookDepth, takerVolume] = await Promise.all([
+    fetchOkxBookDepth(asset).catch(() => null),
+    fetchOkxTakerVolume(asset).catch(() => []),
+  ]);
+  return summarizeOrderFlow(bookDepth, takerVolume);
 }
 
 function computeAggregateOiPercentile(

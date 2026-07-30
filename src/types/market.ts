@@ -124,6 +124,14 @@ export interface AggregateMarketData {
    * This is a record of unwinds that have ALREADY happened.
    */
   liquidations: LiquidationSummary | null;
+  /**
+   * Order-book depth and aggressive buy/sell flow, OKX only. Null unless
+   * OKX responds for this asset. This is a genuinely different signal from
+   * `longShortRatio` (resting account positions) and `liquidations` (forced
+   * closes): book imbalance describes standing orders, and flow describes
+   * aggressive taker volume that just executed — neither is a position.
+   */
+  orderFlow: OrderFlowSummary | null;
   /** Locally recorded time series — this app's own observations. */
   history: LocalHistoryPoint[];
   /** Hours of local history collected so far. */
@@ -158,6 +166,61 @@ export interface LiquidationSummary {
   /** Venue ids behind the figure, so the UI can name its sources. */
   venues: string[];
   windowHours: number;
+}
+
+/** Resting order-book depth, one side. */
+export interface OrderBookSide {
+  usd: number;
+}
+
+/**
+ * Top-of-book depth summed to a fixed number of price levels per side.
+ * Positive imbalancePct means more resting buy-side depth than sell-side.
+ *
+ * This describes STANDING orders waiting to be filled, not trades that
+ * already happened — the opposite tense from `cvdHistory` below, which is
+ * built from executed taker volume.
+ */
+export interface OrderBookImbalance {
+  bid: OrderBookSide;
+  ask: OrderBookSide;
+  /** (bid.usd - ask.usd) / (bid.usd + ask.usd) * 100. */
+  imbalancePct: number;
+  /** Price levels summed per side. */
+  depthLevels: number;
+}
+
+/** One hourly bucket's aggressive buy/sell volume and running cumulative delta. */
+export interface CvdPoint {
+  t: number;
+  buyUsd: number;
+  sellUsd: number;
+  /** Running (buy - sell) total from the start of the window through this point. */
+  cumulativeUsd: number;
+}
+
+/**
+ * Order-book depth and aggressive taker flow, OKX only.
+ *
+ * `cvdHistory` is a genuine cumulative volume delta — the direction and
+ * math are the same as a tick-level CVD chart — but it is built from
+ * OKX's HOURLY pre-aggregated taker volume, not individual trades, because
+ * this app is serverless and cannot hold the persistent connection a tick
+ * feed would need. It cannot see structure inside an hour the way a live
+ * order-flow terminal can. Treat it as a coarse, honest proxy, not a
+ * replacement for one.
+ */
+export interface OrderFlowSummary {
+  bookImbalance: OrderBookImbalance | null;
+  /** Oldest first. */
+  cvdHistory: CvdPoint[];
+  totalBuyUsd: number;
+  totalSellUsd: number;
+  dominantFlow: "buyers" | "sellers" | "balanced";
+  /** Buyers' share of total taker volume, 0-100. */
+  buyerSharePct: number;
+  windowHours: number;
+  venue: string;
 }
 
 /** Notional long/short exposure aggregated across peer-to-pool venues. */

@@ -17,6 +17,7 @@ import { ArbitrageScanner } from "@/components/dashboard/ArbitrageScanner";
 import { PoolExposure } from "@/components/dashboard/PoolExposure";
 import { PositioningIntelligence } from "@/components/dashboard/PositioningIntelligence";
 import { LiquidationIntelligence } from "@/components/dashboard/LiquidationIntelligence";
+import { OrderFlowIntelligence } from "@/components/dashboard/OrderFlowIntelligence";
 import { DashboardSkeleton, LowerSkeleton, Skeleton } from "@/components/ui/Skeleton";
 import { Collapsible } from "@/components/ui/Collapsible";
 import { Button } from "@/components/ui/Button";
@@ -187,6 +188,7 @@ export default function DashboardPage() {
               <div className="lg:col-span-2">
                 <AlertsPanel aggregate={aggregate} />
               </div>
+              <OrderFlowIntelligence data={aggregate} />
             </section>
 
             <footer className="border-t border-hairline pt-6 text-[11px] leading-relaxed text-ink-faint">
