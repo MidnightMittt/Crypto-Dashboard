@@ -369,3 +369,62 @@ export const coinalyzeProvider: MarketDataProvider = {
     }
   },
 };
+
+
+/**
+ * Step-by-step report of what this provider actually does for one asset.
+ *
+ * Written because the failure modes are invisible from the aggregate payload
+ * and from the HTTP status alone. A valid key returning no venues could mean
+ * the markets list is empty, no perpetual matched the asset, every venue name
+ * failed to map to a registry id, the budget was exhausted, or the rows came
+ * back without the fields we require. Each of those needs a different fix and
+ * they all look identical from outside.
+ *
+ * Reports counts and unmapped venue NAMES only. No key material.
+ */
+export async function coinalyzeDiagnostics(asset: AssetSymbol): Promise<Record<string, unknown>> {
+  if (!apiKey()) return { configured: false };
+
+  try {
+    const { markets, exchanges } = await getMarkets();
+
+    const candidates = markets.filter(
+      (m) =>
+        m.base_asset.toUpperCase() === asset &&
+        ["USDT", "USD", "USDC"].includes(m.quote_asset.toUpperCase())
+    );
+
+    // Which venue labels map to a registry id, and which don't.
+    const mapped: string[] = [];
+    const unmapped: string[] = [];
+    for (const m of candidates) {
+      const name = exchanges.get(m.exchange) ?? m.exchange;
+      const id = normalizeExchangeName(name);
+      if (id) mapped.push(id);
+      else unmapped.push(name);
+    }
+
+    const snapshots = await coinalyzeProvider.fetch(asset);
+
+    return {
+      configured: true,
+      perpetualMarkets: markets.length,
+      exchangesInDirectory: exchanges.size,
+      candidatesForAsset: candidates.length,
+      mappedVenues: Array.from(new Set(mapped)),
+      unmappedVenueNames: Array.from(new Set(unmapped)),
+      budgetRemaining: budgetRemaining(),
+      snapshotsReturned: snapshots.length,
+      snapshotsWithLongShort: snapshots.filter((x) => x.longShortRatio !== null).length,
+      sample: snapshots.slice(0, 3).map((x) => ({
+        venue: x.exchangeId,
+        oiUsd: Math.round(x.openInterestUsd),
+        fundingPct: x.fundingRatePct,
+        longShortRatio: x.longShortRatio,
+      })),
+    };
+  } catch (err) {
+    return { configured: true, error: err instanceof Error ? err.message : String(err) };
+  }
+}
