@@ -7,6 +7,9 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/Tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/Select";
 import { AggregateMarketData, AssetSymbol, ExchangeSnapshot, Timeframe } from "@/types/market";
 import { useHistory } from "@/lib/hooks/useHistory";
+import { fundingPer8h } from "@/lib/utils/format";
+import { Badge } from "@/components/ui/Badge";
+import { classifyChartLean, ChartLeanResult } from "@/lib/sentiment/chartLean";
 
 const TIMEFRAMES: Timeframe[] = ["15m", "1H", "4H", "12H", "1D", "1W"];
 type Overlay = "funding" | "oi";
@@ -40,7 +43,16 @@ function buildAggregateSeries(exchanges: ExchangeSnapshot[]) {
         b.priceW += w;
       }
       if (p.fundingRatePct !== undefined) {
-        b.fundingSum += p.fundingRatePct * w;
+        // Normalized to an 8h-equivalent BEFORE blending across venues — the
+        // same rule every other cross-venue funding average in this app
+        // follows (see aggregator.ts). Only Binance and Bybit currently
+        // populate real fundingRatePct history, and both settle 8-hourly, so
+        // this doesn't change today's chart — but an hourly venue's raw rate
+        // is 1/8th its true per-8h cost, and skipping this here (unlike
+        // everywhere else funding gets combined) would silently understate
+        // it the moment one starts publishing history.
+        const per8h = fundingPer8h(p.fundingRatePct, e.fundingIntervalHours);
+        b.fundingSum += per8h * w;
         b.fundingW += w;
       }
       if (p.openInterestUsd !== undefined) b.oi += p.openInterestUsd;
@@ -74,6 +86,26 @@ const TF_TRAILING_POINTS: Record<Timeframe, number> = {
   "12H": 72,
   "1D": 91,
   "1W": 91,
+};
+
+/**
+ * How much net price movement counts as a real direction versus noise, per
+ * timeframe. "Flat" means something different on a 15m chart than a 1W one,
+ * so a single fixed percentage across every timeframe would either fire on
+ * routine 15m noise or almost never fire on 1W.
+ *
+ * These are a reasonable starting point tuned to typical BTC/ETH/SOL
+ * volatility at each horizon, not a backtested constant — matching the same
+ * "defensible starting point, not settled science" framing already applied
+ * to the composite sentiment weights in compositeIndex.ts.
+ */
+const FLAT_THRESHOLD_PCT: Record<Timeframe, number> = {
+  "15m": 0.1,
+  "1H": 0.2,
+  "4H": 0.4,
+  "12H": 0.6,
+  "1D": 1,
+  "1W": 2,
 };
 
 /**
@@ -120,6 +152,19 @@ export function HistoricalChart({
   }, [exchanges, localHistory]);
 
   const points = series.points;
+
+  /*
+   * Computed over the same trailing window the chart actually draws for the
+   * current timeframe, using price + FUNDING specifically — regardless of
+   * which overlay (funding or OI) is currently toggled on screen. The lean
+   * answers "is this move backed by leverage", which is a funding question
+   * by definition; showing it while OI is the active overlay is still
+   * correct, just independent of what's currently drawn.
+   */
+  const lean = useMemo(() => {
+    const trailing = points.slice(-TF_TRAILING_POINTS[timeframe]);
+    return classifyChartLean(trailing, FLAT_THRESHOLD_PCT[timeframe]);
+  }, [points, timeframe]);
 
   // init chart once
   useEffect(() => {
@@ -187,7 +232,10 @@ export function HistoricalChart({
   return (
     <Card>
       <CardHeader className="flex-wrap gap-3">
-        <CardTitle>Price × {overlay === "funding" ? "Funding" : "Open Interest"}</CardTitle>
+        <div className="flex flex-wrap items-center gap-2">
+          <CardTitle>Price × {overlay === "funding" ? "Funding" : "Open Interest"}</CardTitle>
+          {lean && <LeanBadge lean={lean.lean} />}
+        </div>
         <div className="flex flex-wrap items-center gap-3">
           <Select value={overlay} onValueChange={(v) => setOverlay(v as Overlay)}>
             <SelectTrigger className="w-36">
@@ -228,6 +276,9 @@ export function HistoricalChart({
           </div>
         )}
       </div>
+      {lean && (
+        <p className="px-4 pb-1 text-[11px] leading-relaxed text-ink-muted">{narrateLean(lean)}</p>
+      )}
       <p className="px-4 pb-4 text-[11px] text-ink-faint">
         {series.source === "exchange"
           ? "History published by Binance, Bybit, and OKX (about 7 days hourly). Venues without history endpoints contribute only their current values."
@@ -235,4 +286,50 @@ export function HistoricalChart({
       </p>
     </Card>
   );
+}
+
+function LeanBadge({ lean }: { lean: ChartLeanResult["lean"] }) {
+  const variant =
+    lean === "bullish" ? "success" : lean === "bearish" ? "danger" : lean === "coiling" ? "amber" : "neutral";
+  const label = lean === "coiling" ? "Coiling" : lean.charAt(0).toUpperCase() + lean.slice(1);
+  return <Badge variant={variant}>{label}</Badge>;
+}
+
+/**
+ * Wording for all nine (price direction × funding sign) combinations the
+ * classifier can produce, collapsed through the four lean buckets. Kept
+ * component-local rather than in chartLean.ts, matching how every other
+ * panel this session (Liquidation/OrderFlow/Positioning Intelligence) keeps
+ * its testable math and its prose in separate places.
+ */
+function narrateLean(lean: ChartLeanResult): string {
+  const { lean: bucket, fundingSign } = lean;
+
+  if (bucket === "neutral") {
+    return "No clear lean — price and funding are both quiet over this window.";
+  }
+
+  if (bucket === "coiling") {
+    const side = fundingSign === "positive" ? "longs" : "shorts";
+    return `Price is flat while ${side} keep paying up — leverage is building without resolution. This says a move may be coming, not which way.`;
+  }
+
+  if (bucket === "bullish") {
+    if (fundingSign === "positive") {
+      return "Price rising with longs paying up — a leverage-confirmed move.";
+    }
+    if (fundingSign === "negative") {
+      return "Price rising while shorts still pay — a short squeeze in progress, with room to keep forcing shorts out if it continues.";
+    }
+    return "Price rising with no funding skew — a move without leveraged fuel behind it, often the more durable kind.";
+  }
+
+  // bearish
+  if (fundingSign === "negative") {
+    return "Price falling with shorts paying up — a leverage-confirmed move down.";
+  }
+  if (fundingSign === "positive") {
+    return "Price falling while longs still pay up — they haven't been forced out yet. Continuation or a sharp flush are both live risks.";
+  }
+  return "Price falling with no funding skew — a move without a crowded side being punished.";
 }
