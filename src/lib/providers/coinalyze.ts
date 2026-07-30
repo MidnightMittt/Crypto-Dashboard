@@ -1,6 +1,7 @@
 import { AssetSymbol, ExchangeSnapshot, FundingPoint } from "@/types/market";
 import { MarketDataProvider, normalizeExchangeName } from "./types";
 import { DropCounter, log, loggedFetch, loggedParse } from "./debug";
+import { swr } from "../cache/swr";
 
 /**
  * Coinalyze — free API, requires a key from https://coinalyze.net/account/api-key/
@@ -209,166 +210,180 @@ async function symbolsFor(asset: AssetSymbol) {
   return selected;
 }
 
-const dataCache = new Map<string, { snapshots: ExchangeSnapshot[]; fetchedAt: number }>();
-
 export const coinalyzeProvider: MarketDataProvider = {
   id: "coinalyze",
   name: "Coinalyze",
   isConfigured: () => Boolean(apiKey()),
+  /**
+   * Results are cached through the SHARED swr layer, not a local Map.
+   *
+   * This provider is rate-limited to 40 calls/minute and a single asset's
+   * batch costs 33 of them, so at most one fetch per minute can succeed. With
+   * a per-instance cache and per-instance rate window, most serverless
+   * instances found the budget spent and returned nothing — and because the
+   * aggregate is itself shared, that empty result was published to every
+   * instance, overwriting a good one. Binance's long/short ratio was being
+   * fetched correctly and then thrown away.
+   *
+   * Going through swr means one instance pays for the batch and every
+   * instance uses it for the full cache window. `fetchFromApi` THROWS rather
+   * than returning empty when the budget is exhausted, so swr serves the
+   * previous good value instead of caching a blank.
+   */
   fetch: async (asset: AssetSymbol): Promise<ExchangeSnapshot[]> => {
     if (!apiKey()) {
       log("coinalyze", "SKIP provider not configured — COINALYZE_API_KEY is empty/unset");
       return [];
     }
-
-    const cached = dataCache.get(asset);
-    if (cached && Date.now() - cached.fetchedAt < DATA_CACHE_MS) {
-      return cached.snapshots;
-    }
-
     try {
-      const pairs = await symbolsFor(asset);
-      if (pairs.length === 0) {
-        log("coinalyze", `RESULT no symbols resolved for ${asset} — returning 0 snapshots`);
-        return [];
-      }
-
-      /*
-       * Trim the batch to what the budget can actually cover, rather than
-       * demanding all of it and giving up.
-       *
-       * The previous all-or-nothing check is what made this provider inert:
-       * a full batch cost more than a minute's entire allowance, so it was
-       * refused every time and no data was ever fetched. Taking as many
-       * symbols as we can afford means the highest-value venues (ranked
-       * above) come back on every cycle, and the rest arrive as budget frees
-       * up.
-       */
-      const affordable = Math.floor(budgetRemaining() / ENDPOINTS_PER_SYMBOL);
-      if (affordable < 1) {
-        log(
-          "coinalyze",
-          `BUDGET exhausted for ${asset} — ${budgetRemaining()} calls left this minute. ` +
-            `Serving stale cache if available.`
-        );
-        return cached?.snapshots ?? [];
-      }
-
-      const batch = pairs.slice(0, affordable);
-      const cost = batch.length * ENDPOINTS_PER_SYMBOL;
-      spendBudget(cost);
-      log(
-        "coinalyze",
-        `BUDGET spending ${cost} calls for ${asset} (${batch.length} of ${pairs.length} symbols), ` +
-          `${budgetRemaining()} remain`
-      );
-
-      const symbols = batch.map(([, m]) => m.symbol).join(",");
-      const nowSec = Math.floor(Date.now() / 1000);
-
-      const [funding, oi, lsHist] = await Promise.all([
-        call<ValueRow[]>("/funding-rate", { symbols }),
-        call<ValueRow[]>("/open-interest", { symbols, convert_to_usd: "true" }),
-        call<HistoryRow[]>("/long-short-ratio-history", {
-          symbols,
-          interval: "1hour",
-          from: String(nowSec - 6 * 3600),
-          to: String(nowSec),
-        }).catch(() => [] as HistoryRow[]),
-      ]);
-
-      log(
-        "coinalyze",
-        `DATA funding=${funding.length} oi=${oi.length} lsHist=${lsHist.length} (requested ${batch.length} symbols)`
-      );
-
-      const fundingBySymbol = new Map(funding.map((r) => [r.symbol, r.value]));
-      const oiBySymbol = new Map(oi.map((r) => [r.symbol, r.value]));
-      const lsBySymbol = new Map(lsHist.map((r) => [r.symbol, r.history]));
-
-      const now = Date.now();
-      const snapshots: ExchangeSnapshot[] = [];
-
-      const dataDrops = new DropCounter("coinalyze");
-      for (const [exchangeId, market] of batch) {
-        const openInterestUsd = oiBySymbol.get(market.symbol);
-        const rawFunding = fundingBySymbol.get(market.symbol);
-        if (openInterestUsd === undefined || rawFunding === undefined) {
-          dataDrops.drop(
-            `missing ${openInterestUsd === undefined ? "open interest" : "funding"} for ${market.symbol} (${exchangeId})`,
-            market.symbol
-          );
-          continue;
-        }
-
-        const hourly = new Set(["hyperliquid", "dydx", "kraken", "vertex", "aevo"]);
-        const intervalHours = hourly.has(exchangeId) ? 1 : 8;
-
-        // No OI history from this provider — /open-interest-history was
-        // dropped to fit the rate budget. OKX supplies the series the
-        // percentile gauge needs, and venueStore backfills the 24h delta.
-        const fundingHistory: FundingPoint[] = [];
-        const openInterestChange24hPct: number | null = null;
-
-        // Long/short ratio: take the most recent point.
-        const lsSeries = lsBySymbol.get(market.symbol) ?? [];
-        const latestLs = lsSeries[lsSeries.length - 1];
-        const longShortRatio = latestLs?.r ?? null;
-
-        snapshots.push({
-          exchangeId,
-          asset,
-          // Coinalyze returns funding ALREADY AS A PERCENTAGE (0.0027 means
-          // 0.0027%), unlike most exchange APIs which return a decimal
-          // fraction. Multiplying by 100 here previously inflated every
-          // Coinalyze-sourced venue 100x — a normal 0.27 bp reading showed
-          // as 27 bps, which reads as "extremely crowded longs" on a
-          // perfectly neutral market.
-          //
-          // Caught because Binance and Bybit via Coinalyze both showed ~27
-          // bps while the same assets via CoinGecko showed 1-3 bps. Funding
-          // does not diverge that far between major venues; arbitrage closes
-          // those gaps within hours.
-          fundingRatePct: rawFunding,
-          fundingIntervalHours: intervalHours,
-          nextFundingAt:
-            Math.ceil(now / (intervalHours * 3_600_000)) * (intervalHours * 3_600_000),
-          openInterestUsd,
-          openInterestChange24hPct,
-          volume24hUsd: 0, // available via OHLCV, but that's another call per symbol
-          longShortRatio,
-          price: 0, // not returned by these endpoints
-          priceChange24hPct: 0,
-          sparkline: [],
-          fundingHistory,
-          source: "coinalyze",
-          updatedAt: now,
-        });
-      }
-
-      dataDrops.report(snapshots.length, batch.length);
-      const withLs = snapshots.filter((s) => s.longShortRatio !== null).length;
-      log(
-        "coinalyze",
-        `RESULT ${snapshots.length} snapshots for ${asset} (${withLs} with long/short ratio)`
-      );
-
-      dataCache.set(asset, { snapshots, fetchedAt: now });
-      return snapshots;
+      return await swr(`coinalyze:${asset}`, () => fetchFromApi(asset), {
+        freshMs: DATA_CACHE_MS,
+        // Well beyond fresh: stale long/short data is far better than none,
+        // and none is what a blocked budget would otherwise produce.
+        maxAgeMs: 15 * 60_000,
+      });
     } catch (err) {
-      console.warn(`[coinalyze] fetch failed for ${asset}:`, err);
-      // Stale data beats no data here: these are the only venues supplying
-      // long/short ratios, and a few minutes of staleness is far less
-      // misleading than the gauge silently emptying.
-      if (cached) {
-        log("coinalyze", `RESULT serving ${cached.snapshots.length} stale snapshots for ${asset}`);
-        return cached.snapshots;
-      }
-      log("coinalyze", `RESULT 0 snapshots for ${asset} due to the error above`);
+      console.warn(`[coinalyze] no data for ${asset}:`, err);
       return [];
     }
   },
 };
+
+/**
+ * One real batch against the API. Throws on any failure, including an
+ * exhausted budget, so the caller's swr layer keeps the previous good value
+ * rather than caching an empty result.
+ */
+async function fetchFromApi(asset: AssetSymbol): Promise<ExchangeSnapshot[]> {
+  const pairs = await symbolsFor(asset);
+  if (pairs.length === 0) {
+    log("coinalyze", `RESULT no symbols resolved for ${asset}`);
+    return [];
+  }
+
+  /*
+   * Trim the batch to what the budget can actually cover, rather than
+   * demanding all of it and giving up.
+   *
+   * The previous all-or-nothing check is what made this provider inert:
+   * a full batch cost more than a minute's entire allowance, so it was
+   * refused every time and no data was ever fetched. Taking as many
+   * symbols as we can afford means the highest-value venues (ranked
+   * above) come back on every cycle, and the rest arrive as budget frees
+   * up.
+   */
+  const affordable = Math.floor(budgetRemaining() / ENDPOINTS_PER_SYMBOL);
+  if (affordable < 1) {
+    // Thrown, not returned empty: swr treats a rejection as "keep the
+    // previous value", which is the whole point. Returning [] here would
+    // cache a blank and wipe out good data for every instance.
+    throw new Error(
+      `Coinalyze budget exhausted (${budgetRemaining()} calls left this minute)`
+    );
+  }
+
+  const batch = pairs.slice(0, affordable);
+  const cost = batch.length * ENDPOINTS_PER_SYMBOL;
+  spendBudget(cost);
+  log(
+    "coinalyze",
+    `BUDGET spending ${cost} calls for ${asset} (${batch.length} of ${pairs.length} symbols), ` +
+      `${budgetRemaining()} remain`
+  );
+
+  const symbols = batch.map(([, m]) => m.symbol).join(",");
+  const nowSec = Math.floor(Date.now() / 1000);
+
+  const [funding, oi, lsHist] = await Promise.all([
+    call<ValueRow[]>("/funding-rate", { symbols }),
+    call<ValueRow[]>("/open-interest", { symbols, convert_to_usd: "true" }),
+    call<HistoryRow[]>("/long-short-ratio-history", {
+      symbols,
+      interval: "1hour",
+      from: String(nowSec - 6 * 3600),
+      to: String(nowSec),
+    }).catch(() => [] as HistoryRow[]),
+  ]);
+
+  log(
+    "coinalyze",
+    `DATA funding=${funding.length} oi=${oi.length} lsHist=${lsHist.length} (requested ${batch.length} symbols)`
+  );
+
+  const fundingBySymbol = new Map(funding.map((r) => [r.symbol, r.value]));
+  const oiBySymbol = new Map(oi.map((r) => [r.symbol, r.value]));
+  const lsBySymbol = new Map(lsHist.map((r) => [r.symbol, r.history]));
+
+  const now = Date.now();
+  const snapshots: ExchangeSnapshot[] = [];
+
+  const dataDrops = new DropCounter("coinalyze");
+  for (const [exchangeId, market] of batch) {
+    const openInterestUsd = oiBySymbol.get(market.symbol);
+    const rawFunding = fundingBySymbol.get(market.symbol);
+    if (openInterestUsd === undefined || rawFunding === undefined) {
+      dataDrops.drop(
+        `missing ${openInterestUsd === undefined ? "open interest" : "funding"} for ${market.symbol} (${exchangeId})`,
+        market.symbol
+      );
+      continue;
+    }
+
+    const hourly = new Set(["hyperliquid", "dydx", "kraken", "vertex", "aevo"]);
+    const intervalHours = hourly.has(exchangeId) ? 1 : 8;
+
+    // No OI history from this provider — /open-interest-history was
+    // dropped to fit the rate budget. OKX supplies the series the
+    // percentile gauge needs, and venueStore backfills the 24h delta.
+    const fundingHistory: FundingPoint[] = [];
+    const openInterestChange24hPct: number | null = null;
+
+    // Long/short ratio: take the most recent point.
+    const lsSeries = lsBySymbol.get(market.symbol) ?? [];
+    const latestLs = lsSeries[lsSeries.length - 1];
+    const longShortRatio = latestLs?.r ?? null;
+
+    snapshots.push({
+      exchangeId,
+      asset,
+      // Coinalyze returns funding ALREADY AS A PERCENTAGE (0.0027 means
+      // 0.0027%), unlike most exchange APIs which return a decimal
+      // fraction. Multiplying by 100 here previously inflated every
+      // Coinalyze-sourced venue 100x — a normal 0.27 bp reading showed
+      // as 27 bps, which reads as "extremely crowded longs" on a
+      // perfectly neutral market.
+      //
+      // Caught because Binance and Bybit via Coinalyze both showed ~27
+      // bps while the same assets via CoinGecko showed 1-3 bps. Funding
+      // does not diverge that far between major venues; arbitrage closes
+      // those gaps within hours.
+      fundingRatePct: rawFunding,
+      fundingIntervalHours: intervalHours,
+      nextFundingAt:
+        Math.ceil(now / (intervalHours * 3_600_000)) * (intervalHours * 3_600_000),
+      openInterestUsd,
+      openInterestChange24hPct,
+      volume24hUsd: 0, // available via OHLCV, but that's another call per symbol
+      longShortRatio,
+      price: 0, // not returned by these endpoints
+      priceChange24hPct: 0,
+      sparkline: [],
+      fundingHistory,
+      source: "coinalyze",
+      updatedAt: now,
+    });
+  }
+
+  dataDrops.report(snapshots.length, batch.length);
+  const withLs = snapshots.filter((s) => s.longShortRatio !== null).length;
+  log(
+    "coinalyze",
+    `RESULT ${snapshots.length} snapshots for ${asset} (${withLs} with long/short ratio)`
+  );
+
+  // Serving stale on failure is swr's job now, so errors propagate.
+  return snapshots;
+}
 
 
 /**

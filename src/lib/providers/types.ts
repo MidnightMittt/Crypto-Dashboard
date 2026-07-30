@@ -100,6 +100,16 @@ const EXCHANGE_NAME_MAP: Record<string, string> = {
     coinbaseinternational: "coinbase-intl",
     vertex: "vertex",
     aevo: "aevo",
+    // Reported by Coinalyze as unmapped until these were added. BitMEX and
+    // Phemex both have direct adapters now, so the only thing the provider
+    // adds for them is a long/short ratio — which is exactly the metric with
+    // the thinnest coverage.
+    bitmex: "bitmex",
+    phemex: "phemex",
+    kucoin: "kucoin",
+    kucoinfutures: "kucoin",
+    backpack: "backpack",
+    orderly: "orderly",
     gmx: "gmx",
     gmxv2: "gmx",
     drift: "drift",
