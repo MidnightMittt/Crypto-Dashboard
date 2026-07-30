@@ -75,6 +75,65 @@ export async function GET() {
 
   const totalPoints = Object.values(history).reduce((s, n) => s + Math.max(n, 0), 0);
 
+  /*
+   * Live probe of Coinalyze.
+   *
+   * A configured key that returns no venues has two very different causes —
+   * the key is rejected, or it's accepted but nothing maps through — and they
+   * are indistinguishable from the aggregate payload. Worse, "venues sourced
+   * from coinalyze" is a misleading metric now that 20 direct adapters
+   * supersede it: Coinalyze can be working perfectly and still show zero,
+   * because first-hand data wins and the row keeps source="direct".
+   *
+   * So this asks Coinalyze itself and reports the HTTP status. The key is
+   * sent as a query parameter, as that API requires, and is never echoed
+   * back in the response.
+   */
+  const coinalyzeKey = process.env.COINALYZE_API_KEY?.trim();
+  let coinalyze: {
+    configured: boolean;
+    status: number | null;
+    exchanges: number | null;
+    hint?: string;
+  } = { configured: Boolean(coinalyzeKey), status: null, exchanges: null };
+
+  if (coinalyzeKey) {
+    try {
+      const res = await fetch(
+        `https://api.coinalyze.net/v1/exchanges?api_key=${encodeURIComponent(coinalyzeKey)}`,
+        { headers: { accept: "application/json" }, cache: "no-store", signal: AbortSignal.timeout(8_000) }
+      );
+      const body = await res.text();
+      let count: number | null = null;
+      try {
+        const parsed = JSON.parse(body);
+        if (Array.isArray(parsed)) count = parsed.length;
+      } catch {
+        /* not JSON — status alone is the useful signal */
+      }
+      coinalyze = {
+        configured: true,
+        status: res.status,
+        exchanges: count,
+        hint:
+          res.status === 401 || res.status === 403
+            ? "Key rejected — regenerate at coinalyze.net/account/api-key/"
+            : res.status === 429
+              ? "Rate limited — 40 calls/min, each symbol counts as one"
+              : res.ok
+                ? "Key is valid and accepted"
+                : `Unexpected HTTP ${res.status}`,
+      };
+    } catch (err) {
+      coinalyze = {
+        configured: true,
+        status: null,
+        exchanges: null,
+        hint: `Request failed: ${err instanceof Error ? err.name : "unknown"}`,
+      };
+    }
+  }
+
   return NextResponse.json({
     storage: {
       backend: kvConfigured() ? "redis" : "filesystem",
@@ -89,6 +148,7 @@ export async function GET() {
           "stay empty. Attach an Upstash database and REDEPLOY.",
     },
     history: { pointsByAsset: history, totalPoints },
+    providers: { coinalyze },
     keysPresent,
     env: process.env.NODE_ENV,
     now: Date.now(),
