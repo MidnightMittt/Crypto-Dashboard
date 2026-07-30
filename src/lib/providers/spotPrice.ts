@@ -78,21 +78,44 @@ export async function resolveSpotWithConfidence(
    * disagreeing about this one — that's generous enough to never fire on a
    * genuinely dislocated market.
    */
+  /*
+   * Coinbase is the reference when it answers.
+   *
+   * A median across responders isn't enough on its own. For SOL, every
+   * DexScreener pool that passed its own filters was still 5-23% away from
+   * true spot ($91.10 / $88.29 / $81.61 / $77.49 against $73.95) — the
+   * majority were wrong, so the median was wrong too.
+   *
+   * Coinbase quotes a regulated exchange's own book against USD and cannot
+   * return a different asset, which makes it a reference rather than just
+   * another opinion. When present, everything else has to corroborate it
+   * within a tolerance that is wide for spot-vs-spot and far narrower than a
+   * ticker collision.
+   *
+   * Falls back to the median when Coinbase is unavailable, which still catches
+   * a lone outlier among several sources.
+   */
+  const REFERENCE_TOLERANCE = 0.05;
+  const MEDIAN_TOLERANCE = 0.5;
+
   const sorted = [...answered].sort((a, b) => a.priceUsd - b.priceUsd);
-  const median = sorted.length
-    ? sorted[Math.floor(sorted.length / 2)].priceUsd
-    : 0;
+  const median = sorted.length ? sorted[Math.floor(sorted.length / 2)].priceUsd : 0;
+
+  const reference = coinbase?.priceUsd ?? 0;
+  const anchor = reference > 0 ? reference : median;
+  const tolerance = reference > 0 ? REFERENCE_TOLERANCE : MEDIAN_TOLERANCE;
 
   const candidates =
-    median > 0
-      ? answered.filter((c) => Math.abs(c.priceUsd - median) / median <= 0.5)
+    anchor > 0
+      ? answered.filter((c) => Math.abs(c.priceUsd - anchor) / anchor <= tolerance)
       : answered;
 
   const rejected = answered.length - candidates.length;
   if (rejected > 0) {
     console.warn(
-      `[spot] ignoring ${rejected} source(s) for ${asset} more than 50% from the ` +
-        `$${median.toFixed(2)} median — almost certainly a different asset with the same ticker`
+      `[spot] ignoring ${rejected} of ${answered.length} source(s) for ${asset}: ` +
+        `more than ${(tolerance * 100).toFixed(0)}% from the $${anchor.toFixed(2)} ` +
+        `${reference > 0 ? "Coinbase reference" : "median"}`
     );
   }
 
