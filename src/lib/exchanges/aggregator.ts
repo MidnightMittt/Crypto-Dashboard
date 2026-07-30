@@ -245,8 +245,12 @@ const AGGREGATE_CACHE = {
    * never blocks the FIRST result, since there's nothing better to keep.
    */
   shouldShare: (next: AggregateMarketData, previous: AggregateMarketData | null) => {
-    if (!previous) return true;
-    if (previous.exchanges.length === 0) return true;
+    // Never publish an empty aggregate, baseline or not. This was the hole:
+    // after a gap in traffic the Redis entry expires, so `previous` is null
+    // and the first result became the shared baseline unconditionally — a
+    // degraded or empty one included, which every instance then served.
+    if (next.exchanges.length === 0) return false;
+    if (!previous || previous.exchanges.length === 0) return true;
     return next.exchanges.length >= previous.exchanges.length * (2 / 3);
   },
 };
