@@ -5,6 +5,13 @@ import { AssetSymbol } from "@/types/market";
 import { fetchFearGreed } from "@/lib/providers/fearGreed";
 
 export const dynamic = "force-dynamic";
+// swr()'s background refresh now runs via after(), which keeps this
+// invocation alive until it finishes rather than letting the platform freeze
+// it the instant the response is sent (see lib/cache/swr.ts). A cold,
+// degraded fan-out across ~20 adapters at 12s each and concurrency 8 can
+// legitimately take 30s+; 60 is Vercel's Hobby-plan ceiling, so this is the
+// most headroom available without assuming a paid plan.
+export const maxDuration = 60;
 
 /**
  * GET /api/market-data?asset=BTC

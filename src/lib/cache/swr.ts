@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { kvConfigured, kvGet, kvSet } from "../store/kv";
 
 /**
@@ -128,8 +129,19 @@ export async function swr<T>(
   };
 
   // Stale but usable: hand back what we have now, warm the cache behind it.
+  //
+  // This MUST go through `after()`, not a bare fire-and-forget promise.
+  // Vercel can freeze or tear down the serverless instance the instant the
+  // response is sent — a detached `void refresh()` frequently never got to
+  // finish its own fetches, let alone reach the `kvSet` that shares the
+  // result with every other instance. That's what a "stuck" unavailable
+  // venue actually was: not a dead adapter, but a background refresh that
+  // was silently killed before it could publish the recovery. `after()`
+  // tells the platform to keep this invocation alive until the callback
+  // settles, so the refresh — and its write to the shared L2 cache —
+  // actually completes.
   if (best && now - best.fetchedAt < maxAgeMs) {
-    void refresh().catch(() => {});
+    after(() => refresh().catch(() => {}));
     return best.value;
   }
 
