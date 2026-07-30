@@ -1,6 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { AlertTriangle } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { SentimentIndex } from "@/components/dashboard/SentimentIndex";
@@ -24,16 +23,6 @@ import { Button } from "@/components/ui/Button";
 import { useMarketData } from "@/lib/hooks/useMarketData";
 import { useDashboardStore } from "@/lib/store/dashboardStore";
 import { getExchange } from "@/lib/exchanges/registry";
-
-/**
- * lightweight-charts is ~45kB and can't render server-side (it measures the
- * DOM on construction). Loading it separately keeps it off the critical path
- * for the gauges and cards, which are what the page is judged on first.
- */
-const HistoricalChart = dynamic(
-  () => import("@/components/dashboard/HistoricalChart").then((m) => m.HistoricalChart),
-  { ssr: false, loading: () => <Skeleton className="h-[420px] w-full" /> }
-);
 
 export default function DashboardPage() {
   const asset = useDashboardStore((s) => s.asset);
@@ -86,19 +75,8 @@ export default function DashboardPage() {
           </div>
         ) : !ready ? (
           <>
-            {/*
-              While the exchanges are still answering, only the panels that
-              genuinely need them are skeletons. The chart below is already
-              live — it reads recorded history from its own endpoint, which
-              resolves in milliseconds rather than waiting on 13 venues.
-            */}
             <DashboardSkeleton />
-            <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-              <div className="lg:col-span-2">
-                <HistoricalChart asset={asset} />
-              </div>
-              <Skeleton className="h-[420px] w-full" />
-            </section>
+            <Skeleton className="h-[420px] w-full" />
             <LowerSkeleton />
           </>
         ) : (
@@ -131,17 +109,7 @@ export default function DashboardPage() {
               <LongShortGauge data={aggregate} />
             </section>
 
-            <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-              <div className="lg:col-span-2">
-                <HistoricalChart asset={asset} data={aggregate} />
-              </div>
-              {/*
-                Positioning intelligence sits beside the chart, right after the
-                gauges: the gauges say what the reading is, this says what it
-                means and what breaks if it unwinds.
-              */}
-              <PositioningIntelligence data={aggregate} />
-            </section>
+            <PositioningIntelligence data={aggregate} />
 
             <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
               <div className="lg:col-span-2">

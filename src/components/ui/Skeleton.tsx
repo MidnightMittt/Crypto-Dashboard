@@ -11,12 +11,7 @@ export function Skeleton({ className }: { className?: string }) {
   );
 }
 
-/**
- * Placeholder for everything above the chart: the sentiment banner and the
- * four gauges. Deliberately excludes the chart row — the chart draws from
- * its own fast endpoint and is live while this is still showing, so covering
- * it with a skeleton would hide data we already have.
- */
+/** Placeholder for the sentiment banner and the four gauges. */
 export function DashboardSkeleton() {
   return (
     <div className="flex flex-col gap-6">
