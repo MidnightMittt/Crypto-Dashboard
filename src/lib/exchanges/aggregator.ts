@@ -37,7 +37,7 @@ import { resolveSpotWithConfidence } from "../providers/spotPrice";
 import { fetchJlpExposure } from "../providers/jlpExposure";
 import { fetchGmxExposure } from "../providers/gmxExposure";
 import { synthetixExposure } from "./adapters/synthetix";
-import { PoolExposureSummary, LiquidationSummary, OrderFlowSummary } from "@/types/market";
+import { PoolExposureSummary, LiquidationSummary, OrderFlowSummary, ExchangeFlowSummary } from "@/types/market";
 import { LiveAdapter } from "./adapters/types";
 import { fundingPer8h } from "../utils/format";
 import { MarketDataProvider } from "../providers/types";
@@ -47,6 +47,11 @@ import { coingeckoProvider } from "../providers/coingecko";
 import { fetchOkxBookDepth, fetchOkxTakerVolume } from "../providers/okxOrderFlow";
 import { summarizeLiquidations } from "../sentiment/liquidations";
 import { summarizeOrderFlow } from "../sentiment/orderFlow";
+import { fetchBtcExchangeBalance } from "../providers/exchangeFlows/btc";
+import { fetchEthExchangeBalance } from "../providers/exchangeFlows/eth";
+import { trackedVenues, BTC_ADDRESSES, ETH_ADDRESSES } from "../providers/exchangeFlows/addresses";
+import { classifyExchangeFlow } from "../sentiment/exchangeFlow";
+import { recordFlowBalance, balanceWindowAgo } from "../history/flowStore";
 
 /**
  * Aggregators that redistribute data for many exchanges at once. Used to
@@ -459,10 +464,11 @@ async function withRecordedHistory(
 
   // Independent network calls, run concurrently rather than sequentially —
   // none depends on another's result.
-  const [poolExposure, liquidations, orderFlow] = await Promise.all([
+  const [poolExposure, liquidations, orderFlow, exchangeFlow] = await Promise.all([
     buildPoolExposure(asset, agg.exchanges),
     buildLiquidationSummary(asset),
     buildOrderFlowSummary(asset),
+    buildExchangeFlow(asset, point.price, point.t),
   ]);
 
   /*
@@ -495,6 +501,7 @@ async function withRecordedHistory(
     poolExposure,
     liquidations,
     orderFlow,
+    exchangeFlow,
     oiChange24hPct,
     oiPercentile,
     leverageHeatScore,
@@ -594,6 +601,7 @@ function buildAggregate(
       squeezeRisk: null,
       liquidations: null,
       orderFlow: null,
+      exchangeFlow: null,
       spotPriceUsd: null,
       spotSource: null,
       basisPct: null,
@@ -721,6 +729,7 @@ function buildAggregate(
     // Both need their own async fetch; see withRecordedHistory.
     liquidations: null,
     orderFlow: null,
+    exchangeFlow: null,
     history: [],
     historyHours: 0,
     updatedAt: now,
@@ -826,6 +835,52 @@ async function buildOrderFlowSummary(
     fetchOkxTakerVolume(asset).catch(() => []),
   ]);
   return summarizeOrderFlow(bookDepth, takerVolume);
+}
+
+/** Matches every other "24h" figure in this app (oiChange24hPct, priceChange24hPct, ...). */
+const EXCHANGE_FLOW_WINDOW_HOURS = 24;
+
+/**
+ * Only BTC and ETH have a verified address set — see
+ * providers/exchangeFlows/addresses.ts for why the other 8 assets can't
+ * extend this without either a paid data source or address verification
+ * this app hasn't done.
+ *
+ * Records the current balance on every call (throttled to one point per 5
+ * minutes inside flowStore, same as the price/OI history), then diffs
+ * against the closest snapshot ~24h back. Null on a cold start — there's no
+ * prior point yet to diff against — and null whenever the balance fetch
+ * itself fails (no key configured, upstream down, etc.).
+ */
+async function buildExchangeFlow(
+  asset: AssetSymbol | "MARKET",
+  priceUsd: number,
+  now: number
+): Promise<ExchangeFlowSummary | null> {
+  if (asset !== "BTC" && asset !== "ETH") return null;
+
+  const balance =
+    asset === "BTC"
+      ? await fetchBtcExchangeBalance().catch(() => null)
+      : await fetchEthExchangeBalance().catch(() => null);
+  if (!balance) return null;
+
+  const currentBalanceNative = "balanceBtc" in balance ? balance.balanceBtc : balance.balanceEth;
+
+  const history = await recordFlowBalance(asset, { t: now, balanceNative: currentBalanceNative });
+  const prior = balanceWindowAgo(history, EXCHANGE_FLOW_WINDOW_HOURS);
+
+  const addresses = asset === "BTC" ? BTC_ADDRESSES : ETH_ADDRESSES;
+
+  return classifyExchangeFlow({
+    asset,
+    currentBalanceNative,
+    currentT: now,
+    prior,
+    priceUsd,
+    venues: trackedVenues(addresses),
+    trackedAddressCount: balance.trackedAddressCount,
+  });
 }
 
 function computeAggregateOiPercentile(

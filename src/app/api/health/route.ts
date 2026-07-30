@@ -4,6 +4,8 @@ import { readHistory } from "@/lib/history/store";
 import { ALL_ASSETS } from "@/lib/exchanges/registry";
 import { AssetSymbol } from "@/types/market";
 import { coinalyzeDiagnostics, liquidationDiagnostics } from "@/lib/providers/coinalyze";
+import { fetchBtcExchangeBalance } from "@/lib/providers/exchangeFlows/btc";
+import { fetchEthExchangeBalance, etherscanConfigured } from "@/lib/providers/exchangeFlows/eth";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +25,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const optionalKeys = [
     "COINALYZE_API_KEY",
+    "ETHERSCAN_API_KEY",
     "HELIUS_API_KEY",
     "SOLANA_RPC_URL",
     "THE_GRAPH_API_KEY",
@@ -135,6 +138,24 @@ export async function GET() {
     }
   }
 
+  /*
+   * Live probe of the exchange-flow balance fetchers. BTC needs no key (the
+   * Esplora API is public); ETH needs ETHERSCAN_API_KEY. Reporting both
+   * separately here is the fastest way to tell "key missing" apart from
+   * "key present but the upstream is unhappy" — indistinguishable from the
+   * aggregate payload, where exchangeFlow is just null either way.
+   */
+  const btcFlowProbe = await fetchBtcExchangeBalance()
+    .then((r) => ({ ok: r !== null, balanceBtc: r?.balanceBtc ?? null }))
+    .catch((e) => ({ ok: false, balanceBtc: null, error: String(e) }));
+
+  const ethFlowConfigured = etherscanConfigured();
+  const ethFlowProbe = ethFlowConfigured
+    ? await fetchEthExchangeBalance()
+        .then((r) => ({ ok: r !== null, balanceEth: r?.balanceEth ?? null }))
+        .catch((e) => ({ ok: false, balanceEth: null, error: String(e) }))
+    : { ok: false, balanceEth: null, hint: "Set ETHERSCAN_API_KEY to enable" };
+
   return NextResponse.json({
     storage: {
       backend: kvConfigured() ? "redis" : "filesystem",
@@ -153,6 +174,7 @@ export async function GET() {
       coinalyze,
       coinalyzeDetail: await coinalyzeDiagnostics("BTC").catch((e) => ({ error: String(e) })),
       liquidationDetail: await liquidationDiagnostics("BTC").catch((e) => ({ error: String(e) })),
+      exchangeFlowDetail: { btc: btcFlowProbe, eth: ethFlowProbe },
     },
     keysPresent,
     env: process.env.NODE_ENV,

@@ -132,6 +132,13 @@ export interface AggregateMarketData {
    * aggressive taker volume that just executed — neither is a position.
    */
   orderFlow: OrderFlowSummary | null;
+  /**
+   * Net movement of coins into or out of a small set of known, verified
+   * exchange wallets. Only ever populated for BTC and ETH — see
+   * ExchangeFlowSummary for why this can't extend to the other 8 assets, and
+   * why it's a partial signal rather than a comprehensive netflow figure.
+   */
+  exchangeFlow: ExchangeFlowSummary | null;
   /** Locally recorded time series — this app's own observations. */
   history: LocalHistoryPoint[];
   /** Hours of local history collected so far. */
@@ -221,6 +228,41 @@ export interface OrderFlowSummary {
   buyerSharePct: number;
   windowHours: number;
   venue: string;
+}
+
+/**
+ * Net flow of coins into or out of a small, hand-verified set of known
+ * major-exchange wallet addresses — currently just Binance's largest BTC and
+ * ETH wallets. See providers/exchangeFlows/addresses.ts for how each address
+ * was confirmed and why the list is short.
+ *
+ * This is NOT the comprehensive exchange netflow that CryptoQuant or
+ * Glassnode publish — those are built from thousands of labeled addresses
+ * behind a paid API this app doesn't have. This tracks a small, real,
+ * currently-active sample and will undercount total flow by a wide margin.
+ * Read it as "what a few of the biggest known wallets did", not "what every
+ * exchange did" — directionally informative, not a total.
+ *
+ * Computed as a balance delta (now vs. `windowHours` ago), not from
+ * individual transactions, which is why only a single net figure exists —
+ * splitting it into separate inflow/outflow totals would imply per-
+ * transaction granularity this approach doesn't have.
+ *
+ * Positive netflow = tracked balances grew (coins moving toward exchanges,
+ * historically read as latent sell pressure). Negative = tracked balances
+ * shrank (moving to self-custody, read as accumulation).
+ */
+export interface ExchangeFlowSummary {
+  asset: "BTC" | "ETH";
+  netflowUsd: number;
+  /** Same figure in the native unit (BTC or ETH), often the more readable one. */
+  netflowNative: number;
+  currentBalanceUsd: number;
+  windowHours: number;
+  direction: "inflow" | "outflow" | "balanced";
+  /** Exchange names behind the tracked addresses, e.g. ["Binance"]. */
+  venues: string[];
+  trackedAddressCount: number;
 }
 
 /** Notional long/short exposure aggregated across peer-to-pool venues. */

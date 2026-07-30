@@ -17,6 +17,7 @@ import { PoolExposure } from "@/components/dashboard/PoolExposure";
 import { PositioningIntelligence } from "@/components/dashboard/PositioningIntelligence";
 import { LiquidationIntelligence } from "@/components/dashboard/LiquidationIntelligence";
 import { OrderFlowIntelligence } from "@/components/dashboard/OrderFlowIntelligence";
+import { ExchangeFlowIntelligence } from "@/components/dashboard/ExchangeFlowIntelligence";
 import { DashboardSkeleton, LowerSkeleton, Skeleton } from "@/components/ui/Skeleton";
 import { Collapsible } from "@/components/ui/Collapsible";
 import { Button } from "@/components/ui/Button";
@@ -110,6 +111,14 @@ export default function DashboardPage() {
             </section>
 
             <PositioningIntelligence data={aggregate} />
+
+            {/*
+              Where the Price × Funding chart used to sit — replaced rather
+              than reused, at the user's request. This tracks actual wallet
+              movement (a real, if partial, signal) instead of a price/funding
+              lean that rarely resolved to anything decisive.
+            */}
+            <ExchangeFlowIntelligence data={aggregate} />
 
             <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
               <div className="lg:col-span-2">
