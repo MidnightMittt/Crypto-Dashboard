@@ -8,3 +8,4 @@ out
 .data
 *.tsbuildinfo
 .vercel
+coverage
