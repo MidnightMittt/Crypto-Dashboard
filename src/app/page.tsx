@@ -16,6 +16,7 @@ import { AiSummary } from "@/components/dashboard/AiSummary";
 import { ArbitrageScanner } from "@/components/dashboard/ArbitrageScanner";
 import { PoolExposure } from "@/components/dashboard/PoolExposure";
 import { DashboardSkeleton, LowerSkeleton, Skeleton } from "@/components/ui/Skeleton";
+import { Collapsible } from "@/components/ui/Collapsible";
 import { Button } from "@/components/ui/Button";
 import { useMarketData } from "@/lib/hooks/useMarketData";
 import { useDashboardStore } from "@/lib/store/dashboardStore";
@@ -134,10 +135,17 @@ export default function DashboardPage() {
               <AiSummary aggregate={aggregate} />
             </section>
 
-            <section>
-              <SectionTitle>Exchange Breakdown</SectionTitle>
+            {/*
+              Collapsed by default. At 24 venues this block ran ~1,400px —
+              a third of the page — and the heat map below already shows the
+              cross-venue funding picture without it.
+            */}
+            <Collapsible
+              title="Exchange Breakdown"
+              summary={`${venueCount ?? aggregate.exchanges.length} venues`}
+            >
               <ExchangeGrid exchanges={aggregate.exchanges} />
-            </section>
+            </Collapsible>
 
             <section>
               <SectionTitle>Cross-Market Funding</SectionTitle>

@@ -11,6 +11,43 @@ import { AggregateMarketData } from "@/types/market";
 
 const COLORS = ["#1B8A9A", "#2DD4E8", "#8890A0", "#F5A623", "#EF4444"];
 
+/**
+ * The percentile has two distinct reasons for being unavailable, and the old
+ * copy conflated them into one sentence that contradicted itself — it claimed
+ * "no reachable venue publishes open-interest history" while OKX does supply
+ * it, and then said "19.9h so far, and it needs about 4h", which reads as an
+ * unmet requirement that had already been met.
+ *
+ * Enough history is a necessary but not sufficient condition. A percentile
+ * also needs the SAME set of venues reporting across the whole window,
+ * otherwise it ranks today's cross-venue total against a series built from
+ * fewer venues and pins itself at 100. See computeAggregateOiPercentile.
+ */
+const MIN_HOURS_FOR_PERCENTILE = 4;
+
+function unavailableLabel(data: AggregateMarketData): string {
+  return data.historyHours < MIN_HOURS_FOR_PERCENTILE ? "Collecting" : "Unavailable";
+}
+
+function unavailableReason(data: AggregateMarketData): string {
+  const hours = data.historyHours;
+
+  if (hours < MIN_HOURS_FOR_PERCENTILE) {
+    return (
+      `Ranking today's open interest needs a trailing window to compare against. ` +
+      `${hours.toFixed(1)}h recorded so far, of roughly ${MIN_HOURS_FOR_PERCENTILE}h. ` +
+      `The dollar figure above is live and unaffected.`
+    );
+  }
+
+  return (
+    `${hours.toFixed(1)}h of history is recorded, but a percentile needs the same ` +
+    `set of venues reporting across the whole window — ranking today's total against ` +
+    `a series built from fewer venues would pin this at 100. It resolves as coverage ` +
+    `settles. The dollar figure above is live and unaffected.`
+  );
+}
+
 export function OpenInterestGauge({ data }: { data: AggregateMarketData }) {
   const pctl = data.oiPercentile;
   const band = pctl !== null ? bandFor(pctl, OI_BANDS) : null;
@@ -33,11 +70,9 @@ export function OpenInterestGauge({ data }: { data: AggregateMarketData }) {
           centerValue={formatCompactUsd(data.totalOpenInterestUsd)}
           centerLabel="Total Open Interest"
         />
-        <Badge variant={badgeVariant}>{band ? band.label : "Collecting"}</Badge>
+        <Badge variant={badgeVariant}>{band ? band.label : unavailableLabel(data)}</Badge>
         <p className="text-center text-xs leading-relaxed text-ink-muted">
-          {band
-            ? band.description
-            : `No reachable venue publishes open-interest history, so this ranks against the app's own recorded data — ${data.historyHours.toFixed(1)}h so far, and it needs about 4h. Leave the server running.`}
+          {band ? band.description : unavailableReason(data)}
         </p>
         <div className="mt-1 grid w-full grid-cols-2 gap-2 border-t border-hairline pt-3">
           <GaugeStat label="24h Change" value={orDash(data.oiChange24hPct, (v) => formatPct(v, 1))} />
