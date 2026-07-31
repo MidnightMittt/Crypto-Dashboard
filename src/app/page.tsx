@@ -133,6 +133,17 @@ export default function DashboardPage() {
             </section>
 
             {/*
+              Pool exposure and order flow sit here, right alongside the
+              other positioning/flow intelligence cards, rather than lower
+              down paired with the arbitrage/alerts tools they have no
+              thematic connection to.
+            */}
+            <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <PoolExposure data={aggregate} />
+              <OrderFlowIntelligence data={aggregate} />
+            </section>
+
+            {/*
               Collapsed by default. At 24 venues this block ran ~1,400px —
               a third of the page — and the heat map below already shows the
               cross-venue funding picture without it.
@@ -154,18 +165,9 @@ export default function DashboardPage() {
               <Leaderboards exchanges={aggregate.exchanges} />
             </section>
 
-            <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-              <div className="lg:col-span-2">
-                <ArbitrageScanner exchanges={aggregate.exchanges} />
-              </div>
-              <PoolExposure data={aggregate} />
-            </section>
-
-            <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-              <div className="lg:col-span-2">
-                <AlertsPanel aggregate={aggregate} />
-              </div>
-              <OrderFlowIntelligence data={aggregate} />
+            <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <ArbitrageScanner exchanges={aggregate.exchanges} />
+              <AlertsPanel aggregate={aggregate} />
             </section>
 
             <footer className="border-t border-hairline pt-6 text-[11px] leading-relaxed text-ink-faint">
