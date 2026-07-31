@@ -19,6 +19,8 @@ import { LiquidationIntelligence } from "@/components/dashboard/LiquidationIntel
 import { OrderFlowIntelligence } from "@/components/dashboard/OrderFlowIntelligence";
 import { ExchangeFlowIntelligence } from "@/components/dashboard/ExchangeFlowIntelligence";
 import { DeribitOptionsIntelligence } from "@/components/dashboard/DeribitOptionsIntelligence";
+import { MarketBreadth } from "@/components/dashboard/MarketBreadth";
+import { CorrelationHeatmap } from "@/components/dashboard/CorrelationHeatmap";
 import { DashboardSkeleton, LowerSkeleton, Skeleton } from "@/components/ui/Skeleton";
 import { Collapsible } from "@/components/ui/Collapsible";
 import { Button } from "@/components/ui/Button";
@@ -147,6 +149,17 @@ export default function DashboardPage() {
             <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <PoolExposure data={aggregate} />
               <OrderFlowIntelligence data={aggregate} />
+            </section>
+
+            {/*
+              Market-wide context, same for every asset tab — doesn't belong
+              on any per-asset card. Sits here because it's the same kind of
+              "step back and look at the bigger picture" read as the
+              intelligence cards above it.
+            */}
+            <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <MarketBreadth stablecoins={data?.stablecoins ?? null} globalMarket={data?.globalMarket ?? null} />
+              <CorrelationHeatmap correlation={data?.correlation ?? null} />
             </section>
 
             {/*

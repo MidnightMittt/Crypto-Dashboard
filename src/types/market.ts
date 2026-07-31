@@ -91,6 +91,19 @@ export interface AggregateMarketData {
   /** How many independent spot sources answered. */
   spotSourceCount: number;
   /**
+   * (Coinbase spot - median of other spot sources) / that median * 100.
+   * Null unless Coinbase AND at least one other source both answered.
+   *
+   * NOT a Coinbase-vs-Binance comparison, the textbook definition of
+   * "Coinbase Premium" — Binance's spot API is unreachable directly from
+   * this app's hosting region, the same geo-blocking reason its perp data
+   * already routes through Coinalyze/CoinGecko. This compares Coinbase
+   * against the blended Alchemy/Jupiter/DexScreener reference instead. See
+   * providers/spotPrice.ts's resolveSpotWithConfidence for the full
+   * reasoning.
+   */
+  coinbasePremiumPct: number | null;
+  /**
    * Net positioning at peer-to-pool venues. Null when none reported.
    *
    * Deliberately separate from `longShortRatio`. That field is an ACCOUNT

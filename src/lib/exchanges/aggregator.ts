@@ -299,7 +299,7 @@ async function buildAggregateForAsset(asset: AssetSymbol): Promise<AggregateMark
   // overlaps the two, instead of adding spot's full latency to every load.
   const spot = resolveSpotWithConfidence(asset).catch((err) => {
     console.warn(`[spot] resolution failed for ${asset}:`, err);
-    return { price: null, disagreementPct: null, sourceCount: 0 };
+    return { price: null, disagreementPct: null, sourceCount: 0, coinbasePremiumPct: null };
   });
 
   const { snapshots, unavailable } = await snapshotsForAsset(asset);
@@ -416,10 +416,12 @@ async function withRecordedHistory(
   let basisPct: number | null = null;
   let spotDisagreementPct: number | null = null;
   let spotSourceCount = 0;
+  let coinbasePremiumPct: number | null = null;
   if (asset !== "MARKET" && spot) {
-    const { price: resolved, disagreementPct, sourceCount } = await spot;
+    const { price: resolved, disagreementPct, sourceCount, coinbasePremiumPct: premium } = await spot;
     spotSourceCount = sourceCount;
     spotDisagreementPct = disagreementPct;
+    coinbasePremiumPct = premium;
     if (resolved) {
       // OI-weighted perp price across venues that report one.
       const priced = agg.exchanges.filter((e) => e.price > 0);
@@ -541,6 +543,7 @@ async function withRecordedHistory(
     basisPct,
     spotDisagreementPct,
     spotSourceCount,
+    coinbasePremiumPct,
     history,
     historyHours: historySpanHours(history),
   };
@@ -638,6 +641,7 @@ function buildAggregate(
       basisPct: null,
       spotDisagreementPct: null,
       spotSourceCount: 0,
+      coinbasePremiumPct: null,
       poolExposure: null,
       history: [],
       historyHours: 0,
@@ -750,6 +754,7 @@ function buildAggregate(
     basisPct: null,
     spotDisagreementPct: null,
     spotSourceCount: 0,
+    coinbasePremiumPct: null,
     // Filled in by withRecordedHistory, which is where the async work lives.
     poolExposure: null,
     fundingDivergence,

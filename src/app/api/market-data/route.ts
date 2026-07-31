@@ -3,6 +3,10 @@ import { getAggregateForAsset, getAggregateForMarket } from "@/lib/exchanges/agg
 import { ALL_ASSETS } from "@/lib/exchanges/registry";
 import { AssetSymbol } from "@/types/market";
 import { fetchFearGreed } from "@/lib/providers/fearGreed";
+import { fetchStablecoinSummary } from "@/lib/providers/stablecoins";
+import { fetchGlobalMarketSummary } from "@/lib/providers/globalMarket";
+import { fetchAllAssetHistories, CORRELATION_WINDOW_DAYS } from "@/lib/providers/coingeckoHistory";
+import { computeCorrelationMatrix } from "@/lib/sentiment/correlation";
 
 export const dynamic = "force-dynamic";
 // swr()'s background refresh now runs via after(), which keeps this
@@ -24,13 +28,19 @@ export async function GET(req: NextRequest) {
   const assetParam = req.nextUrl.searchParams.get("asset") ?? "BTC";
 
   try {
-    const [aggregate, fearGreed] = await Promise.all([
+    const [aggregate, fearGreed, stablecoins, globalMarket, assetHistories] = await Promise.all([
       assetParam === "MARKET"
         ? getAggregateForMarket()
         : ALL_ASSETS.includes(assetParam as AssetSymbol)
           ? getAggregateForAsset(assetParam as AssetSymbol)
           : Promise.resolve(null),
       fetchFearGreed(),
+      // Market-wide, asset-independent — same reasoning as fearGreed above:
+      // fetched every request, but each is swr()/module cached, so this
+      // costs nothing beyond the first request per cache window.
+      fetchStablecoinSummary().catch(() => null),
+      fetchGlobalMarketSummary().catch(() => null),
+      fetchAllAssetHistories().catch(() => ({})),
     ]);
 
     if (!aggregate) {
@@ -40,9 +50,14 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    const correlation = computeCorrelationMatrix(assetHistories, CORRELATION_WINDOW_DAYS, Date.now());
+
     return NextResponse.json({
       aggregate,
       fearGreed,
+      stablecoins,
+      globalMarket,
+      correlation,
       meta: { generatedAt: Date.now() },
     });
   } catch (err) {

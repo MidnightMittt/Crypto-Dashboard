@@ -81,6 +81,20 @@ export function FundingGauge({ data }: { data: AggregateMarketData }) {
               {orDash(data.basisPct, (v) => formatPct(v, 3))}
             </span>
           </div>
+          {data.coinbasePremiumPct !== null && (
+            <div className="mt-1.5 flex items-center justify-between">
+              <span className="text-[10px] uppercase tracking-wider text-ink-faint">
+                Coinbase premium
+              </span>
+              <span
+                className={`font-mono text-xs ${
+                  data.coinbasePremiumPct > 0 ? "text-success" : "text-danger"
+                }`}
+              >
+                {formatPct(data.coinbasePremiumPct, 3)}
+              </span>
+            </div>
+          )}
           {data.spotDisagreementPct !== null && data.spotDisagreementPct > 1 && (
             <p className="mt-1 text-[10px] leading-relaxed text-amber">
               Spot sources disagree by {data.spotDisagreementPct.toFixed(2)}% — treat this basis figure

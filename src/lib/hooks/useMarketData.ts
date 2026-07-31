@@ -2,6 +2,9 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { AggregateMarketData, AssetSymbol, FearGreed } from "@/types/market";
+import { StablecoinSummary } from "@/lib/providers/stablecoins";
+import { GlobalMarketSummary } from "@/lib/providers/globalMarket";
+import { CorrelationMatrix } from "@/lib/sentiment/correlation";
 
 const POLL_MS = Number(process.env.NEXT_PUBLIC_POLL_INTERVAL_MS ?? 15_000);
 
@@ -9,6 +12,10 @@ export interface MarketPayload {
   aggregate: AggregateMarketData;
   /** Market-wide spot sentiment, for contrast with our leverage index. */
   fearGreed: FearGreed | null;
+  /** Market-wide, asset-independent — same for every asset tab. */
+  stablecoins: StablecoinSummary | null;
+  globalMarket: GlobalMarketSummary | null;
+  correlation: CorrelationMatrix | null;
   meta: { generatedAt: number };
 }
 

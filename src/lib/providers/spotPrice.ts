@@ -47,9 +47,27 @@ export async function resolveSpotPrice(asset: AssetSymbol): Promise<SpotPrice | 
  * bridged wrapper, or stale data — and the basis figure shouldn't be
  * trusted at face value.
  */
-export async function resolveSpotWithConfidence(
-  asset: AssetSymbol
-): Promise<{ price: SpotPrice | null; disagreementPct: number | null; sourceCount: number }> {
+export async function resolveSpotWithConfidence(asset: AssetSymbol): Promise<{
+  price: SpotPrice | null;
+  disagreementPct: number | null;
+  sourceCount: number;
+  /**
+   * (Coinbase spot - median of the OTHER responding spot sources) / that
+   * median * 100. Null unless both Coinbase AND at least one other source
+   * answered — a premium against nothing isn't a premium.
+   *
+   * This is a deliberate redefinition of "Coinbase Premium" from its
+   * traditional form (Coinbase vs. Binance specifically): Binance's spot
+   * API is unreachable directly from this app's hosting region for the same
+   * geo-blocking reason its perp data already routes through Coinalyze/
+   * CoinGecko. Comparing Coinbase against the blended Alchemy/Jupiter/
+   * DexScreener reference instead is a defensible stand-in for "Coinbase vs.
+   * the rest of the market" — and it's free, reusing spot sources this
+   * function was already fetching for basis. Disclosed as exactly that in
+   * the UI, not presented as the textbook Binance-comparison figure.
+   */
+  coinbasePremiumPct: number | null;
+}> {
   const [coinbase, alchemy, jupiter, dex] = await Promise.all([
     fetchCoinbaseSpot(asset),
     fetchAlchemySpot(asset, ALL_ASSETS),
@@ -128,5 +146,21 @@ export async function resolveSpotWithConfidence(
     if (min > 0) disagreementPct = ((max - min) / min) * 100;
   }
 
-  return { price, disagreementPct, sourceCount: candidates.length };
+  // Median of the OTHER sources only — comparing Coinbase against a blend
+  // that includes Coinbase itself would understate any real gap.
+  let coinbasePremiumPct: number | null = null;
+  if (coinbase && coinbase.priceUsd > 0) {
+    const others = [alchemy, jupiter, dex]
+      .filter((p): p is SpotPrice => p !== null && p.priceUsd > 0)
+      .map((p) => p.priceUsd)
+      .sort((a, b) => a - b);
+    if (others.length > 0) {
+      const othersMedian = others[Math.floor(others.length / 2)];
+      if (othersMedian > 0) {
+        coinbasePremiumPct = ((coinbase.priceUsd - othersMedian) / othersMedian) * 100;
+      }
+    }
+  }
+
+  return { price, disagreementPct, sourceCount: candidates.length, coinbasePremiumPct };
 }
