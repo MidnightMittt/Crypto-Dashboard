@@ -54,7 +54,7 @@ function demoKeyHeader(): Record<string, string> {
   return key ? { "x-cg-demo-api-key": key } : {};
 }
 
-async function fetchOneSeries(id: string): Promise<PricePoint[] | null> {
+async function fetchOnce(id: string): Promise<{ points: PricePoint[] | null; status: number | null }> {
   try {
     const res = await fetch(
       `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=${CORRELATION_WINDOW_DAYS}&interval=daily`,
@@ -64,17 +64,33 @@ async function fetchOneSeries(id: string): Promise<PricePoint[] | null> {
         cache: "no-store",
       }
     );
-    if (!res.ok) return null;
+    if (!res.ok) return { points: null, status: res.status };
 
     const json = (await res.json()) as MarketChartResponse;
     const points = (json.prices ?? [])
       .filter((p): p is [number, number] => Array.isArray(p) && Number.isFinite(p[1]) && p[1] > 0)
       .map(([t, price]) => ({ t, price }));
 
-    return points.length > 0 ? points : null;
+    return { points: points.length > 0 ? points : null, status: res.status };
   } catch {
-    return null;
+    return { points: null, status: null };
   }
+}
+
+/**
+ * One retry, ONLY on 429. Every other failure (network error, 404, a
+ * malformed body) is a real failure that retrying won't fix — a rate limit
+ * is the one case where waiting a beat and asking again is the correct
+ * response, not a workaround.
+ */
+async function fetchOneSeries(id: string): Promise<PricePoint[] | null> {
+  const first = await fetchOnce(id);
+  if (first.points) return first.points;
+  if (first.status !== 429) return null;
+
+  await new Promise((resolve) => setTimeout(resolve, 2_000));
+  const retry = await fetchOnce(id);
+  return retry.points;
 }
 
 async function fetchAll(): Promise<Partial<Record<AssetSymbol, PricePoint[]>>> {
@@ -83,10 +99,12 @@ async function fetchAll(): Promise<Partial<Record<AssetSymbol, PricePoint[]>>> {
     const series = await fetchOneSeries(id);
     if (series) out[asset] = series;
     // 400ms, not a tighter stagger: this shares CoinGecko's free-tier rate
-    // limit with providers/coingecko.ts's derivatives fetch, which is often
-    // running concurrently in the same request. A cold instance hitting
-    // both at once measurably lost several of the 10 assets to 429s at a
-    // 150ms stagger — this is the more conservative pacing that fixed it.
+    // limit with providers/coingecko.ts's derivatives fetch AND
+    // globalMarket.ts's two calls, all of which can be running in the same
+    // request. Even from a fresh IP with none of that history, a cold
+    // instance measured only 3 of 10 assets surviving — pacing alone isn't
+    // enough at this endpoint's real-world limit, which is why
+    // fetchOneSeries also retries once on a 429 specifically (see above).
     await new Promise((resolve) => setTimeout(resolve, 400));
   }
   return out;
