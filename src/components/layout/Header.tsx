@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Activity } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/Select";
 import { Badge } from "@/components/ui/Badge";
@@ -27,6 +28,12 @@ export function Header({ venueCount, updatedAt }: { venueCount?: number; updated
         </div>
 
         <div className="flex items-center gap-3">
+          <Link
+            href="/options"
+            className="hidden text-[11px] uppercase tracking-widest text-ink-faint transition-colors hover:text-ink sm:inline"
+          >
+            Options →
+          </Link>
           {updatedAt && (
             <span className="hidden text-[11px] text-ink-faint sm:inline">
               Updated {timeAgo(updatedAt)}

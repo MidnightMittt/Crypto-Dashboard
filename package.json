@@ -12,7 +12,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "check-drift": "node scripts/check-drift.mjs"
+    "check-drift": "node scripts/check-drift.mjs",
+    "check-robinhood": "node scripts/check-robinhood.mjs",
+    "check-tradier": "node scripts/check-tradier.mjs"
   },
   "dependencies": {
     "@drift-labs/sdk": "^2.155.0",
@@ -29,8 +31,10 @@
     "framer-motion": "^11.11.9",
     "lucide-react": "^0.453.0",
     "next": "^15.5.22",
+    "otplib": "^13.4.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "robinhood-nodejs": "^2.0.11",
     "tailwind-merge": "^2.5.4",
     "zustand": "^4.5.5"
   },
