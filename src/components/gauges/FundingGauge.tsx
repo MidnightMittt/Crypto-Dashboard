@@ -4,10 +4,12 @@ import { useMemo } from "react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { LeanGauge } from "@/components/ui/LeanGauge";
 import { GaugeBase } from "./GaugeBase";
 import { GaugeStat } from "./GaugeStat";
 import { TrendArrow } from "./TrendArrow";
 import { bandFor, FUNDING_BANDS } from "@/lib/sentiment/bands";
+import { coinbasePremiumLean } from "@/lib/sentiment/leans";
 import { formatFundingPct, formatPct, orDash } from "@/lib/utils/format";
 import { AggregateMarketData } from "@/types/market";
 import { gaugeTrail } from "@/lib/utils/gaugeTrail";
@@ -82,17 +84,22 @@ export function FundingGauge({ data }: { data: AggregateMarketData }) {
             </span>
           </div>
           {data.coinbasePremiumPct !== null && (
-            <div className="mt-1.5 flex items-center justify-between">
-              <span className="text-[10px] uppercase tracking-wider text-ink-faint">
-                Coinbase premium
-              </span>
-              <span
-                className={`font-mono text-xs ${
-                  data.coinbasePremiumPct > 0 ? "text-success" : "text-danger"
-                }`}
-              >
-                {formatPct(data.coinbasePremiumPct, 3)}
-              </span>
+            <div className="mt-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] uppercase tracking-wider text-ink-faint">
+                  Coinbase premium
+                </span>
+                <span
+                  className={`font-mono text-xs ${
+                    data.coinbasePremiumPct > 0 ? "text-success" : "text-danger"
+                  }`}
+                >
+                  {formatPct(data.coinbasePremiumPct, 3)}
+                </span>
+              </div>
+              <div className="mt-1.5">
+                <LeanGauge lean={coinbasePremiumLean(data.coinbasePremiumPct)} />
+              </div>
             </div>
           )}
           {data.spotDisagreementPct !== null && data.spotDisagreementPct > 1 && (

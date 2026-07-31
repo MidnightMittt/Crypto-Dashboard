@@ -2,7 +2,9 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { LeanGauge } from "@/components/ui/LeanGauge";
 import { formatCompactUsd, formatUsd } from "@/lib/utils/format";
+import { deribitOptionsLean } from "@/lib/sentiment/leans";
 import { AggregateMarketData, DeribitOptionsSummary } from "@/types/market";
 
 /**
@@ -60,6 +62,8 @@ export function DeribitOptionsIntelligence({ data }: { data: AggregateMarketData
                 <div className="text-[10px] uppercase tracking-widest text-ink-faint">Max pain</div>
               </div>
             </div>
+
+            <LeanGauge lean={deribitOptionsLean(opt.putCallRatio)} />
 
             {opt.atmIvPct !== null && (
               <div className="text-[11px] text-ink-faint">

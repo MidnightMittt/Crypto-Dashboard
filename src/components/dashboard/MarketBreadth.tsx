@@ -1,7 +1,9 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { LeanGauge } from "@/components/ui/LeanGauge";
 import { formatCompactUsd, formatPct } from "@/lib/utils/format";
+import { stablecoinFlowLean } from "@/lib/sentiment/leans";
 import { StablecoinSummary } from "@/lib/providers/stablecoins";
 import { GlobalMarketSummary } from "@/lib/providers/globalMarket";
 import { ALTSEASON_WINDOW_DAYS } from "@/lib/providers/globalMarket";
@@ -78,6 +80,9 @@ export function MarketBreadth({
                   {formatCompactUsd(stablecoins.netChange7dUsd)}
                 </span>
               </span>
+            </div>
+            <div className="mt-3">
+              <LeanGauge lean={stablecoinFlowLean(stablecoins.netChange7dPct)} />
             </div>
             <p className="mt-2 text-[10px] leading-relaxed text-ink-faint">
               {narrateStablecoins(stablecoins)}{" "}
