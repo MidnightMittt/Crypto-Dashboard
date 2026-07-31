@@ -501,8 +501,27 @@ async function withRecordedHistory(
     priceChange24hPct: agg.priceChange24hPct,
   });
 
+  /*
+   * Recomputed here rather than left as buildAggregate's synchronous-only
+   * version — orderFlow, exchangeFlow, and poolExposure aren't available
+   * until the async Promise.all above resolves. This overrides the earlier
+   * value in the `...agg` spread below.
+   */
+  const compositeSentimentScore = computeCompositeSentiment({
+    weightedFundingRatePct: agg.weightedFundingRatePct,
+    oiChange24hPct,
+    oiPercentile,
+    longShortRatio: agg.longShortRatio,
+    priceChange24hPct: agg.priceChange24hPct,
+    exchanges: agg.exchanges,
+    orderFlow,
+    exchangeFlow,
+    poolExposure,
+  });
+
   return {
     ...agg,
+    compositeSentimentScore,
     poolExposure,
     liquidations,
     orderFlow,

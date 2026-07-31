@@ -1,4 +1,4 @@
-import { ExchangeSnapshot } from "@/types/market";
+import { ExchangeSnapshot, ExchangeFlowSummary, OrderFlowSummary, PoolExposureSummary } from "@/types/market";
 
 export function clamp(v: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, v));
@@ -15,6 +15,26 @@ interface CompositeInputs {
   longShortRatio: number | null;
   priceChange24hPct: number;
   exchanges: ExchangeSnapshot[];
+  /**
+   * Three supplementary signals, all optional and all dropped (weight
+   * renormalized) when absent — same "missing means missing, not neutral"
+   * rule as every other input here.
+   *
+   * Deliberately NOT included: liquidations, squeezeRisk, fundingDivergence,
+   * cexDex, or arbitrage spreads. None of those have an honest bullish/
+   * bearish reading — liquidations describe what already happened rather
+   * than a lean, squeezeRisk is a magnitude-of-risk score (its own docs
+   * warn against reading it as a probability, let alone a direction),
+   * fundingDivergence measures cross-venue DISAGREEMENT with no direction
+   * of its own, cexDex's funding gap would double-count the funding rate
+   * already scored above, and arbitrage spreads are a cross-venue
+   * inefficiency, not a market-wide sentiment signal. Forcing any of them
+   * into a directional score would make this index look more precise than
+   * it actually is.
+   */
+  orderFlow?: OrderFlowSummary | null;
+  exchangeFlow?: ExchangeFlowSummary | null;
+  poolExposure?: PoolExposureSummary | null;
 }
 
 /**
@@ -31,7 +51,7 @@ export function computeCompositeSentiment(inputs: CompositeInputs): number {
   const components: Array<{ score: number; weight: number }> = [];
 
   // Funding: the most direct read on positioning.
-  components.push({ score: scale(inputs.weightedFundingRatePct, -0.2, 0.2), weight: 0.3 });
+  components.push({ score: scale(inputs.weightedFundingRatePct, -0.2, 0.2), weight: 0.25 });
 
   // Price momentum.
   components.push({ score: scale(inputs.priceChange24hPct, -10, 10), weight: 0.2 });
@@ -42,12 +62,12 @@ export function computeCompositeSentiment(inputs: CompositeInputs): number {
     if (inputs.oiChange24hPct !== null) parts.push(scale(inputs.oiChange24hPct, -15, 25));
     components.push({
       score: parts.reduce((s, v) => s + v, 0) / parts.length,
-      weight: 0.25,
+      weight: 0.2,
     });
   }
 
   if (inputs.longShortRatio !== null) {
-    components.push({ score: scale(inputs.longShortRatio, 0.5, 1.8), weight: 0.15 });
+    components.push({ score: scale(inputs.longShortRatio, 0.5, 1.8), weight: 0.1 });
   }
 
   // Volume turnover relative to open interest — how hot the churn is.
@@ -62,7 +82,39 @@ export function computeCompositeSentiment(inputs: CompositeInputs): number {
   const totalVolume = priced.reduce((s, e) => s + e.volume24hUsd, 0);
   const totalOi = priced.reduce((s, e) => s + e.openInterestUsd, 0);
   if (totalOi > 0 && totalVolume > 0) {
-    components.push({ score: scale(totalVolume / totalOi, 0.5, 4), weight: 0.1 });
+    components.push({ score: scale(totalVolume / totalOi, 0.5, 4), weight: 0.08 });
+  }
+
+  // Aggressive taker flow, OKX only. buyerSharePct is already a 0-100 share
+  // centered on 50 — the exact shape a component score needs, no rescaling.
+  if (inputs.orderFlow) {
+    components.push({ score: inputs.orderFlow.buyerSharePct, weight: 0.07 });
+  }
+
+  // Net movement at a small set of verified exchange wallets (BTC/ETH only
+  // — see providers/exchangeFlows/addresses.ts). Inflow reads bearish
+  // (coins arriving at an exchange), outflow bullish (moving to
+  // self-custody). Scaled against the wallet's OWN balance rather than a
+  // fixed dollar amount, same reasoning as the "balanced" dead zone in
+  // exchangeFlow.ts: a $10M move means something different on a $100M
+  // wallet than a $1B one.
+  if (inputs.exchangeFlow) {
+    const priorBalanceUsd = inputs.exchangeFlow.currentBalanceUsd - inputs.exchangeFlow.netflowUsd;
+    const pctMoved =
+      priorBalanceUsd > 0 ? (inputs.exchangeFlow.netflowUsd / priorBalanceUsd) * 100 : 0;
+    // Inverted: positive pctMoved (inflow) must score LOW (bearish).
+    components.push({ score: scale(-pctMoved, -2, 2), weight: 0.05 });
+  }
+
+  // Net long/short skew at peer-to-pool DEXs. Kept as its OWN component
+  // rather than merged into longShortRatio above — that field is account
+  // positioning at order-book venues, this is notional exposure where a
+  // pool takes the other side. Averaging the two would blend numbers that
+  // answer different questions. Scored the same direction as
+  // longShortRatio (net long = higher score) for consistency within this
+  // index, not as a contrarian crowding signal.
+  if (inputs.poolExposure) {
+    components.push({ score: scale(inputs.poolExposure.netSkewPct, -30, 30), weight: 0.05 });
   }
 
   const totalWeight = components.reduce((s, c) => s + c.weight, 0);

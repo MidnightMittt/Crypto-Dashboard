@@ -149,9 +149,9 @@ describe("computeCompositeSentiment", () => {
       priceChange24hPct: 0,
       exchanges: [],
     });
-    // funding=50 (w .3), price=50 (w .2), OI=100 (w .25) -> (50*.3+50*.2+100*.25)/0.75
-    // = (15+10+25)/0.75 = 50/0.75 = 66.67 -> rounds to 67.
-    expect(score).toBe(67);
+    // funding=50 (w .25), price=50 (w .2), OI=100 (w .2) -> (50*.25+50*.2+100*.2)/0.65
+    // = (12.5+10+20)/0.65 = 42.5/0.65 = 65.38 -> rounds to 65.
+    expect(score).toBe(65);
   });
 
   it("is monotonic in funding: higher funding never produces a lower score, all else equal", () => {
@@ -172,6 +172,230 @@ describe("computeCompositeSentiment", () => {
       exchanges: [],
     });
     expect(high).toBeGreaterThan(low);
+  });
+
+  it("scores maximally bullish including the three supplementary signals", () => {
+    const score = computeCompositeSentiment({
+      weightedFundingRatePct: 0.2,
+      oiChange24hPct: 25,
+      oiPercentile: 100,
+      longShortRatio: 1.8,
+      priceChange24hPct: 10,
+      exchanges: [],
+      orderFlow: {
+        bookImbalance: null,
+        cvdHistory: [],
+        totalBuyUsd: 100,
+        totalSellUsd: 0,
+        dominantFlow: "buyers",
+        buyerSharePct: 100,
+        windowHours: 24,
+        venue: "OKX",
+      },
+      exchangeFlow: {
+        asset: "BTC",
+        netflowUsd: -20_000, // outflow -> bullish
+        netflowNative: -1,
+        currentBalanceUsd: 980_000,
+        windowHours: 24,
+        direction: "outflow",
+        venues: ["Binance"],
+        trackedAddressCount: 1,
+      },
+      poolExposure: { longUsd: 100, shortUsd: 0, netSkewPct: 30, venues: ["Jupiter Perps"] },
+    });
+    expect(score).toBe(100);
+  });
+
+  it("scores maximally bearish including the three supplementary signals", () => {
+    const score = computeCompositeSentiment({
+      weightedFundingRatePct: -0.2,
+      oiChange24hPct: -15,
+      oiPercentile: 0,
+      longShortRatio: 0.5,
+      priceChange24hPct: -10,
+      exchanges: [],
+      orderFlow: {
+        bookImbalance: null,
+        cvdHistory: [],
+        totalBuyUsd: 0,
+        totalSellUsd: 100,
+        dominantFlow: "sellers",
+        buyerSharePct: 0,
+        windowHours: 24,
+        venue: "OKX",
+      },
+      exchangeFlow: {
+        asset: "BTC",
+        netflowUsd: 20_000, // inflow -> bearish
+        netflowNative: 1,
+        currentBalanceUsd: 1_020_000,
+        windowHours: 24,
+        direction: "inflow",
+        venues: ["Binance"],
+        trackedAddressCount: 1,
+      },
+      poolExposure: { longUsd: 0, shortUsd: 100, netSkewPct: -30, venues: ["Jupiter Perps"] },
+    });
+    expect(score).toBe(0);
+  });
+});
+
+describe("computeCompositeSentiment - order flow", () => {
+  it("pulls the score toward bullish when aggressive buyers dominate", () => {
+    const score = computeCompositeSentiment({
+      weightedFundingRatePct: 0,
+      oiChange24hPct: null,
+      oiPercentile: null,
+      longShortRatio: null,
+      priceChange24hPct: 0,
+      exchanges: [],
+      orderFlow: {
+        bookImbalance: null,
+        cvdHistory: [],
+        totalBuyUsd: 100,
+        totalSellUsd: 0,
+        dominantFlow: "buyers",
+        buyerSharePct: 100,
+        windowHours: 24,
+        venue: "OKX",
+      },
+    });
+    // funding=50 (w .25), price=50 (w .2), orderFlow=100 (w .07)
+    // (12.5+10+7)/0.52 = 29.5/0.52 = 56.73 -> 57
+    expect(score).toBe(57);
+  });
+
+  it("is dropped (renormalized away, not scored as neutral) when absent", () => {
+    const withoutOrderFlow = computeCompositeSentiment({
+      weightedFundingRatePct: 0,
+      oiChange24hPct: null,
+      oiPercentile: null,
+      longShortRatio: null,
+      priceChange24hPct: 0,
+      exchanges: [],
+    });
+    expect(withoutOrderFlow).toBe(50);
+  });
+});
+
+describe("computeCompositeSentiment - exchange flow", () => {
+  it("scores inflow (coins moving toward exchanges) as bearish", () => {
+    const score = computeCompositeSentiment({
+      weightedFundingRatePct: 0,
+      oiChange24hPct: null,
+      oiPercentile: null,
+      longShortRatio: null,
+      priceChange24hPct: 0,
+      exchanges: [],
+      exchangeFlow: {
+        asset: "BTC",
+        netflowUsd: 20_000,
+        netflowNative: 1,
+        currentBalanceUsd: 1_020_000,
+        windowHours: 24,
+        direction: "inflow",
+        venues: ["Binance"],
+        trackedAddressCount: 1,
+      },
+    });
+    // prior balance = 1,020,000 - 20,000 = 1,000,000 -> pctMoved = +2%
+    // -> scale(-2, -2, 2) = 0 (bearish floor)
+    // funding=50(.25) price=50(.2) flow=0(.05) -> (12.5+10+0)/0.5 = 45
+    expect(score).toBe(45);
+  });
+
+  it("scores outflow (coins leaving exchanges) as bullish", () => {
+    const score = computeCompositeSentiment({
+      weightedFundingRatePct: 0,
+      oiChange24hPct: null,
+      oiPercentile: null,
+      longShortRatio: null,
+      priceChange24hPct: 0,
+      exchanges: [],
+      exchangeFlow: {
+        asset: "BTC",
+        netflowUsd: -20_000,
+        netflowNative: -1,
+        currentBalanceUsd: 980_000,
+        windowHours: 24,
+        direction: "outflow",
+        venues: ["Binance"],
+        trackedAddressCount: 1,
+      },
+    });
+    // prior balance = 980,000 - (-20,000) = 1,000,000 -> pctMoved = -2%
+    // -> scale(2, -2, 2) = 100 (bullish ceiling)
+    // funding=50(.25) price=50(.2) flow=100(.05) -> (12.5+10+5)/0.5 = 55
+    expect(score).toBe(55);
+  });
+
+  it("treats a zero/negative prior balance as no movement rather than dividing by zero", () => {
+    const score = computeCompositeSentiment({
+      weightedFundingRatePct: 0,
+      oiChange24hPct: null,
+      oiPercentile: null,
+      longShortRatio: null,
+      priceChange24hPct: 0,
+      exchanges: [],
+      exchangeFlow: {
+        asset: "BTC",
+        netflowUsd: 5,
+        netflowNative: 5,
+        currentBalanceUsd: 5, // prior = 5 - 5 = 0
+        windowHours: 24,
+        direction: "inflow",
+        venues: ["Binance"],
+        trackedAddressCount: 1,
+      },
+    });
+    expect(score).toBe(50);
+  });
+});
+
+describe("computeCompositeSentiment - pool exposure", () => {
+  it("scores net-long pool positioning as bullish", () => {
+    const score = computeCompositeSentiment({
+      weightedFundingRatePct: 0,
+      oiChange24hPct: null,
+      oiPercentile: null,
+      longShortRatio: null,
+      priceChange24hPct: 0,
+      exchanges: [],
+      poolExposure: { longUsd: 65, shortUsd: 35, netSkewPct: 30, venues: ["Jupiter Perps"] },
+    });
+    // pool = scale(30, -30, 30) = 100 (w .05)
+    // funding=50(.25) price=50(.2) pool=100(.05) -> (12.5+10+5)/0.5 = 55
+    expect(score).toBe(55);
+  });
+
+  it("scores net-short pool positioning as bearish", () => {
+    const score = computeCompositeSentiment({
+      weightedFundingRatePct: 0,
+      oiChange24hPct: null,
+      oiPercentile: null,
+      longShortRatio: null,
+      priceChange24hPct: 0,
+      exchanges: [],
+      poolExposure: { longUsd: 35, shortUsd: 65, netSkewPct: -30, venues: ["Jupiter Perps"] },
+    });
+    // pool = scale(-30, -30, 30) = 0
+    // funding=50(.25) price=50(.2) pool=0(.05) -> (12.5+10+0)/0.5 = 45
+    expect(score).toBe(45);
+  });
+
+  it("clamps skew beyond the scale range rather than extrapolating", () => {
+    const score = computeCompositeSentiment({
+      weightedFundingRatePct: 0,
+      oiChange24hPct: null,
+      oiPercentile: null,
+      longShortRatio: null,
+      priceChange24hPct: 0,
+      exchanges: [],
+      poolExposure: { longUsd: 100, shortUsd: 0, netSkewPct: 100, venues: ["Jupiter Perps"] },
+    });
+    expect(score).toBeLessThanOrEqual(100);
+    expect(score).toBeGreaterThanOrEqual(0);
   });
 });
 
