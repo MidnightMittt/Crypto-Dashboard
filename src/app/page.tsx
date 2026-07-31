@@ -18,6 +18,7 @@ import { PositioningIntelligence } from "@/components/dashboard/PositioningIntel
 import { LiquidationIntelligence } from "@/components/dashboard/LiquidationIntelligence";
 import { OrderFlowIntelligence } from "@/components/dashboard/OrderFlowIntelligence";
 import { ExchangeFlowIntelligence } from "@/components/dashboard/ExchangeFlowIntelligence";
+import { DeribitOptionsIntelligence } from "@/components/dashboard/DeribitOptionsIntelligence";
 import { DashboardSkeleton, LowerSkeleton, Skeleton } from "@/components/ui/Skeleton";
 import { Collapsible } from "@/components/ui/Collapsible";
 import { Button } from "@/components/ui/Button";
@@ -114,11 +115,16 @@ export default function DashboardPage() {
 
             {/*
               Where the Price × Funding chart used to sit — replaced rather
-              than reused, at the user's request. This tracks actual wallet
-              movement (a real, if partial, signal) instead of a price/funding
-              lean that rarely resolved to anything decisive.
+              than reused, at the user's request. Paired here because both
+              cards are BTC/ETH-only signals that live outside perpetual
+              futures entirely: wallet flow and options-market structure,
+              neither derived from funding/OI/positioning like everything
+              else on this page.
             */}
-            <ExchangeFlowIntelligence data={aggregate} />
+            <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <ExchangeFlowIntelligence data={aggregate} />
+              <DeribitOptionsIntelligence data={aggregate} />
+            </section>
 
             <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
               <div className="lg:col-span-2">

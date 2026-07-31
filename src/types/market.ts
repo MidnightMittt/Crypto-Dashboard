@@ -148,6 +148,16 @@ export interface AggregateMarketData {
    * Meaningless (false) for every non-BTC/ETH asset.
    */
   exchangeFlowConfigured: boolean;
+  /**
+   * Crypto OPTIONS positioning from Deribit — the dominant venue for BTC/ETH
+   * options by a wide margin. Genuinely different from everything else on
+   * this dashboard, which is entirely perpetual futures: put/call ratio and
+   * max pain describe options-market structure, not perp positioning, and
+   * must not be read as another flavor of longShortRatio or squeezeRisk.
+   * Only ever populated for BTC and ETH — Deribit doesn't list options on
+   * the other 8 assets.
+   */
+  deribitOptions: DeribitOptionsSummary | null;
   /** Locally recorded time series — this app's own observations. */
   history: LocalHistoryPoint[];
   /** Hours of local history collected so far. */
@@ -272,6 +282,41 @@ export interface ExchangeFlowSummary {
   /** Exchange names behind the tracked addresses, e.g. ["Binance"]. */
   venues: string[];
   trackedAddressCount: number;
+}
+
+/**
+ * BTC/ETH options positioning, sourced entirely from Deribit — options
+ * market share there is large enough that other venues (OKX, Bybit,
+ * Delta Exchange) don't move these figures meaningfully, so this isn't
+ * cross-venue aggregated the way funding/OI are.
+ *
+ * `putCallRatio` and `maxPain` are both computed for ONE specific expiry
+ * (`expiry`, the nearest one with enough open interest to be meaningful),
+ * not blended across every listed expiry — max pain in particular is only a
+ * coherent concept for a single settlement date. `totalOpenInterestUsd` is
+ * the only field that aggregates across all expiries.
+ */
+export interface DeribitOptionsSummary {
+  asset: "BTC" | "ETH";
+  /** ISO date the ratio/max-pain figures below are computed for. */
+  expiry: string;
+  /** Put open interest / call open interest, for `expiry` only. */
+  putCallRatio: number;
+  /**
+   * The strike where option writers collectively lose the least (and,
+   * mechanically, the largest cluster of option buyers would be furthest
+   * from profitable) if the underlying settled there at `expiry`. A
+   * heuristic about where OI clusters, not a prediction — see the
+   * narration this feeds for the standard caveat about reading too much
+   * directional intent into it.
+   */
+  maxPain: number;
+  /** At-the-money implied vol for `expiry`, annualized percentage. */
+  atmIvPct: number | null;
+  /** Open interest across every listed expiry, in contracts (1 = 1 BTC or 1 ETH notional). */
+  totalOpenInterestContracts: number;
+  totalOpenInterestUsd: number;
+  updatedAt: number;
 }
 
 /** Notional long/short exposure aggregated across peer-to-pool venues. */

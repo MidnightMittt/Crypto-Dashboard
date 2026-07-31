@@ -37,7 +37,7 @@ import { resolveSpotWithConfidence } from "../providers/spotPrice";
 import { fetchJlpExposure } from "../providers/jlpExposure";
 import { fetchGmxExposure } from "../providers/gmxExposure";
 import { synthetixExposure } from "./adapters/synthetix";
-import { PoolExposureSummary, LiquidationSummary, OrderFlowSummary, ExchangeFlowSummary } from "@/types/market";
+import { PoolExposureSummary, LiquidationSummary, OrderFlowSummary, ExchangeFlowSummary, DeribitOptionsSummary } from "@/types/market";
 import { LiveAdapter } from "./adapters/types";
 import { fundingPer8h } from "../utils/format";
 import { MarketDataProvider } from "../providers/types";
@@ -52,6 +52,8 @@ import { fetchEthExchangeBalance, etherscanConfigured } from "../providers/excha
 import { trackedVenues, BTC_ADDRESSES, ETH_ADDRESSES } from "../providers/exchangeFlows/addresses";
 import { classifyExchangeFlow } from "../sentiment/exchangeFlow";
 import { recordFlowBalance, balanceWindowAgo } from "../history/flowStore";
+import { fetchDeribitOptions } from "../providers/deribitOptions";
+import { summarizeDeribitOptions } from "../sentiment/deribitOptions";
 
 /**
  * Aggregators that redistribute data for many exchanges at once. Used to
@@ -464,11 +466,12 @@ async function withRecordedHistory(
 
   // Independent network calls, run concurrently rather than sequentially —
   // none depends on another's result.
-  const [poolExposure, liquidations, orderFlow, exchangeFlow] = await Promise.all([
+  const [poolExposure, liquidations, orderFlow, exchangeFlow, deribitOptions] = await Promise.all([
     buildPoolExposure(asset, agg.exchanges),
     buildLiquidationSummary(asset),
     buildOrderFlowSummary(asset),
     buildExchangeFlow(asset, point.price, point.t),
+    buildDeribitOptions(asset, point.t),
   ]);
   // BTC's fetcher is keyless; ETH's needs ETHERSCAN_API_KEY. Computed
   // separately from the fetch itself so the UI can tell "no key" apart
@@ -527,6 +530,7 @@ async function withRecordedHistory(
     orderFlow,
     exchangeFlow,
     exchangeFlowConfigured,
+    deribitOptions,
     oiChange24hPct,
     oiPercentile,
     leverageHeatScore,
@@ -628,6 +632,7 @@ function buildAggregate(
       orderFlow: null,
       exchangeFlow: null,
       exchangeFlowConfigured: false,
+      deribitOptions: null,
       spotPriceUsd: null,
       spotSource: null,
       basisPct: null,
@@ -757,6 +762,7 @@ function buildAggregate(
     orderFlow: null,
     exchangeFlow: null,
     exchangeFlowConfigured: false,
+    deribitOptions: null,
     history: [],
     historyHours: 0,
     updatedAt: now,
@@ -908,6 +914,26 @@ async function buildExchangeFlow(
     venues: trackedVenues(addresses),
     trackedAddressCount: balance.trackedAddressCount,
   });
+}
+
+/**
+ * BTC/ETH options positioning, Deribit only — see DeribitOptionsSummary's
+ * doc comment for why this isn't cross-venue aggregated and isn't folded
+ * into computeCompositeSentiment (put/call ratio and max pain don't have
+ * the kind of unambiguous bullish/bearish reading that composite's other
+ * inputs do — same reasoning already applied to leaving liquidations,
+ * squeezeRisk, fundingDivergence, cexDex, and arbitrage spreads out of it).
+ */
+async function buildDeribitOptions(
+  asset: AssetSymbol | "MARKET",
+  now: number
+): Promise<DeribitOptionsSummary | null> {
+  if (asset !== "BTC" && asset !== "ETH") return null;
+
+  const rows = await fetchDeribitOptions(asset).catch(() => null);
+  if (!rows) return null;
+
+  return summarizeDeribitOptions(asset, rows, now);
 }
 
 function computeAggregateOiPercentile(
