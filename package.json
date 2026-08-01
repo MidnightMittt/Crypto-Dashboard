@@ -14,7 +14,9 @@
     "test:coverage": "vitest run --coverage",
     "check-drift": "node scripts/check-drift.mjs",
     "check-robinhood": "node scripts/check-robinhood.mjs",
-    "check-tradier": "node scripts/check-tradier.mjs"
+    "check-tradier": "node scripts/check-tradier.mjs",
+    "backtest:fetch": "node scripts/backtest/fetchHistory.mjs",
+    "backtest": "tsx scripts/backtest/run.ts && tsx scripts/backtest/report.ts"
   },
   "dependencies": {
     "@drift-labs/sdk": "^2.155.0",
@@ -48,6 +50,7 @@
     "eslint-config-next": "^15.5.22",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.13",
+    "tsx": "^4.23.1",
     "typescript": "^5.6.3",
     "vitest": "^4.1.10"
   }
