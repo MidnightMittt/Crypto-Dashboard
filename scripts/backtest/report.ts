@@ -1,6 +1,8 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { SQUEEZE_SCORE_BUCKETS, RegimeStat, BacktestStats } from "../../src/lib/sentiment/backtestStats";
+import { MarketRegime } from "../../src/types/market";
 
 /**
  * Aggregates run.ts's per-day output into descriptive statistics. These are
@@ -8,10 +10,19 @@ import { fileURLToPath } from "url";
  * market conditions, not multiple cycles. Treat as a first, honest look at
  * whether these scores' own internal logic ("fade the crowded side") lines
  * up with what actually happened, not a validated edge.
+ *
+ * Writes two things:
+ *   - scripts/backtest/report.md — human-readable, gitignored, regenerated
+ *     each run.
+ *   - src/data/backtestStats.json — the small, committed snapshot the live
+ *     site reads via src/lib/sentiment/backtestStats.ts's lookup functions.
+ *     Bucket definitions live in that shared module so this generator and
+ *     the live lookup can never disagree on what a bucket means.
  */
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, "data");
+const STATS_OUT_PATH = path.join(__dirname, "..", "..", "src", "data", "backtestStats.json");
 
 interface DayRecord {
   asset: string;
@@ -34,54 +45,66 @@ function median(xs: number[]): number | null {
   return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 const fmt = (n: number | null) => (n === null ? "—" : `${n >= 0 ? "+" : ""}${n.toFixed(2)}%`);
+const nums = (xs: Array<number | null>): number[] => xs.filter((v): v is number => v !== null);
 
-const SQUEEZE_BUCKETS: Array<[string, (s: number) => boolean]> = [
-  ["0-30 (quiet)", (s) => s < 30],
-  ["30-50", (s) => s >= 30 && s < 50],
-  ["50-70", (s) => s >= 50 && s < 70],
-  ["70-100 (crowded)", (s) => s >= 70],
-];
+function buildRegimeStat(bucket: DayRecord[]): RegimeStat {
+  const r1 = nums(bucket.map((r) => r.forwardReturn1d));
+  const r3 = nums(bucket.map((r) => r.forwardReturn3d));
+  const r7 = nums(bucket.map((r) => r.forwardReturn7d));
+  return {
+    n: bucket.length,
+    mean1dPct: mean(r1) ?? 0,
+    mean3dPct: mean(r3) ?? 0,
+    mean7dPct: mean(r7) ?? 0,
+    fadeHitRatePct: null, // filled in by callers that have a "side" to fade against
+  };
+}
 
-function squeezeTable(records: DayRecord[]): string {
+function squeezeSection(records: DayRecord[]): { markdown: string; stats: Record<string, RegimeStat> } {
   const rows: string[] = [
     "| Score bucket | Side | N | Mean 1d | Mean 3d | Mean 7d | Fade hit-rate* |",
     "|---|---|---|---|---|---|---|",
   ];
-  for (const [label, inBucket] of SQUEEZE_BUCKETS) {
+  const stats: Record<string, RegimeStat> = {};
+
+  for (const { label, test } of SQUEEZE_SCORE_BUCKETS) {
     for (const side of ["long", "short"] as const) {
-      const bucket = records.filter(
-        (r) => r.squeezeScore !== null && inBucket(r.squeezeScore) && r.squeezeSide === side
-      );
+      const bucket = records.filter((r) => r.squeezeScore !== null && test(r.squeezeScore) && r.squeezeSide === side);
       if (bucket.length === 0) continue;
-      const r7 = bucket.map((r) => r.forwardReturn7d).filter((v): v is number => v !== null);
-      // "Fade the extreme" thesis: crowded longs -> expect price to fall; crowded shorts -> expect price to rise.
-      const fadeHits = bucket.filter((r) => {
-        if (r.forwardReturn7d === null) return false;
-        return side === "long" ? r.forwardReturn7d < 0 : r.forwardReturn7d > 0;
-      }).length;
-      const withReturn = bucket.filter((r) => r.forwardReturn7d !== null).length;
-      const hitRate = withReturn ? `${((fadeHits / withReturn) * 100).toFixed(0)}%` : "—";
+
+      const r7WithValue = bucket.filter((r) => r.forwardReturn7d !== null);
+      const fadeHits = r7WithValue.filter((r) =>
+        side === "long" ? (r.forwardReturn7d as number) < 0 : (r.forwardReturn7d as number) > 0
+      ).length;
+      const fadeHitRatePct = r7WithValue.length ? (fadeHits / r7WithValue.length) * 100 : null;
+
+      const stat = buildRegimeStat(bucket);
+      stat.fadeHitRatePct = fadeHitRatePct;
+      stats[`${label}:${side}`] = stat;
+
       rows.push(
-        `| ${label} | ${side} | ${bucket.length} | ${fmt(mean(bucket.map((r) => r.forwardReturn1d).filter((v): v is number => v !== null)))} | ${fmt(mean(bucket.map((r) => r.forwardReturn3d).filter((v): v is number => v !== null)))} | ${fmt(mean(r7))} | ${hitRate} |`
+        `| ${label} | ${side} | ${bucket.length} | ${fmt(stat.mean1dPct)} | ${fmt(stat.mean3dPct)} | ${fmt(stat.mean7dPct)} | ${fadeHitRatePct === null ? "—" : `${fadeHitRatePct.toFixed(0)}%`} |`
       );
     }
   }
   rows.push("");
-  rows.push("*Fade hit-rate: how often price moved opposite the crowded side over the next 7 days — the behavior squeezeRisk's own \"fade the extreme\" framing predicts.");
-  return rows.join("\n");
+  rows.push('*Fade hit-rate: how often price moved opposite the crowded side over the next 7 days — the behavior squeezeRisk\'s own "fade the extreme" framing predicts.');
+  return { markdown: rows.join("\n"), stats };
 }
 
-function thesisTable(records: DayRecord[]): string {
+function thesisSection(records: DayRecord[]): { markdown: string; stats: Partial<Record<MarketRegime, RegimeStat>> } {
   const regimes = Array.from(new Set(records.map((r) => r.thesisRegime).filter((r): r is string => r !== null)));
   const rows: string[] = ["| Regime | N | Mean 1d | Median 1d | Mean 3d | Mean 7d |", "|---|---|---|---|---|---|"];
+  const stats: Partial<Record<MarketRegime, RegimeStat>> = {};
+
   for (const regime of regimes) {
     const bucket = records.filter((r) => r.thesisRegime === regime);
-    const r1 = bucket.map((r) => r.forwardReturn1d).filter((v): v is number => v !== null);
-    const r3 = bucket.map((r) => r.forwardReturn3d).filter((v): v is number => v !== null);
-    const r7 = bucket.map((r) => r.forwardReturn7d).filter((v): v is number => v !== null);
-    rows.push(`| ${regime} | ${bucket.length} | ${fmt(mean(r1))} | ${fmt(median(r1))} | ${fmt(mean(r3))} | ${fmt(mean(r7))} |`);
+    const r1 = nums(bucket.map((r) => r.forwardReturn1d));
+    const stat = buildRegimeStat(bucket);
+    stats[regime as MarketRegime] = stat;
+    rows.push(`| ${regime} | ${bucket.length} | ${fmt(stat.mean1dPct)} | ${fmt(median(r1))} | ${fmt(stat.mean3dPct)} | ${fmt(stat.mean7dPct)} |`);
   }
-  return rows.join("\n");
+  return { markdown: rows.join("\n"), stats };
 }
 
 function main() {
@@ -93,12 +116,17 @@ function main() {
   const records: DayRecord[] = JSON.parse(fs.readFileSync(resultsPath, "utf8"));
   const assets = Array.from(new Set(records.map((r) => r.asset)));
   const dates = records.map((r) => r.date).sort();
+  const coverageStart = dates[0];
+  const coverageEnd = dates[dates.length - 1];
+
+  const squeeze = squeezeSection(records);
+  const thesis = thesisSection(records);
 
   const header = `# Backtest Report
 
 Generated ${new Date().toISOString()}
 
-**Coverage:** ${assets.join(", ")}, ${dates[0]} to ${dates[dates.length - 1]} (${records.length} evaluated days total).
+**Coverage:** ${assets.join(", ")}, ${coverageStart} to ${coverageEnd} (${records.length} evaluated days total).
 Window length is bounded by OKX's open-interest and long/short history, which is hard-capped at
 180 daily points with no pagination — this covers roughly one market stretch, not multiple
 cycles. Treat everything below as descriptive statistics over that one window, not a validated,
@@ -124,17 +152,28 @@ lookahead.
 `;
 
   const body = `
-${squeezeTable(records)}
+${squeeze.markdown}
 
 ## Market Thesis (regime)
 
-${thesisTable(records)}
+${thesis.markdown}
 `;
 
   const report = header + body;
   fs.writeFileSync(path.join(DATA_DIR, "..", "report.md"), report);
   console.log(report);
-  console.log(`\n[report] wrote scripts/backtest/report.md`);
+  console.log(`[report] wrote scripts/backtest/report.md`);
+
+  const statsOut: BacktestStats = {
+    generatedAt: Date.now(),
+    coverageStart,
+    coverageEnd,
+    squeeze: squeeze.stats,
+    thesis: thesis.stats,
+  };
+  fs.mkdirSync(path.dirname(STATS_OUT_PATH), { recursive: true });
+  fs.writeFileSync(STATS_OUT_PATH, JSON.stringify(statsOut, null, 2));
+  console.log(`[report] wrote src/data/backtestStats.json`);
 }
 
 main();

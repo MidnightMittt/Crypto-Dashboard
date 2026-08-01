@@ -3,6 +3,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { MarketThesis, ThesisEvidence } from "@/types/market";
+import { lookupThesisStat } from "@/lib/sentiment/backtestStats";
+import backtestStats from "@/data/backtestStats.json";
 
 /**
  * Cross-indicator synthesis, read together as a briefing rather than as a
@@ -62,6 +64,7 @@ export function MarketThesisBriefing({ thesis }: { thesis: MarketThesis | null }
             Not a probability — a measure of how much the {totalEvidence} pieces of evidence below
             agree with each other, weighted by source. No backtest sits behind this number.
           </p>
+          <RegimeBacktestLine regime={thesis.regime} />
         </div>
 
         <div className="grid grid-cols-1 gap-4 border-t border-hairline pt-4 sm:grid-cols-2">
@@ -98,6 +101,21 @@ export function MarketThesisBriefing({ thesis }: { thesis: MarketThesis | null }
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function RegimeBacktestLine({ regime }: { regime: MarketThesis["regime"] }) {
+  const stat = lookupThesisStat(backtestStats, regime);
+  if (!stat) return null;
+
+  return (
+    <p className="mt-1 text-[10px] leading-relaxed text-ink-faint">
+      This regime is separately backtested, though: in the window ({backtestStats.coverageStart} to{" "}
+      {backtestStats.coverageEnd}, N={stat.n} occurrences), price moved a mean{" "}
+      {stat.mean7dPct >= 0 ? "+" : ""}
+      {stat.mean7dPct.toFixed(1)}% over the following 7 days. One narrow window, not a validated
+      probability.
+    </p>
   );
 }
 

@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { formatCompactUsd } from "@/lib/utils/format";
 import { AggregateMarketData, SqueezeRisk } from "@/types/market";
+import { lookupSqueezeStat } from "@/lib/sentiment/backtestStats";
+import backtestStats from "@/data/backtestStats.json";
 
 /**
  * Derivatives positioning, in one panel.
@@ -99,7 +101,24 @@ function SqueezeSection({ risk }: { risk: SqueezeRisk }) {
         not a calibrated probability. 70 means more of the setup is present than at
         40, not that anything is 70% likely.
       </p>
+
+      <BacktestStatLine risk={risk} />
     </div>
+  );
+}
+
+function BacktestStatLine({ risk }: { risk: SqueezeRisk }) {
+  const stat = lookupSqueezeStat(backtestStats, risk.score, risk.side);
+  if (!stat) return null;
+
+  return (
+    <p className="text-[10px] leading-relaxed text-ink-faint">
+      Historically, in the backtested window ({backtestStats.coverageStart} to{" "}
+      {backtestStats.coverageEnd}, N={stat.n} occurrences at this score/side): price moved a mean{" "}
+      {stat.mean7dPct >= 0 ? "+" : ""}
+      {stat.mean7dPct.toFixed(1)}% over the next 7 days, matching the fade direction{" "}
+      {stat.fadeHitRatePct?.toFixed(0)}% of the time. One narrow window, not a guarantee.
+    </p>
   );
 }
 
