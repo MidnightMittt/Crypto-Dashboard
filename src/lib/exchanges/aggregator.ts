@@ -82,6 +82,7 @@ import {
   readHistory,
   recordHistory,
 } from "../history/store";
+import { recordDailyPoint } from "../history/dailyStore";
 
 const ADAPTER_MAP: Record<string, LiveAdapter> = {
   binance: fetchBinance,
@@ -409,6 +410,19 @@ async function withRecordedHistory(
   };
 
   const history = await recordHistory(asset, point);
+
+  // Long-retention sibling of the write above — one point per UTC day, kept
+  // for years, so scripts/backtest/'s replay window can eventually grow
+  // past what OKX's 180-day-capped OI/long-short history alone allows. Same
+  // already-computed fields, no new fetch; never allowed to break the
+  // response if it fails.
+  recordDailyPoint(asset, {
+    t: point.t,
+    totalOpenInterestUsd: point.totalOpenInterestUsd,
+    weightedFundingRatePct: point.weightedFundingRatePct,
+    longShortRatio: point.longShortRatio,
+    price: point.price,
+  }).catch((err) => console.warn(`[dailyHistory] record failed for ${asset}:`, err));
 
   // Spot reference from DexScreener, used only for basis. Whole-market view
   // has no single spot price, so it's skipped there.
