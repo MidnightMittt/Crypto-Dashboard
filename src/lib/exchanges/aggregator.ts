@@ -66,6 +66,7 @@ const PROVIDERS: MarketDataProvider[] = [
   defillamaProvider, // DEX-leaning, no key
 ];
 import { computeCompositeSentiment, computeLeverageHeat, computeOiPercentile } from "../sentiment/compositeIndex";
+import { buildMarketThesis } from "../sentiment/marketThesis";
 import {
   computeCexDexSplit,
   computeFundingDivergence,
@@ -524,6 +525,30 @@ async function withRecordedHistory(
     poolExposure,
   });
 
+  /*
+   * Computed last of all — reads every other derived field above, the way
+   * an analyst reads the whole board rather than one gauge at a time. See
+   * sentiment/marketThesis.ts and MarketThesis's own doc comment for what
+   * this deliberately is and is not (not a probability, no backtest).
+   */
+  const marketThesis = buildMarketThesis(
+    {
+      asset,
+      weightedFundingRatePct: agg.weightedFundingRatePct,
+      longShortRatio: agg.longShortRatio,
+      basisPct,
+      coinbasePremiumPct,
+      orderFlow,
+      squeezeRisk,
+      deribitOptions,
+      exchangeFlow,
+      liquidations,
+      priceChange24hPct: agg.priceChange24hPct,
+      leverageHeatScore,
+    },
+    agg.updatedAt
+  );
+
   return {
     ...agg,
     compositeSentimentScore,
@@ -533,6 +558,7 @@ async function withRecordedHistory(
     exchangeFlow,
     exchangeFlowConfigured,
     deribitOptions,
+    marketThesis,
     oiChange24hPct,
     oiPercentile,
     leverageHeatScore,
@@ -636,6 +662,7 @@ function buildAggregate(
       exchangeFlow: null,
       exchangeFlowConfigured: false,
       deribitOptions: null,
+      marketThesis: null,
       spotPriceUsd: null,
       spotSource: null,
       basisPct: null,
@@ -768,6 +795,7 @@ function buildAggregate(
     exchangeFlow: null,
     exchangeFlowConfigured: false,
     deribitOptions: null,
+    marketThesis: null,
     history: [],
     historyHours: 0,
     updatedAt: now,

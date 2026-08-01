@@ -3,6 +3,7 @@
 import { AlertTriangle } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { SentimentIndex } from "@/components/dashboard/SentimentIndex";
+import { MarketThesisBriefing } from "@/components/dashboard/MarketThesisBriefing";
 import { FundingGauge } from "@/components/gauges/FundingGauge";
 import { OpenInterestGauge } from "@/components/gauges/OpenInterestGauge";
 import { LeverageHeatGauge } from "@/components/gauges/LeverageHeatGauge";
@@ -106,6 +107,14 @@ export default function DashboardPage() {
             </div>
 
             <SentimentIndex data={aggregate} fearGreed={data?.fearGreed} />
+
+            {/*
+              The flagship read: every other card on this page is one
+              indicator; this is all of them read together. Sits right
+              after the composite gauge, before the individual speedometers,
+              since it's meant to be read first.
+            */}
+            <MarketThesisBriefing thesis={aggregate.marketThesis} />
 
             <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
               <FundingGauge data={aggregate} />

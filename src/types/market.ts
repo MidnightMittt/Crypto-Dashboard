@@ -171,6 +171,12 @@ export interface AggregateMarketData {
    * the other 8 assets.
    */
   deribitOptions: DeribitOptionsSummary | null;
+  /**
+   * Cross-indicator synthesis — every OTHER field on this object read
+   * together, rather than one at a time. See MarketThesis's own doc
+   * comment for what this deliberately is and is not.
+   */
+  marketThesis: MarketThesis | null;
   /** Locally recorded time series — this app's own observations. */
   history: LocalHistoryPoint[];
   /** Hours of local history collected so far. */
@@ -397,6 +403,71 @@ export interface SqueezeRisk {
   side: "long" | "short" | "balanced";
   /** Every input, so the score can be audited rather than trusted. */
   components: SqueezeComponent[];
+}
+
+export type ThesisDirection = "bullish" | "bearish" | "neutral";
+
+/**
+ * One already-existing dashboard metric, read as evidence for or against a
+ * directional thesis. `value` and `detail` always cite the real number this
+ * came from — never a re-derived or invented figure. `source` names the
+ * card/field it's read from, so every line in the thesis card is traceable
+ * back to something else already visible on the dashboard.
+ */
+export interface ThesisEvidence {
+  source: string;
+  direction: ThesisDirection;
+  /** Plain-language statement citing the actual observed value. */
+  detail: string;
+  /** Relative importance in the thesis, same weighting concept as SqueezeComponent. */
+  weight: number;
+}
+
+export type MarketRegime =
+  | "Squeeze Setup — Longs Exposed"
+  | "Squeeze Setup — Shorts Exposed"
+  | "Trending Bullish"
+  | "Trending Bearish"
+  | "Leaning Bullish"
+  | "Leaning Bearish"
+  | "Consolidation"
+  | "Mixed / Low Conviction";
+
+/**
+ * Cross-indicator synthesis: every OTHER derived field on AggregateMarketData
+ * — funding, positioning, basis, order flow, squeeze risk, options skew,
+ * exchange flow — read together rather than one card at a time, the way an
+ * analyst reads a full board rather than one gauge in isolation.
+ *
+ * ── What this deliberately is NOT ────────────────────────────────────────
+ *
+ * Not a probability, not a price target, not a trade signal. `conviction`
+ * is a 0-10 measure of how much the gathered evidence AGREES with itself —
+ * arithmetic on weights that are already on this dashboard, not a
+ * calibrated statistic. This app has no backtesting infrastructure, so
+ * nothing here claims to have been validated against historical outcomes.
+ * A conviction of 8 means "most of the weighted evidence points the same
+ * way right now", not "there's an 80% chance of X". See
+ * sentiment/marketThesis.ts for the exact, fully-documented arithmetic.
+ */
+export interface MarketThesis {
+  asset: AssetSymbol | "MARKET";
+  regime: MarketRegime;
+  regimeDescription: string;
+  bullishEvidence: ThesisEvidence[];
+  bearishEvidence: ThesisEvidence[];
+  /** Evidence gathered but genuinely non-directional (e.g. liquidations, which are backward-looking) — shown for context, never counted toward conviction. */
+  neutralEvidence: ThesisEvidence[];
+  /** 0-10. See this type's own doc comment — explicitly not a probability. */
+  conviction: number;
+  convictionLabel: string;
+  /** Top 5 by weight, from whichever of bullishEvidence/bearishEvidence matches the dominant direction. */
+  topSupporting: ThesisEvidence[];
+  /** Top 5 by weight, from the side OPPOSING the dominant direction. */
+  topOpposing: ThesisEvidence[];
+  /** Plain-language statements of what would need to change for this reading to flip. */
+  invalidation: string[];
+  updatedAt: number;
 }
 
 /** One recorded observation from this app's own polling. */
