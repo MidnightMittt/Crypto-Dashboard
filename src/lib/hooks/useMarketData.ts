@@ -5,8 +5,19 @@ import { AggregateMarketData, AssetSymbol, FearGreed } from "@/types/market";
 import { StablecoinSummary } from "@/lib/providers/stablecoins";
 import { GlobalMarketSummary } from "@/lib/providers/globalMarket";
 import { CorrelationMatrix } from "@/lib/sentiment/correlation";
+import { BitcoinNetworkSummary } from "@/lib/providers/bitcoinNetwork";
+import { EthereumGasSummary } from "@/lib/providers/ethereumGas";
+import { SolanaNetworkSummary } from "@/lib/providers/solanaNetwork";
+import { ChainTvlSummary } from "@/lib/providers/chainTvl";
 
 const POLL_MS = Number(process.env.NEXT_PUBLIC_POLL_INTERVAL_MS ?? 15_000);
+
+export interface NetworkHealthPayload {
+  bitcoin: BitcoinNetworkSummary | null;
+  ethereum: EthereumGasSummary | null;
+  solana: SolanaNetworkSummary | null;
+  chainTvl: ChainTvlSummary | null;
+}
 
 export interface MarketPayload {
   aggregate: AggregateMarketData;
@@ -16,6 +27,7 @@ export interface MarketPayload {
   stablecoins: StablecoinSummary | null;
   globalMarket: GlobalMarketSummary | null;
   correlation: CorrelationMatrix | null;
+  networkHealth: NetworkHealthPayload;
   meta: { generatedAt: number };
 }
 

@@ -7,6 +7,10 @@ import { fetchStablecoinSummary } from "@/lib/providers/stablecoins";
 import { fetchGlobalMarketSummary } from "@/lib/providers/globalMarket";
 import { fetchAllAssetHistories, CORRELATION_WINDOW_DAYS } from "@/lib/providers/coingeckoHistory";
 import { computeCorrelationMatrix } from "@/lib/sentiment/correlation";
+import { fetchBitcoinNetworkSummary } from "@/lib/providers/bitcoinNetwork";
+import { fetchEthereumGasSummary } from "@/lib/providers/ethereumGas";
+import { fetchSolanaNetworkSummary } from "@/lib/providers/solanaNetwork";
+import { fetchChainTvlSummary } from "@/lib/providers/chainTvl";
 
 export const dynamic = "force-dynamic";
 // swr()'s background refresh now runs via after(), which keeps this
@@ -28,7 +32,17 @@ export async function GET(req: NextRequest) {
   const assetParam = req.nextUrl.searchParams.get("asset") ?? "BTC";
 
   try {
-    const [aggregate, fearGreed, stablecoins, globalMarket, assetHistories] = await Promise.all([
+    const [
+      aggregate,
+      fearGreed,
+      stablecoins,
+      globalMarket,
+      assetHistories,
+      bitcoinNetwork,
+      ethereumGas,
+      solanaNetwork,
+      chainTvl,
+    ] = await Promise.all([
       assetParam === "MARKET"
         ? getAggregateForMarket()
         : ALL_ASSETS.includes(assetParam as AssetSymbol)
@@ -41,6 +55,10 @@ export async function GET(req: NextRequest) {
       fetchStablecoinSummary().catch(() => null),
       fetchGlobalMarketSummary().catch(() => null),
       fetchAllAssetHistories().catch(() => ({})),
+      fetchBitcoinNetworkSummary().catch(() => null),
+      fetchEthereumGasSummary().catch(() => null),
+      fetchSolanaNetworkSummary().catch(() => null),
+      fetchChainTvlSummary().catch(() => null),
     ]);
 
     if (!aggregate) {
@@ -58,6 +76,7 @@ export async function GET(req: NextRequest) {
       stablecoins,
       globalMarket,
       correlation,
+      networkHealth: { bitcoin: bitcoinNetwork, ethereum: ethereumGas, solana: solanaNetwork, chainTvl },
       meta: { generatedAt: Date.now() },
     });
   } catch (err) {

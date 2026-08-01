@@ -21,6 +21,7 @@ import { ExchangeFlowIntelligence } from "@/components/dashboard/ExchangeFlowInt
 import { DeribitOptionsIntelligence } from "@/components/dashboard/DeribitOptionsIntelligence";
 import { MarketBreadth } from "@/components/dashboard/MarketBreadth";
 import { CorrelationHeatmap } from "@/components/dashboard/CorrelationHeatmap";
+import { NetworkHealth } from "@/components/dashboard/NetworkHealth";
 import { DashboardSkeleton, LowerSkeleton, Skeleton } from "@/components/ui/Skeleton";
 import { Collapsible } from "@/components/ui/Collapsible";
 import { Button } from "@/components/ui/Button";
@@ -161,6 +162,13 @@ export default function DashboardPage() {
               <MarketBreadth stablecoins={data?.stablecoins ?? null} globalMarket={data?.globalMarket ?? null} />
               <CorrelationHeatmap correlation={data?.correlation ?? null} />
             </section>
+
+            {/*
+              Raw chain state (hash rate, gas, TPS, TVL) — informational,
+              not a sentiment signal, so it gets its own row rather than
+              being squeezed alongside the analysis cards above.
+            */}
+            <NetworkHealth data={data?.networkHealth} />
 
             {/*
               Collapsed by default. At 24 venues this block ran ~1,400px —
