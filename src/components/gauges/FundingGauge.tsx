@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { LeanGauge } from "@/components/ui/LeanGauge";
+import { BandGauge } from "@/components/ui/BandGauge";
 import { GaugeBase } from "./GaugeBase";
 import { GaugeStat } from "./GaugeStat";
 import { TrendArrow } from "./TrendArrow";
@@ -15,6 +16,12 @@ import { AggregateMarketData } from "@/types/market";
 import { gaugeTrail } from "@/lib/utils/gaugeTrail";
 
 const COLORS = ["#7A1E1E", "#EF4444", "#F59E0B", "#6B7684", "#86EFAC", "#22C55E", "#14532D"];
+// FUNDING_BANDS has 5 tiers (Extreme Shorts/Bearish/Neutral/Bullish/Crowded
+// Longs); the 7-color array above is a continuous radial-gauge gradient.
+// Sampling every other stop (skipping the two intermediate amber/light-
+// green gradient waypoints) gives exactly 5 colors, index-matched to the
+// 5 bands, reusing the same hex values rather than inventing new ones.
+const FUNDING_BAND_COLORS = [COLORS[0], COLORS[1], COLORS[3], COLORS[5], COLORS[6]];
 
 /**
  * Funding and basis normally point the same way — both reflect whether
@@ -58,6 +65,9 @@ export function FundingGauge({ data }: { data: AggregateMarketData }) {
         />
         <Badge variant={badgeVariant}>{band.label}</Badge>
         <p className="text-center text-xs leading-relaxed text-ink-muted">{band.description}</p>
+        <div className="w-full">
+          <BandGauge value={data.weightedFundingRatePct} bands={FUNDING_BANDS} colors={FUNDING_BAND_COLORS} />
+        </div>
         <div className="mt-1 grid w-full grid-cols-3 gap-3 border-t border-hairline pt-3">
           <GaugeStat label="Annualized" value={formatPct(data.fundingAnnualizedPct, 1)} />
           <GaugeStat label="24h Δ" value={orDash(data.fundingChange24hPct, (v) => formatPct(v, 3))} />

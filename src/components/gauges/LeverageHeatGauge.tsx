@@ -4,6 +4,7 @@ import { useMemo } from "react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { BandGauge } from "@/components/ui/BandGauge";
 import { GaugeBase } from "./GaugeBase";
 import { GaugeStat } from "./GaugeStat";
 import { bandFor, LEVERAGE_HEAT_BANDS } from "@/lib/sentiment/bands";
@@ -52,6 +53,11 @@ export function LeverageHeatGauge({ data }: { data: AggregateMarketData }) {
             ? band.description
             : `Needs a 24-hour open-interest trend to tell whether leverage is building. No reachable venue publishes one, so it comes from the app's own recorded data — ${data.historyHours.toFixed(1)}h of the 20h needed.`}
         </p>
+        {heat !== null && (
+          <div className="w-full">
+            <BandGauge value={heat} bands={LEVERAGE_HEAT_BANDS} colors={COLORS} />
+          </div>
+        )}
         <div className="mt-1 grid w-full grid-cols-3 gap-2 border-t border-hairline pt-3">
           <GaugeStat label="OI Trend" value={orDash(data.oiChange24hPct, (v) => formatPct(v, 1))} />
           <GaugeStat label="Price 24h" value={formatPct(data.priceChange24hPct, 1)} />

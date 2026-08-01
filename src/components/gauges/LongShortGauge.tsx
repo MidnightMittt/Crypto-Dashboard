@@ -4,6 +4,7 @@ import { useMemo } from "react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { BandGauge } from "@/components/ui/BandGauge";
 import { GaugeBase } from "./GaugeBase";
 import { GaugeStat } from "./GaugeStat";
 import { bandFor, LONG_SHORT_BANDS } from "@/lib/sentiment/bands";
@@ -60,6 +61,11 @@ export function LongShortGauge({ data }: { data: AggregateMarketData }) {
             ? band.description
             : "Only Binance, Bybit, and OKX publish positioning data, and none are reachable from your connection. This one can't be reconstructed locally — it's not derivable from open interest or funding."}
         </p>
+        {longPct !== null && (
+          <div className="w-full">
+            <BandGauge value={longPct} bands={LONG_SHORT_BANDS} colors={COLORS} />
+          </div>
+        )}
         <div className="mt-1 grid w-full grid-cols-2 gap-2 border-t border-hairline pt-3">
           <GaugeStat label="Long Share" value={longPct !== null ? `${longPct.toFixed(1)}%` : "—"} />
           <GaugeStat label="Short Share" value={longPct !== null ? `${(100 - longPct).toFixed(1)}%` : "—"} />

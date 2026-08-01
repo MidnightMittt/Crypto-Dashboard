@@ -4,6 +4,24 @@ export function bandFor(value: number, bands: SentimentBand[]): SentimentBand {
   return bands.find((b) => value >= b.min && value <= b.max) ?? bands[bands.length - 1];
 }
 
+/**
+ * Which band a value falls in, plus where that band sits on a 0-100 axis —
+ * the position a small BandGauge marker renders at. Position is by BAND
+ * INDEX, not by where the value falls within its band's own min/max range:
+ * a discrete "which of these N tiers" position is what "simple to look at
+ * and take action on" calls for, not a continuous slider a user would have
+ * to read precisely to interpret.
+ */
+export function bandPosition(
+  value: number,
+  bands: SentimentBand[]
+): { index: number; position: number; label: string } {
+  const found = bands.findIndex((b) => value >= b.min && value <= b.max);
+  const index = found === -1 ? bands.length - 1 : found;
+  const position = bands.length > 1 ? (index / (bands.length - 1)) * 100 : 50;
+  return { index, position, label: bands[index]?.label ?? "" };
+}
+
 export const FUNDING_BANDS: SentimentBand[] = [
   { min: -100, max: -0.15, label: "Extreme Shorts", description: "Shorts are paying up heavily — crowded short positioning." },
   { min: -0.15, max: -0.04, label: "Bearish", description: "Funding leans negative; shorts hold a mild edge." },
@@ -32,6 +50,18 @@ export const LONG_SHORT_BANDS: SentimentBand[] = [
   { min: 0, max: 35, label: "Mostly Shorts", description: "Positioning skews heavily short." },
   { min: 35, max: 65, label: "Balanced", description: "Longs and shorts are roughly even." },
   { min: 65, max: 100, label: "Mostly Longs", description: "Positioning skews heavily long." },
+];
+
+/**
+ * 25/75 split matches blockchaincenter.net's original Altcoin Season Index
+ * definition (the index this app's altseasonIndex is a 30-day-window
+ * variant of — see providers/globalMarket.ts) directly: Bitcoin Season at
+ * or below 25, Altcoin Season at or above 75. Not an invented threshold.
+ */
+export const DOMINANCE_ROTATION_BANDS: SentimentBand[] = [
+  { min: 0, max: 25, label: "BTC Season", description: "Capital is consolidating into BTC — few alts are outperforming it." },
+  { min: 25, max: 75, label: "No Clear Rotation", description: "Neither BTC nor alts are dominating capital flows right now." },
+  { min: 75, max: 100, label: "Altcoin Season", description: "Capital is rotating into alts — most are outperforming BTC." },
 ];
 
 export const COMPOSITE_BANDS: SentimentBand[] = [

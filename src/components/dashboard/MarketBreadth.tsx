@@ -2,11 +2,19 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { LeanGauge } from "@/components/ui/LeanGauge";
+import { BandGauge } from "@/components/ui/BandGauge";
 import { formatCompactUsd, formatPct } from "@/lib/utils/format";
 import { stablecoinFlowLean } from "@/lib/sentiment/leans";
+import { DOMINANCE_ROTATION_BANDS } from "@/lib/sentiment/bands";
 import { StablecoinSummary } from "@/lib/providers/stablecoins";
 import { GlobalMarketSummary } from "@/lib/providers/globalMarket";
 import { ALTSEASON_WINDOW_DAYS } from "@/lib/providers/globalMarket";
+
+// Amber (BTC-heavy) - gray (neither) - cyan (alt-heavy). Deliberately NOT
+// red/green: this axis isn't bullish/bearish, it's a rotation read, and
+// using the same colors as the directional gauges elsewhere on this
+// dashboard would visually imply a direction this doesn't have.
+const DOMINANCE_ROTATION_COLORS = ["#F5A623", "#8890A0", "#2DD4E8"];
 
 /**
  * Market-wide context that no per-asset card here can provide: total crypto
@@ -45,6 +53,13 @@ export function MarketBreadth({
                       ? "danger"
                       : "neutral"
                 }
+              />
+            </div>
+            <div className="mt-3">
+              <BandGauge
+                value={globalMarket.altseasonIndex}
+                bands={DOMINANCE_ROTATION_BANDS}
+                colors={DOMINANCE_ROTATION_COLORS}
               />
             </div>
             <p className="mt-2 text-[10px] leading-relaxed text-ink-faint">

@@ -4,6 +4,7 @@ import { useMemo } from "react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { BandGauge } from "@/components/ui/BandGauge";
 import { GaugeBase } from "./GaugeBase";
 import { GaugeStat } from "./GaugeStat";
 import { TrendArrow } from "./TrendArrow";
@@ -86,6 +87,11 @@ export function OpenInterestGauge({ data }: { data: AggregateMarketData }) {
         <p className="text-center text-xs leading-relaxed text-ink-muted">
           {band ? band.description : unavailableReason(data)}
         </p>
+        {pctl !== null && (
+          <div className="w-full">
+            <BandGauge value={pctl} bands={OI_BANDS} colors={COLORS} />
+          </div>
+        )}
         <div className="mt-1 grid w-full grid-cols-2 gap-2 border-t border-hairline pt-3">
           <GaugeStat label="24h Change" value={orDash(data.oiChange24hPct, (v) => formatPct(v, 1))} />
           <GaugeStat label="Percentile" value={orDash(pctl, (v) => `${Math.round(v)}th`)} />
