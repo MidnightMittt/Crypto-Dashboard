@@ -85,7 +85,12 @@ import {
 import { recordDailyPoint } from "../history/dailyStore";
 import { fetchOkxDailyCandles } from "../providers/okxCandles";
 import { buildTechnicalRead } from "../sentiment/technicals";
-import type { TechnicalRead } from "@/types/market";
+import { fetchEtfFlows } from "../providers/etfFlows";
+import { fetchSpotVolumeUsd } from "../providers/spotVolume";
+import { evaluateAll } from "../signals/evaluators";
+import { buildMarketBias, snapshotVerdicts } from "../signals/marketBias";
+import { readBiasSnapshot, writeBiasSnapshot } from "../history/biasStore";
+import type { TechnicalRead, EtfFlowSummary, SpotPerpVolume } from "@/types/market";
 
 const ADAPTER_MAP: Record<string, LiveAdapter> = {
   binance: fetchBinance,
@@ -486,15 +491,25 @@ async function withRecordedHistory(
 
   // Independent network calls, run concurrently rather than sequentially —
   // none depends on another's result.
-  const [poolExposure, liquidations, orderFlow, exchangeFlow, deribitOptions, technicals] =
-    await Promise.all([
-      buildPoolExposure(asset, agg.exchanges),
-      buildLiquidationSummary(asset),
-      buildOrderFlowSummary(asset),
-      buildExchangeFlow(asset, point.price, point.t),
-      buildDeribitOptions(asset, point.t),
-      buildTechnicals(asset),
-    ]);
+  const [
+    poolExposure,
+    liquidations,
+    orderFlow,
+    exchangeFlow,
+    deribitOptions,
+    technicals,
+    etfFlows,
+    spotPerpVolume,
+  ] = await Promise.all([
+    buildPoolExposure(asset, agg.exchanges),
+    buildLiquidationSummary(asset),
+    buildOrderFlowSummary(asset),
+    buildExchangeFlow(asset, point.price, point.t),
+    buildDeribitOptions(asset, point.t),
+    buildTechnicals(asset),
+    buildEtfFlows(asset),
+    buildSpotPerpVolume(asset, agg.exchanges),
+  ]);
   // BTC's fetcher is keyless; ETH's needs ETHERSCAN_API_KEY. Computed
   // separately from the fetch itself so the UI can tell "no key" apart
   // from "key present, still building history" instead of guessing.
@@ -569,6 +584,65 @@ async function withRecordedHistory(
     agg.updatedAt
   );
 
+  /*
+   * The decision engine's roll-up. Runs last of everything, because it reads
+   * the finished verdicts of every metric above.
+   *
+   * `stablecoins` is fetched by the route rather than here, so the
+   * stablecoin evaluator simply won't fire in this path — evaluateAll drops
+   * absent metrics and renormalizes, which is the same rule every other
+   * aggregate in this file follows.
+   */
+  const priorBias = await readBiasSnapshot(asset);
+  const metricVerdicts = evaluateAll(
+    {
+      ...agg,
+      oiChange24hPct,
+      oiPercentile,
+      fundingPercentile,
+      leverageHeatScore,
+      basisPct,
+      coinbasePremiumPct,
+      spotSourceCount,
+      spotDisagreementPct,
+      squeezeRisk,
+      liquidations,
+      orderFlow,
+      exchangeFlow,
+      deribitOptions,
+      technicals,
+      etfFlows,
+      spotPerpVolume,
+      marketThesis,
+      updatedAt: agg.updatedAt,
+    } as AggregateMarketData,
+    {
+      technicals,
+      stablecoins: null,
+      priceChange24hPct: agg.priceChange24hPct,
+      now: agg.updatedAt,
+    }
+  );
+
+  const marketBias = buildMarketBias({
+    asset,
+    metrics: metricVerdicts,
+    technicals,
+    squeezeScore: squeezeRisk?.score ?? null,
+    previous: priorBias?.verdicts ?? null,
+    now: agg.updatedAt,
+  });
+
+  if (marketBias) {
+    // Fire-and-forget: a failed snapshot costs one "what changed" diff, never
+    // the response.
+    writeBiasSnapshot(
+      asset,
+      { verdicts: snapshotVerdicts(metricVerdicts), score: marketBias.score, t: agg.updatedAt },
+      priorBias
+    ).catch(() => {});
+  }
+
   return {
     ...agg,
     compositeSentimentScore,
@@ -579,6 +653,9 @@ async function withRecordedHistory(
     exchangeFlowConfigured,
     deribitOptions,
     technicals,
+    etfFlows,
+    spotPerpVolume,
+    marketBias,
     marketThesis,
     oiChange24hPct,
     oiPercentile,
@@ -684,6 +761,9 @@ function buildAggregate(
       exchangeFlowConfigured: false,
       deribitOptions: null,
       technicals: null,
+      etfFlows: null,
+      spotPerpVolume: null,
+      marketBias: null,
       marketThesis: null,
       spotPriceUsd: null,
       spotSource: null,
@@ -818,6 +898,9 @@ function buildAggregate(
     exchangeFlowConfigured: false,
     deribitOptions: null,
     technicals: null,
+    etfFlows: null,
+    spotPerpVolume: null,
+    marketBias: null,
     marketThesis: null,
     history: [],
     historyHours: 0,
@@ -991,6 +1074,45 @@ async function buildTechnicals(asset: AssetSymbol | "MARKET"): Promise<Technical
 
   const candles = await fetchOkxDailyCandles(asset).catch(() => []);
   return buildTechnicalRead(candles);
+}
+
+/** US spot ETF flows. BTC/ETH only — no such complex exists for the rest. */
+async function buildEtfFlows(asset: AssetSymbol | "MARKET"): Promise<EtfFlowSummary | null> {
+  if (asset !== "BTC" && asset !== "ETH") return null;
+  return fetchEtfFlows(asset).catch(() => null);
+}
+
+/**
+ * Spot turnover against perpetual turnover, BOTH LEGS FROM OKX.
+ *
+ * The perp leg must not be the all-venue sum. Measured live, that compared
+ * one venue's spot book ($136M) against nineteen venues' perp volume
+ * ($11.9B) and produced a 0.008 "ratio" that mostly encoded how many venues
+ * were in each leg — it would have read as extreme leverage-dominance on
+ * every asset, forever, regardless of what traders were doing.
+ *
+ * Same-venue keeps it a real comparison. The trade-off is that the absolute
+ * level now reflects OKX's product mix (a derivatives-first venue, where
+ * perps genuinely run an order of magnitude above spot), which is why the
+ * evaluator treats the level cautiously rather than as a calibrated scale.
+ */
+async function buildSpotPerpVolume(
+  asset: AssetSymbol | "MARKET",
+  exchanges: ExchangeSnapshot[]
+): Promise<SpotPerpVolume | null> {
+  if (asset === "MARKET") return null;
+
+  const okxPerp = exchanges.find((e) => e.exchangeId === "okx")?.volume24hUsd ?? 0;
+  if (okxPerp <= 0) return null;
+
+  const spotVolumeUsd = await fetchSpotVolumeUsd(asset).catch(() => null);
+  if (spotVolumeUsd === null) return null;
+
+  return {
+    spotVolumeUsd,
+    perpVolumeUsd: okxPerp,
+    spotToPerpRatio: spotVolumeUsd / okxPerp,
+  };
 }
 
 async function buildDeribitOptions(

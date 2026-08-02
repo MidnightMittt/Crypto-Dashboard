@@ -1,3 +1,5 @@
+import type { MarketBias } from "@/lib/signals/types";
+
 // ─────────────────────────────────────────────────────────────────────────
 // Core domain types. Every exchange adapter resolves to this shape.
 //
@@ -183,6 +185,16 @@ export interface AggregateMarketData {
    * series) and whenever candle data is unavailable.
    */
   technicals: TechnicalRead | null;
+  /** US spot ETF flows. BTC/ETH only, null everywhere else. */
+  etfFlows: EtfFlowSummary | null;
+  /** Spot vs perpetual turnover. Null when either leg is unavailable. */
+  spotPerpVolume: SpotPerpVolume | null;
+  /**
+   * The decision engine's roll-up: every metric's verdict plus the weighted
+   * overall bias. See lib/signals/types.ts for what `confidence` does and
+   * does not claim.
+   */
+  marketBias: MarketBias | null;
   /** Locally recorded time series — this app's own observations. */
   history: LocalHistoryPoint[];
   /** Hours of local history collected so far. */
@@ -409,6 +421,45 @@ export interface SqueezeRisk {
   side: "long" | "short" | "balanced";
   /** Every input, so the score can be audited rather than trusted. */
   components: SqueezeComponent[];
+}
+
+/**
+ * US spot ETF net flows — the one read on this dashboard of money arriving
+ * from traditional finance rather than from crypto-native positioning.
+ *
+ * Only ever populated for BTC and ETH; no US spot ETF complex exists for
+ * the other eight assets. Settles on a business-day calendar, so a weekend
+ * reading is legitimately unchanged rather than absent — see `isStale`.
+ */
+export interface EtfFlowSummary {
+  asset: AssetSymbol;
+  /** UTC date of the most recent settled print, YYYY-MM-DD. */
+  latestDate: string;
+  netFlowUsd: number;
+  netFlow5dUsd: number;
+  totalNetAssetsUsd: number;
+  /**
+   * Mean absolute daily flow over the trailing ~60 sessions. Magnitude is
+   * judged against this rather than a fixed dollar figure, because a
+   * routine BTC-complex day is an enormous ETH-complex one.
+   */
+  typicalAbsFlowUsd: number;
+  /** True when the latest print is older than a long weekend can explain. */
+  isStale: boolean;
+  ageDays: number;
+}
+
+/**
+ * Spot turnover measured against perpetual turnover. The ratio is the
+ * signal: perps far outpacing spot means a move is leverage-driven rather
+ * than demand-driven, which the rest of this dashboard already treats as
+ * the fragile case.
+ */
+export interface SpotPerpVolume {
+  spotVolumeUsd: number;
+  perpVolumeUsd: number;
+  /** spot / perp. Below ~0.2 is heavily leverage-led; above ~0.6 is spot-led. */
+  spotToPerpRatio: number;
 }
 
 export type ThesisDirection = "bullish" | "bearish" | "neutral";

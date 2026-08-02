@@ -3,6 +3,8 @@
 import { AlertTriangle } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { SentimentIndex } from "@/components/dashboard/SentimentIndex";
+import { MarketBiasCard } from "@/components/dashboard/MarketBiasCard";
+import { SignalBreakdown } from "@/components/dashboard/SignalBreakdown";
 import { MarketThesisBriefing } from "@/components/dashboard/MarketThesisBriefing";
 import { FundingGauge } from "@/components/gauges/FundingGauge";
 import { OpenInterestGauge } from "@/components/gauges/OpenInterestGauge";
@@ -105,6 +107,15 @@ export default function DashboardPage() {
                 </span>
               )}
             </div>
+
+            {/*
+              The headline answer, above everything else: what is the market
+              likely to do next, and why. Every card below is one input into
+              this single read.
+            */}
+            <MarketBiasCard bias={aggregate.marketBias} />
+
+            <SignalBreakdown metrics={aggregate.marketBias?.metrics ?? []} />
 
             <SentimentIndex data={aggregate} fearGreed={data?.fearGreed} />
 
