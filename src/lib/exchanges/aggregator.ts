@@ -83,6 +83,9 @@ import {
   recordHistory,
 } from "../history/store";
 import { recordDailyPoint } from "../history/dailyStore";
+import { fetchOkxDailyCandles } from "../providers/okxCandles";
+import { buildTechnicalRead } from "../sentiment/technicals";
+import type { TechnicalRead } from "@/types/market";
 
 const ADAPTER_MAP: Record<string, LiveAdapter> = {
   binance: fetchBinance,
@@ -483,13 +486,15 @@ async function withRecordedHistory(
 
   // Independent network calls, run concurrently rather than sequentially —
   // none depends on another's result.
-  const [poolExposure, liquidations, orderFlow, exchangeFlow, deribitOptions] = await Promise.all([
-    buildPoolExposure(asset, agg.exchanges),
-    buildLiquidationSummary(asset),
-    buildOrderFlowSummary(asset),
-    buildExchangeFlow(asset, point.price, point.t),
-    buildDeribitOptions(asset, point.t),
-  ]);
+  const [poolExposure, liquidations, orderFlow, exchangeFlow, deribitOptions, technicals] =
+    await Promise.all([
+      buildPoolExposure(asset, agg.exchanges),
+      buildLiquidationSummary(asset),
+      buildOrderFlowSummary(asset),
+      buildExchangeFlow(asset, point.price, point.t),
+      buildDeribitOptions(asset, point.t),
+      buildTechnicals(asset),
+    ]);
   // BTC's fetcher is keyless; ETH's needs ETHERSCAN_API_KEY. Computed
   // separately from the fetch itself so the UI can tell "no key" apart
   // from "key present, still building history" instead of guessing.
@@ -559,6 +564,7 @@ async function withRecordedHistory(
       liquidations,
       priceChange24hPct: agg.priceChange24hPct,
       leverageHeatScore,
+      technicals,
     },
     agg.updatedAt
   );
@@ -572,6 +578,7 @@ async function withRecordedHistory(
     exchangeFlow,
     exchangeFlowConfigured,
     deribitOptions,
+    technicals,
     marketThesis,
     oiChange24hPct,
     oiPercentile,
@@ -676,6 +683,7 @@ function buildAggregate(
       exchangeFlow: null,
       exchangeFlowConfigured: false,
       deribitOptions: null,
+      technicals: null,
       marketThesis: null,
       spotPriceUsd: null,
       spotSource: null,
@@ -809,6 +817,7 @@ function buildAggregate(
     exchangeFlow: null,
     exchangeFlowConfigured: false,
     deribitOptions: null,
+    technicals: null,
     marketThesis: null,
     history: [],
     historyHours: 0,
@@ -971,6 +980,19 @@ async function buildExchangeFlow(
  * inputs do — same reasoning already applied to leaving liquidations,
  * squeezeRisk, fundingDivergence, cexDex, and arbitrage spreads out of it).
  */
+/**
+ * Daily price-action read. Null for MARKET, which is a roll-up across ten
+ * assets and therefore has no single price series to run indicators on —
+ * the thesis for that view simply renormalizes without this evidence, the
+ * same way it already handles any other absent source.
+ */
+async function buildTechnicals(asset: AssetSymbol | "MARKET"): Promise<TechnicalRead | null> {
+  if (asset === "MARKET") return null;
+
+  const candles = await fetchOkxDailyCandles(asset).catch(() => []);
+  return buildTechnicalRead(candles);
+}
+
 async function buildDeribitOptions(
   asset: AssetSymbol | "MARKET",
   now: number

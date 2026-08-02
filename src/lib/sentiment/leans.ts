@@ -1,4 +1,5 @@
 import { Lean } from "@/components/ui/LeanGauge";
+import { SqueezeRisk } from "@/types/market";
 
 /**
  * Pure scoring functions behind the small LeanGauge shown on the 3 cards
@@ -53,4 +54,28 @@ export function stablecoinFlowLean(netChange7dPct: number): Lean {
   if (netChange7dPct <= -1) return "extreme-bearish";
   if (netChange7dPct <= -0.2) return "bearish";
   return "neutral";
+}
+
+/**
+ * Below this squeeze score, the setup isn't developed enough to count as a
+ * directional lean — shared with marketThesis.ts's squeezeRiskEvidence so
+ * the two can never disagree about when a squeeze becomes "meaningful."
+ */
+export const SQUEEZE_MEANINGFUL_SCORE = 40;
+
+/**
+ * squeezeRisk's score alone isn't inherently bullish or bearish — it's a
+ * magnitude of "how crowded" (see LeanGauge.tsx's own doc comment on why
+ * that distinction matters). Direction only comes from combining it with
+ * which side is crowded, via the same "fade the extreme" rule already
+ * documented in marketThesis.ts: a crowded, exposed side is bearish for
+ * that side's holders, not bullish for them — this is a caution flag on the
+ * crowded side, not a signal in its favor.
+ */
+export function squeezeLean(score: number, side: SqueezeRisk["side"]): Lean {
+  if (side === "balanced" || score < SQUEEZE_MEANINGFUL_SCORE) return "neutral";
+  const direction: "bullish" | "bearish" = side === "long" ? "bearish" : "bullish";
+  const extreme = score >= 70;
+  if (direction === "bearish") return extreme ? "extreme-bearish" : "bearish";
+  return extreme ? "extreme-bullish" : "bullish";
 }

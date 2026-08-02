@@ -1,0 +1,310 @@
+import { TechnicalRead, ThesisDirection } from "@/types/market";
+import {
+  Candle,
+  adx,
+  atr,
+  closes,
+  directionalBias,
+  ema,
+  lastClose,
+  macd,
+  rollingVwap,
+  rsi,
+  trendStructure,
+  volumeRatio,
+} from "../technicals/indicators";
+
+/**
+ * Turns raw indicator numbers into a directional read and plain-English
+ * statements. The math lives in technicals/indicators.ts; this file holds
+ * every judgment call about what the numbers MEAN.
+ *
+ * ── Why this is one composite read, not eight separate signals ─────────
+ *
+ * The dashboard deliberately gets ONE technical evidence entry in the market
+ * thesis, not one per indicator. Eight entries would let technicals
+ * outvote every positioning signal on the card by sheer count, which
+ * inverts the point: this app's edge is derivatives positioning, and
+ * technicals are here to CONFIRM OR CONTRADICT that read, not to replace
+ * it. Six of these indicators are also different views of the same
+ * underlying price series, so counting them separately would double-count
+ * one piece of information.
+ *
+ * Thresholds below are conventional defaults (RSI 30/70, ADX 25, etc.) —
+ * a defensible starting point, not settled science, same framing this app
+ * already uses for FUNDING_BANDS and leans.ts.
+ */
+
+/** Above this ADX, the market is conventionally "trending" rather than ranging. */
+const ADX_TRENDING = 25;
+/** Below this ADX, directional readings carry much less weight. */
+const ADX_RANGING = 20;
+const RSI_OVERBOUGHT = 70;
+const RSI_OVERSOLD = 30;
+/** RSI band treated as genuinely neutral rather than a mild lean. */
+const RSI_NEUTRAL_LOW = 45;
+const RSI_NEUTRAL_HIGH = 55;
+/** Volume multiple above which a move counts as genuinely participated-in. */
+const VOLUME_CONFIRMING = 1.2;
+/** Volume multiple below which a move looks unconvinced. */
+const VOLUME_WEAK = 0.7;
+
+/** Minimum bars before any technical read is attempted at all. */
+const MIN_CANDLES = 60;
+
+/**
+ * MACD histogram must exceed this fraction of price to count as a vote.
+ *
+ * Without it, a histogram of -1.8e-15 — floating-point noise from two EMAs
+ * that have mathematically converged — registers as a full bearish vote. A
+ * steady linear uptrend hits exactly that case, and it flipped the read
+ * from broadly bullish to barely bullish.
+ */
+const MACD_EPSILON_PCT = 1e-5;
+
+/**
+ * The maximum number of indicators that can vote (EMA alignment, MACD,
+ * trend structure, VWAP, RSI, ADX bias). Used to scale strength by
+ * participation so a 2-of-6 verdict can't read as confidently as a 6-of-6.
+ */
+const MAX_VOTES = 6;
+
+export function buildTechnicalRead(candles: Candle[]): TechnicalRead | null {
+  if (candles.length < MIN_CANDLES) return null;
+
+  const cl = closes(candles);
+  const price = lastClose(candles);
+  if (price === null || price <= 0) return null;
+
+  const rsiValue = rsi(cl);
+  const macdResult = macd(cl);
+  const adxValue = adx(candles);
+  const atrValue = atr(candles);
+  const vwap = rollingVwap(candles);
+  const volRatio = volumeRatio(candles);
+  const structure = trendStructure(candles);
+  const bias = directionalBias(candles);
+
+  const ema20 = ema(cl, 20);
+  const ema50 = ema(cl, 50);
+  const ema200 = ema(cl, 200);
+
+  let emaAlignment: TechnicalRead["emaAlignment"] = null;
+  if (ema20 !== null && ema50 !== null && ema200 !== null) {
+    if (price > ema20 && price > ema50 && price > ema200) emaAlignment = "above-all";
+    else if (price < ema20 && price < ema50 && price < ema200) emaAlignment = "below-all";
+    else emaAlignment = "mixed";
+  }
+
+  /*
+   * Direction is a simple vote across the readings that genuinely have one.
+   * Each contributes at most one vote so no single indicator dominates, and
+   * indicators that are absent (null) or neutral simply don't vote — the
+   * same "missing data must not read as neutral-and-still-count" rule the
+   * rest of this app follows.
+   */
+  const votes: ThesisDirection[] = [];
+
+  if (emaAlignment === "above-all") votes.push("bullish");
+  else if (emaAlignment === "below-all") votes.push("bearish");
+
+  if (macdResult && Math.abs(macdResult.histogram) > price * MACD_EPSILON_PCT) {
+    votes.push(macdResult.histogram > 0 ? "bullish" : "bearish");
+  }
+
+  if (structure === "higher-highs") votes.push("bullish");
+  else if (structure === "lower-lows") votes.push("bearish");
+
+  if (vwap !== null) votes.push(price > vwap ? "bullish" : "bearish");
+
+  /*
+   * RSI votes only OUTSIDE its neutral band, and NOT at the extremes.
+   * Beyond 70/30 it stops being a trend-confirmation signal and becomes an
+   * exhaustion warning — the same "fade the extreme" logic marketThesis.ts
+   * already applies to crowded funding. Counting an overbought RSI as
+   * bullish would double down exactly where the risk is highest.
+   */
+  if (rsiValue !== null) {
+    if (rsiValue >= RSI_OVERBOUGHT) votes.push("bearish");
+    else if (rsiValue <= RSI_OVERSOLD) votes.push("bullish");
+    else if (rsiValue > RSI_NEUTRAL_HIGH) votes.push("bullish");
+    else if (rsiValue < RSI_NEUTRAL_LOW) votes.push("bearish");
+  }
+
+  // ADX has no direction of its own, so it only votes via +DI/-DI, and only
+  // when the trend is actually strong enough for that to mean something.
+  if (bias && adxValue !== null && adxValue >= ADX_TRENDING) {
+    votes.push(bias === "up" ? "bullish" : "bearish");
+  }
+
+  const bullVotes = votes.filter((v) => v === "bullish").length;
+  const bearVotes = votes.filter((v) => v === "bearish").length;
+  const total = bullVotes + bearVotes;
+
+  let direction: ThesisDirection = "neutral";
+  if (total > 0) {
+    if (bullVotes > bearVotes) direction = "bullish";
+    else if (bearVotes > bullVotes) direction = "bearish";
+  }
+
+  /*
+   * strength = how lopsided the vote is x how many indicators voted at all,
+   * damped when the market isn't actually trending. Deliberately the same
+   * agreement-x-participation shape marketThesis.ts already uses for
+   * conviction, for the same reason: without the participation term a
+   * unanimous 2-of-6 verdict scores identically to a unanimous 6-of-6 one.
+   *
+   * That was a real bug, not a hypothetical — a flat, choppy series where
+   * only EMA and VWAP could vote scored 100 while a clean uptrend scored 33.
+   *
+   * ADX being null (undefined trend strength) damps too. Not knowing the
+   * regime is a reason for less confidence, not the same confidence.
+   */
+  const agreement = total > 0 ? Math.max(bullVotes, bearVotes) / total : 0.5;
+  const directionalEdge = total === 0 ? 0 : agreement * 2 - 1;
+  const participation = total / MAX_VOTES;
+  const rangingDamp = adxValue === null || adxValue < ADX_RANGING ? 0.6 : 1;
+  const strength = Math.round(
+    Math.max(0, Math.min(100, directionalEdge * participation * rangingDamp * 100))
+  );
+
+  return {
+    direction,
+    strength,
+    summary: buildSummary(direction, strength, adxValue, emaAlignment, structure),
+    rsi: rsiValue,
+    macdHistogram: macdResult ? macdResult.histogram : null,
+    emaAlignment,
+    adx: adxValue,
+    atrPct: atrValue !== null ? (atrValue / price) * 100 : null,
+    volumeRatio: volRatio,
+    vwapPosition: vwap === null ? null : price > vwap ? "above" : "below",
+    trendStructure: structure,
+  };
+}
+
+function buildSummary(
+  direction: ThesisDirection,
+  strength: number,
+  adxValue: number | null,
+  emaAlignment: TechnicalRead["emaAlignment"],
+  structure: TechnicalRead["trendStructure"]
+): string {
+  const regime =
+    adxValue === null
+      ? "Trend strength unclear"
+      : adxValue >= ADX_TRENDING
+        ? "Price is in a defined trend"
+        : adxValue < ADX_RANGING
+          ? "Price is ranging rather than trending"
+          : "Trend is developing but not yet established";
+
+  if (direction === "neutral") {
+    return `${regime}, with no clear directional bias in the technical picture.`;
+  }
+
+  const where =
+    emaAlignment === "above-all"
+      ? "trading above its 20, 50 and 200-day averages"
+      : emaAlignment === "below-all"
+        ? "trading below its 20, 50 and 200-day averages"
+        : "mixed against its moving averages";
+
+  const structureText =
+    structure === "higher-highs"
+      ? " and building higher highs"
+      : structure === "lower-lows"
+        ? " and cutting lower lows"
+        : "";
+
+  const conviction = strength >= 60 ? "broadly" : strength >= 30 ? "modestly" : "weakly";
+
+  return `${regime}. Technicals lean ${conviction} ${direction} — ${where}${structureText}.`;
+}
+
+/**
+ * The plain-English confirmation bullets shown on the Market Thesis card.
+ *
+ * Phrased RELATIVE to the thesis the rest of the dashboard already built, so
+ * each line says whether price action backs that read or argues against it —
+ * which is the whole point of the feature. Never restates a raw indicator
+ * value as its own headline.
+ *
+ * Returns at most 5 lines, ordered most-important first.
+ */
+export function technicalConfirmation(read: TechnicalRead, dominant: ThesisDirection): string[] {
+  const lines: string[] = [];
+  const agrees = read.direction !== "neutral" && read.direction === dominant;
+  const conflicts = read.direction !== "neutral" && dominant !== "neutral" && read.direction !== dominant;
+
+  // 1. The headline: does price action back the positioning read or not.
+  if (dominant === "neutral") {
+    lines.push(
+      read.direction === "neutral"
+        ? "Positioning and price action are both non-committal — nothing here argues for a directional read."
+        : `Positioning is mixed, but price action leans ${read.direction} — technicals are the only side currently taking a view.`
+    );
+  } else if (agrees) {
+    lines.push(`Price action confirms the ${dominant} thesis — technicals and positioning point the same way.`);
+  } else if (conflicts) {
+    lines.push(
+      `Price action weakens the ${dominant} thesis — technicals lean ${read.direction}, against how traders are positioned.`
+    );
+  } else {
+    lines.push(`Price action is neutral, neither confirming nor contradicting the ${dominant} thesis.`);
+  }
+
+  // 2. Moving-average structure — the clearest "is the trend intact" read.
+  if (read.emaAlignment === "above-all") {
+    lines.push("Price is above its 20, 50 and 200-day moving averages, supporting continuation higher.");
+  } else if (read.emaAlignment === "below-all") {
+    lines.push("Price is below its 20, 50 and 200-day moving averages, supporting continuation lower.");
+  } else if (read.emaAlignment === "mixed") {
+    lines.push("Price is caught between its moving averages — no clean trend structure to lean on.");
+  }
+
+  // 3. Momentum, with the divergence case called out explicitly since it's
+  //    the most actionable thing technicals can tell a positioning read.
+  if (read.macdHistogram !== null && read.rsi !== null) {
+    const momentumUp = read.macdHistogram > 0;
+    if (read.rsi >= RSI_OVERBOUGHT) {
+      lines.push(
+        `Momentum is stretched (RSI ${read.rsi.toFixed(0)}) — historically closer to exhaustion than to a fresh leg up.`
+      );
+    } else if (read.rsi <= RSI_OVERSOLD) {
+      lines.push(
+        `Momentum is washed out (RSI ${read.rsi.toFixed(0)}) — the kind of level that has more often preceded relief than further downside.`
+      );
+    } else if (momentumUp && read.trendStructure === "lower-lows") {
+      lines.push("Momentum is turning up even as price still cuts lower lows — an early divergence, not yet a trend change.");
+    } else if (!momentumUp && read.trendStructure === "higher-highs") {
+      lines.push("Momentum is fading despite price still making higher highs — the move is losing its engine.");
+    } else {
+      lines.push(`Momentum is ${momentumUp ? "improving" : "deteriorating"}, consistent with the current price structure.`);
+    }
+  }
+
+  // 4. Volume — does the move have participation behind it.
+  if (read.volumeRatio !== null) {
+    if (read.volumeRatio >= VOLUME_CONFIRMING) {
+      lines.push(
+        `Volume is running ${read.volumeRatio.toFixed(1)}x its recent average — the current move is backed by real participation.`
+      );
+    } else if (read.volumeRatio <= VOLUME_WEAK) {
+      lines.push(
+        `Volume is only ${read.volumeRatio.toFixed(1)}x its recent average — this move is not yet backed by conviction.`
+      );
+    }
+  }
+
+  // 5. Trend-strength caveat, which reframes everything above when weak.
+  if (read.adx !== null && read.adx < ADX_RANGING && lines.length < 5) {
+    lines.push(
+      `Trend strength is weak (ADX ${read.adx.toFixed(0)}) — in a range like this, directional signals tend to mean-revert rather than follow through.`
+    );
+  } else if (read.adx !== null && read.adx >= ADX_TRENDING && lines.length < 5) {
+    lines.push(`Trend strength is firm (ADX ${read.adx.toFixed(0)}), so directional signals carry more weight than usual here.`);
+  }
+
+  return lines.slice(0, 5);
+}

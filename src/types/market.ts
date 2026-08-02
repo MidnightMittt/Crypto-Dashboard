@@ -177,6 +177,12 @@ export interface AggregateMarketData {
    * comment for what this deliberately is and is not.
    */
   marketThesis: MarketThesis | null;
+  /**
+   * Daily price-action read, feeding the thesis as evidence and surfacing as
+   * context on the positioning card. Null for MARKET (no single price
+   * series) and whenever candle data is unavailable.
+   */
+  technicals: TechnicalRead | null;
   /** Locally recorded time series — this app's own observations. */
   history: LocalHistoryPoint[];
   /** Hours of local history collected so far. */
@@ -408,6 +414,44 @@ export interface SqueezeRisk {
 export type ThesisDirection = "bullish" | "bearish" | "neutral";
 
 /**
+ * Price-action context, read from daily candles — the one input on this
+ * dashboard that describes what PRICE is doing rather than how traders are
+ * positioned. Everything else here (funding, OI, long/short, flow) measures
+ * positioning; without this the thesis can say "longs are crowded" but not
+ * whether price action agrees.
+ *
+ * Deliberately NOT surfaced as raw indicator values anywhere in the UI. The
+ * dashboard shows the interpretation (`summary`, and the confirmation
+ * bullets built from it), because a bare "RSI 47" asks the reader to do the
+ * work this app exists to do for them.
+ *
+ * Any field can be null when the series is too short to compute it
+ * honestly — see technicals/indicators.ts, which returns null rather than a
+ * half-formed value.
+ */
+export interface TechnicalRead {
+  /** Composite price-action direction, from the readings below. */
+  direction: ThesisDirection;
+  /** 0-100 conviction in that direction, from how many readings agree. Not a probability. */
+  strength: number;
+  /** One-line plain-English summary of the technical picture. */
+  summary: string;
+  rsi: number | null;
+  macdHistogram: number | null;
+  /** Latest close relative to EMA20/50/200, e.g. "above all three". */
+  emaAlignment: "above-all" | "below-all" | "mixed" | null;
+  /** Wilder's ADX — trend strength with no direction of its own. */
+  adx: number | null;
+  /** ATR as a percentage of price, so it's comparable across assets. */
+  atrPct: number | null;
+  /** Latest bar's volume as a multiple of its trailing average. */
+  volumeRatio: number | null;
+  /** Latest close vs the trailing rolling VWAP. */
+  vwapPosition: "above" | "below" | null;
+  trendStructure: "higher-highs" | "lower-lows" | "sideways" | null;
+}
+
+/**
  * One already-existing dashboard metric, read as evidence for or against a
  * directional thesis. `value` and `detail` always cite the real number this
  * came from — never a re-derived or invented figure. `source` names the
@@ -454,6 +498,8 @@ export interface MarketThesis {
   asset: AssetSymbol | "MARKET";
   regime: MarketRegime;
   regimeDescription: string;
+  /** Which side has more weighted evidence — "neutral" when bullish and bearish weight tie. */
+  dominant: ThesisDirection;
   bullishEvidence: ThesisEvidence[];
   bearishEvidence: ThesisEvidence[];
   /** Evidence gathered but genuinely non-directional (e.g. liquidations, which are backward-looking) — shown for context, never counted toward conviction. */
@@ -467,6 +513,12 @@ export interface MarketThesis {
   topOpposing: ThesisEvidence[];
   /** Plain-language statements of what would need to change for this reading to flip. */
   invalidation: string[];
+  /**
+   * 3-5 plain-English lines on whether price action backs the thesis above
+   * or argues against it. Empty when candle data is unavailable. Phrased
+   * relative to `dominant` — see sentiment/technicals.ts.
+   */
+  technicalConfirmation: string[];
   updatedAt: number;
 }
 

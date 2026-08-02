@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { formatCompactUsd } from "@/lib/utils/format";
-import { AggregateMarketData, SqueezeRisk } from "@/types/market";
+import { AggregateMarketData, SqueezeRisk, TechnicalRead } from "@/types/market";
 import { lookupSqueezeStat } from "@/lib/sentiment/backtestStats";
 import backtestStats from "@/data/backtestStats.json";
 
@@ -41,7 +41,7 @@ export function PositioningIntelligence({ data }: { data: AggregateMarketData })
           </p>
         )}
 
-        {squeezeRisk && <SqueezeSection risk={squeezeRisk} />}
+        {squeezeRisk && <SqueezeSection risk={squeezeRisk} technicals={data.technicals ?? null} />}
         {fundingPercentile !== null && (
           <FundingPercentileRow percentile={fundingPercentile} />
         )}
@@ -63,7 +63,13 @@ function SqueezeBadge({ risk }: { risk: SqueezeRisk }) {
   );
 }
 
-function SqueezeSection({ risk }: { risk: SqueezeRisk }) {
+function SqueezeSection({
+  risk,
+  technicals,
+}: {
+  risk: SqueezeRisk;
+  technicals: TechnicalRead | null;
+}) {
   const headline =
     risk.side === "balanced"
       ? "No clear one-sided crowding — neither side is obviously exposed."
@@ -103,8 +109,39 @@ function SqueezeSection({ risk }: { risk: SqueezeRisk }) {
       </p>
 
       <BacktestStatLine risk={risk} />
+      <SqueezeTechnicalContext risk={risk} technicals={technicals} />
     </div>
   );
+}
+
+/**
+ * Whether price action agrees with the squeeze setup, which materially
+ * changes how to read it: a crowded side that price is ALREADY moving
+ * against is mid-unwind, whereas a crowded side price still favours is a
+ * setup that hasn't triggered. The score alone can't distinguish those two.
+ */
+function SqueezeTechnicalContext({
+  risk,
+  technicals,
+}: {
+  risk: SqueezeRisk;
+  technicals: TechnicalRead | null;
+}) {
+  if (!technicals || risk.side === "balanced") return null;
+
+  // The direction an unwind would push price: crowded longs get forced out
+  // downward, crowded shorts upward.
+  const unwindDirection = risk.side === "long" ? "bearish" : "bullish";
+  const agrees = technicals.direction === unwindDirection;
+  const opposes = technicals.direction !== "neutral" && !agrees;
+
+  const message = agrees
+    ? `Price action is already leaning ${technicals.direction} — the direction an unwind would push it, so this setup may be in motion rather than pending.`
+    : opposes
+      ? `Price action still leans ${technicals.direction}, against the way an unwind would resolve — the crowded side is not yet under pressure.`
+      : "Price action is directionless here, so nothing is yet forcing the crowded side out.";
+
+  return <p className="text-[10px] leading-relaxed text-ink-faint">{message}</p>;
 }
 
 function BacktestStatLine({ risk }: { risk: SqueezeRisk }) {

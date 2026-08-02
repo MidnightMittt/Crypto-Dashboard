@@ -159,6 +159,18 @@ function replayAsset(data: RawAssetData): DayRecord[] {
       squeezeRisk,
       deribitOptions: null, // no historical source found
       exchangeFlow: null, // this app's own recorder has no depth yet
+      /*
+       * Left null for now even though the raw material EXISTS here — the
+       * Binance klines already fetched above could be rolled up to daily
+       * bars and run through buildTechnicalRead. Wiring that in is a
+       * deliberate follow-up rather than a data gap like the entries above.
+       *
+       * Until then, every regime statistic this harness produces describes
+       * the thesis WITHOUT price-action evidence, while the live site now
+       * includes it at weight 0.14. The two will disagree, and the report's
+       * regime table should be regenerated once this is connected.
+       */
+      technicals: null,
       liquidations: null,
       priceChange24hPct,
       leverageHeatScore,

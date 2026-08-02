@@ -43,6 +43,8 @@ export function MarketThesisBriefing({ thesis }: { thesis: MarketThesis | null }
       </CardHeader>
 
       <CardContent className="flex flex-col gap-4 pt-0">
+        <VerdictLine thesis={thesis} />
+
         <p className="text-sm leading-relaxed text-ink">{thesis.regimeDescription}</p>
 
         <div>
@@ -66,6 +68,22 @@ export function MarketThesisBriefing({ thesis }: { thesis: MarketThesis | null }
           </p>
           <RegimeBacktestLine regime={thesis.regime} />
         </div>
+
+        {thesis.technicalConfirmation.length > 0 && (
+          <div className="border-t border-hairline pt-3">
+            <span className="text-[11px] uppercase tracking-widest text-ink-muted">
+              Technical Confirmation
+            </span>
+            <ul className="mt-2 flex flex-col gap-1.5">
+              {thesis.technicalConfirmation.map((line, i) => (
+                <li key={i} className="flex gap-2 text-[11px] leading-relaxed text-ink-faint">
+                  <span className="text-ink-muted">·</span>
+                  <span>{line}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 gap-4 border-t border-hairline pt-4 sm:grid-cols-2">
           <EvidenceColumn title="Supporting the thesis" evidence={thesis.topSupporting} tone="for" />
@@ -101,6 +119,67 @@ export function MarketThesisBriefing({ thesis }: { thesis: MarketThesis | null }
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * The one-line answer to "so which way is this leaning". Deliberately TEXT
+ * and not a gauge: this dashboard already carries four radial gauges plus
+ * several LeanGauges, and the ask here was for a clearer verdict, not
+ * another dial to interpret.
+ *
+ * The qualifier is driven by conviction so the wording can't overstate a
+ * weak, split reading — a 2/10 bearish thesis reads "leans bearish", not
+ * "BEARISH".
+ */
+function VerdictLine({ thesis }: { thesis: MarketThesis }) {
+  const { dominant, conviction } = thesis;
+
+  if (dominant === "neutral") {
+    return (
+      <div className="rounded-md border border-hairline bg-white/[0.02] px-3 py-2.5">
+        <p className="text-sm font-semibold text-ink-muted">No directional edge right now</p>
+        <p className="mt-0.5 text-[11px] leading-relaxed text-ink-faint">
+          Bullish and bearish evidence carry equal weight — the honest read is to wait rather
+          than to pick a side.
+        </p>
+      </div>
+    );
+  }
+
+  const bullish = dominant === "bullish";
+  const strong = conviction >= 7;
+  const weak = conviction <= 3;
+
+  const headline = strong
+    ? bullish
+      ? "Bullish — evidence broadly aligned"
+      : "Bearish — evidence broadly aligned"
+    : weak
+      ? bullish
+        ? "Leans bullish, but weakly"
+        : "Leans bearish, but weakly"
+      : bullish
+        ? "Bullish, with reservations"
+        : "Bearish, with reservations";
+
+  const subtext = weak
+    ? "Most signals disagree with each other, so this lean is fragile — treat it as a tilt, not a setup."
+    : strong
+      ? "Most of the weighted evidence points the same way, which is as aligned as this dashboard gets."
+      : "There is a clear lean, but meaningful evidence still points the other way — see below.";
+
+  return (
+    <div
+      className={`rounded-md border px-3 py-2.5 ${
+        bullish ? "border-success/30 bg-success/[0.06]" : "border-danger/30 bg-danger/[0.06]"
+      }`}
+    >
+      <p className={`text-sm font-semibold ${bullish ? "text-success" : "text-danger"}`}>
+        {headline}
+      </p>
+      <p className="mt-0.5 text-[11px] leading-relaxed text-ink-faint">{subtext}</p>
+    </div>
   );
 }
 

@@ -13,6 +13,7 @@ const NOW = 1_700_000_000_000;
 function baseInputs(overrides: Partial<MarketThesisInputs> = {}): MarketThesisInputs {
   return {
     asset: "BTC",
+    technicals: null,
     weightedFundingRatePct: 0,
     longShortRatio: null,
     basisPct: null,

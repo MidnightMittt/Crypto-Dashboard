@@ -7,11 +7,13 @@ import {
   LiquidationSummary,
   MarketThesis,
   MarketRegime,
+  TechnicalRead,
   ThesisDirection,
   ThesisEvidence,
 } from "@/types/market";
+import { technicalConfirmation } from "./technicals";
 import { bandFor, FUNDING_BANDS, LONG_SHORT_BANDS } from "./bands";
-import { coinbasePremiumLean, deribitOptionsLean } from "./leans";
+import { coinbasePremiumLean, deribitOptionsLean, SQUEEZE_MEANINGFUL_SCORE } from "./leans";
 import { Lean } from "@/components/ui/LeanGauge";
 
 /**
@@ -43,6 +45,8 @@ import { Lean } from "@/components/ui/LeanGauge";
 
 export interface MarketThesisInputs {
   asset: AssetSymbol | "MARKET";
+  /** Daily price-action read. Null for MARKET, which has no single price series. */
+  technicals: TechnicalRead | null;
   weightedFundingRatePct: number;
   longShortRatio: number | null;
   basisPct: number | null;
@@ -64,14 +68,26 @@ export interface MarketThesisInputs {
  * same rule as computeCompositeSentiment.
  */
 const WEIGHTS = {
-  funding: 0.2,
-  longShort: 0.12,
-  basis: 0.12,
-  coinbasePremium: 0.08,
-  orderFlow: 0.12,
-  squeezeRisk: 0.18,
-  deribitOptions: 0.1,
-  exchangeFlow: 0.08,
+  funding: 0.17,
+  longShort: 0.1,
+  basis: 0.1,
+  coinbasePremium: 0.07,
+  orderFlow: 0.1,
+  squeezeRisk: 0.16,
+  deribitOptions: 0.09,
+  exchangeFlow: 0.07,
+  /*
+   * Technicals earn a meaningful share because they're the only input here
+   * that describes PRICE rather than POSITIONING — every other source above
+   * measures how traders are placed, so without this the thesis can say
+   * "longs are crowded" but not whether price action agrees.
+   *
+   * The other eight took a proportional haircut to make room (funding
+   * 0.20 -> 0.17, squeezeRisk 0.18 -> 0.16, and so on) rather than any one
+   * source being singled out, preserving their relative ordering exactly.
+   * Still sums to 1.00; missing sources renormalize as before.
+   */
+  technicals: 0.14,
 };
 
 function leanToDirection(lean: Lean): ThesisDirection {
@@ -154,9 +170,6 @@ function orderFlowEvidence(flow: OrderFlowSummary): ThesisEvidence {
   };
 }
 
-/** Below this squeeze score, the setup isn't developed enough to count as a directional lean. */
-const SQUEEZE_MEANINGFUL_SCORE = 40;
-
 function squeezeRiskEvidence(sr: SqueezeRisk): ThesisEvidence {
   const direction: ThesisDirection =
     sr.side === "balanced" || sr.score < SQUEEZE_MEANINGFUL_SCORE
@@ -197,6 +210,33 @@ function exchangeFlowEvidence(flow: ExchangeFlowSummary): ThesisEvidence {
         ? "Tracked exchange wallet balance roughly flat"
         : `${flow.netflowNative >= 0 ? "+" : ""}${flow.netflowNative.toFixed(2)} ${flow.asset} moved ${flow.direction === "inflow" ? "into" : "out of"} the tracked exchange wallet`,
     weight: WEIGHTS.exchangeFlow,
+  };
+}
+
+/**
+ * ONE combined entry for all of price action, not one per indicator.
+ *
+ * Eight separate technical entries would let price action outvote every
+ * positioning signal on the card by sheer count — inverting the point of
+ * this dashboard, whose subject is derivatives positioning. Most of those
+ * indicators are also different views of the same price series, so listing
+ * them separately would double-count a single piece of information.
+ *
+ * A weak technical read (`strength` under this floor) is reported as
+ * neutral rather than as a faint directional lean, so noise in a ranging
+ * market doesn't quietly tilt the thesis.
+ */
+const TECHNICAL_MEANINGFUL_STRENGTH = 20;
+
+function technicalEvidence(read: TechnicalRead): ThesisEvidence {
+  const direction: ThesisDirection =
+    read.strength < TECHNICAL_MEANINGFUL_STRENGTH ? "neutral" : read.direction;
+
+  return {
+    source: "Price Action",
+    direction,
+    detail: read.summary,
+    weight: WEIGHTS.technicals,
   };
 }
 
@@ -324,6 +364,7 @@ export function buildMarketThesis(inputs: MarketThesisInputs, now: number): Mark
   if (inputs.squeezeRisk) push(squeezeRiskEvidence(inputs.squeezeRisk));
   if (inputs.deribitOptions) push(deribitOptionsEvidence(inputs.deribitOptions));
   if (inputs.exchangeFlow) push(exchangeFlowEvidence(inputs.exchangeFlow));
+  if (inputs.technicals) push(technicalEvidence(inputs.technicals));
   if (inputs.liquidations) neutral.push(liquidationsEvidence(inputs.liquidations));
 
   if (bullish.length === 0 && bearish.length === 0 && neutral.length === 0) return null;
@@ -366,6 +407,7 @@ export function buildMarketThesis(inputs: MarketThesisInputs, now: number): Mark
     asset: inputs.asset,
     regime: regime.label,
     regimeDescription: regime.description,
+    dominant,
     bullishEvidence: bullish,
     bearishEvidence: bearish,
     neutralEvidence: neutral,
@@ -374,6 +416,13 @@ export function buildMarketThesis(inputs: MarketThesisInputs, now: number): Mark
     topSupporting,
     topOpposing,
     invalidation: buildInvalidation(topSupporting, dominant),
+    /*
+     * Built here, AFTER `dominant` is known, which is what keeps this
+     * non-circular: the technical read itself was computed independently of
+     * the thesis and fed in as evidence above; only the PHRASING of these
+     * lines depends on the thesis it's being compared against.
+     */
+    technicalConfirmation: inputs.technicals ? technicalConfirmation(inputs.technicals, dominant) : [],
     updatedAt: now,
   };
 }
