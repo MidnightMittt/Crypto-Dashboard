@@ -29,7 +29,17 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, "data");
 const REFRESH = process.argv.includes("--refresh");
-const MONTHS_BACK = 7; // full months, plus the elapsed days of the current month
+/*
+ * Full months back, plus the elapsed days of the current month.
+ *
+ * Sized by the LONGEST moving average the replay needs, not by the
+ * evaluation window. The OKX-bounded eval window starts ~5 months back, and
+ * computing EMA200 on the first evaluated day needs 200 daily bars BEFORE
+ * that — so ~7 months of runway on top. At the previous value of 7 the
+ * EMA200 was null across most of the replay, silently giving the backtest a
+ * different technical read than the live site.
+ */
+const MONTHS_BACK = 14;
 
 const ASSETS = [
   { asset: "BTC", symbol: "BTCUSDT", okxCcy: "BTC" },
@@ -163,12 +173,27 @@ async function fetchOkxRubik(path_, ccy, mapRow) {
 async function fetchAsset({ asset, symbol, okxCcy }) {
   log(`${asset}:`);
 
-  // Futures klines: [open_time, open, high, low, close, ...], ms timestamps.
+  /*
+   * Futures klines: [open_time, open, high, low, close, volume, close_time,
+   * quote_volume, ...], ms timestamps.
+   *
+   * Full OHLCV is kept, not just the close: ATR, ADX, VWAP and the volume
+   * ratio all need high/low/volume, and index 7 (quote_volume) is the
+   * USD-denominated figure — index 5 is base-asset units, which would make
+   * the volume ratio incomparable across assets.
+   */
   const futuresKlines = await fetchSeries(
     "futures klines",
     (m) => `https://data.binance.vision/data/futures/um/monthly/klines/${symbol}/1h/${symbol}-1h-${m.year}-${pad2(m.month)}.zip`,
     (d) => `https://data.binance.vision/data/futures/um/daily/klines/${symbol}/1h/${symbol}-1h-${d.year}-${pad2(d.month)}-${pad2(d.day)}.zip`,
-    (cols) => ({ t: Number(cols[0]), close: Number(cols[4]) })
+    (cols) => ({
+      t: Number(cols[0]),
+      open: Number(cols[1]),
+      high: Number(cols[2]),
+      low: Number(cols[3]),
+      close: Number(cols[4]),
+      volumeUsd: Number(cols[7]),
+    })
   );
 
   // Spot klines: same columns, but timestamps are in MICROSECONDS in this

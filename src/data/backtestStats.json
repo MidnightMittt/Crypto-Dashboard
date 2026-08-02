@@ -1,99 +1,99 @@
 {
-  "generatedAt": 1785622130410,
-  "coverageStart": "2026-03-23",
-  "coverageEnd": "2026-07-25",
+  "generatedAt": 1785704531023,
+  "coverageStart": "2026-03-24",
+  "coverageEnd": "2026-07-26",
   "squeeze": {
     "0-30 (quiet):long": {
-      "n": 22,
-      "mean1dPct": -0.08308986088793559,
-      "mean3dPct": -0.14570453475764084,
-      "mean7dPct": 0.24540532771280787,
-      "fadeHitRatePct": 50
+      "n": 16,
+      "mean1dPct": -0.3591702117741942,
+      "mean3dPct": -0.6627395996957641,
+      "mean7dPct": 0.13456747363872165,
+      "fadeHitRatePct": 43.75
     },
     "30-50:long": {
-      "n": 75,
-      "mean1dPct": 0.0074992009213507745,
-      "mean3dPct": 0.2648220353455248,
-      "mean7dPct": 0.9531416122792716,
-      "fadeHitRatePct": 35.13513513513514
+      "n": 91,
+      "mean1dPct": 0.1206233532730989,
+      "mean3dPct": 0.5125424806553533,
+      "mean7dPct": 0.8862944790074956,
+      "fadeHitRatePct": 33.70786516853933
     },
     "30-50:short": {
-      "n": 7,
-      "mean1dPct": -1.1074727553093218,
-      "mean3dPct": -1.1425803432654458,
-      "mean7dPct": -1.1565230367215555,
-      "fadeHitRatePct": 42.857142857142854
+      "n": 4,
+      "mean1dPct": -2.5596179964611454,
+      "mean3dPct": -2.4450816149969867,
+      "mean7dPct": -2.440632661149393,
+      "fadeHitRatePct": 25
     },
     "50-70:long": {
-      "n": 71,
-      "mean1dPct": 0.28594656604207985,
-      "mean3dPct": 0.09760140464974508,
-      "mean7dPct": -0.08772294460637654,
-      "fadeHitRatePct": 45.714285714285715
+      "n": 74,
+      "mean1dPct": -0.01542124237060398,
+      "mean3dPct": -0.998134216194314,
+      "mean7dPct": -2.1924082834471195,
+      "fadeHitRatePct": 59.45945945945946
     },
     "50-70:short": {
-      "n": 14,
-      "mean1dPct": 0.2407872572864669,
-      "mean3dPct": 0.4812005482853738,
-      "mean7dPct": 0.7436501431024463,
-      "fadeHitRatePct": 64.28571428571429
+      "n": 10,
+      "mean1dPct": 0.46892233473335476,
+      "mean3dPct": 0.983242146246418,
+      "mean7dPct": 1.4796565384813924,
+      "fadeHitRatePct": 70
     },
     "70-100 (crowded):long": {
-      "n": 24,
-      "mean1dPct": -0.9915573081609269,
-      "mean3dPct": -3.682559224113944,
-      "mean7dPct": -9.000613045702496,
-      "fadeHitRatePct": 95.83333333333334
+      "n": 11,
+      "mean1dPct": -0.48969187796874647,
+      "mean3dPct": -2.151520351738826,
+      "mean7dPct": -5.37838339202085,
+      "fadeHitRatePct": 90.9090909090909
     },
     "70-100 (crowded):short": {
-      "n": 6,
-      "mean1dPct": -0.6968052441803709,
-      "mean3dPct": 1.6537784986874804,
-      "mean7dPct": 1.9931119267068365,
-      "fadeHitRatePct": 66.66666666666666
+      "n": 13,
+      "mean1dPct": -0.23175927013276207,
+      "mean3dPct": 0.662255481752751,
+      "mean7dPct": 0.7107751974160019,
+      "fadeHitRatePct": 61.53846153846154
     }
   },
   "thesis": {
-    "Mixed / Low Conviction": {
-      "n": 66,
-      "mean1dPct": -0.17701554358445462,
-      "mean3dPct": 0.31364129565943016,
-      "mean7dPct": 1.342672801768281,
+    "Consolidation": {
+      "n": 62,
+      "mean1dPct": 0.6546946438716658,
+      "mean3dPct": -0.03193257702464985,
+      "mean7dPct": 0.5460985864811417,
       "fadeHitRatePct": null
     },
-    "Consolidation": {
-      "n": 60,
-      "mean1dPct": 0.6972721317884223,
-      "mean3dPct": 0.20336254663603348,
-      "mean7dPct": 1.376526015051382,
+    "Mixed / Low Conviction": {
+      "n": 39,
+      "mean1dPct": 0.2225756614501375,
+      "mean3dPct": 0.5112552551403904,
+      "mean7dPct": 1.2750617036720469,
       "fadeHitRatePct": null
     },
     "Leaning Bearish": {
-      "n": 81,
-      "mean1dPct": -0.1175433316275895,
-      "mean3dPct": 0.017853936972785745,
-      "mean7dPct": -0.1751451926999782,
+      "n": 115,
+      "mean1dPct": -0.3866235852931252,
+      "mean3dPct": -0.38605290524426794,
+      "mean7dPct": -0.7426428703116714,
       "fadeHitRatePct": null
     },
     "Squeeze Setup — Shorts Exposed": {
-      "n": 6,
-      "mean1dPct": -0.6968052441803709,
-      "mean3dPct": 1.6537784986874804,
-      "mean7dPct": 1.9931119267068365,
+      "n": 13,
+      "mean1dPct": -0.23175927013276207,
+      "mean3dPct": 0.662255481752751,
+      "mean7dPct": 0.7107751974160019,
       "fadeHitRatePct": null
     },
     "Leaning Bullish": {
-      "n": 13,
-      "mean1dPct": -0.3726508132762743,
-      "mean3dPct": 0.5631605302627277,
-      "mean7dPct": -0.7040457950309448,
+      "n": 10,
+      "mean1dPct": -0.5137775259454755,
+      "mean3dPct": 0.800938028712595,
+      "mean7dPct": 0.3581350664774927,
       "fadeHitRatePct": null
     },
     "Squeeze Setup — Longs Exposed": {
-      "n": 24,
-      "mean1dPct": -0.9915573081609269,
-      "mean3dPct": -3.682559224113944,
-      "mean7dPct": -9.000613045702496,
+      "n": 11,
+      "mean1dPct": -0.48969187796874647,
+      "mean3dPct": -2.151520351738826,
+      "mean7dPct": -5.37838339202085,
       "fadeHitRatePct": null
     }
   }

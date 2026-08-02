@@ -5,6 +5,8 @@ import { computeSqueezeRisk, computeFundingPercentile } from "../../src/lib/sent
 import { oiPercentileFromHistory } from "../../src/lib/history/store";
 import { computeLeverageHeat } from "../../src/lib/sentiment/compositeIndex";
 import { buildMarketThesis, MarketThesisInputs } from "../../src/lib/sentiment/marketThesis";
+import { buildTechnicalRead } from "../../src/lib/sentiment/technicals";
+import { Candle } from "../../src/lib/technicals/indicators";
 import { LocalHistoryPoint } from "../../src/types/market";
 
 /**
@@ -33,9 +35,18 @@ const DAY_MS = 86_400_000;
 const OI_BURN_IN_DAYS = 48; // oiPercentileFromHistory's own minimum
 const FORWARD_BUFFER_DAYS = 7; // longest labeled horizon
 
+interface HourlyBar {
+  t: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volumeUsd: number;
+}
+
 interface RawAssetData {
   asset: "BTC" | "ETH";
-  futuresKlines: Array<{ t: number; close: number }>;
+  futuresKlines: HourlyBar[];
   spotKlines: Array<{ t: number; close: number }>;
   fundingRate: Array<{ t: number; fundingRatePct: number }>;
   oiHistory: Array<{ t: number; oiUsd: number }>;
@@ -102,10 +113,46 @@ function forwardReturn(futuresKlines: Array<{ t: number; close: number }>, fromT
   return ((endPoint.close - startPrice) / startPrice) * 100;
 }
 
+/**
+ * Rolls hourly bars up into daily candles, so the replay can run the SAME
+ * `buildTechnicalRead` the live site uses (which expects daily bars from
+ * OKX). Grouped by UTC calendar day: open from the first hour, close from
+ * the last, high/low as extremes, volume summed.
+ *
+ * Partial days are dropped. The live provider discards OKX's unconfirmed
+ * bar for the same reason — a half-finished day understates volume badly
+ * enough to flip the volume-ratio read on its own.
+ */
+function rollUpToDaily(hourly: HourlyBar[]): Candle[] {
+  const byDay = new Map<string, HourlyBar[]>();
+  for (const bar of hourly) {
+    const key = new Date(bar.t).toISOString().slice(0, 10);
+    const existing = byDay.get(key);
+    if (existing) existing.push(bar);
+    else byDay.set(key, [bar]);
+  }
+
+  const out: Candle[] = [];
+  for (const [key, bars] of Array.from(byDay.entries()).sort((a, b) => a[0].localeCompare(b[0]))) {
+    if (bars.length < 24) continue; // incomplete day
+    bars.sort((a, b) => a.t - b.t);
+    out.push({
+      t: Date.parse(`${key}T00:00:00Z`),
+      open: bars[0].open,
+      high: Math.max(...bars.map((b) => b.high)),
+      low: Math.min(...bars.map((b) => b.low)),
+      close: bars[bars.length - 1].close,
+      volumeUsd: bars.reduce((s, b) => s + b.volumeUsd, 0),
+    });
+  }
+  return out;
+}
+
 function replayAsset(data: RawAssetData): DayRecord[] {
   const { asset, futuresKlines, spotKlines, fundingRate, oiHistory, longShortHistory } = data;
   const records: DayRecord[] = [];
 
+  const dailyCandles = rollUpToDaily(futuresKlines);
   const lastEvalIndex = oiHistory.length - 1 - FORWARD_BUFFER_DAYS;
 
   for (let i = OI_BURN_IN_DAYS; i <= lastEvalIndex; i++) {
@@ -160,17 +207,10 @@ function replayAsset(data: RawAssetData): DayRecord[] {
       deribitOptions: null, // no historical source found
       exchangeFlow: null, // this app's own recorder has no depth yet
       /*
-       * Left null for now even though the raw material EXISTS here — the
-       * Binance klines already fetched above could be rolled up to daily
-       * bars and run through buildTechnicalRead. Wiring that in is a
-       * deliberate follow-up rather than a data gap like the entries above.
-       *
-       * Until then, every regime statistic this harness produces describes
-       * the thesis WITHOUT price-action evidence, while the live site now
-       * includes it at weight 0.14. The two will disagree, and the report's
-       * regime table should be regenerated once this is connected.
+       * Only bars that CLOSED strictly before this evaluation day, so the
+       * technical read can't see the day it is being used to score.
        */
-      technicals: null,
+      technicals: buildTechnicalRead(dailyCandles.filter((c) => c.t < t)),
       liquidations: null,
       priceChange24hPct,
       leverageHeatScore,
