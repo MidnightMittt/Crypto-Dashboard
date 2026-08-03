@@ -42,8 +42,8 @@ const REFRESH = process.argv.includes("--refresh");
 const MONTHS_BACK = 14;
 
 const ASSETS = [
-  { asset: "BTC", symbol: "BTCUSDT", okxCcy: "BTC" },
-  { asset: "ETH", symbol: "ETHUSDT", okxCcy: "ETH" },
+  { asset: "BTC", symbol: "BTCUSDT", okxCcy: "BTC", sosoType: "us-btc-spot" },
+  { asset: "ETH", symbol: "ETHUSDT", okxCcy: "ETH", sosoType: "us-eth-spot" },
 ];
 
 function log(msg) {
@@ -170,7 +170,67 @@ async function fetchOkxRubik(path_, ccy, mapRow) {
   return rows;
 }
 
-async function fetchAsset({ asset, symbol, okxCcy }) {
+/**
+ * Fear & Greed history — alternative.me, keyless, 3,100+ daily points back
+ * to 2018-02-01. Market-wide (one crowd-sentiment index, not per-asset),
+ * so this is fetched once and shared across BTC and ETH rather than
+ * duplicated into each asset's cache file.
+ */
+async function fetchFearGreedHistory() {
+  const res = await fetch("https://api.alternative.me/fng/?limit=0&format=json");
+  if (!res.ok) throw new Error(`Fear & Greed HTTP ${res.status}`);
+  const json = await res.json();
+  const rows = (json.data ?? [])
+    .map((row) => ({ t: Number(row.timestamp) * 1000, value: Number(row.value) }))
+    .sort((a, b) => a.t - b.t);
+  log(`Fear & Greed: ${rows.length} pts, ${rows.length ? new Date(rows[0].t).toISOString().slice(0, 10) : "—"} to ${rows.length ? new Date(rows[rows.length - 1].t).toISOString().slice(0, 10) : "—"}`);
+  return rows;
+}
+
+/**
+ * Total stablecoin supply history — DefiLlama's `stablecoincharts/all`,
+ * keyless, back to 2017. Also market-wide: the live evaluator (see
+ * providers/stablecoins.ts) reads TOTAL circulating supply across every
+ * stablecoin, not a per-asset figure, so this is one shared series too.
+ */
+async function fetchStablecoinHistory() {
+  const res = await fetch("https://stablecoins.llama.fi/stablecoincharts/all");
+  if (!res.ok) throw new Error(`DefiLlama stablecoins HTTP ${res.status}`);
+  const json = await res.json();
+  const rows = (json ?? [])
+    .map((row) => ({ t: Number(row.date) * 1000, totalUsd: Number(row.totalCirculatingUSD?.peggedUSD) }))
+    .filter((row) => Number.isFinite(row.totalUsd) && row.totalUsd > 0)
+    .sort((a, b) => a.t - b.t);
+  log(`Stablecoin supply: ${rows.length} pts, ${rows.length ? new Date(rows[0].t).toISOString().slice(0, 10) : "—"} to ${rows.length ? new Date(rows[rows.length - 1].t).toISOString().slice(0, 10) : "—"}`);
+  return rows;
+}
+
+/**
+ * US spot ETF net flows — SoSoValue, the same keyless endpoint
+ * providers/etfFlows.ts already uses live. 300 daily points back to
+ * 2025-05-21, BTC and ETH only (no US spot ETF complex exists for the
+ * other assets, live or historically).
+ */
+async function fetchEtfFlowsHistory(sosoType) {
+  const res = await fetch("https://api.sosovalue.xyz/openapi/v2/etf/historicalInflowChart", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type: sosoType }),
+  });
+  if (!res.ok) throw new Error(`SoSoValue HTTP ${res.status}`);
+  const json = await res.json();
+  const rows = (json.data ?? [])
+    .map((row) => ({
+      t: Date.parse(`${row.date}T00:00:00Z`),
+      netFlowUsd: Number(row.totalNetInflow),
+    }))
+    .filter((row) => Number.isFinite(row.t) && Number.isFinite(row.netFlowUsd))
+    .sort((a, b) => a.t - b.t);
+  log(`  ETF flows (${sosoType}): ${rows.length} pts, ${rows.length ? new Date(rows[0].t).toISOString().slice(0, 10) : "—"} to ${rows.length ? new Date(rows[rows.length - 1].t).toISOString().slice(0, 10) : "—"}`);
+  return rows;
+}
+
+async function fetchAsset({ asset, symbol, okxCcy, sosoType }) {
   log(`${asset}:`);
 
   /*
@@ -204,7 +264,10 @@ async function fetchAsset({ asset, symbol, okxCcy }) {
     "spot klines",
     (m) => `https://data.binance.vision/data/spot/monthly/klines/${symbol}/1h/${symbol}-1h-${m.year}-${pad2(m.month)}.zip`,
     (d) => `https://data.binance.vision/data/spot/daily/klines/${symbol}/1h/${symbol}-1h-${d.year}-${pad2(d.month)}-${pad2(d.day)}.zip`,
-    (cols) => ({ t: Math.round(Number(cols[0]) / 1000), close: Number(cols[4]) })
+    // volumeUsd (index 7, quote-denominated) added alongside close so the
+    // backtest can compute spot-vs-perp turnover, the same way the live
+    // spotVolume.ts provider reads a spot ticker's quote volume.
+    (cols) => ({ t: Math.round(Number(cols[0]) / 1000), close: Number(cols[4]), volumeUsd: Number(cols[7]) })
   );
 
   // Funding: [calc_time, funding_interval_hours, last_funding_rate], rate as
@@ -230,11 +293,25 @@ async function fetchAsset({ asset, symbol, okxCcy }) {
   log(`  OKX OI history: ${oiHistory.length} pts, ${oiHistory.length ? new Date(oiHistory[0].t).toISOString().slice(0, 10) : "—"} to ${oiHistory.length ? new Date(oiHistory[oiHistory.length - 1].t).toISOString().slice(0, 10) : "—"}`);
   log(`  OKX long/short history: ${longShortHistory.length} pts`);
 
-  return { asset, futuresKlines, spotKlines, fundingRate, oiHistory, longShortHistory };
+  const etfFlows = await fetchEtfFlowsHistory(sosoType);
+
+  return { asset, futuresKlines, spotKlines, fundingRate, oiHistory, longShortHistory, etfFlows };
 }
 
 async function main() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
+
+  // Market-wide series — fetched once, shared by both assets' replays,
+  // rather than duplicated into BTC.json/ETH.json.
+  const marketPath = path.join(DATA_DIR, "MARKET.json");
+  if (!fs.existsSync(marketPath) || REFRESH) {
+    const fearGreed = await fetchFearGreedHistory();
+    const stablecoins = await fetchStablecoinHistory();
+    fs.writeFileSync(marketPath, JSON.stringify({ fearGreed, stablecoins }));
+    log(`wrote ${marketPath}`);
+  } else {
+    log("MARKET.json already cached — skipping (pass --refresh to re-fetch)");
+  }
 
   for (const cfg of ASSETS) {
     const outPath = path.join(DATA_DIR, `${cfg.asset}.json`);

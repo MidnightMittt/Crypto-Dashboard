@@ -1,4 +1,5 @@
 import { MarketRegime } from "@/types/market";
+import { Category, Verdict } from "@/lib/signals/types";
 
 /**
  * Lookup layer for `scripts/backtest/`'s output. Deliberately separate from
@@ -28,6 +29,17 @@ export interface BacktestStats {
   coverageEnd: string;
   squeeze: Record<string, RegimeStat>;
   thesis: Partial<Record<MarketRegime, RegimeStat>>;
+  /**
+   * The decision engine's five category rollups (lib/signals/categories.ts),
+   * bucketed by each category's own verdict — e.g. how did price move after
+   * days where Liquidity specifically read bullish vs. bearish. A SEPARATE
+   * question from the thesis regime stats above: those describe the older
+   * marketThesis engine, these describe the newer category-weighted
+   * marketBias engine. Neither replaces the other.
+   */
+  categories: Partial<Record<`${Category}:${Verdict}`, RegimeStat>>;
+  /** The overall marketBias verdict (not marketThesis's regime), bucketed the same way. */
+  biasVerdict: Partial<Record<Verdict, RegimeStat>>;
 }
 
 /**
@@ -67,5 +79,21 @@ export function lookupSqueezeStat(
 
 export function lookupThesisStat(stats: BacktestStats, regime: MarketRegime): RegimeStat | null {
   const stat = stats.thesis[regime];
+  return stat && stat.n >= MIN_SAMPLE_N ? stat : null;
+}
+
+/**
+ * Not yet wired into any UI component — this backtest pass only establishes
+ * that the category engine CAN be validated, and produces the first real
+ * numbers. Whether/how to surface them is a separate decision, same
+ * discipline the original squeeze/thesis backtest was built under.
+ */
+export function lookupCategoryStat(stats: BacktestStats, category: Category, verdict: Verdict): RegimeStat | null {
+  const stat = stats.categories[`${category}:${verdict}`];
+  return stat && stat.n >= MIN_SAMPLE_N ? stat : null;
+}
+
+export function lookupBiasVerdictStat(stats: BacktestStats, verdict: Verdict): RegimeStat | null {
+  const stat = stats.biasVerdict[verdict];
   return stat && stat.n >= MIN_SAMPLE_N ? stat : null;
 }

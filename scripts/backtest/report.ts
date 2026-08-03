@@ -30,6 +30,8 @@ interface DayRecord {
   squeezeScore: number | null;
   squeezeSide: string | null;
   thesisRegime: string | null;
+  biasVerdict: string | null;
+  categories: Array<{ category: string; score: number; verdict: string }>;
   forwardReturn1d: number | null;
   forwardReturn3d: number | null;
   forwardReturn7d: number | null;
@@ -107,6 +109,50 @@ function thesisSection(records: DayRecord[]): { markdown: string; stats: Partial
   return { markdown: rows.join("\n"), stats };
 }
 
+/**
+ * Buckets the decision engine's five category rollups by their own verdict —
+ * a separate question from the marketThesis regime table above, since
+ * categories.ts is a different engine (category-weighted, not
+ * marketThesis's flat-evidence scheme).
+ */
+function categoriesSection(records: DayRecord[]): {
+  markdown: string;
+  stats: Partial<Record<`${string}:${string}`, RegimeStat>>;
+} {
+  const rows: string[] = ["| Category | Verdict | N | Mean 1d | Mean 3d | Mean 7d |", "|---|---|---|---|---|---|"];
+  const stats: Partial<Record<`${string}:${string}`, RegimeStat>> = {};
+
+  const allCategories = Array.from(new Set(records.flatMap((r) => r.categories.map((c) => c.category)))).sort();
+
+  for (const category of allCategories) {
+    for (const verdict of ["bullish", "bearish", "neutral"] as const) {
+      const bucket = records.filter((r) => r.categories.some((c) => c.category === category && c.verdict === verdict));
+      if (bucket.length === 0) continue;
+      const stat = buildRegimeStat(bucket);
+      stats[`${category}:${verdict}`] = stat;
+      rows.push(`| ${category} | ${verdict} | ${bucket.length} | ${fmt(stat.mean1dPct)} | ${fmt(stat.mean3dPct)} | ${fmt(stat.mean7dPct)} |`);
+    }
+  }
+
+  return { markdown: rows.join("\n"), stats };
+}
+
+/** The overall marketBias verdict (category-weighted engine), bucketed the same simple way. */
+function biasVerdictSection(records: DayRecord[]): { markdown: string; stats: Partial<Record<string, RegimeStat>> } {
+  const rows: string[] = ["| Bias verdict | N | Mean 1d | Mean 3d | Mean 7d |", "|---|---|---|---|---|"];
+  const stats: Partial<Record<string, RegimeStat>> = {};
+
+  for (const verdict of ["bullish", "bearish", "neutral"] as const) {
+    const bucket = records.filter((r) => r.biasVerdict === verdict);
+    if (bucket.length === 0) continue;
+    const stat = buildRegimeStat(bucket);
+    stats[verdict] = stat;
+    rows.push(`| ${verdict} | ${bucket.length} | ${fmt(stat.mean1dPct)} | ${fmt(stat.mean3dPct)} | ${fmt(stat.mean7dPct)} |`);
+  }
+
+  return { markdown: rows.join("\n"), stats };
+}
+
 function main() {
   const resultsPath = path.join(DATA_DIR, "results.json");
   if (!fs.existsSync(resultsPath)) {
@@ -121,6 +167,8 @@ function main() {
 
   const squeeze = squeezeSection(records);
   const thesis = thesisSection(records);
+  const categories = categoriesSection(records);
+  const biasVerdict = biasVerdictSection(records);
 
   const header = `# Backtest Report
 
@@ -157,6 +205,20 @@ ${squeeze.markdown}
 ## Market Thesis (regime)
 
 ${thesis.markdown}
+
+## Decision Engine — Category Rollups
+
+The category-weighted engine (lib/signals/categories.ts), NOT the marketThesis regime table
+above — a separate system, added and backtested for the first time in this pass. Order flow,
+Coinbase premium, Deribit options, and exchange netflow are excluded from every category here for
+the same reason as above (no historical source); Fear & Greed, stablecoin supply, and ETF flows
+ARE included, newly backtestable this pass.
+
+${categories.markdown}
+
+## Decision Engine — Overall Bias Verdict
+
+${biasVerdict.markdown}
 `;
 
   const report = header + body;
@@ -170,6 +232,8 @@ ${thesis.markdown}
     coverageEnd,
     squeeze: squeeze.stats,
     thesis: thesis.stats,
+    categories: categories.stats,
+    biasVerdict: biasVerdict.stats,
   };
   fs.mkdirSync(path.dirname(STATS_OUT_PATH), { recursive: true });
   fs.writeFileSync(STATS_OUT_PATH, JSON.stringify(statsOut, null, 2));
