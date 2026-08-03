@@ -71,7 +71,7 @@ export function LongShortGauge({ data }: { data: AggregateMarketData }) {
           <GaugeStat label="Short Share" value={longPct !== null ? `${(100 - longPct).toFixed(1)}%` : "—"} />
         </div>
         {uniqueReporting.length > 0 && (
-          <p className="text-center text-[10px] text-ink-faint">
+          <p className="text-center text-[11px] text-ink-faint">
             Source: {uniqueReporting.join(", ")}
           </p>
         )}

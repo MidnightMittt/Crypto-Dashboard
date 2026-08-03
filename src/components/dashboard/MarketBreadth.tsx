@@ -62,7 +62,7 @@ export function MarketBreadth({
                 colors={DOMINANCE_ROTATION_COLORS}
               />
             </div>
-            <p className="mt-2 text-[10px] leading-relaxed text-ink-faint">
+            <p className="mt-2 text-[11px] leading-relaxed text-ink-faint">
               {narrateAltseason(globalMarket.altseasonIndex)} 24h market cap{" "}
               {globalMarket.mcapChange24hPct >= 0 ? "+" : ""}
               {formatPct(globalMarket.mcapChange24hPct, 1)}.
@@ -80,7 +80,7 @@ export function MarketBreadth({
                 {formatCompactUsd(stablecoins.totalMcapUsd)}
               </span>
             </div>
-            <div className="mt-2 grid grid-cols-2 gap-2 text-[10px]">
+            <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
               <span className="text-ink-faint">
                 24h{" "}
                 <span className={stablecoins.netChange24hUsd >= 0 ? "text-success" : "text-danger"}>
@@ -99,7 +99,7 @@ export function MarketBreadth({
             <div className="mt-3">
               <LeanGauge lean={stablecoinFlowLean(stablecoins.netChange7dPct)} />
             </div>
-            <p className="mt-2 text-[10px] leading-relaxed text-ink-faint">
+            <p className="mt-2 text-[11px] leading-relaxed text-ink-faint">
               {narrateStablecoins(stablecoins)}{" "}
               {stablecoins.topIssuers
                 .slice(0, 2)
@@ -127,7 +127,7 @@ function Stat({
   return (
     <div>
       <div className={`font-mono text-lg ${color}`}>{value}</div>
-      <div className="text-[10px] uppercase tracking-widest text-ink-faint">{label}</div>
+      <div className="text-[11px] uppercase tracking-widest text-ink-faint">{label}</div>
     </div>
   );
 }

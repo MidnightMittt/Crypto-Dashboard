@@ -108,11 +108,25 @@ export default function DashboardPage() {
             </div>
 
             {/*
+              The four core readings, at a glance, before the synthesis
+              below. These are the numbers a trader checks reflexively on
+              opening the page, so they sit above the briefing rather than
+              inside the collapsed Raw Metrics group — deliberately kept to
+              a single compact row so the briefing still lands within the
+              first screen.
+            */}
+            <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <FundingGauge data={aggregate} />
+              <OpenInterestGauge data={aggregate} />
+              <LeverageHeatGauge data={aggregate} />
+              <LongShortGauge data={aggregate} />
+            </section>
+
+            {/*
               ── TIER 1 — THE BRIEFING ─────────────────────────────────────
-              The whole answer, above the fold. Regime, conviction,
-              agreement, evidence both ways, opportunity, risk, what
-              changed, what to watch. Everything below this is the working
-              behind it.
+              The whole answer. Regime, conviction, agreement, evidence both
+              ways, opportunity, risk, what changed, what to watch.
+              Everything below this is the working behind it.
             */}
             <MarketBriefing bias={aggregate.marketBias} thesis={aggregate.marketThesis} />
 
@@ -149,24 +163,15 @@ export default function DashboardPage() {
               </section>
             </Collapsible>
 
-            <Collapsible title="Raw Metrics" summary="funding, open interest, leverage heat, long/short, composite">
-              <div className="flex flex-col gap-4">
-                <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-                  <FundingGauge data={aggregate} />
-                  <OpenInterestGauge data={aggregate} />
-                  <LeverageHeatGauge data={aggregate} />
-                  <LongShortGauge data={aggregate} />
-                </section>
-                {/*
-                  The composite sentiment score lives here rather than at the
-                  top. It is a second 0-100 "overall market" number alongside
-                  the briefing's, and two competing headline scores was the
-                  single worst thing on this page for a fast read. Its inputs
-                  now feed the engine directly; the gauge is kept for anyone
-                  who wants to see it.
-                */}
-                <SentimentIndex data={aggregate} fearGreed={data?.fearGreed} />
-              </div>
+            {/*
+              The composite sentiment score lives here rather than at the
+              top. It is a second 0-100 "overall market" number alongside the
+              briefing's, and two competing headline scores was the single
+              worst thing on this page for a fast read. Its inputs now feed
+              the engine directly; the gauge is kept for anyone who wants it.
+            */}
+            <Collapsible title="Composite Sentiment" summary="legacy 0-100 score, Fear & Greed comparison">
+              <SentimentIndex data={aggregate} fearGreed={data?.fearGreed} />
             </Collapsible>
 
             <Collapsible title="Market Context" summary="breadth, correlation, chain health">

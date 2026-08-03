@@ -78,7 +78,7 @@ export function FundingGauge({ data }: { data: AggregateMarketData }) {
             question funding answers, from an independent source. */}
         <div className="w-full border-t border-hairline pt-3">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] uppercase tracking-wider text-ink-faint">
+            <span className="text-[11px] uppercase tracking-wider text-ink-faint">
               Basis vs spot
             </span>
             <span
@@ -96,7 +96,7 @@ export function FundingGauge({ data }: { data: AggregateMarketData }) {
           {data.coinbasePremiumPct !== null && (
             <div className="mt-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] uppercase tracking-wider text-ink-faint">
+                <span className="text-[11px] uppercase tracking-wider text-ink-faint">
                   Coinbase premium
                 </span>
                 <span
@@ -113,13 +113,13 @@ export function FundingGauge({ data }: { data: AggregateMarketData }) {
             </div>
           )}
           {data.spotDisagreementPct !== null && data.spotDisagreementPct > 1 && (
-            <p className="mt-1 text-[10px] leading-relaxed text-amber">
+            <p className="mt-1 text-[11px] leading-relaxed text-amber">
               Spot sources disagree by {data.spotDisagreementPct.toFixed(2)}% — treat this basis figure
               with caution.
             </p>
           )}
           {data.basisPct !== null && (
-            <p className="mt-1 text-[10px] leading-relaxed text-ink-faint">
+            <p className="mt-1 text-[11px] leading-relaxed text-ink-faint">
               {data.basisPct > 0
                 ? "Perps trade above spot — longs paying up for leverage."
                 : "Perps trade below spot — short pressure."}

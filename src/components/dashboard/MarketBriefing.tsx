@@ -123,7 +123,7 @@ function Headline({ bias, thesis }: { bias: MarketBias; thesis: MarketThesis | n
 function Stat({ label, value, hint }: { label: string; value: string; hint: string }) {
   return (
     <div className="flex flex-col gap-1" title={hint}>
-      <span className="text-[10px] uppercase tracking-[0.16em] text-ink-muted">{label}</span>
+      <span className="text-[11px] uppercase tracking-[0.16em] text-ink-muted">{label}</span>
       <span className="font-mono text-lg leading-none text-ink">{value}</span>
     </div>
   );
@@ -284,7 +284,7 @@ function WhatToWatch({ bias, thesis }: { bias: MarketBias; thesis: MarketThesis 
 
       {invalidation.length > 0 && (
         <>
-          <p className="mt-4 text-[10px] uppercase tracking-[0.16em] text-ink-muted">
+          <p className="mt-4 text-[11px] uppercase tracking-[0.16em] text-ink-muted">
             What would invalidate this
           </p>
           <ul className="mt-2 flex flex-col gap-1.5">
@@ -301,5 +301,5 @@ function WhatToWatch({ bias, thesis }: { bias: MarketBias; thesis: MarketThesis 
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <span className="text-[10px] uppercase tracking-[0.18em] text-ink-muted">{children}</span>;
+  return <span className="text-[11px] uppercase tracking-[0.18em] text-ink-muted">{children}</span>;
 }

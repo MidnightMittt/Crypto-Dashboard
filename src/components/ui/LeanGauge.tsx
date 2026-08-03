@@ -37,7 +37,7 @@ export function LeanGauge({ lean }: { lean: Lean }) {
         />
       </div>
       <span
-        className="text-[10px] font-semibold uppercase tracking-wider"
+        className="text-[11px] font-semibold uppercase tracking-wider"
         style={{ color: config.color }}
       >
         {config.label}

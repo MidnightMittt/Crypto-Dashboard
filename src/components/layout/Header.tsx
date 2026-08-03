@@ -21,7 +21,7 @@ export function Header({ venueCount, updatedAt }: { venueCount?: number; updated
           </div>
           <div>
             <h1 className="text-sm font-semibold tracking-tight text-ink">Leverage Terminal</h1>
-            <p className="text-[10px] uppercase tracking-[0.15em] text-ink-faint">
+            <p className="text-[11px] uppercase tracking-[0.15em] text-ink-faint">
               Perp funding · open interest · positioning
             </p>
           </div>

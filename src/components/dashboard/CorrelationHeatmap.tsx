@@ -35,7 +35,7 @@ export function CorrelationHeatmap({ correlation }: { correlation: CorrelationMa
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-[10px]">
+              <table className="w-full border-collapse text-[11px]">
                 <thead>
                   <tr>
                     <th className="p-1" />
@@ -68,7 +68,7 @@ export function CorrelationHeatmap({ correlation }: { correlation: CorrelationMa
                 </tbody>
               </table>
             </div>
-            <p className="mt-3 text-[10px] leading-relaxed text-ink-faint">{narrate(correlation)}</p>
+            <p className="mt-3 text-[11px] leading-relaxed text-ink-faint">{narrate(correlation)}</p>
           </>
         )}
       </CardContent>

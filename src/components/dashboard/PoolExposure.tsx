@@ -87,7 +87,7 @@ export function PoolExposure({ data }: { data: AggregateMarketData }) {
           only exists because a pool, not another trader, is on the other side.
         </p>
 
-        <p className="text-[10px] text-ink-faint">Source: {venueNames.join(", ")}</p>
+        <p className="text-[11px] text-ink-faint">Source: {venueNames.join(", ")}</p>
       </CardContent>
     </Card>
   );

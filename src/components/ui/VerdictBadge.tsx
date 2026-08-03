@@ -44,7 +44,7 @@ export function VerdictBadge({
 export function ConfidenceLabel({ confidence, basis }: { confidence: number; basis?: string }) {
   return (
     <span
-      className="font-mono text-[10px] text-ink-faint"
+      className="font-mono text-[11px] text-ink-faint"
       title={`Signal confidence measures how much evidence supports this read — data completeness, agreement between sources, and whether any backtest covers it. It is NOT the probability of a price move.${basis ? ` ${basis}` : ""}`}
     >
       {confidence}% signal confidence

@@ -55,11 +55,11 @@ export function DeribitOptionsIntelligence({ data }: { data: AggregateMarketData
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <div className="font-mono text-2xl text-ink">{opt.putCallRatio.toFixed(2)}</div>
-                <div className="text-[10px] uppercase tracking-widest text-ink-faint">Put/Call ratio</div>
+                <div className="text-[11px] uppercase tracking-widest text-ink-faint">Put/Call ratio</div>
               </div>
               <div>
                 <div className="font-mono text-2xl text-ink">{formatUsd(opt.maxPain, 0)}</div>
-                <div className="text-[10px] uppercase tracking-widest text-ink-faint">Max pain</div>
+                <div className="text-[11px] uppercase tracking-widest text-ink-faint">Max pain</div>
               </div>
             </div>
 
@@ -71,7 +71,7 @@ export function DeribitOptionsIntelligence({ data }: { data: AggregateMarketData
               </div>
             )}
 
-            <p className="text-[10px] leading-relaxed text-ink-faint">{narrate(opt)}</p>
+            <p className="text-[11px] leading-relaxed text-ink-faint">{narrate(opt)}</p>
           </>
         )}
       </CardContent>

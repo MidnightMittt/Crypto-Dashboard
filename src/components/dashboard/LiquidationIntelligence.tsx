@@ -54,7 +54,7 @@ export function LiquidationIntelligence({ data }: { data: AggregateMarketData })
 
             <LiquidationBars history={liq.history} />
 
-            <div className="grid grid-cols-2 gap-2 text-[10px]">
+            <div className="grid grid-cols-2 gap-2 text-[11px]">
               <span className="text-ink-faint">
                 <span className="text-danger">Longs liquidated</span>{" "}
                 {formatCompactUsd(liq.totalLongUsd)}
@@ -65,7 +65,7 @@ export function LiquidationIntelligence({ data }: { data: AggregateMarketData })
               </span>
             </div>
 
-            <p className="text-[10px] leading-relaxed text-ink-faint">{narrate(liq)}</p>
+            <p className="text-[11px] leading-relaxed text-ink-faint">{narrate(liq)}</p>
           </>
         )}
       </CardContent>
@@ -113,7 +113,7 @@ function narrate(liq: NonNullable<AggregateMarketData["liquidations"]>): string 
 function LiquidationBars({ history }: { history: LiquidationBucket[] }) {
   if (history.length === 0) {
     return (
-      <div className="flex h-14 w-full items-center justify-center rounded border border-dashed border-hairline text-[10px] text-ink-faint">
+      <div className="flex h-14 w-full items-center justify-center rounded border border-dashed border-hairline text-[11px] text-ink-faint">
         Collecting liquidation history…
       </div>
     );

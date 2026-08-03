@@ -112,7 +112,7 @@ export function AlertsPanel({ aggregate }: { aggregate: AggregateMarketData }) {
 
         {firings.length > 0 && (
           <div className="mt-2 border-t border-hairline pt-3">
-            <div className="mb-2 text-[10px] uppercase tracking-wide text-ink-faint">Recent firings</div>
+            <div className="mb-2 text-[11px] uppercase tracking-wide text-ink-faint">Recent firings</div>
             <div className="flex max-h-40 flex-col gap-1 overflow-y-auto">
               {firings.map((f, i) => (
                 <div key={`${f.ruleId}-${f.t}-${i}`} className="rounded bg-cyan/5 px-2 py-1.5 text-xs text-ink-muted">

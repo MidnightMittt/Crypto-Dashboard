@@ -72,9 +72,9 @@ export function ExchangeFlowIntelligence({ data }: { data: AggregateMarketData }
               </span>
             </div>
 
-            <p className="text-[10px] leading-relaxed text-ink-faint">{narrate(flow)}</p>
+            <p className="text-[11px] leading-relaxed text-ink-faint">{narrate(flow)}</p>
 
-            <p className="border-t border-hairline pt-2 text-[10px] leading-relaxed text-ink-faint">
+            <p className="border-t border-hairline pt-2 text-[11px] leading-relaxed text-ink-faint">
               Partial signal — tracks {flow.trackedAddressCount} known {flow.venues.join("/")}{" "}
               wallet{flow.trackedAddressCount === 1 ? "" : "s"} only, not a comprehensive
               exchange-wide total. Read it as directional, not exhaustive.

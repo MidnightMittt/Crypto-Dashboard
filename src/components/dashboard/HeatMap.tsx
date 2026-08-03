@@ -51,7 +51,7 @@ export function HeatMap({ exchanges }: { exchanges: ExchangeSnapshot[] }) {
       <CardHeader className="flex-wrap gap-2">
         <CardTitle>Funding Heat Map</CardTitle>
         <div className="flex items-center gap-3">
-          <span className="text-[10px] text-ink-faint">Basis points per 8h</span>
+          <span className="text-[11px] text-ink-faint">Basis points per 8h</span>
           <Legend />
         </div>
       </CardHeader>
@@ -61,13 +61,13 @@ export function HeatMap({ exchanges }: { exchanges: ExchangeSnapshot[] }) {
           <table className="w-full border-separate border-spacing-1">
             <thead>
               <tr>
-                <th className="sticky left-0 z-10 bg-panel px-2 py-1 text-left text-[10px] uppercase tracking-wide text-ink-faint">
+                <th className="sticky left-0 z-10 bg-panel px-2 py-1 text-left text-[11px] uppercase tracking-wide text-ink-faint">
                   Asset
                 </th>
                 {activeExchanges.map((ex) => (
                   <th
                     key={ex.id}
-                    className="px-1 py-1 text-center text-[9px] font-medium uppercase tracking-wide text-ink-faint"
+                    className="px-1 py-1 text-center text-[11px] font-medium uppercase tracking-wide text-ink-faint"
                     title={`${ex.name} — funding every ${
                       exchanges.find((e) => e.exchangeId === ex.id)?.fundingIntervalHours ?? "?"
                     }h`}
@@ -88,7 +88,7 @@ export function HeatMap({ exchanges }: { exchanges: ExchangeSnapshot[] }) {
                     if (!snap) {
                       return (
                         <td key={ex.id} className="p-0">
-                          <div className="flex h-9 w-14 items-center justify-center rounded bg-white/[0.02] text-[10px] text-ink-faint">
+                          <div className="flex h-9 w-14 items-center justify-center rounded bg-white/[0.02] text-[11px] text-ink-faint">
                             —
                           </div>
                         </td>
@@ -104,7 +104,7 @@ export function HeatMap({ exchanges }: { exchanges: ExchangeSnapshot[] }) {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <div
-                              className="flex h-9 w-14 cursor-default items-center justify-center rounded font-mono text-[10px] font-semibold text-white transition-transform hover:scale-110"
+                              className="flex h-9 w-14 cursor-default items-center justify-center rounded font-mono text-[11px] font-semibold text-white transition-transform hover:scale-110"
                               style={{ backgroundColor: bg }}
                             >
                               {bps >= 0 ? "+" : ""}
@@ -162,7 +162,7 @@ function Legend() {
             className="h-3 w-3 rounded-sm"
             style={{ backgroundColor: lerpColorScale(colorPosition(bps), -1, 1, FUNDING_STOPS) }}
           />
-          <span className="text-[9px] text-ink-faint">{bps > 0 ? `+${bps}` : bps}</span>
+          <span className="text-[11px] text-ink-faint">{bps > 0 ? `+${bps}` : bps}</span>
         </span>
       ))}
     </div>

@@ -37,7 +37,7 @@ export function BandGauge({
           style={{ left: `${position}%`, backgroundColor: color }}
         />
       </div>
-      <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color }}>
+      <span className="text-[11px] font-semibold uppercase tracking-wider" style={{ color }}>
         {label}
       </span>
     </div>

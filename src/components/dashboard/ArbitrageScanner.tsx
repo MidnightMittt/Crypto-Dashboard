@@ -68,7 +68,7 @@ export function ArbitrageScanner({ exchanges }: { exchanges: ExchangeSnapshot[] 
     <Card>
       <CardHeader>
         <CardTitle>Funding Spread Scanner</CardTitle>
-        <span className="text-[10px] text-ink-faint">Normalized to 8h</span>
+        <span className="text-[11px] text-ink-faint">Normalized to 8h</span>
       </CardHeader>
       <div className="p-4 pt-2">
         {spreads.length === 0 ? (
@@ -89,7 +89,7 @@ export function ArbitrageScanner({ exchanges }: { exchanges: ExchangeSnapshot[] 
                   </span>
                 </span>
                 <span className="flex items-center gap-4">
-                  <span className="text-[10px] text-ink-faint">
+                  <span className="text-[11px] text-ink-faint">
                     liq. {formatCompactUsd(s.minLiquidityUsd)}
                   </span>
                   <span className="font-mono text-cyan">{formatBps(s.spreadPct)} bps</span>

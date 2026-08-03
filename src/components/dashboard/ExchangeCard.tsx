@@ -32,14 +32,14 @@ export function ExchangeCard({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span
-            className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold text-void"
+            className="flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold text-void"
             style={{ backgroundColor: meta.color }}
           >
             {meta.name.slice(0, 1)}
           </span>
           <div>
             <div className="text-sm font-medium text-ink">{meta.name}</div>
-            <div className="text-[10px] uppercase tracking-wide text-ink-faint">
+            <div className="text-[11px] uppercase tracking-wide text-ink-faint">
               {meta.type} · {marketCount ? `${marketCount} markets` : snapshot.asset}
             </div>
           </div>
@@ -49,7 +49,7 @@ export function ExchangeCard({
             {snapshot.fundingIntervalHours}h
           </span>
           {snapshot.source && snapshot.source !== "direct" && (
-            <span className="text-[9px] uppercase tracking-wide text-cyan/70">
+            <span className="text-[11px] uppercase tracking-wide text-cyan/70">
               via {snapshot.source}
             </span>
           )}
@@ -65,7 +65,7 @@ export function ExchangeCard({
           }
         />
       ) : (
-        <div className="flex h-10 w-full items-center justify-center rounded border border-dashed border-hairline text-[10px] text-ink-faint">
+        <div className="flex h-10 w-full items-center justify-center rounded border border-dashed border-hairline text-[11px] text-ink-faint">
           Collecting funding history…
         </div>
       )}
@@ -119,7 +119,7 @@ function Stat({
           : "text-ink";
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-[10px] uppercase tracking-wide text-ink-faint">{label}</span>
+      <span className="text-[11px] uppercase tracking-wide text-ink-faint">{label}</span>
       <span className={`${mono ? "font-mono" : ""} text-[13px] font-medium ${color}`}>{value}</span>
     </div>
   );

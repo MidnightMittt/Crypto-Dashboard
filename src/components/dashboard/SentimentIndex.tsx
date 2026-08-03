@@ -76,13 +76,13 @@ function FearGreedCompare({ data, fearGreed }: { data: AggregateMarketData; fear
         </span>
       </div>
       {diverging && (
-        <p className="mt-1.5 text-[10px] leading-relaxed text-amber">
+        <p className="mt-1.5 text-[11px] leading-relaxed text-amber">
           {gap > 0
             ? "Leverage positioning is notably more optimistic than broad spot sentiment."
             : "Broad spot sentiment is notably more optimistic than leverage positioning."}
         </p>
       )}
-      <p className="mt-1 text-[10px] text-ink-faint">
+      <p className="mt-1 text-[11px] text-ink-faint">
         Fear &amp; Greed measures spot-market sentiment; the index above measures perp leverage. Source:
         alternative.me
       </p>
@@ -92,7 +92,7 @@ function FearGreedCompare({ data, fearGreed }: { data: AggregateMarketData; fear
 
 function ScaleLegend() {
   return (
-    <div className="flex items-center gap-2 text-[10px] text-ink-faint">
+    <div className="flex items-center gap-2 text-[11px] text-ink-faint">
       <LegendDot color="#7A1E1E" label="Fear" />
       <LegendDot color="#8890A0" label="Neutral" />
       <LegendDot color="#F5A623" label="Greed" />

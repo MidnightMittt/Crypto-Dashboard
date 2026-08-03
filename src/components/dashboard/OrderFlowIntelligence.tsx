@@ -55,7 +55,7 @@ export function OrderFlowIntelligence({ data }: { data: AggregateMarketData }) {
 
               <CvdChart cvdHistory={flow.cvdHistory} />
 
-              <div className="mt-2 grid grid-cols-2 gap-2 text-[10px]">
+              <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
                 <span className="text-ink-faint">
                   <span className="text-success">Aggressive buys</span>{" "}
                   {formatCompactUsd(flow.totalBuyUsd)}
@@ -67,7 +67,7 @@ export function OrderFlowIntelligence({ data }: { data: AggregateMarketData }) {
               </div>
             </div>
 
-            <p className="text-[10px] leading-relaxed text-ink-faint">{narrate(flow)}</p>
+            <p className="text-[11px] leading-relaxed text-ink-faint">{narrate(flow)}</p>
           </>
         )}
       </CardContent>
@@ -118,7 +118,7 @@ function BookImbalanceRow({
         <div className="bg-danger/60" style={{ width: `${100 - bidSharePct}%` }} />
       </div>
 
-      <div className="mt-1 grid grid-cols-2 gap-2 text-[10px]">
+      <div className="mt-1 grid grid-cols-2 gap-2 text-[11px]">
         <span className="text-ink-faint">
           <span className="text-success">Bids</span> {formatCompactUsd(bid.usd)}
         </span>
@@ -137,7 +137,7 @@ function CvdChart({
 }) {
   if (cvdHistory.length < 2) {
     return (
-      <div className="mt-2 flex h-10 w-full items-center justify-center rounded border border-dashed border-hairline text-[10px] text-ink-faint">
+      <div className="mt-2 flex h-10 w-full items-center justify-center rounded border border-dashed border-hairline text-[11px] text-ink-faint">
         Collecting flow history…
       </div>
     );

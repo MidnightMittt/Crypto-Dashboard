@@ -97,12 +97,12 @@ function SqueezeSection({
                 style={{ width: `${Math.max(Math.min(c.score, 100), 0)}%` }}
               />
             </div>
-            <p className="text-[10px] leading-relaxed text-ink-faint">{c.detail}</p>
+            <p className="text-[11px] leading-relaxed text-ink-faint">{c.detail}</p>
           </div>
         ))}
       </div>
 
-      <p className="text-[10px] leading-relaxed text-ink-faint">
+      <p className="text-[11px] leading-relaxed text-ink-faint">
         A weighted ranking of conditions that have preceded liquidation cascades —
         not a calibrated probability. 70 means more of the setup is present than at
         40, not that anything is 70% likely.
@@ -141,7 +141,7 @@ function SqueezeTechnicalContext({
       ? `Price action still leans ${technicals.direction}, against the way an unwind would resolve — the crowded side is not yet under pressure.`
       : "Price action is directionless here, so nothing is yet forcing the crowded side out.";
 
-  return <p className="text-[10px] leading-relaxed text-ink-faint">{message}</p>;
+  return <p className="text-[11px] leading-relaxed text-ink-faint">{message}</p>;
 }
 
 function BacktestStatLine({ risk }: { risk: SqueezeRisk }) {
@@ -149,7 +149,7 @@ function BacktestStatLine({ risk }: { risk: SqueezeRisk }) {
   if (!stat) return null;
 
   return (
-    <p className="text-[10px] leading-relaxed text-ink-faint">
+    <p className="text-[11px] leading-relaxed text-ink-faint">
       Historically, in the backtested window ({backtestStats.coverageStart} to{" "}
       {backtestStats.coverageEnd}, N={stat.n} occurrences at this score/side): price moved a mean{" "}
       {stat.mean7dPct >= 0 ? "+" : ""}
@@ -175,7 +175,7 @@ function FundingPercentileRow({ percentile }: { percentile: number }) {
         </span>
         <span className="font-mono text-sm text-ink">{percentile}th</span>
       </div>
-      <p className="mt-1 text-[10px] leading-relaxed text-ink-faint">{reading}</p>
+      <p className="mt-1 text-[11px] leading-relaxed text-ink-faint">{reading}</p>
     </div>
   );
 }
@@ -207,7 +207,7 @@ function CexDexRow({ split }: { split: NonNullable<AggregateMarketData["cexDex"]
         <div className="bg-amber/60" style={{ width: `${100 - cexOiSharePct}%` }} />
       </div>
 
-      <div className="mt-2 grid grid-cols-2 gap-2 text-[10px]">
+      <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
         <span className="text-ink-faint">
           <span className="text-cyan">CEX</span> {formatCompactUsd(cex.openInterestUsd)} ·{" "}
           {cex.fundingBps.toFixed(2)} bps · {cex.venueCount} venues
@@ -218,7 +218,7 @@ function CexDexRow({ split }: { split: NonNullable<AggregateMarketData["cexDex"]
         </span>
       </div>
 
-      <p className="mt-1 text-[10px] leading-relaxed text-ink-faint">{reading}</p>
+      <p className="mt-1 text-[11px] leading-relaxed text-ink-faint">{reading}</p>
     </div>
   );
 }
@@ -245,7 +245,7 @@ function DivergenceRow({
         </span>
         <span className="font-mono text-sm text-ink">{dispersionBps.toFixed(2)} bps</span>
       </div>
-      <p className="mt-1 text-[10px] leading-relaxed text-ink-faint">
+      <p className="mt-1 text-[11px] leading-relaxed text-ink-faint">
         {reading} Widest gap {spreadBps.toFixed(1)} bps across {venueCount} venues:{" "}
         <span className="text-success">{highestVenue.name}</span>{" "}
         {highestVenue.bps.toFixed(2)} vs{" "}

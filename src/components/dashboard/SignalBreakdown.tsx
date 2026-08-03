@@ -22,7 +22,7 @@ export function SignalBreakdown({ metrics }: { metrics: MetricVerdict[] }) {
     <Card>
       <CardHeader>
         <CardTitle>Signal Breakdown</CardTitle>
-        <span className="text-[10px] uppercase tracking-widest text-ink-muted">
+        <span className="text-[11px] uppercase tracking-widest text-ink-muted">
           {metrics.length} metrics
         </span>
       </CardHeader>
@@ -51,7 +51,7 @@ function SignalRow({ metric }: { metric: MetricVerdict }) {
 
       <p className="text-[11px] leading-relaxed text-ink-faint">{metric.explanation}</p>
 
-      <p className="text-[10px] leading-relaxed text-ink-faint/70">
+      <p className="text-[11px] leading-relaxed text-ink-faint/70">
         <span className="text-ink-muted">Why it matters:</span> {metric.whyItMatters}
       </p>
 
@@ -63,14 +63,14 @@ function SignalRow({ metric }: { metric: MetricVerdict }) {
       {metric.conflicts.length > 0 && (
         <ul className="mt-0.5 flex flex-col gap-1">
           {metric.conflicts.map((c, i) => (
-            <li key={i} className="text-[10px] leading-relaxed text-amber/80">
+            <li key={i} className="text-[11px] leading-relaxed text-amber/80">
               ⚠ {c}
             </li>
           ))}
         </ul>
       )}
 
-      <span className="font-mono text-[9px] text-ink-faint/60">
+      <span className="font-mono text-[11px] text-ink-faint/60">
         Updated {new Date(metric.asOf).toLocaleTimeString()}
       </span>
     </li>
