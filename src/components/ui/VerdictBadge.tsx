@@ -51,3 +51,34 @@ export function ConfidenceLabel({ confidence, basis }: { confidence: number; bas
     </span>
   );
 }
+
+/**
+ * A filled bar carrying magnitude — the intensity dimension that would
+ * otherwise need a fourth, fifth, sixth color. `tone` picks the fill color;
+ * pass "neutral" for a direction-agnostic value (e.g. Market Health) so it
+ * never gets misread as bullish or bearish.
+ */
+export function IntensityMeter({
+  value,
+  tone,
+}: {
+  /** 0-100. */
+  value: number;
+  tone: Verdict | "neutral-value";
+}) {
+  const fill =
+    tone === "bullish" ? "bg-success" : tone === "bearish" ? "bg-danger" : "bg-ink-faint";
+  const clamped = Math.max(0, Math.min(100, value));
+
+  return (
+    <div
+      className="h-1.5 w-full overflow-hidden rounded-full bg-white/[0.08]"
+      role="progressbar"
+      aria-valuenow={Math.round(clamped)}
+      aria-valuemin={0}
+      aria-valuemax={100}
+    >
+      <div className={`h-full rounded-full ${fill}`} style={{ width: `${clamped}%` }} />
+    </div>
+  );
+}

@@ -4,6 +4,8 @@ import { AlertTriangle } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { SentimentIndex } from "@/components/dashboard/SentimentIndex";
 import { MarketBriefing } from "@/components/dashboard/MarketBriefing";
+import { MarketSnapshotBar } from "@/components/dashboard/MarketSnapshotBar";
+import { CategoryCard } from "@/components/dashboard/CategoryCard";
 import { MarketThesisTimeline } from "@/components/dashboard/MarketThesisTimeline";
 import { SignalBreakdown } from "@/components/dashboard/SignalBreakdown";
 import { FundingGauge } from "@/components/gauges/FundingGauge";
@@ -57,6 +59,8 @@ export default function DashboardPage() {
       <Header venueCount={venueCount} updatedAt={data?.meta.generatedAt} />
 
       <main className="mx-auto flex max-w-[1600px] flex-col gap-6 px-4 py-6 sm:px-6">
+        <MarketSnapshotBar bias={aggregate?.marketBias ?? null} />
+
         {isError && (
           <div className="flex items-center justify-between gap-4 rounded-lg border border-danger/30 bg-danger/5 px-4 py-3">
             <span className="flex items-center gap-2 text-sm text-danger">
@@ -127,6 +131,20 @@ export default function DashboardPage() {
               <LeverageHeatGauge data={aggregate} />
               <LongShortGauge data={aggregate} />
             </section>
+
+            {/*
+              Five category rollups — Liquidity/Momentum/Derivatives/
+              On-chain/Sentiment — sitting between the raw gauges above and
+              the single synthesized briefing below. Same 15 metric verdicts
+              the briefing uses, regrouped; nothing new is fetched.
+            */}
+            {aggregate.marketBias && aggregate.marketBias.categories.length > 0 && (
+              <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+                {aggregate.marketBias.categories.map((c) => (
+                  <CategoryCard key={c.category} category={c} />
+                ))}
+              </section>
+            )}
 
             {/*
               ── TIER 1 — THE BRIEFING ─────────────────────────────────────

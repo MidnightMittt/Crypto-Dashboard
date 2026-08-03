@@ -125,9 +125,13 @@ describe("what changed", () => {
 });
 
 describe("risk assessment", () => {
+  // Real metric ids, spread across categories — CATEGORY_MAP only scores
+  // ids it recognizes, so a fake "m0"-style id now contributes nothing at
+  // all under the category-weighted engine (correctly; it doesn't exist).
+  const CONFLICT_IDS = ["funding", "squeezeRisk", "technicals", "coinbasePremium"];
   const withConflicts = (n: number) =>
-    Array.from({ length: n }, (_, i) => ({
-      ...metric(`m${i}`, "bullish"),
+    CONFLICT_IDS.slice(0, n).map((id) => ({
+      ...metric(id, "bullish"),
       conflicts: ["something disagrees"],
     }));
 
@@ -304,5 +308,66 @@ describe("watchNext", () => {
   it("excludes zero-weight metrics, which cannot change the overall read", () => {
     const bias = build([withTrigger("funding", "bullish"), withTrigger("liquidations", "neutral")])!;
     expect(bias.watchNext.map((m) => m.id)).toEqual(["funding"]);
+  });
+});
+
+describe("category rollup fields", () => {
+  it("attaches the category breakdown that produced the score", () => {
+    const bias = build([metric("funding", "bullish", 90), metric("technicals", "bullish", 90)])!;
+    expect(bias.categories.map((c) => c.category).sort()).toEqual(["derivatives", "momentum"]);
+  });
+
+  it("computes the overall score BY combining categories, not the old flat per-metric sum", () => {
+    // Two derivatives metrics (funding, basis) at full weight vs. one
+    // sentiment metric (fearGreed) at full weight: under flat weighting
+    // funding+basis (0.15+0.08=0.23) would swamp fearGreed (0.03). Under
+    // category weighting derivatives (20%) vs sentiment (15%) is a much
+    // closer contest, so the bearish side should meaningfully cut into the
+    // bullish score rather than being nearly erased.
+    const bias = build([
+      metric("funding", "bullish", 100),
+      metric("basis", "bullish", 100),
+      metric("fearGreed", "bearish", 100),
+    ])!;
+    expect(bias.verdict).toBe("bullish");
+    // Under the OLD flat scheme this would land above 90; under category
+    // weighting sentiment's full 15% pulls back much harder.
+    expect(bias.score).toBeLessThan(90);
+  });
+
+  it("provides a trend strength bucket when technicals are available", () => {
+    const bias = buildMarketBias({
+      asset: "BTC",
+      metrics: [metric("funding", "bullish")],
+      technicals: {
+        direction: "bullish",
+        strength: 65,
+        summary: "",
+        rsi: 60,
+        macdHistogram: 1,
+        emaAlignment: "above-all",
+        adx: 30,
+        atrPct: 2,
+        volumeRatio: 1,
+        vwapPosition: "above",
+        trendStructure: "higher-highs",
+      },
+      squeezeScore: null,
+      previous: null,
+      now: 0,
+    })!;
+    expect(bias.trendStrength).toEqual({ label: "Strong", value: 65 });
+  });
+
+  it("has no trend strength without a technical read", () => {
+    const bias = build([metric("funding", "bullish")])!;
+    expect(bias.trendStrength).toBeNull();
+  });
+
+  it("computes a health score independent of the directional bias score", () => {
+    const bullish = build([metric("funding", "bullish", 90)])!;
+    const bearish = build([metric("funding", "bearish", 90)])!;
+    // Same confidence/agreement/risk shape either direction -> same health.
+    expect(bullish.healthScore).toBe(bearish.healthScore);
   });
 });

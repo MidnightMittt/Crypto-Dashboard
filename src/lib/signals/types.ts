@@ -52,6 +52,35 @@ export interface MetricVerdict {
 
 export type RiskLevel = "low" | "medium" | "high";
 
+/**
+ * The five groupings metrics roll up into before the overall score — a
+ * layer between the flat 15-metric list and the single headline number.
+ * `onchain` is spelled without punctuation to stay a valid object key;
+ * display uses `CATEGORY_LABELS` in categories.ts.
+ */
+export type Category = "liquidity" | "momentum" | "derivatives" | "onchain" | "sentiment";
+
+/** One category's rollup — same shape as MarketBias, one tier down. */
+export interface CategoryScore {
+  category: Category;
+  label: string;
+  score: number;
+  verdict: Verdict;
+  confidence: number;
+  /** The single highest-ranked contributing metric's own explanation, reused verbatim. */
+  topReason: string;
+  /** Every metric feeding this category, for the "Why?" expansion. */
+  metrics: MetricVerdict[];
+}
+
+export type TrendStrengthLabel = "Very Weak" | "Weak" | "Moderate" | "Strong" | "Very Strong";
+
+export interface TrendStrength {
+  label: TrendStrengthLabel;
+  /** 0-100, the technicals.strength value this was bucketed from. */
+  value: number;
+}
+
 /** One line of the "what changed since last update" diff. */
 export interface BiasChange {
   label: string;
@@ -103,5 +132,16 @@ export interface MarketBias {
   riskRationale: string;
   /** Every contributing verdict, for the per-metric display. */
   metrics: MetricVerdict[];
+  /** The five category rollups this score was built from — see categories.ts. */
+  categories: CategoryScore[];
+  /** Null when no technical read is available (e.g. MARKET, or a fetch failure). */
+  trendStrength: TrendStrength | null;
+  /**
+   * 0-100, DIRECTION-AGNOSTIC: how trustworthy and calm the picture is,
+   * regardless of which way it leans. Deliberately distinct from `score`,
+   * which IS directional — a health score that just repeated the bias
+   * score under a new name would be redundant. See categories.ts.
+   */
+  healthScore: number;
   updatedAt: number;
 }

@@ -1,5 +1,7 @@
 import { BiasChange, MarketBias, MetricVerdict, RiskLevel, Verdict } from "./types";
 import { agreementOf } from "./confidence";
+import { computeWeightedScore, metricWeight, rankMetric } from "./scoring";
+import { buildAllCategories, buildMarketHealth, buildTrendStrength, combineCategoryScores } from "./categories";
 import { TechnicalRead } from "@/types/market";
 
 /**
@@ -18,52 +20,6 @@ import { TechnicalRead } from "@/types/market";
  *      and buildMarketThesis; defaulting absent data to 50 would drag every
  *      reading toward the middle and make a data outage look like calm.
  */
-
-/**
- * Relative importance per metric. Extends the scheme already used in
- * marketThesis.ts rather than inventing a second, competing one — the
- * ordering there (funding and squeeze heaviest, premium and flow lightest)
- * carries over, with the new sources slotted in by how much independent
- * information they add.
- *
- * These do not need to sum to 1: only their ratios matter, since absent
- * metrics force a renormalization anyway.
- */
-const WEIGHTS: Record<string, number> = {
-  funding: 0.15,
-  squeezeRisk: 0.14,
-  technicals: 0.13,
-  orderFlow: 0.1,
-  openInterest: 0.09,
-  basis: 0.08,
-  longShort: 0.08,
-  etfFlows: 0.08,
-  options: 0.06,
-  exchangeFlow: 0.06,
-  spotPerpVolume: 0.05,
-  stablecoins: 0.04,
-  coinbasePremium: 0.03,
-  fearGreed: 0.03,
-  liquidations: 0, // backward-looking; shown for context, never scored
-};
-
-/** Score distance from 50 beyond which the roll-up reads as directional rather than balanced. */
-const DIRECTIONAL_THRESHOLD = 6;
-
-function weightFor(id: string): number {
-  return WEIGHTS[id] ?? 0.05;
-}
-
-/** Signed contribution: +1 bullish, -1 bearish, 0 neutral. */
-function directionSign(verdict: Verdict): number {
-  return verdict === "bullish" ? 1 : verdict === "bearish" ? -1 : 0;
-}
-
-function verdictFromScore(score: number): Verdict {
-  if (score >= 50 + DIRECTIONAL_THRESHOLD) return "bullish";
-  if (score <= 50 - DIRECTIONAL_THRESHOLD) return "bearish";
-  return "neutral";
-}
 
 /**
  * Risk is about how DANGEROUS conditions are, independent of direction —
@@ -151,48 +107,29 @@ export function buildMarketBias(inputs: MarketBiasInputs): MarketBias | null {
   if (metrics.length === 0) return null;
 
   /*
-   * Each metric's pull is weight x its own confidence. Without the
-   * confidence term a heavily-weighted metric running on one venue would
-   * carry the same force as one corroborated across twenty.
+   * The headline score is now CATEGORY-weighted, not a flat per-metric sum:
+   * group into Liquidity/Momentum/Derivatives/On-chain/Sentiment first,
+   * then combine those five via CATEGORY_WEIGHTS (25/20/20/20/15). This is
+   * a deliberate behavior change, not a refactor artifact — it moves the
+   * headline number for some readings versus the old flat weighting,
+   * because a metric's pull is now also shaped by how much weight its
+   * whole category carries. See categories.ts.
    */
-  let weightedSum = 0;
-  let totalWeight = 0;
+  const categories = buildAllCategories(metrics);
+  const combined = combineCategoryScores(categories);
+  if (!combined) return null;
 
-  for (const m of metrics) {
-    const w = weightFor(m.id) * (m.confidence / 100);
-    if (w <= 0) continue;
-    totalWeight += w;
-    weightedSum += directionSign(m.verdict) * w;
-  }
-
-  if (totalWeight <= 0) return null;
-
-  // -1..+1 renormalized across whatever actually reported, then mapped to 0-100.
-  const normalized = weightedSum / totalWeight;
-  const score = Math.round(50 + normalized * 50);
-  const verdict = verdictFromScore(score);
-
-  /*
-   * Aggregate confidence is weighted by the same weights, so it answers
-   * "how well-evidenced is the picture overall" rather than treating a
-   * throwaway metric as equal to the heaviest one.
-   */
-  const confidenceWeightTotal = metrics.reduce((s, m) => s + weightFor(m.id), 0);
-  const confidence =
-    confidenceWeightTotal > 0
-      ? Math.round(metrics.reduce((s, m) => s + m.confidence * weightFor(m.id), 0) / confidenceWeightTotal)
-      : 0;
+  const { score, verdict, confidence } = combined;
 
   // Ranked by weight x confidence so the best-supported reasons lead, not
   // merely the loudest-sounding ones.
-  const rank = (m: MetricVerdict) => weightFor(m.id) * (m.confidence / 100);
   const topBullish = metrics
     .filter((m) => m.verdict === "bullish")
-    .sort((a, b) => rank(b) - rank(a))
+    .sort((a, b) => rankMetric(b) - rankMetric(a))
     .slice(0, 5);
   const topBearish = metrics
     .filter((m) => m.verdict === "bearish")
-    .sort((a, b) => rank(b) - rank(a))
+    .sort((a, b) => rankMetric(b) - rankMetric(a))
     .slice(0, 5);
 
   const changes: BiasChange[] = [];
@@ -215,7 +152,7 @@ export function buildMarketBias(inputs: MarketBiasInputs): MarketBias | null {
    * dilute every agreement figure identically and meaninglessly.
    */
   const agreement = Math.round(
-    agreementOf(metrics.filter((m) => weightFor(m.id) > 0).map((m) => m.verdict)) * 100
+    agreementOf(metrics.filter((m) => metricWeight(m.id) > 0).map((m) => m.verdict)) * 100
   );
 
   /*
@@ -235,8 +172,8 @@ export function buildMarketBias(inputs: MarketBiasInputs): MarketBias | null {
    * the overall read most come first.
    */
   const watchNext = metrics
-    .filter((m) => m.nextTrigger !== null && weightFor(m.id) > 0)
-    .sort((a, b) => weightFor(b.id) - weightFor(a.id))
+    .filter((m) => m.nextTrigger !== null && metricWeight(m.id) > 0)
+    .sort((a, b) => metricWeight(b.id) - metricWeight(a.id))
     .slice(0, 4);
 
   return {
@@ -256,6 +193,9 @@ export function buildMarketBias(inputs: MarketBiasInputs): MarketBias | null {
     riskLevel: risk.level,
     riskRationale: risk.rationale,
     metrics,
+    categories,
+    trendStrength: buildTrendStrength(technicals),
+    healthScore: buildMarketHealth(confidence, agreement, risk.level),
     updatedAt: now,
   };
 }
