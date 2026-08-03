@@ -109,13 +109,18 @@ export default function DashboardPage() {
             </div>
 
             {/*
-              The four core readings, at a glance, before the synthesis
-              below. These are the numbers a trader checks reflexively on
-              opening the page, so they sit above the briefing rather than
-              inside the collapsed Raw Metrics group — deliberately kept to
-              a single compact row so the briefing still lands within the
-              first screen.
+              The composite gauge and the four core readings, at a glance,
+              before the synthesis below. These are the numbers a trader
+              checks reflexively on opening the page.
+
+              Note the composite score and the briefing's bias score are
+              two DIFFERENT numbers and can disagree: the composite is the
+              older weighted sentiment index, the bias score is the decision
+              engine's read across all 15 metric verdicts. Both are labelled
+              on their own cards.
             */}
+            <SentimentIndex data={aggregate} fearGreed={data?.fearGreed} />
+
             <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
               <FundingGauge data={aggregate} />
               <OpenInterestGauge data={aggregate} />
@@ -170,17 +175,6 @@ export default function DashboardPage() {
                 <DeribitOptionsIntelligence data={aggregate} />
                 <PoolExposure data={aggregate} />
               </section>
-            </Collapsible>
-
-            {/*
-              The composite sentiment score lives here rather than at the
-              top. It is a second 0-100 "overall market" number alongside the
-              briefing's, and two competing headline scores was the single
-              worst thing on this page for a fast read. Its inputs now feed
-              the engine directly; the gauge is kept for anyone who wants it.
-            */}
-            <Collapsible title="Composite Sentiment" summary="legacy 0-100 score, Fear & Greed comparison">
-              <SentimentIndex data={aggregate} fearGreed={data?.fearGreed} />
             </Collapsible>
 
             <Collapsible title="Market Context" summary="breadth, correlation, chain health">
