@@ -143,6 +143,14 @@ describe("buildTrendStrength", () => {
     volumeRatio: 1,
     vwapPosition: "above",
     trendStructure: "sideways",
+    bollingerBandwidthPct: null,
+    bollingerPosition: null,
+    stochasticK: null,
+    obvTrend: null,
+    supertrendDirection: null,
+    parabolicSarDirection: null,
+    ichimokuPosition: null,
+    fibonacciNearestLevel: null,
   });
 
   it("returns null without a technical read", () => {

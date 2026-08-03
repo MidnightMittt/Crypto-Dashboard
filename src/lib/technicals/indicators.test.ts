@@ -10,6 +10,14 @@ import {
   volumeRatio,
   trendStructure,
   Candle,
+  bollingerBands,
+  stochastic,
+  obv,
+  obvTrend,
+  supertrend,
+  parabolicSar,
+  ichimoku,
+  fibonacciRetracement,
 } from "./indicators";
 
 /**
@@ -160,5 +168,186 @@ describe("insufficient data returns null rather than a half-formed number", () =
 
   it("rollingVwap when total volume is zero — avoids a divide-by-zero NaN", () => {
     expect(rollingVwap(Array.from({ length: 25 }, (_, i) => bar(100, 99, 99.5, i, 0)))).toBeNull();
+  });
+});
+
+describe("bollingerBands", () => {
+  it("collapses to zero width when price is perfectly constant", () => {
+    const bands = bollingerBands(Array(25).fill(100))!;
+    expect(bands.middle).toBe(100);
+    expect(bands.upper).toBe(100);
+    expect(bands.lower).toBe(100);
+    expect(bands.bandwidthPct).toBe(0);
+  });
+
+  it("matches a hand-computed step function", () => {
+    // 19 values of 10, one of 30. mean = 220/20 = 11.
+    // variance = (19*(10-11)^2 + (30-11)^2) / 20 = (19 + 361) / 20 = 19.
+    const bands = bollingerBands([...Array(19).fill(10), 30])!;
+    expect(bands.middle).toBe(11);
+    expect(bands.upper).toBeCloseTo(11 + 2 * Math.sqrt(19), 9);
+    expect(bands.lower).toBeCloseTo(11 - 2 * Math.sqrt(19), 9);
+  });
+
+  it("returns null below the period", () => {
+    expect(bollingerBands(Array(10).fill(1))).toBeNull();
+  });
+});
+
+describe("stochastic", () => {
+  it("scores %K at 100 when the close sits exactly at the period high", () => {
+    // high === close on every bar, so the latest close IS the window's high.
+    const candles = Array.from({ length: 20 }, (_, i) => bar(100 + i, 99 + i, 100 + i, i));
+    expect(stochastic(candles)!.k).toBe(100);
+  });
+
+  it("scores %K at 0 when the close sits exactly at the period low", () => {
+    // low === close on every bar, so the latest close IS the window's low.
+    const candles = Array.from({ length: 20 }, (_, i) => bar(101 - i, 100 - i, 100 - i, i));
+    expect(stochastic(candles)!.k).toBe(0);
+  });
+
+  it("reads 50 on a perfectly flat range rather than dividing by zero", () => {
+    expect(stochastic(Array.from({ length: 20 }, (_, i) => bar(105, 95, 100, i)))!.k).toBe(50);
+  });
+
+  it("returns null below the period", () => {
+    expect(stochastic(Array(5).fill(bar(10, 9, 9.5, 0)))).toBeNull();
+  });
+});
+
+describe("obv / obvTrend", () => {
+  it("is strictly increasing through a clean uptrend", () => {
+    const series = obv(Array.from({ length: 40 }, (_, i) => bar(101 + i, 99 + i, 100 + i, i)));
+    for (let i = 1; i < series.length; i++) expect(series[i]).toBeGreaterThan(series[i - 1]);
+    expect(obvTrend(Array.from({ length: 40 }, (_, i) => bar(101 + i, 99 + i, 100 + i, i)))).toBe("up");
+  });
+
+  it("is strictly decreasing through a clean downtrend", () => {
+    const series = obv(Array.from({ length: 40 }, (_, i) => bar(101 - i, 99 - i, 100 - i, i)));
+    for (let i = 1; i < series.length; i++) expect(series[i]).toBeLessThan(series[i - 1]);
+    expect(obvTrend(Array.from({ length: 40 }, (_, i) => bar(101 - i, 99 - i, 100 - i, i)))).toBe("down");
+  });
+
+  it("starts at zero", () => {
+    expect(obv([bar(10, 9, 9.5, 0)])).toEqual([0]);
+  });
+
+  it("holds flat on an unchanged close", () => {
+    const flat = [bar(10, 9, 9.5, 0), bar(10, 9, 9.5, 1)];
+    expect(obv(flat)).toEqual([0, 0]);
+  });
+});
+
+describe("supertrend", () => {
+  it("never flips to down through a clean, sustained uptrend", () => {
+    const uptrend = Array.from({ length: 120 }, (_, i) => bar(101 + i, 99 + i, 100 + i, i));
+    for (let n = 30; n <= uptrend.length; n += 10) {
+      expect(supertrend(uptrend.slice(0, n))?.direction).toBe("up");
+    }
+  });
+
+  it("never flips to up through a clean, sustained downtrend", () => {
+    const downtrend = Array.from({ length: 120 }, (_, i) => bar(600 - i, 598 - i, 599 - i, i));
+    for (let n = 30; n <= downtrend.length; n += 10) {
+      expect(supertrend(downtrend.slice(0, n))?.direction).toBe("down");
+    }
+  });
+
+  it("flips direction after a sharp, sustained reversal", () => {
+    const upThenDown = [
+      ...Array.from({ length: 60 }, (_, i) => bar(101 + i, 99 + i, 100 + i, i)),
+      ...Array.from({ length: 60 }, (_, i) => bar(161 - i * 3, 155 - i * 3, 158 - i * 3, 60 + i)),
+    ];
+    expect(supertrend(upThenDown)?.direction).toBe("down");
+  });
+
+  it("returns null on too short a series", () => {
+    expect(supertrend(Array.from({ length: 5 }, (_, i) => bar(10, 9, 9.5, i)))).toBeNull();
+  });
+});
+
+describe("parabolicSar", () => {
+  it("keeps SAR at or below every low while direction reads up", () => {
+    const uptrend = Array.from({ length: 100 }, (_, i) => bar(101 + i, 99 + i, 100 + i, i));
+    for (let n = 10; n <= uptrend.length; n += 5) {
+      const slice = uptrend.slice(0, n);
+      const result = parabolicSar(slice);
+      if (result?.direction === "up") {
+        expect(result.value).toBeLessThanOrEqual(slice[slice.length - 1].low);
+      }
+    }
+  });
+
+  it("keeps SAR at or above every high while direction reads down", () => {
+    const downtrend = Array.from({ length: 100 }, (_, i) => bar(600 - i, 598 - i, 599 - i, i));
+    for (let n = 10; n <= downtrend.length; n += 5) {
+      const slice = downtrend.slice(0, n);
+      const result = parabolicSar(slice);
+      if (result?.direction === "down") {
+        expect(result.value).toBeGreaterThanOrEqual(slice[slice.length - 1].high);
+      }
+    }
+  });
+
+  it("returns null on too short a series", () => {
+    expect(parabolicSar([bar(10, 9, 9.5, 0), bar(10, 9, 9.5, 1)])).toBeNull();
+  });
+});
+
+describe("ichimoku", () => {
+  it("reads price above the cloud in a clean, sustained uptrend", () => {
+    const uptrend = Array.from({ length: 60 }, (_, i) => bar(101 + i * 2, 99 + i * 2, 100 + i * 2, i));
+    const result = ichimoku(uptrend)!;
+    expect(result.priceVsCloud).toBe("above");
+    expect(result.chikouConfirms).toBe(true);
+  });
+
+  it("reads price below the cloud in a clean, sustained downtrend", () => {
+    const downtrend = Array.from({ length: 60 }, (_, i) => bar(1200 - i * 2, 1198 - i * 2, 1199 - i * 2, i));
+    const result = ichimoku(downtrend)!;
+    expect(result.priceVsCloud).toBe("below");
+    expect(result.chikouConfirms).toBe(false);
+  });
+
+  it("returns null below 52 bars", () => {
+    expect(ichimoku(Array.from({ length: 30 }, (_, i) => bar(10, 9, 9.5, i)))).toBeNull();
+  });
+});
+
+describe("fibonacciRetracement", () => {
+  it("bounds swing high/low from the actual extremes in the window", () => {
+    const candles = Array.from({ length: 50 }, (_, i) => bar(100, 90, 95, i));
+    candles[10] = bar(150, 145, 148, 10);
+    candles[30] = bar(52, 50, 51, 30);
+    const result = fibonacciRetracement(candles)!;
+    expect(result.swingHigh).toBe(150);
+    expect(result.swingLow).toBe(50);
+  });
+
+  it("places the 50% level at the exact midpoint of the range", () => {
+    const candles = Array.from({ length: 50 }, (_, i) => bar(100, 90, 95, i));
+    candles[10] = bar(150, 145, 148, 10);
+    candles[30] = bar(52, 50, 51, 30);
+    const result = fibonacciRetracement(candles)!;
+    const fifty = result.levels.find((l) => l.ratio === 0.5)!;
+    expect(fifty.price).toBe((150 + 50) / 2);
+  });
+
+  it("orders levels from the swing high (ratio 0) down to the swing low (ratio 1)", () => {
+    const candles = Array.from({ length: 50 }, (_, i) => bar(100, 90, 95, i));
+    candles[10] = bar(150, 145, 148, 10);
+    candles[30] = bar(52, 50, 51, 30);
+    const result = fibonacciRetracement(candles)!;
+    expect(result.levels[0]).toEqual({ ratio: 0, price: 150 });
+    expect(result.levels[result.levels.length - 1]).toEqual({ ratio: 1, price: 50 });
+  });
+
+  it("returns null below the window", () => {
+    expect(fibonacciRetracement(Array(10).fill(bar(10, 9, 9.5, 0)))).toBeNull();
+  });
+
+  it("returns null when the swing range is degenerate (flat price)", () => {
+    expect(fibonacciRetracement(Array.from({ length: 50 }, (_, i) => bar(100, 100, 100, i)))).toBeNull();
   });
 });

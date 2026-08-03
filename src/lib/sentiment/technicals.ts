@@ -12,6 +12,13 @@ import {
   rsi,
   trendStructure,
   volumeRatio,
+  bollingerBands,
+  stochastic,
+  obvTrend as obvTrendOf,
+  supertrend,
+  parabolicSar,
+  ichimoku,
+  fibonacciRetracement,
 } from "../technicals/indicators";
 
 /**
@@ -52,6 +59,10 @@ const VOLUME_WEAK = 0.7;
 /** Minimum bars before any technical read is attempted at all. */
 const MIN_CANDLES = 60;
 
+/** Stochastic %K extremes — same fade-the-extreme convention as RSI (below). */
+const STOCH_OVERBOUGHT = 80;
+const STOCH_OVERSOLD = 20;
+
 /**
  * MACD histogram must exceed this fraction of price to count as a vote.
  *
@@ -63,11 +74,36 @@ const MIN_CANDLES = 60;
 const MACD_EPSILON_PCT = 1e-5;
 
 /**
- * The maximum number of indicators that can vote (EMA alignment, MACD,
- * trend structure, VWAP, RSI, ADX bias). Used to scale strength by
- * participation so a 2-of-6 verdict can't read as confidently as a 6-of-6.
+ * The maximum number of indicators that can vote: the original six (EMA
+ * alignment, MACD, trend structure, VWAP, RSI, ADX bias) plus seven more
+ * (Bollinger, Stochastic, OBV, Supertrend, Parabolic SAR, Ichimoku,
+ * Fibonacci). Used to scale strength by participation so a 2-of-13 verdict
+ * can't read as confidently as a 13-of-13.
+ *
+ * ── Fade vs. follow — why the new votes don't all point the same way ────
+ *
+ * Bollinger and Stochastic are OSCILLATORS: they vote against the extreme,
+ * the same "fade the crowd" convention RSI already uses in this file (and
+ * that marketThesis.ts uses for crowded funding) — price pinned to the
+ * upper band or a stochastic near 100 reads as stretched, not as
+ * confirmation to keep going.
+ *
+ * OBV, Supertrend and Parabolic SAR are TREND-FOLLOWING: they vote WITH
+ * whatever direction they're currently reading, because that is what each
+ * is designed to measure (volume confirming the move, or a live
+ * trail-stop's current side).
+ *
+ * Ichimoku votes with price's position relative to the cloud (a
+ * trend-following read); inside the cloud is genuine indecision and casts
+ * no vote, the same way RSI's neutral band doesn't.
+ *
+ * Fibonacci is neither — a price sitting at a retracement level says
+ * nothing on its own about direction. It only votes by BORROWING the
+ * existing trend direction (`directionalBias`) when price is actually
+ * near a level, i.e. "the trend's pullback found support/resistance where
+ * theory says it should," never as a stand-alone signal.
  */
-const MAX_VOTES = 6;
+const MAX_VOTES = 13;
 
 export function buildTechnicalRead(candles: Candle[]): TechnicalRead | null {
   if (candles.length < MIN_CANDLES) return null;
@@ -84,6 +120,14 @@ export function buildTechnicalRead(candles: Candle[]): TechnicalRead | null {
   const volRatio = volumeRatio(candles);
   const structure = trendStructure(candles);
   const bias = directionalBias(candles);
+
+  const bands = bollingerBands(cl);
+  const stoch = stochastic(candles);
+  const obvDirection = obvTrendOf(candles);
+  const st = supertrend(candles);
+  const sar = parabolicSar(candles);
+  const cloud = ichimoku(candles);
+  const fib = fibonacciRetracement(candles);
 
   const ema20 = ema(cl, 20);
   const ema50 = ema(cl, 50);
@@ -137,6 +181,37 @@ export function buildTechnicalRead(candles: Candle[]): TechnicalRead | null {
     votes.push(bias === "up" ? "bullish" : "bearish");
   }
 
+  // Bollinger — fades the extreme, same convention as RSI above: pinned to
+  // a band reads as stretched, not as license to keep pushing that way.
+  let bollingerPosition: TechnicalRead["bollingerPosition"] = null;
+  if (bands) {
+    bollingerPosition = price > bands.upper ? "above-upper" : price < bands.lower ? "below-lower" : "inside";
+    if (bollingerPosition === "above-upper") votes.push("bearish");
+    else if (bollingerPosition === "below-lower") votes.push("bullish");
+  }
+
+  // Stochastic — same fade-the-extreme rule, only voting outside its bands.
+  if (stoch !== null) {
+    if (stoch.k >= STOCH_OVERBOUGHT) votes.push("bearish");
+    else if (stoch.k <= STOCH_OVERSOLD) votes.push("bullish");
+  }
+
+  // OBV, Supertrend, Parabolic SAR, Ichimoku — all trend-FOLLOWING, so they
+  // vote WITH their current reading rather than fading it.
+  if (obvDirection) votes.push(obvDirection === "up" ? "bullish" : "bearish");
+  if (st) votes.push(st.direction === "up" ? "bullish" : "bearish");
+  if (sar) votes.push(sar.direction === "up" ? "bullish" : "bearish");
+  if (cloud && cloud.priceVsCloud !== "inside") {
+    votes.push(cloud.priceVsCloud === "above" ? "bullish" : "bearish");
+  }
+
+  // Fibonacci never votes on its own — see this file's header. It only
+  // borrows the prevailing trend direction, and only when price is
+  // actually sitting at a retracement level right now.
+  if (fib && fib.nearestLevel !== null && bias) {
+    votes.push(bias === "up" ? "bullish" : "bearish");
+  }
+
   const bullVotes = votes.filter((v) => v === "bullish").length;
   const bearVotes = votes.filter((v) => v === "bearish").length;
   const total = bullVotes + bearVotes;
@@ -180,6 +255,14 @@ export function buildTechnicalRead(candles: Candle[]): TechnicalRead | null {
     volumeRatio: volRatio,
     vwapPosition: vwap === null ? null : price > vwap ? "above" : "below",
     trendStructure: structure,
+    bollingerBandwidthPct: bands ? bands.bandwidthPct : null,
+    bollingerPosition,
+    stochasticK: stoch ? stoch.k : null,
+    obvTrend: obvDirection,
+    supertrendDirection: st ? st.direction : null,
+    parabolicSarDirection: sar ? sar.direction : null,
+    ichimokuPosition: cloud ? cloud.priceVsCloud : null,
+    fibonacciNearestLevel: fib ? fib.nearestLevel : null,
   };
 }
 

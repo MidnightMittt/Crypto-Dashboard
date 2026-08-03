@@ -507,6 +507,23 @@ export interface TechnicalRead {
   /** Latest close vs the trailing rolling VWAP. */
   vwapPosition: "above" | "below" | null;
   trendStructure: "higher-highs" | "lower-lows" | "sideways" | null;
+
+  // ── Added alongside 7 more indicators — each casts one vote in the same
+  // composite read above, never a separate category-level signal. ────────
+  /** Bollinger Band width as % of the middle band — a volatility-squeeze read. */
+  bollingerBandwidthPct: number | null;
+  /** Where price sits vs the bands. */
+  bollingerPosition: "above-upper" | "below-lower" | "inside" | null;
+  /** Stochastic %K, 0-100. */
+  stochasticK: number | null;
+  /** Whether cumulative on-balance volume has risen or fallen over the trailing window. */
+  obvTrend: "up" | "down" | null;
+  supertrendDirection: "up" | "down" | null;
+  parabolicSarDirection: "up" | "down" | null;
+  /** Price vs the Ichimoku cloud built from current (not forward-displaced) components. */
+  ichimokuPosition: "above" | "below" | "inside" | null;
+  /** The Fibonacci ratio price currently sits closest to, if within the proximity band. */
+  fibonacciNearestLevel: number | null;
 }
 
 /**

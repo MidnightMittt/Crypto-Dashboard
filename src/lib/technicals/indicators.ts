@@ -280,3 +280,327 @@ export function lastClose(candles: Candle[]): number | null {
 export function closes(candles: Candle[]): number[] {
   return candles.map((c) => c.close);
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Seven additional indicators. Same conventions as above: pure, oldest-
+// first, null on insufficient data. Each is verified in indicators.test.ts
+// against either a published reference or a mathematical identity that
+// must hold by construction — the same bar RSI was held to.
+// ─────────────────────────────────────────────────────────────────────────
+
+export interface BollingerBandsResult {
+  middle: number;
+  upper: number;
+  lower: number;
+  /** Band width as a percentage of the middle band — a volatility-squeeze read. */
+  bandwidthPct: number;
+}
+
+/** 20-period SMA +/- 2 standard deviations — the textbook default. */
+export function bollingerBands(
+  closes: number[],
+  period = 20,
+  stdDevMultiplier = 2
+): BollingerBandsResult | null {
+  if (closes.length < period) return null;
+  const window = closes.slice(closes.length - period);
+  const middle = mean(window);
+  const variance = mean(window.map((c) => (c - middle) ** 2));
+  const stdDev = Math.sqrt(variance);
+  const upper = middle + stdDevMultiplier * stdDev;
+  const lower = middle - stdDevMultiplier * stdDev;
+  return { middle, upper, lower, bandwidthPct: middle !== 0 ? ((upper - lower) / middle) * 100 : 0 };
+}
+
+export interface StochasticResult {
+  /** Where the close sits within the trailing high-low range, 0-100. */
+  k: number;
+  /** 3-period SMA of %K — the signal line. */
+  d: number;
+}
+
+/** %K over every bar from `period - 1` onward, oldest-first — needed to build %D. */
+function stochasticKSeries(candles: Candle[], period: number): number[] {
+  const out: number[] = [];
+  for (let i = period - 1; i < candles.length; i++) {
+    const window = candles.slice(i - period + 1, i + 1);
+    const highestHigh = Math.max(...window.map((c) => c.high));
+    const lowestLow = Math.min(...window.map((c) => c.low));
+    const range = highestHigh - lowestLow;
+    // A flat range has no "position within the range" — 50 is the honest
+    // midpoint reading, not an overbought or oversold claim.
+    out.push(range === 0 ? 50 : ((candles[i].close - lowestLow) / range) * 100);
+  }
+  return out;
+}
+
+/** 14-period stochastic oscillator with a 3-period %D signal line. */
+export function stochastic(candles: Candle[], period = 14, dPeriod = 3): StochasticResult | null {
+  if (candles.length < period) return null;
+  const kSeries = stochasticKSeries(candles, period);
+  if (kSeries.length === 0) return null;
+  return { k: kSeries[kSeries.length - 1], d: mean(kSeries.slice(-dPeriod)) };
+}
+
+/**
+ * On-Balance Volume — cumulative volume, signed by the day's close
+ * direction. Returns the FULL series rather than one number: OBV only
+ * means something relative to its own recent trend (is it rising or
+ * falling), never as a single absolute value.
+ */
+export function obv(candles: Candle[]): number[] {
+  const out: number[] = [0];
+  for (let i = 1; i < candles.length; i++) {
+    const prev = out[out.length - 1];
+    if (candles[i].close > candles[i - 1].close) out.push(prev + candles[i].volumeUsd);
+    else if (candles[i].close < candles[i - 1].close) out.push(prev - candles[i].volumeUsd);
+    else out.push(prev);
+  }
+  return out;
+}
+
+/** Whether OBV has risen or fallen over the trailing `lookback` bars — the confirmation read. */
+export function obvTrend(candles: Candle[], lookback = 20): "up" | "down" | null {
+  const series = obv(candles);
+  if (series.length <= lookback) return null;
+  const now = series[series.length - 1];
+  const then = series[series.length - 1 - lookback];
+  if (now === then) return null;
+  return now > then ? "up" : "down";
+}
+
+/** Full Wilder-smoothed ATR series (unlike `atr`, which returns only the latest value). */
+function atrSeries(candles: Candle[], period: number): number[] {
+  return wilderSmooth(trueRanges(candles), period);
+}
+
+export interface SupertrendResult {
+  value: number;
+  direction: "up" | "down";
+}
+
+/**
+ * ATR-band flip system: price crossing the current band flips the trend,
+ * and the opposite band becomes the new stop. Standard 10-period ATR, 3x
+ * multiplier.
+ *
+ * Genuinely iterative — unlike every other indicator in this file, a given
+ * day's value depends on the accumulated state of every prior day, not
+ * just a fixed lookback window. Verified against behavioral identities
+ * (a monotonic trend never flips; a hand-built reversal flips at the
+ * expected bar) rather than a single published numeric table, since none
+ * of the commonly cited worked examples specify their exact OHLC inputs
+ * precisely enough to reproduce bit-for-bit.
+ */
+export function supertrend(candles: Candle[], period = 10, multiplier = 3): SupertrendResult | null {
+  const atrValues = atrSeries(candles, period);
+  if (atrValues.length < 2) return null;
+
+  const offset = candles.length - atrValues.length; // atrValues[j] <-> candles[j + offset]
+  let prevFinalUpper: number | null = null;
+  let prevFinalLower: number | null = null;
+  let prevValue: number | null = null;
+  let direction: "up" | "down" = "up";
+
+  for (let j = 0; j < atrValues.length; j++) {
+    const i = j + offset;
+    const c = candles[i];
+    const mid = (c.high + c.low) / 2;
+    const basicUpper = mid + multiplier * atrValues[j];
+    const basicLower = mid - multiplier * atrValues[j];
+
+    let finalUpper = basicUpper;
+    let finalLower = basicLower;
+
+    if (prevFinalUpper !== null && prevFinalLower !== null) {
+      const prevClose = candles[i - 1].close;
+      finalUpper = basicUpper < prevFinalUpper || prevClose > prevFinalUpper ? basicUpper : prevFinalUpper;
+      finalLower = basicLower > prevFinalLower || prevClose < prevFinalLower ? basicLower : prevFinalLower;
+    }
+
+    let value: number;
+    if (prevValue === null) {
+      direction = c.close > mid ? "up" : "down";
+      value = direction === "up" ? finalLower : finalUpper;
+    } else if (direction === "down") {
+      if (c.close > finalUpper) {
+        direction = "up";
+        value = finalLower;
+      } else {
+        value = finalUpper;
+      }
+    } else {
+      if (c.close < finalLower) {
+        direction = "down";
+        value = finalUpper;
+      } else {
+        value = finalLower;
+      }
+    }
+
+    prevFinalUpper = finalUpper;
+    prevFinalLower = finalLower;
+    prevValue = value;
+  }
+
+  return { value: prevValue!, direction };
+}
+
+export interface ParabolicSarResult {
+  value: number;
+  direction: "up" | "down";
+}
+
+const SAR_AF_STEP = 0.02;
+const SAR_AF_MAX = 0.2;
+
+/**
+ * Standard Parabolic SAR: an accelerating stop-and-reverse level that
+ * trails price, flipping sides when price crosses it.
+ *
+ * Same caveat as `supertrend` — genuinely iterative, verified against
+ * structural invariants the algorithm guarantees by construction (SAR
+ * never sits above price during an uptrend, never below it during a
+ * downtrend, and a clean reversal flips direction) rather than a
+ * bit-for-bit published table.
+ */
+export function parabolicSar(candles: Candle[]): ParabolicSarResult | null {
+  if (candles.length < 3) return null;
+
+  let uptrend = candles[1].close >= candles[0].close;
+  let sar = uptrend ? Math.min(candles[0].low, candles[1].low) : Math.max(candles[0].high, candles[1].high);
+  let ep = uptrend ? Math.max(candles[0].high, candles[1].high) : Math.min(candles[0].low, candles[1].low);
+  let af = SAR_AF_STEP;
+
+  for (let i = 2; i < candles.length; i++) {
+    let next = sar + af * (ep - sar);
+
+    if (uptrend) {
+      next = Math.min(next, candles[i - 1].low, candles[i - 2].low);
+      if (candles[i].low < next) {
+        uptrend = false;
+        sar = ep;
+        ep = candles[i].low;
+        af = SAR_AF_STEP;
+      } else {
+        sar = next;
+        if (candles[i].high > ep) {
+          ep = candles[i].high;
+          af = Math.min(af + SAR_AF_STEP, SAR_AF_MAX);
+        }
+      }
+    } else {
+      next = Math.max(next, candles[i - 1].high, candles[i - 2].high);
+      if (candles[i].high > next) {
+        uptrend = true;
+        sar = ep;
+        ep = candles[i].high;
+        af = SAR_AF_STEP;
+      } else {
+        sar = next;
+        if (candles[i].low < ep) {
+          ep = candles[i].low;
+          af = Math.min(af + SAR_AF_STEP, SAR_AF_MAX);
+        }
+      }
+    }
+  }
+
+  return { value: sar, direction: uptrend ? "up" : "down" };
+}
+
+export interface IchimokuResult {
+  tenkanSen: number;
+  kijunSen: number;
+  senkouSpanA: number;
+  senkouSpanB: number;
+  priceVsCloud: "above" | "below" | "inside";
+  /** Whether today's close beats the price from 26 bars ago — the Chikou Span confirmation. */
+  chikouConfirms: boolean | null;
+}
+
+function highLowMidpoint(candles: Candle[], period: number): number | null {
+  if (candles.length < period) return null;
+  const window = candles.slice(candles.length - period);
+  return (Math.max(...window.map((c) => c.high)) + Math.min(...window.map((c) => c.low))) / 2;
+}
+
+const ICHIMOKU_CHIKOU_LAG = 26;
+
+/**
+ * Ichimoku Cloud: Tenkan-sen(9)/Kijun-sen(26)/Senkou Span A&B(52), standard
+ * periods.
+ *
+ * Deliberately NOT forward-displaced. On a chart, Senkou Span A/B are
+ * conventionally plotted 26 bars ahead — a drawing convention for where the
+ * cloud will sit, not a different value. For a real-time "is price above
+ * or below the cloud right now" read, the components computed as of today
+ * ARE the relevant cloud; shifting them forward would test price against a
+ * cloud that has not been reached yet.
+ */
+export function ichimoku(candles: Candle[]): IchimokuResult | null {
+  const tenkanSen = highLowMidpoint(candles, 9);
+  const kijunSen = highLowMidpoint(candles, 26);
+  const senkouSpanB = highLowMidpoint(candles, 52);
+  if (tenkanSen === null || kijunSen === null || senkouSpanB === null) return null;
+
+  const senkouSpanA = (tenkanSen + kijunSen) / 2;
+  const price = candles[candles.length - 1].close;
+  const cloudTop = Math.max(senkouSpanA, senkouSpanB);
+  const cloudBottom = Math.min(senkouSpanA, senkouSpanB);
+  const priceVsCloud = price > cloudTop ? "above" : price < cloudBottom ? "below" : "inside";
+
+  const chikouConfirms =
+    candles.length > ICHIMOKU_CHIKOU_LAG
+      ? price > candles[candles.length - 1 - ICHIMOKU_CHIKOU_LAG].close
+      : null;
+
+  return { tenkanSen, kijunSen, senkouSpanA, senkouSpanB, priceVsCloud, chikouConfirms };
+}
+
+export interface FibonacciResult {
+  swingHigh: number;
+  swingLow: number;
+  levels: Array<{ ratio: number; price: number }>;
+  /** The standard ratio price currently sits closest to, if within `FIB_PROXIMITY_PCT` of the range. */
+  nearestLevel: number | null;
+}
+
+const FIB_RATIOS = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
+/** Trailing bars used to find the swing high/low — see this file's header note on why 50 was chosen. */
+const FIB_WINDOW = 50;
+/** How close price must sit to a level, as a fraction of the swing range, to count as "at" it. */
+const FIB_PROXIMITY_PCT = 0.02;
+
+/**
+ * Fibonacci retracement — confirmed with the user as a disclosed, NOT a
+ * settled, convention (same framing as FUNDING_BANDS' own thresholds):
+ * swing high/low taken over the trailing 50 daily bars, since unlike every
+ * other indicator here there is no single textbook definition of which
+ * swing to measure. A different window would produce different levels;
+ * this one is a defensible choice, not the only correct one.
+ */
+export function fibonacciRetracement(candles: Candle[], window = FIB_WINDOW): FibonacciResult | null {
+  if (candles.length < window) return null;
+  const recent = candles.slice(candles.length - window);
+  const swingHigh = Math.max(...recent.map((c) => c.high));
+  const swingLow = Math.min(...recent.map((c) => c.low));
+  const range = swingHigh - swingLow;
+  if (range <= 0) return null;
+
+  const levels = FIB_RATIOS.map((ratio) => ({ ratio, price: swingHigh - ratio * range }));
+  const price = candles[candles.length - 1].close;
+  const tolerance = range * FIB_PROXIMITY_PCT;
+
+  let nearestLevel: number | null = null;
+  let minDist = Infinity;
+  for (const level of levels) {
+    const dist = Math.abs(price - level.price);
+    if (dist < tolerance && dist < minDist) {
+      minDist = dist;
+      nearestLevel = level.ratio;
+    }
+  }
+
+  return { swingHigh, swingLow, levels, nearestLevel };
+}

@@ -110,6 +110,75 @@ describe("buildTechnicalRead", () => {
       buildTechnicalRead(flat)!.strength
     );
   });
+
+  describe("the 7 additional indicators reach buildTechnicalRead's output", () => {
+    it("reads the trend-following set (OBV/Supertrend/SAR/Ichimoku) as bullish in a sustained uptrend", () => {
+      const read = buildTechnicalRead(uptrend)!;
+      expect(read.obvTrend).toBe("up");
+      expect(read.supertrendDirection).toBe("up");
+      expect(read.parabolicSarDirection).toBe("up");
+      expect(read.ichimokuPosition).toBe("above");
+    });
+
+    it("reads the same set as bearish in a sustained downtrend", () => {
+      const read = buildTechnicalRead(downtrend)!;
+      expect(read.obvTrend).toBe("down");
+      expect(read.supertrendDirection).toBe("down");
+      expect(read.parabolicSarDirection).toBe("down");
+      expect(read.ichimokuPosition).toBe("below");
+    });
+
+    it("populates Bollinger and Stochastic readings", () => {
+      const read = buildTechnicalRead(uptrend)!;
+      expect(read.bollingerBandwidthPct).not.toBeNull();
+      expect(read.bollingerPosition).not.toBeNull();
+      expect(read.stochasticK).not.toBeNull();
+      expect(read.stochasticK).toBeGreaterThanOrEqual(0);
+      expect(read.stochasticK).toBeLessThanOrEqual(100);
+    });
+
+    it("treats Bollinger as fade-the-extreme, not confirmation, like RSI", () => {
+      // A calm, tight range for 240 bars (so the 20-period bands stay
+      // narrow), then a sharp vertical spike on the last bar — a genuine
+      // "price pierces the band" scenario, unlike sustained exponential
+      // growth, which drags the bands wide enough that price never clears
+      // them (verified directly: a 3%/day compounding rise still finished
+      // slightly BELOW its own upper band, since volatility grows with it).
+      const calm = Array.from({ length: 240 }, (_, i) => bar(100.5, 99.5, 100 + noise(i) * 0.1, i));
+      const spike = [...calm, bar(140, 138, 139, 240)];
+      const read = buildTechnicalRead(spike)!;
+      expect(read.bollingerPosition).toBe("above-upper");
+    });
+
+    it("only casts a Fibonacci vote when price sits at a genuine retracement level", () => {
+      // A pure monotonic rise sits AT the swing-high (0%) level by
+      // construction — today's close IS the window's high — so this
+      // correctly casts a vote rather than staying null.
+      const smooth = Array.from({ length: 260 }, (_, i) => bar(101 + i, 99 + i, 100 + i, i));
+      expect(buildTechnicalRead(smooth)!.fibonacciNearestLevel).toBe(0);
+
+      // A series that ranges between two known bounds, with the final close
+      // parked well between any two adjacent standard levels (here, roughly
+      // 15% of the range — between the 0% and 23.6% levels, outside the 2%
+      // proximity band around either) casts no vote.
+      const ranged = Array.from({ length: 260 }, (_, i) => {
+        const mid = 100 + Math.sin(i / 15) * 20; // oscillates within [80, 120]
+        return bar(mid + 1, mid - 1, mid, i);
+      });
+      const midRangeClose = [...ranged.slice(0, -1), bar(121, 119, 100 - 20 * 0.85, 259)];
+      expect(buildTechnicalRead(midRangeClose)!.fibonacciNearestLevel).toBeNull();
+    });
+
+    it("scores full participation (13/13) higher than a case where several indicators are null", () => {
+      // A series just above MIN_CANDLES is too short for Ichimoku (52) and
+      // Fibonacci's 50-bar window to have much room, so participation is
+      // necessarily lower than the full 260-bar fixtures above.
+      const short = Array.from({ length: 61 }, (_, i) => bar(101 + i, 99 + i, 100 + i, i));
+      const shortRead = buildTechnicalRead(short)!;
+      const longRead = buildTechnicalRead(uptrend)!;
+      expect(longRead.strength).toBeGreaterThanOrEqual(shortRead.strength);
+    });
+  });
 });
 
 describe("technicalConfirmation", () => {
