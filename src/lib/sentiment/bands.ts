@@ -4,6 +4,54 @@ export function bandFor(value: number, bands: SentimentBand[]): SentimentBand {
   return bands.find((b) => value >= b.min && value <= b.max) ?? bands[bands.length - 1];
 }
 
+/** A boundary a value could cross, and the band waiting on the other side. */
+export interface BandEdge {
+  threshold: number;
+  label: string;
+  /** Absolute distance from the current value to this boundary. */
+  distance: number;
+}
+
+export interface BandTrigger {
+  current: SentimentBand;
+  /** Next boundary above. Null when already in the top band. */
+  above: BandEdge | null;
+  /** Next boundary below. Null when already in the bottom band. */
+  below: BandEdge | null;
+}
+
+/**
+ * The levels at which a reading would change its own classification.
+ *
+ * This is the mechanism behind the dashboard's "what to watch next": the
+ * thresholds returned here are the SAME constants `bandFor` uses to produce
+ * the verdict, so a stated trigger can never drift from the logic it
+ * describes. Hard-coding "watch 0.04%" in a sentence somewhere would drift
+ * the moment a band moved; reading it back out of the band table cannot.
+ *
+ * The outermost bounds (the first band's `min`, the last band's `max`) are
+ * sentinels like -100/100 rather than meaningful levels, so a value in an
+ * outer band reports `null` on that side instead of quoting a number no
+ * market will ever reach.
+ */
+export function bandTrigger(value: number, bands: SentimentBand[]): BandTrigger {
+  const index = bands.findIndex((b) => value >= b.min && value <= b.max);
+  const i = index === -1 ? bands.length - 1 : index;
+  const current = bands[i];
+
+  const above =
+    i < bands.length - 1
+      ? { threshold: current.max, label: bands[i + 1].label, distance: Math.abs(current.max - value) }
+      : null;
+
+  const below =
+    i > 0
+      ? { threshold: current.min, label: bands[i - 1].label, distance: Math.abs(value - current.min) }
+      : null;
+
+  return { current, above, below };
+}
+
 /**
  * Which band a value falls in, plus where that band sits on a 0-100 axis —
  * the position a small BandGauge marker renders at. Position is by BAND

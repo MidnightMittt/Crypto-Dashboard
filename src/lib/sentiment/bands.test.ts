@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   bandFor,
   bandPosition,
+  bandTrigger,
   FUNDING_BANDS,
   OI_BANDS,
   LEVERAGE_HEAT_BANDS,
@@ -137,4 +138,81 @@ describe("bandPosition", () => {
       }
     }
   });
+});
+
+describe("bandTrigger", () => {
+  /*
+   * These tests deliberately assert against the BAND TABLES THEMSELVES
+   * rather than against hard-coded numbers. The whole point of bandTrigger
+   * is that a "watch this level" sentence on the dashboard cannot drift
+   * from the threshold that actually produces the verdict — so if a band
+   * moves, these must follow it automatically rather than fail.
+   */
+  const TABLES: Array<[string, SentimentBand[]]> = [
+    ["FUNDING_BANDS", FUNDING_BANDS],
+    ["OI_BANDS", OI_BANDS],
+    ["LEVERAGE_HEAT_BANDS", LEVERAGE_HEAT_BANDS],
+    ["LONG_SHORT_BANDS", LONG_SHORT_BANDS],
+    ["DOMINANCE_ROTATION_BANDS", DOMINANCE_ROTATION_BANDS],
+    ["COMPOSITE_BANDS", COMPOSITE_BANDS],
+  ];
+
+  it("names the exact boundary of the band a value sits in", () => {
+    // Neutral funding: the trigger must be the real ±0.04 edge of that band.
+    const neutral = FUNDING_BANDS.find((b) => b.label === "Neutral")!;
+    const t = bandTrigger(0, FUNDING_BANDS);
+    expect(t.current.label).toBe("Neutral");
+    expect(t.above!.threshold).toBe(neutral.max);
+    expect(t.below!.threshold).toBe(neutral.min);
+  });
+
+  it("names the band waiting on the other side of each boundary", () => {
+    const t = bandTrigger(0, FUNDING_BANDS);
+    expect(t.above!.label).toBe("Bullish");
+    expect(t.below!.label).toBe("Bearish");
+  });
+
+  it("reports distance to each boundary from the current value", () => {
+    const t = bandTrigger(0.01, FUNDING_BANDS);
+    expect(t.above!.distance).toBeCloseTo(0.03, 10);
+    expect(t.below!.distance).toBeCloseTo(0.05, 10);
+  });
+
+  it("returns null on the outer side rather than quoting a sentinel bound", () => {
+    // -100/+100 are placeholders, not levels any market reaches. Surfacing
+    // them as something to "watch" would be nonsense.
+    const top = bandTrigger(50, FUNDING_BANDS);
+    expect(top.current.label).toBe("Crowded Longs");
+    expect(top.above).toBeNull();
+    expect(top.below).not.toBeNull();
+
+    const bottom = bandTrigger(-50, FUNDING_BANDS);
+    expect(bottom.current.label).toBe("Extreme Shorts");
+    expect(bottom.below).toBeNull();
+    expect(bottom.above).not.toBeNull();
+  });
+
+  for (const [name, bands] of TABLES) {
+    it(`stays consistent with bandFor across ${name}`, () => {
+      for (const band of bands) {
+        const mid = (Math.max(band.min, -50) + Math.min(band.max, 150)) / 2;
+        const t = bandTrigger(mid, bands);
+        expect(t.current.label).toBe(bandFor(mid, bands).label);
+      }
+    });
+
+    it(`quotes only real boundaries in ${name}`, () => {
+      const valid = new Set<number>();
+      bands.forEach((b, i) => {
+        if (i > 0) valid.add(b.min);
+        if (i < bands.length - 1) valid.add(b.max);
+      });
+      for (const band of bands) {
+        const mid = (Math.max(band.min, -50) + Math.min(band.max, 150)) / 2;
+        const t = bandTrigger(mid, bands);
+        if (t.above) expect(valid.has(t.above.threshold)).toBe(true);
+        if (t.below) expect(valid.has(t.below.threshold)).toBe(true);
+      }
+    });
+  }
 });

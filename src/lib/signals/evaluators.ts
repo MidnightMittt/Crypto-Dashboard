@@ -1,10 +1,12 @@
-import { AggregateMarketData, TechnicalRead } from "@/types/market";
+import { AggregateMarketData, FearGreed, TechnicalRead } from "@/types/market";
 import type { StablecoinSummary } from "../providers/stablecoins";
 import { MetricVerdict, Verdict } from "./types";
 import { agreementOf, describeConfidence, scoreConfidence } from "./confidence";
-import { bandFor, FUNDING_BANDS, LONG_SHORT_BANDS } from "../sentiment/bands";
+import { bandFor, bandTrigger, FUNDING_BANDS, LONG_SHORT_BANDS } from "../sentiment/bands";
+import type { SentimentBand } from "@/types/market";
 import { coinbasePremiumLean, deribitOptionsLean, stablecoinFlowLean } from "../sentiment/leans";
 import { squeezeLean } from "../sentiment/leans";
+import { DOMINANT_SHARE_HIGH, DOMINANT_SHARE_LOW } from "../sentiment/orderFlow";
 import { Lean } from "@/components/ui/LeanGauge";
 
 /**
@@ -31,9 +33,27 @@ import { Lean } from "@/components/ui/LeanGauge";
 export interface SignalContext {
   technicals: TechnicalRead | null;
   stablecoins: StablecoinSummary | null;
+  fearGreed: FearGreed | null;
   /** Price change over 24h, used to test whether positioning is being confirmed by price. */
   priceChange24hPct: number;
   now: number;
+}
+
+/**
+ * Renders a band's own boundaries as a "watch this level" sentence.
+ *
+ * `fmt` receives the raw threshold so each metric can attach its own units
+ * (%/8h, bps, a ratio) without this helper knowing about any of them.
+ * Values come straight from the band table, never from a literal typed into
+ * a sentence, so they cannot drift from the verdict logic.
+ */
+function triggerFromBands(value: number, bands: SentimentBand[], fmt: (n: number) => string): string | null {
+  const t = bandTrigger(value, bands);
+  const parts: string[] = [];
+  if (t.above) parts.push(`${t.above.label} above ${fmt(t.above.threshold)}`);
+  if (t.below) parts.push(`${t.below.label} below ${fmt(t.below.threshold)}`);
+  if (parts.length === 0) return null;
+  return `Currently ${t.current.label} — turns ${parts.join("; ")}.`;
 }
 
 function leanToVerdict(lean: Lean): Verdict {
@@ -112,6 +132,7 @@ function evaluateFunding(data: AggregateMarketData, ctx: SignalContext): MetricV
       "Funding is the running cost of holding leverage, so it shows which side is paying to keep its position — and which side gets forced out first.",
     asOf: data.updatedAt,
     conflicts,
+    nextTrigger: triggerFromBands(pct, FUNDING_BANDS, (n) => `${n}%/8h`),
   };
 }
 
@@ -174,6 +195,10 @@ function evaluateOpenInterest(data: AggregateMarketData, ctx: SignalContext): Me
       "Open interest is how much leverage is riding on the market. Read against price it separates a move backed by new money from one that is just positions closing.",
     asOf: data.updatedAt,
     conflicts: [],
+    // The +/-2% OI and +/-0.5% price cutoffs above are what actually switch
+    // this verdict, so they are the levels quoted.
+    nextTrigger:
+      "Turns directional once open interest moves more than 2% in 24h while price moves more than 0.5% — the sign of both together decides which way.",
   };
 }
 
@@ -218,6 +243,12 @@ function evaluateSqueeze(data: AggregateMarketData, ctx: SignalContext): MetricV
       "Forced liquidations move price faster than any deliberate buying or selling. This scores how much fuel is stacked on one side.",
     asOf: data.updatedAt,
     conflicts,
+    // SQUEEZE_MEANINGFUL_SCORE (40) and the 70 extreme line in leans.ts are
+    // the thresholds squeezeLean actually switches on.
+    nextTrigger:
+      sr.side === "balanced"
+        ? "Stays neutral until funding and long/short agree on a crowded side."
+        : `Score ${sr.score}/100 — drops to neutral below 40, and reads as an extreme setup at 70 or above.`,
   };
 }
 
@@ -242,6 +273,7 @@ function evaluateLongShort(data: AggregateMarketData, ctx: SignalContext): Metri
     confidence: scoreConfidence(inputs),
     confidenceBasis: describeConfidence(inputs),
     explanation: `${ratio.toFixed(2)}:1 long/short (${longPct.toFixed(0)}% long) — ${band.label.toLowerCase()}.`,
+    nextTrigger: triggerFromBands(longPct, LONG_SHORT_BANDS, (n) => `${n}% long`),
     whyItMatters:
       "Shows how the crowd is actually placed. Heavily one-sided positioning is what makes a market vulnerable to a move in the other direction.",
     asOf: data.updatedAt,
@@ -278,6 +310,7 @@ function evaluateBasis(data: AggregateMarketData, ctx: SignalContext): MetricVer
       "The gap between perp and spot prices shows what leveraged traders will pay over owning the asset outright.",
     asOf: data.updatedAt,
     conflicts,
+    nextTrigger: `Reads as neutral inside +/-${BASIS_NEUTRAL_PCT}% — bullish above, bearish below (currently ${basis.toFixed(3)}%).`,
   };
 }
 
@@ -333,6 +366,9 @@ function evaluateOrderFlow(data: AggregateMarketData, ctx: SignalContext): Metri
       "Taker flow is who is willing to cross the spread to get filled — the most direct measure of urgency on either side.",
     asOf: data.updatedAt,
     conflicts,
+    // DOMINANT_SHARE_LOW/HIGH are the same constants summarizeOrderFlow
+    // switches on, imported rather than retyped so they cannot drift.
+    nextTrigger: `Buyers currently ${flow.buyerSharePct.toFixed(0)}% of taker volume — turns bullish at ${DOMINANT_SHARE_HIGH}% or above, bearish at ${DOMINANT_SHARE_LOW}% or below.`,
   };
 }
 
@@ -365,6 +401,9 @@ function evaluateLiquidations(data: AggregateMarketData): MetricVerdict | null {
       "Shows which side has already been flushed out. Backward-looking by nature, so it explains the move that happened rather than predicting the next one.",
     asOf: data.updatedAt,
     conflicts: [],
+    // Deliberately null: this metric never takes a direction, so there is no
+    // level at which it would flip. Inventing one would imply it predicts.
+    nextTrigger: null,
   };
 }
 
@@ -389,6 +428,8 @@ function evaluateOptions(data: AggregateMarketData, ctx: SignalContext): MetricV
       "Options positioning shows what traders are paying to hedge against, which often diverges from what they say in spot markets.",
     asOf: data.updatedAt,
     conflicts,
+    // 0.8 / 1.2 are deribitOptionsLean's own neutral boundaries.
+    nextTrigger: `Put/call ${opt.putCallRatio.toFixed(2)} — turns bullish below 0.80, bearish above 1.20.`,
   };
 }
 
@@ -430,6 +471,7 @@ function evaluateExchangeFlow(data: AggregateMarketData): MetricVerdict | null {
       "Large transfers on and off exchanges are the clearest on-chain whale signal available: coins moving onto an exchange are usually being positioned to sell, coins leaving are usually being held.",
     asOf: data.updatedAt,
     conflicts: [],
+    nextTrigger: `Flips as soon as the tracked wallet balance turns the other way — currently ${flow.direction}.`,
   };
 }
 
@@ -453,6 +495,8 @@ function evaluateCoinbasePremium(data: AggregateMarketData): MetricVerdict | nul
       "Coinbase is the main US on-ramp, so a persistent premium or discount there is the cleanest read on American demand specifically.",
     asOf: data.updatedAt,
     conflicts: [],
+    // coinbasePremiumLean's own boundaries: +/-0.03 to lean, +/-0.15 for extreme.
+    nextTrigger: `Premium ${premium.toFixed(3)}% — leans bullish above +0.03%, bearish below -0.03%, extreme past +/-0.15%.`,
   };
 }
 
@@ -490,6 +534,7 @@ function evaluateTechnicals(data: AggregateMarketData, ctx: SignalContext): Metr
       "Every other metric here measures positioning. This is the only one measuring what price itself is actually doing.",
     asOf: data.updatedAt,
     conflicts,
+    nextTrigger: `Strength ${t.strength}/100 — below 20 this reports neutral regardless of direction; ADX above 25 would make the trend read carry full weight.`,
   };
 }
 
@@ -513,6 +558,53 @@ function evaluateStablecoins(data: AggregateMarketData, ctx: SignalContext): Met
       "Stablecoins are the buying power waiting on the sidelines. Supply growing means money has arrived and not yet been deployed.",
     asOf: data.updatedAt,
     conflicts: [],
+    // stablecoinFlowLean's own boundaries: +/-0.2% to lean, +/-1% for extreme.
+    nextTrigger: `7-day supply change ${s.netChange7dPct.toFixed(2)}% — leans bullish above +0.2%, bearish below -0.2%.`,
+  };
+}
+
+// ── Fear & Greed ───────────────────────────────────────────────────────
+
+/** Beyond these, sentiment is treated as a contrarian signal rather than a trend read. */
+const FEAR_GREED_EXTREME_GREED = 75;
+const FEAR_GREED_EXTREME_FEAR = 25;
+
+function evaluateFearGreed(data: AggregateMarketData, ctx: SignalContext): MetricVerdict | null {
+  const fg = ctx.fearGreed;
+  if (!fg || !Number.isFinite(fg.value)) return null;
+
+  /*
+   * Read as a CONTRARIAN indicator at the extremes — the same "fade the
+   * crowd" rule funding and squeeze risk already follow in this codebase.
+   * Extreme greed marks the point where buyers are already all-in and there
+   * is little marginal demand left; extreme fear marks the opposite. In the
+   * middle of the range it carries no directional information at all, so it
+   * reports neutral rather than a faint lean.
+   */
+  const verdict: Verdict =
+    fg.value >= FEAR_GREED_EXTREME_GREED
+      ? "bearish"
+      : fg.value <= FEAR_GREED_EXTREME_FEAR
+        ? "bullish"
+        : "neutral";
+
+  const inputs = { completeness: 1, agreement: verdict === "neutral" ? 0.5 : 0.7, backtested: false };
+
+  return {
+    id: "fearGreed",
+    label: "Fear & Greed",
+    verdict,
+    confidence: scoreConfidence(inputs),
+    confidenceBasis: `${describeConfidence(inputs)} Read contrarian at the extremes, not as a trend signal.`,
+    explanation:
+      verdict === "neutral"
+        ? `Sentiment reads ${fg.value}/100 (${fg.classification}) — inside the range where crowd mood carries no directional edge.`
+        : `Sentiment reads ${fg.value}/100 (${fg.classification}) — crowd positioning is stretched, and extremes have more often marked turning points than continuations.`,
+    whyItMatters:
+      "Retail sentiment is most informative when it is extreme: that is when the marginal buyer or seller has already acted.",
+    asOf: data.updatedAt,
+    conflicts: [],
+    nextTrigger: `Currently ${fg.value}/100 — turns bearish at ${FEAR_GREED_EXTREME_GREED} or above, bullish at ${FEAR_GREED_EXTREME_FEAR} or below.`,
   };
 }
 
@@ -561,6 +653,7 @@ function evaluateEtfFlows(data: AggregateMarketData): MetricVerdict | null {
       "ETF flows are the only read here on money arriving from traditional finance rather than from crypto-native traders.",
     asOf: data.updatedAt,
     conflicts,
+    nextTrigger: `Counts as directional past half a typical day's flow, i.e. around ${usd(etf.typicalAbsFlowUsd * 0.5)} either way.`,
   };
 }
 
@@ -612,6 +705,7 @@ function evaluateSpotPerpVolume(data: AggregateMarketData, ctx: SignalContext): 
       "Moves carried by leverage alone unwind faster than moves backed by spot buying, because leveraged positions can be forced to close.",
     asOf: data.updatedAt,
     conflicts,
+    nextTrigger: `Spot at ${(v.spotToPerpRatio * 100).toFixed(0)}% of perp turnover — flags leverage-led below 3%, spot-led above 10%.`,
   };
 }
 
@@ -636,6 +730,7 @@ export function evaluateAll(data: AggregateMarketData, ctx: SignalContext): Metr
     evaluateOptions(data, ctx),
     evaluateCoinbasePremium(data),
     evaluateStablecoins(data, ctx),
+    evaluateFearGreed(data, ctx),
     evaluateLiquidations(data),
   ];
 

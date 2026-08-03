@@ -38,6 +38,16 @@ export interface MetricVerdict {
    * smoothed over — the spec's "if signals conflict, say they conflict".
    */
   conflicts: string[];
+  /**
+   * The concrete level at which this metric would change its own verdict,
+   * e.g. "turns bullish above 0.04%/8h". Null when no meaningful threshold
+   * exists (a metric already at an extreme, or one with no banded scale).
+   *
+   * Sourced from the SAME constants the verdict itself uses — see
+   * `bandTrigger` in sentiment/bands.ts — so a stated trigger can never
+   * drift from the logic it describes.
+   */
+  nextTrigger: string | null;
 }
 
 export type RiskLevel = "low" | "medium" | "high";
@@ -60,10 +70,31 @@ export interface MarketBias {
   verdict: Verdict;
   /** Aggregate evidence quality across contributing metrics. */
   confidence: number;
+  /**
+   * 0-100: how much the metrics agree WITH EACH OTHER.
+   *
+   * Deliberately separate from `confidence`, which measures how good the
+   * underlying evidence is. The two come apart in exactly the case worth
+   * knowing about: a unanimous read built on thin data is high agreement
+   * and low confidence, and collapsing them into one number would hide it.
+   */
+  agreement: number;
   headline: string;
   /** Ranked by weight x confidence, so the strongest-supported reasons lead. */
   topBullish: MetricVerdict[];
   topBearish: MetricVerdict[];
+  /**
+   * The best-supported metric AGREEING with the overall read — the clearest
+   * asymmetry currently visible. Never a trade recommendation.
+   */
+  opportunity: MetricVerdict | null;
+  /**
+   * The best-supported metric ARGUING AGAINST the overall read: the most
+   * likely reason this thesis turns out wrong.
+   */
+  counterRisk: MetricVerdict | null;
+  /** Metrics closest to flipping, with the level that would do it. */
+  watchNext: MetricVerdict[];
   /** Empty on the first run for an asset, which the UI states plainly. */
   changes: BiasChange[];
   /** True when there is no prior snapshot to diff against yet. */

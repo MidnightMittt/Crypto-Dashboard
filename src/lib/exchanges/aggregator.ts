@@ -53,6 +53,8 @@ import { trackedVenues, BTC_ADDRESSES, ETH_ADDRESSES } from "../providers/exchan
 import { classifyExchangeFlow } from "../sentiment/exchangeFlow";
 import { recordFlowBalance, balanceWindowAgo } from "../history/flowStore";
 import { fetchDeribitOptions } from "../providers/deribitOptions";
+import { fetchStablecoinSummary } from "../providers/stablecoins";
+import { fetchFearGreed } from "../providers/fearGreed";
 import { summarizeDeribitOptions } from "../sentiment/deribitOptions";
 
 /**
@@ -500,6 +502,8 @@ async function withRecordedHistory(
     technicals,
     etfFlows,
     spotPerpVolume,
+    stablecoins,
+    fearGreed,
   ] = await Promise.all([
     buildPoolExposure(asset, agg.exchanges),
     buildLiquidationSummary(asset),
@@ -509,6 +513,15 @@ async function withRecordedHistory(
     buildTechnicals(asset),
     buildEtfFlows(asset),
     buildSpotPerpVolume(asset, agg.exchanges),
+    /*
+     * Fetched here rather than threaded in from the route, even though the
+     * route also fetches them for its own response. Both providers are
+     * already swr-cached, so the second call costs nothing — and passing
+     * them in as arguments would bake whatever happened to be present at
+     * cache-fill time into this asset's cached aggregate.
+     */
+    fetchStablecoinSummary().catch(() => null),
+    fetchFearGreed().catch(() => null),
   ]);
   // BTC's fetcher is keyless; ETH's needs ETHERSCAN_API_KEY. Computed
   // separately from the fetch itself so the UI can tell "no key" apart
@@ -618,7 +631,8 @@ async function withRecordedHistory(
     } as AggregateMarketData,
     {
       technicals,
-      stablecoins: null,
+      stablecoins,
+      fearGreed,
       priceChange24hPct: agg.priceChange24hPct,
       now: agg.updatedAt,
     }

@@ -1,4 +1,5 @@
 import { BiasChange, MarketBias, MetricVerdict, RiskLevel, Verdict } from "./types";
+import { agreementOf } from "./confidence";
 import { TechnicalRead } from "@/types/market";
 
 /**
@@ -42,6 +43,7 @@ const WEIGHTS: Record<string, number> = {
   spotPerpVolume: 0.05,
   stablecoins: 0.04,
   coinbasePremium: 0.03,
+  fearGreed: 0.03,
   liquidations: 0, // backward-looking; shown for context, never scored
 };
 
@@ -206,14 +208,49 @@ export function buildMarketBias(inputs: MarketBiasInputs): MarketBias | null {
   const conflicted = metrics.filter((m) => m.conflicts.length > 0).length >= 3;
   const risk = assessRisk(metrics, technicals, squeezeScore);
 
+  /*
+   * Agreement across the metrics themselves, NOT a restatement of
+   * confidence. Liquidations is excluded because it is permanently neutral
+   * by design, and counting a metric that can never take a side would
+   * dilute every agreement figure identically and meaninglessly.
+   */
+  const agreement = Math.round(
+    agreementOf(metrics.filter((m) => weightFor(m.id) > 0).map((m) => m.verdict)) * 100
+  );
+
+  /*
+   * Opportunity and counter-risk are the best-supported metric on each side
+   * of the overall read. Both are existing verdicts, surfaced rather than
+   * synthesized, so each traces back to a real number already on the page.
+   * Null when the read is neutral: there is no thesis to support or oppose.
+   */
+  const aligned = verdict === "neutral" ? [] : verdict === "bullish" ? topBullish : topBearish;
+  const opposing = verdict === "neutral" ? [] : verdict === "bullish" ? topBearish : topBullish;
+  const opportunity = aligned[0] ?? null;
+  const counterRisk = opposing[0] ?? null;
+
+  /*
+   * What to watch: metrics that both carry weight and can actually name the
+   * level that would flip them. Ranked by weight so the ones that would move
+   * the overall read most come first.
+   */
+  const watchNext = metrics
+    .filter((m) => m.nextTrigger !== null && weightFor(m.id) > 0)
+    .sort((a, b) => weightFor(b.id) - weightFor(a.id))
+    .slice(0, 4);
+
   return {
     asset,
     score,
     verdict,
     confidence,
+    agreement,
     headline: buildHeadline(verdict, score, confidence, conflicted),
     topBullish,
     topBearish,
+    opportunity,
+    counterRisk,
+    watchNext,
     changes,
     isFirstReading: previous === null,
     riskLevel: risk.level,

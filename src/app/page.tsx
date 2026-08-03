@@ -3,9 +3,8 @@
 import { AlertTriangle } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { SentimentIndex } from "@/components/dashboard/SentimentIndex";
-import { MarketBiasCard } from "@/components/dashboard/MarketBiasCard";
+import { MarketBriefing } from "@/components/dashboard/MarketBriefing";
 import { SignalBreakdown } from "@/components/dashboard/SignalBreakdown";
-import { MarketThesisBriefing } from "@/components/dashboard/MarketThesisBriefing";
 import { FundingGauge } from "@/components/gauges/FundingGauge";
 import { OpenInterestGauge } from "@/components/gauges/OpenInterestGauge";
 import { LeverageHeatGauge } from "@/components/gauges/LeverageHeatGauge";
@@ -109,113 +108,103 @@ export default function DashboardPage() {
             </div>
 
             {/*
-              The headline answer, above everything else: what is the market
-              likely to do next, and why. Every card below is one input into
-              this single read.
+              ── TIER 1 — THE BRIEFING ─────────────────────────────────────
+              The whole answer, above the fold. Regime, conviction,
+              agreement, evidence both ways, opportunity, risk, what
+              changed, what to watch. Everything below this is the working
+              behind it.
             */}
-            <MarketBiasCard bias={aggregate.marketBias} />
+            <MarketBriefing bias={aggregate.marketBias} thesis={aggregate.marketThesis} />
 
+            {/*
+              ── TIER 2 — THE EVIDENCE ─────────────────────────────────────
+              Every metric in one uniform shape, so the briefing above is
+              auditable rather than taken on trust.
+            */}
             <SignalBreakdown metrics={aggregate.marketBias?.metrics ?? []} />
 
-            <SentimentIndex data={aggregate} fearGreed={data?.fearGreed} />
-
-            <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <FundingGauge data={aggregate} />
-              <OpenInterestGauge data={aggregate} />
-              <LeverageHeatGauge data={aggregate} />
-              <LongShortGauge data={aggregate} />
-            </section>
-
             {/*
-              The flagship read: every other card on this page is one
-              indicator; this is all of them read together. Sits right
-              after the individual speedometers, since it draws on their
-              readings directly.
+              ── TIER 3 — THE DETAIL ───────────────────────────────────────
+              Nothing here is deleted; it is demoted. Each of these cards
+              renders exactly as it did before, but collapsed by default,
+              because the engine above has already read them. A trader who
+              wants to audit a specific number opens the relevant group; a
+              trader who wants the market read never has to.
             */}
-            <MarketThesisBriefing thesis={aggregate.marketThesis} />
-
-            <PositioningIntelligence data={aggregate} />
-
-            {/*
-              Where the Price × Funding chart used to sit — replaced rather
-              than reused, at the user's request. Paired here because both
-              cards are BTC/ETH-only signals that live outside perpetual
-              futures entirely: wallet flow and options-market structure,
-              neither derived from funding/OI/positioning like everything
-              else on this page.
-            */}
-            <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <ExchangeFlowIntelligence data={aggregate} />
-              <DeribitOptionsIntelligence data={aggregate} />
-            </section>
-
-            <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-              <div className="lg:col-span-2">
-                <AiSummary aggregate={aggregate} />
+            <Collapsible title="Positioning Detail" summary="squeeze, funding percentile, CEX/DEX, order flow">
+              <div className="flex flex-col gap-4">
+                <PositioningIntelligence data={aggregate} />
+                <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                  <OrderFlowIntelligence data={aggregate} />
+                  <LiquidationIntelligence data={aggregate} />
+                </section>
               </div>
-              {/*
-                Backward-looking companion to the squeeze-setup badge in
-                PositioningIntelligence above: that one asks what's primed to
-                unwind next, this one shows what already got forced out.
-              */}
-              <LiquidationIntelligence data={aggregate} />
-            </section>
-
-            {/*
-              Pool exposure and order flow sit here, right alongside the
-              other positioning/flow intelligence cards, rather than lower
-              down paired with the arbitrage/alerts tools they have no
-              thematic connection to.
-            */}
-            <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <PoolExposure data={aggregate} />
-              <OrderFlowIntelligence data={aggregate} />
-            </section>
-
-            {/*
-              Market-wide context, same for every asset tab — doesn't belong
-              on any per-asset card. Sits here because it's the same kind of
-              "step back and look at the bigger picture" read as the
-              intelligence cards above it.
-            */}
-            <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <MarketBreadth stablecoins={data?.stablecoins ?? null} globalMarket={data?.globalMarket ?? null} />
-              <CorrelationHeatmap correlation={data?.correlation ?? null} />
-            </section>
-
-            {/*
-              Raw chain state (hash rate, gas, TPS, TVL) — informational,
-              not a sentiment signal, so it gets its own row rather than
-              being squeezed alongside the analysis cards above.
-            */}
-            <NetworkHealth data={data?.networkHealth} />
-
-            {/*
-              Collapsed by default. At 24 venues this block ran ~1,400px —
-              a third of the page — and the heat map below already shows the
-              cross-venue funding picture without it.
-            */}
-            <Collapsible
-              title="Exchange Breakdown"
-              summary={`${venueCount ?? aggregate.exchanges.length} venues`}
-            >
-              <ExchangeGrid exchanges={aggregate.exchanges} />
             </Collapsible>
 
-            <section>
-              <SectionTitle>Cross-Market Funding</SectionTitle>
-              <HeatMap exchanges={aggregate.exchanges} />
-            </section>
+            <Collapsible title="Flow & Options Detail" summary="exchange netflow, Deribit, pool exposure">
+              <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <ExchangeFlowIntelligence data={aggregate} />
+                <DeribitOptionsIntelligence data={aggregate} />
+                <PoolExposure data={aggregate} />
+              </section>
+            </Collapsible>
 
-            <section>
-              <SectionTitle>Leaderboards</SectionTitle>
-              <Leaderboards exchanges={aggregate.exchanges} />
-            </section>
+            <Collapsible title="Raw Metrics" summary="funding, open interest, leverage heat, long/short, composite">
+              <div className="flex flex-col gap-4">
+                <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <FundingGauge data={aggregate} />
+                  <OpenInterestGauge data={aggregate} />
+                  <LeverageHeatGauge data={aggregate} />
+                  <LongShortGauge data={aggregate} />
+                </section>
+                {/*
+                  The composite sentiment score lives here rather than at the
+                  top. It is a second 0-100 "overall market" number alongside
+                  the briefing's, and two competing headline scores was the
+                  single worst thing on this page for a fast read. Its inputs
+                  now feed the engine directly; the gauge is kept for anyone
+                  who wants to see it.
+                */}
+                <SentimentIndex data={aggregate} fearGreed={data?.fearGreed} />
+              </div>
+            </Collapsible>
 
-            <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <ArbitrageScanner exchanges={aggregate.exchanges} />
-              <AlertsPanel aggregate={aggregate} />
-            </section>
+            <Collapsible title="Market Context" summary="breadth, correlation, chain health">
+              <div className="flex flex-col gap-4">
+                <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                  <MarketBreadth stablecoins={data?.stablecoins ?? null} globalMarket={data?.globalMarket ?? null} />
+                  <CorrelationHeatmap correlation={data?.correlation ?? null} />
+                </section>
+                <NetworkHealth data={data?.networkHealth} />
+              </div>
+            </Collapsible>
+
+            <Collapsible
+              title="Venue Breakdown"
+              summary={`${venueCount ?? aggregate.exchanges.length} venues`}
+            >
+              <div className="flex flex-col gap-6">
+                <ExchangeGrid exchanges={aggregate.exchanges} />
+                <section>
+                  <SectionTitle>Cross-Market Funding</SectionTitle>
+                  <HeatMap exchanges={aggregate.exchanges} />
+                </section>
+                <section>
+                  <SectionTitle>Leaderboards</SectionTitle>
+                  <Leaderboards exchanges={aggregate.exchanges} />
+                </section>
+              </div>
+            </Collapsible>
+
+            <Collapsible title="Tools & Narrative" summary="AI summary, arbitrage, alerts">
+              <div className="flex flex-col gap-4">
+                <AiSummary aggregate={aggregate} />
+                <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                  <ArbitrageScanner exchanges={aggregate.exchanges} />
+                  <AlertsPanel aggregate={aggregate} />
+                </section>
+              </div>
+            </Collapsible>
 
             <footer className="border-t border-hairline pt-6 text-[11px] leading-relaxed text-ink-faint">
               <p className="font-medium text-ink-muted">This is a market data tool, not financial advice.</p>

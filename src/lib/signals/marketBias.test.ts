@@ -12,6 +12,7 @@ const metric = (id: string, verdict: Verdict, confidence = 80): MetricVerdict =>
   whyItMatters: "",
   asOf: 0,
   conflicts: [],
+  nextTrigger: null,
 });
 
 const build = (metrics: MetricVerdict[], previous: Record<string, Verdict> | null = null) =>
@@ -213,5 +214,95 @@ describe("snapshotVerdicts", () => {
       funding: "bullish",
       basis: "bearish",
     });
+  });
+});
+
+describe("agreement, opportunity and counter-risk", () => {
+  it("reports full agreement when every weighted metric points the same way", () => {
+    const bias = build([metric("funding", "bullish"), metric("basis", "bullish")])!;
+    expect(bias.agreement).toBe(100);
+  });
+
+  it("reports zero agreement on an even split", () => {
+    const bias = build([metric("funding", "bullish"), metric("squeezeRisk", "bearish")])!;
+    expect(bias.agreement).toBe(0);
+  });
+
+  it("keeps agreement distinct from confidence — unanimous but thin scores high then low", () => {
+    // The case the two-number split exists to expose: everything agrees, but
+    // nothing behind it is well-evidenced.
+    const bias = build([metric("funding", "bullish", 10), metric("basis", "bullish", 10)])!;
+    expect(bias.agreement).toBe(100);
+    expect(bias.confidence).toBeLessThan(20);
+  });
+
+  it("excludes permanently-neutral liquidations from agreement", () => {
+    // Weight 0, and it can never take a side — counting it would dilute
+    // every reading identically and tell the reader nothing.
+    const withLiq = build([metric("funding", "bullish"), metric("liquidations", "neutral")])!;
+    expect(withLiq.agreement).toBe(100);
+  });
+
+  it("surfaces the best-supported aligned metric as the opportunity", () => {
+    const bias = build([
+      metric("coinbasePremium", "bullish", 90), // lightest weight
+      metric("funding", "bullish", 90), // heaviest weight
+      metric("basis", "bearish", 50),
+    ])!;
+    expect(bias.verdict).toBe("bullish");
+    expect(bias.opportunity?.id).toBe("funding");
+  });
+
+  it("surfaces the best-supported opposing metric as the counter-risk", () => {
+    // Bullish side needs enough weight to clear the +/-6 neutral band —
+    // funding alone against squeezeRisk lands at 55, which is correctly
+    // still neutral.
+    const bias = build([
+      metric("funding", "bullish", 95),
+      metric("technicals", "bullish", 95),
+      metric("squeezeRisk", "bearish", 80),
+      metric("coinbasePremium", "bearish", 20),
+    ])!;
+    expect(bias.verdict).toBe("bullish");
+    expect(bias.counterRisk?.id).toBe("squeezeRisk");
+  });
+
+  it("has neither opportunity nor counter-risk when the read is neutral", () => {
+    // Nothing to support or oppose — claiming otherwise would invent a thesis.
+    const bias = build([metric("funding", "bullish"), metric("funding", "bearish")])!;
+    expect(bias.verdict).toBe("neutral");
+    expect(bias.opportunity).toBeNull();
+    expect(bias.counterRisk).toBeNull();
+  });
+});
+
+describe("watchNext", () => {
+  const withTrigger = (id: string, v: Verdict): MetricVerdict => ({
+    ...metric(id, v),
+    nextTrigger: `${id} would flip at some level`,
+  });
+
+  it("only includes metrics that can actually name a flip level", () => {
+    const bias = build([withTrigger("funding", "bullish"), metric("basis", "bullish")])!;
+    expect(bias.watchNext.map((m) => m.id)).toEqual(["funding"]);
+  });
+
+  it("ranks by weight, so the metrics that would move the read most come first", () => {
+    const bias = build([
+      withTrigger("coinbasePremium", "bullish"),
+      withTrigger("funding", "bullish"),
+    ])!;
+    expect(bias.watchNext[0].id).toBe("funding");
+  });
+
+  it("caps the list at four", () => {
+    const ids = ["funding", "squeezeRisk", "technicals", "orderFlow", "openInterest", "basis"];
+    const bias = build(ids.map((id) => withTrigger(id, "bullish")))!;
+    expect(bias.watchNext).toHaveLength(4);
+  });
+
+  it("excludes zero-weight metrics, which cannot change the overall read", () => {
+    const bias = build([withTrigger("funding", "bullish"), withTrigger("liquidations", "neutral")])!;
+    expect(bias.watchNext.map((m) => m.id)).toEqual(["funding"]);
   });
 });

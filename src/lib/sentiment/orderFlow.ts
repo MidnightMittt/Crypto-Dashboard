@@ -19,8 +19,8 @@ import { RawBookDepth, RawCvdPoint } from "@/lib/providers/okxOrderFlow";
  */
 
 /** Matches LONG_SHORT_BANDS' and liquidations.ts's balanced-zone convention. */
-const DOMINANT_SHARE_LOW = 35;
-const DOMINANT_SHARE_HIGH = 65;
+export const DOMINANT_SHARE_LOW = 35;
+export const DOMINANT_SHARE_HIGH = 65;
 
 export function summarizeOrderFlow(
   bookDepth: RawBookDepth | null,
