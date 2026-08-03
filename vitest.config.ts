@@ -13,7 +13,7 @@ import path from "path";
  */
 export default defineConfig({
   test: {
-    include: ["src/lib/**/*.test.ts"],
+    include: ["src/lib/**/*.test.ts", "scripts/backtest/**/*.test.ts"],
     environment: "node",
     coverage: {
       provider: "v8",

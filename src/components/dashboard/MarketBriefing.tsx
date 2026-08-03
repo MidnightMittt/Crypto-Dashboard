@@ -4,6 +4,8 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { VerdictBadge, ConfidenceLabel } from "@/components/ui/VerdictBadge";
 import { MarketBias, MetricVerdict } from "@/lib/signals/types";
 import { MarketThesis } from "@/types/market";
+import { lookupBiasVerdictStat } from "@/lib/sentiment/backtestStats";
+import backtestStats from "@/data/backtestStats.json";
 
 /**
  * The morning briefing. One card that answers, in reading order:
@@ -116,7 +118,29 @@ function Headline({ bias, thesis }: { bias: MarketBias; thesis: MarketThesis | n
           {thesis.regimeDescription}
         </p>
       )}
+
+      <BiasBacktestStatLine verdict={bias.verdict} />
     </div>
+  );
+}
+
+/**
+ * Same pattern already shipped on PositioningIntelligence's squeeze read and
+ * CategoryCard's category read: only renders once the backtested bucket
+ * clears MIN_SAMPLE_N, so a thin bucket says nothing rather than stating a
+ * number with false confidence.
+ */
+function BiasBacktestStatLine({ verdict }: { verdict: MarketBias["verdict"] }) {
+  const stat = lookupBiasVerdictStat(backtestStats, verdict);
+  if (!stat) return null;
+
+  return (
+    <p className="max-w-4xl text-[13px] leading-relaxed text-ink-faint">
+      Historically, in the backtested window ({backtestStats.coverageStart} to{" "}
+      {backtestStats.coverageEnd}, N={stat.n} days the overall read was {verdict}): price moved a
+      mean {stat.mean1dPct >= 0 ? "+" : ""}
+      {stat.mean1dPct.toFixed(1)}% over the next 24h. One narrow window, not a guarantee.
+    </p>
   );
 }
 

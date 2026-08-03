@@ -123,14 +123,37 @@ interface DayRecord {
   biasHealthScore: number | null;
   /** One entry per category that reported, for the category-level backtest report. */
   categories: Array<{ category: string; score: number; verdict: string }>;
+  /**
+   * One entry per metric that fired that day (evaluateAll's output, id +
+   * verdict only) — the raw material report.ts's hypothesis section needs
+   * to bucket occurrences by metric, paired with the forward returns below.
+   * Not stored anywhere else: `categories` is a rollup, this is the flat
+   * per-metric list underneath it.
+   */
+  metrics: Array<{ id: string; verdict: string }>;
+  forwardReturn1h: number | null;
+  forwardReturn4h: number | null;
   forwardReturn1d: number | null;
   forwardReturn3d: number | null;
   forwardReturn7d: number | null;
 }
 
-function forwardReturn(futuresKlines: Array<{ t: number; close: number }>, fromT: number, days: number): number | null {
-  const startPrice = closestWithin(futuresKlines, fromT, 3 * 3_600_000)?.close;
-  const endPoint = closestWithin(futuresKlines, fromT + days * DAY_MS, 3 * 3_600_000);
+/**
+ * `toleranceMs` is deliberately half the series' own bar spacing: wide
+ * enough to tolerate a bar landing a bit early/late, tight enough that a 1h
+ * lookup can never silently match a bar meant for a neighboring hour.
+ * Daily forwardReturn calls (1d/3d/7d) keep the original 3h tolerance
+ * against hourly bars; the new 1h/4h calls use 30 minutes, half an hourly
+ * bar's spacing, for the same reason.
+ */
+function forwardReturn(
+  series: Array<{ t: number; close: number }>,
+  fromT: number,
+  horizonMs: number,
+  toleranceMs: number
+): number | null {
+  const startPrice = closestWithin(series, fromT, toleranceMs)?.close;
+  const endPoint = closestWithin(series, fromT + horizonMs, toleranceMs);
   if (!startPrice || !endPoint) return null;
   return ((endPoint.close - startPrice) / startPrice) * 100;
 }
@@ -434,9 +457,12 @@ function replayAsset(data: RawAssetData, marketWide: MarketWideData): DayRecord[
       biasConfidence: bias?.confidence ?? null,
       biasHealthScore: bias?.healthScore ?? null,
       categories: (bias?.categories ?? []).map((c) => ({ category: c.category, score: c.score, verdict: c.verdict })),
-      forwardReturn1d: forwardReturn(futuresKlines, t, 1),
-      forwardReturn3d: forwardReturn(futuresKlines, t, 3),
-      forwardReturn7d: forwardReturn(futuresKlines, t, 7),
+      metrics: metricVerdicts.map((m) => ({ id: m.id, verdict: m.verdict })),
+      forwardReturn1h: forwardReturn(futuresKlines, t, 1 * 3_600_000, 30 * 60_000),
+      forwardReturn4h: forwardReturn(futuresKlines, t, 4 * 3_600_000, 30 * 60_000),
+      forwardReturn1d: forwardReturn(futuresKlines, t, 1 * DAY_MS, 3 * 3_600_000),
+      forwardReturn3d: forwardReturn(futuresKlines, t, 3 * DAY_MS, 3 * 3_600_000),
+      forwardReturn7d: forwardReturn(futuresKlines, t, 7 * DAY_MS, 3 * 3_600_000),
     });
   }
 

@@ -1,8 +1,12 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { SQUEEZE_SCORE_BUCKETS, RegimeStat, BacktestStats } from "../../src/lib/sentiment/backtestStats";
+import { SQUEEZE_SCORE_BUCKETS, RegimeStat, BacktestStats, HypothesisStat, MIN_SAMPLE_N } from "../../src/lib/sentiment/backtestStats";
 import { MarketRegime } from "../../src/types/market";
+import { SIGNAL_HYPOTHESES, HOLDING_PERIODS, HoldingPeriod } from "../../src/lib/signals/hypothesis";
+import { summarizeOccurrences, Occurrence } from "./metrics";
+import { buildCombinations, CombinationDayRecord } from "./combinations";
+import { buildWeightReview, WeightReviewDayRecord } from "./weightReview";
 
 /**
  * Aggregates run.ts's per-day output into descriptive statistics. These are
@@ -27,11 +31,15 @@ const STATS_OUT_PATH = path.join(__dirname, "..", "..", "src", "data", "backtest
 interface DayRecord {
   asset: string;
   date: string;
+  t: number;
   squeezeScore: number | null;
   squeezeSide: string | null;
   thesisRegime: string | null;
   biasVerdict: string | null;
   categories: Array<{ category: string; score: number; verdict: string }>;
+  metrics: Array<{ id: string; verdict: string }>;
+  forwardReturn1h: number | null;
+  forwardReturn4h: number | null;
   forwardReturn1d: number | null;
   forwardReturn3d: number | null;
   forwardReturn7d: number | null;
@@ -153,6 +161,75 @@ function biasVerdictSection(records: DayRecord[]): { markdown: string; stats: Pa
   return { markdown: rows.join("\n"), stats };
 }
 
+/** Which raw field on a DayRecord holds the forward return for a given holding period. */
+function holdingPeriodField(hp: HoldingPeriod): "forwardReturn1h" | "forwardReturn4h" | "forwardReturn1d" | "forwardReturn7d" {
+  switch (hp) {
+    case "1h":
+      return "forwardReturn1h";
+    case "4h":
+      return "forwardReturn4h";
+    case "24h":
+      return "forwardReturn1d"; // DayRecord's 1d field IS the 24h forward return; "3d" isn't a hypothesis holding period.
+    case "7d":
+      return "forwardReturn7d";
+  }
+}
+
+function occurrencesFor(records: DayRecord[], metricId: string, hp: HoldingPeriod): Occurrence[] {
+  const field = holdingPeriodField(hp);
+  const occurrences: Occurrence[] = [];
+  for (const r of records) {
+    const m = r.metrics.find((x) => x.id === metricId);
+    if (!m) continue;
+    occurrences.push({ t: r.t, verdict: m.verdict as Occurrence["verdict"], forwardReturnPct: r[field] });
+  }
+  return occurrences;
+}
+
+/**
+ * One row per (metric with a real historical source) x holding period —
+ * the hypothesis-testing framework's core measurement. Rows below
+ * MIN_SAMPLE_N print "insufficient data" rather than a number, the same
+ * rule the live UI lookups already enforce, so the report and the site can
+ * never disagree about what counts as enough evidence to state.
+ */
+function hypothesesSection(records: DayRecord[]): {
+  markdown: string;
+  stats: Partial<Record<`${string}:${HoldingPeriod}`, HypothesisStat>>;
+} {
+  const rows: string[] = [
+    "| Metric | Holding | N | Win rate | Mean | Median | Max DD | Bull P/R | Bear P/R | p-value |",
+    "|---|---|---|---|---|---|---|---|---|---|",
+  ];
+  const stats: Partial<Record<`${string}:${HoldingPeriod}`, HypothesisStat>> = {};
+
+  const pct = (n: number | null) => (n === null ? "—" : `${(n * 100).toFixed(0)}%`);
+
+  for (const h of SIGNAL_HYPOTHESES) {
+    if (!h.hasHistoricalSource) continue;
+    for (const hp of HOLDING_PERIODS) {
+      const occurrences = occurrencesFor(records, h.id, hp);
+      const stat = summarizeOccurrences(occurrences, MIN_SAMPLE_N);
+      stats[`${h.id}:${hp}`] = stat;
+
+      if (stat.n < MIN_SAMPLE_N) {
+        rows.push(`| ${h.label} | ${hp} | ${stat.n} | insufficient data | | | | | | |`);
+        continue;
+      }
+
+      rows.push(
+        `| ${h.label} | ${hp} | ${stat.n} | ${stat.winRate === null ? "—" : `${(stat.winRate * 100).toFixed(0)}%`} | ${fmt(stat.meanReturnPct)} | ${fmt(stat.medianReturnPct)} | ${stat.maxDrawdownPct === null ? "—" : `${stat.maxDrawdownPct.toFixed(2)}%`} | ${pct(stat.bullish.precision)}/${pct(stat.bullish.recall)} | ${pct(stat.bearish.precision)}/${pct(stat.bearish.recall)} | ${stat.significance ? stat.significance.pValue.toFixed(4) : "—"} |`
+      );
+    }
+  }
+
+  rows.push("");
+  rows.push(
+    "*Bull/Bear P/R: one-vs-rest precision/recall for that class (e.g. Bull P = of the days this metric fired bullish, how often price actually rose; Bull R = of the days price actually rose, how often this metric had fired bullish). p-value is a two-sided exact sign test against a 50% null — small values mean the win rate is unlikely to be a coin flip, not that the effect is large."
+  );
+  return { markdown: rows.join("\n"), stats };
+}
+
 function main() {
   const resultsPath = path.join(DATA_DIR, "results.json");
   if (!fs.existsSync(resultsPath)) {
@@ -169,6 +246,9 @@ function main() {
   const thesis = thesisSection(records);
   const categories = categoriesSection(records);
   const biasVerdict = biasVerdictSection(records);
+  const hypotheses = hypothesesSection(records);
+  const combinations = buildCombinations(records as CombinationDayRecord[]);
+  const weightReview = buildWeightReview(records as WeightReviewDayRecord[]);
 
   const header = `# Backtest Report
 
@@ -219,6 +299,25 @@ ${categories.markdown}
 ## Decision Engine — Overall Bias Verdict
 
 ${biasVerdict.markdown}
+
+## Hypothesis Testing — Per-Metric, Per-Holding-Period
+
+Every metric with a real historical source (10 of 15 — see src/lib/signals/hypothesis.ts for the
+full contract, including the 5 with no source yet), tested as an explicit hypothesis: entry =
+verdict fires bullish/bearish, exit = time-based only (no stop-loss/take-profit), success/failure
+= sign-only match with the forward return. Rows below N=${MIN_SAMPLE_N} report "insufficient
+data" rather than a number, matching this app's standing rule that a thin sample is hidden, not
+stated with false confidence.
+
+${hypotheses.markdown}
+
+## Category Combinations
+
+${combinations.markdown}
+
+## Weight Review (proposal only — no file below this line is touched by any script)
+
+${weightReview.markdown}
 `;
 
   const report = header + body;
@@ -234,6 +333,8 @@ ${biasVerdict.markdown}
     thesis: thesis.stats,
     categories: categories.stats,
     biasVerdict: biasVerdict.stats,
+    hypotheses: hypotheses.stats,
+    combinations: combinations.results,
   };
   fs.mkdirSync(path.dirname(STATS_OUT_PATH), { recursive: true });
   fs.writeFileSync(STATS_OUT_PATH, JSON.stringify(statsOut, null, 2));

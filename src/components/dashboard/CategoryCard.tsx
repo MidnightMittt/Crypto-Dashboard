@@ -7,6 +7,8 @@ import { Collapsible } from "@/components/ui/Collapsible";
 import { CategoryScore } from "@/lib/signals/types";
 import { intensityLabel } from "@/lib/signals/scoring";
 import { CATEGORY_DESCRIPTIONS, METRIC_DESCRIPTIONS } from "@/lib/signals/descriptions";
+import { lookupCategoryStat } from "@/lib/sentiment/backtestStats";
+import backtestStats from "@/data/backtestStats.json";
 
 /**
  * One shared card for all five categories — same component, five instances,
@@ -50,6 +52,8 @@ export function CategoryCard({ category }: { category: CategoryScore }) {
           <ConfidenceLabel confidence={category.confidence} />
         </div>
 
+        <BacktestStatLine category={category} />
+
         <Collapsible title="Why?" summary={`${category.metrics.length} metrics`}>
           <ul className="flex flex-col gap-2.5 pt-1">
             {category.metrics.map((m) => (
@@ -72,5 +76,24 @@ export function CategoryCard({ category }: { category: CategoryScore }) {
         </Collapsible>
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * Same pattern already shipped on PositioningIntelligence's squeeze read:
+ * only renders once the backtested bucket clears MIN_SAMPLE_N, so a thin
+ * bucket says nothing rather than stating a number with false confidence.
+ */
+function BacktestStatLine({ category }: { category: CategoryScore }) {
+  const stat = lookupCategoryStat(backtestStats, category.category, category.verdict);
+  if (!stat) return null;
+
+  return (
+    <p className="text-[11px] leading-relaxed text-ink-faint">
+      Historically, in the backtested window ({backtestStats.coverageStart} to{" "}
+      {backtestStats.coverageEnd}, N={stat.n} days this category read {category.verdict}): price
+      moved a mean {stat.mean1dPct >= 0 ? "+" : ""}
+      {stat.mean1dPct.toFixed(1)}% over the next 24h. One narrow window, not a guarantee.
+    </p>
   );
 }

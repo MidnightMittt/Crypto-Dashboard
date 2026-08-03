@@ -283,7 +283,7 @@ function evaluateLongShort(data: AggregateMarketData, ctx: SignalContext): Metri
 
 // ── Basis ──────────────────────────────────────────────────────────────
 
-const BASIS_NEUTRAL_PCT = 0.02;
+export const BASIS_NEUTRAL_PCT = 0.02;
 
 function evaluateBasis(data: AggregateMarketData, ctx: SignalContext): MetricVerdict | null {
   const basis = data.basisPct;
@@ -566,8 +566,8 @@ function evaluateStablecoins(data: AggregateMarketData, ctx: SignalContext): Met
 // ── Fear & Greed ───────────────────────────────────────────────────────
 
 /** Beyond these, sentiment is treated as a contrarian signal rather than a trend read. */
-const FEAR_GREED_EXTREME_GREED = 75;
-const FEAR_GREED_EXTREME_FEAR = 25;
+export const FEAR_GREED_EXTREME_GREED = 75;
+export const FEAR_GREED_EXTREME_FEAR = 25;
 
 function evaluateFearGreed(data: AggregateMarketData, ctx: SignalContext): MetricVerdict | null {
   const fg = ctx.fearGreed;
