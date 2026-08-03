@@ -1,4 +1,5 @@
 import type { MarketBias } from "@/lib/signals/types";
+import type { BiasHistoryEntry } from "@/lib/history/biasHistory";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Core domain types. Every exchange adapter resolves to this shape.
@@ -195,6 +196,12 @@ export interface AggregateMarketData {
    * does not claim.
    */
   marketBias: MarketBias | null;
+  /**
+   * How the thesis moved over the last week — one entry per genuine shift,
+   * not per poll. Empty on a fresh deployment and fills forward; there is
+   * no backfill (see lib/history/biasHistory.ts for why).
+   */
+  biasTimeline: BiasHistoryEntry[];
   /** Locally recorded time series — this app's own observations. */
   history: LocalHistoryPoint[];
   /** Hours of local history collected so far. */

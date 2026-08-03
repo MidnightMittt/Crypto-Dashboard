@@ -4,6 +4,7 @@ import { AlertTriangle } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { SentimentIndex } from "@/components/dashboard/SentimentIndex";
 import { MarketBriefing } from "@/components/dashboard/MarketBriefing";
+import { MarketThesisTimeline } from "@/components/dashboard/MarketThesisTimeline";
 import { SignalBreakdown } from "@/components/dashboard/SignalBreakdown";
 import { FundingGauge } from "@/components/gauges/FundingGauge";
 import { OpenInterestGauge } from "@/components/gauges/OpenInterestGauge";
@@ -129,6 +130,14 @@ export default function DashboardPage() {
               Everything below this is the working behind it.
             */}
             <MarketBriefing bias={aggregate.marketBias} thesis={aggregate.marketThesis} />
+
+            {/*
+              How the read got here. Sits directly under the briefing because
+              the arc and the current state are one story — a cautiously
+              bullish thesis that has been decaying all day means something
+              different from one that has been building.
+            */}
+            <MarketThesisTimeline timeline={aggregate.biasTimeline} bias={aggregate.marketBias} />
 
             {/*
               ── TIER 2 — THE EVIDENCE ─────────────────────────────────────

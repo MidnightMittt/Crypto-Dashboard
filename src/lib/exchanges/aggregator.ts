@@ -92,6 +92,7 @@ import { fetchSpotVolumeUsd } from "../providers/spotVolume";
 import { evaluateAll } from "../signals/evaluators";
 import { buildMarketBias, snapshotVerdicts } from "../signals/marketBias";
 import { readBiasSnapshot, writeBiasSnapshot } from "../history/biasStore";
+import { recordBiasHistory, BiasHistoryEntry } from "../history/biasHistory";
 import type { TechnicalRead, EtfFlowSummary, SpotPerpVolume } from "@/types/market";
 
 const ADAPTER_MAP: Record<string, LiveAdapter> = {
@@ -647,6 +648,8 @@ async function withRecordedHistory(
     now: agg.updatedAt,
   });
 
+  let biasTimeline: BiasHistoryEntry[] = [];
+
   if (marketBias) {
     // Fire-and-forget: a failed snapshot costs one "what changed" diff, never
     // the response.
@@ -655,6 +658,25 @@ async function withRecordedHistory(
       { verdicts: snapshotVerdicts(metricVerdicts), score: marketBias.score, t: agg.updatedAt },
       priorBias
     ).catch(() => {});
+
+    /*
+     * Awaited, unlike the snapshot above, because the resulting series is
+     * rendered in this same response. It only writes when the read has
+     * actually moved (see biasHistory.shouldRecord), so the common case is a
+     * read and an early return.
+     */
+    biasTimeline = await recordBiasHistory(asset, {
+      t: agg.updatedAt,
+      score: marketBias.score,
+      verdict: marketBias.verdict,
+      regime: marketThesis?.regime ?? null,
+      // The metrics actually driving the read at this moment, so a row on
+      // the timeline says WHY it moved, not just that it did.
+      reasons: (marketBias.verdict === "bearish" ? marketBias.topBearish : marketBias.topBullish)
+        .slice(0, 3)
+        .map((m) => m.label),
+      topRisk: marketBias.counterRisk?.label ?? null,
+    }).catch(() => []);
   }
 
   return {
@@ -670,6 +692,7 @@ async function withRecordedHistory(
     etfFlows,
     spotPerpVolume,
     marketBias,
+    biasTimeline,
     marketThesis,
     oiChange24hPct,
     oiPercentile,
@@ -778,6 +801,7 @@ function buildAggregate(
       etfFlows: null,
       spotPerpVolume: null,
       marketBias: null,
+      biasTimeline: [],
       marketThesis: null,
       spotPriceUsd: null,
       spotSource: null,
@@ -915,6 +939,7 @@ function buildAggregate(
     etfFlows: null,
     spotPerpVolume: null,
     marketBias: null,
+    biasTimeline: [],
     marketThesis: null,
     history: [],
     historyHours: 0,
