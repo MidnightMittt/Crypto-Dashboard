@@ -8,6 +8,7 @@ import { buildMarketThesis, MarketThesisInputs } from "../../src/lib/sentiment/m
 import { buildTechnicalRead } from "../../src/lib/sentiment/technicals";
 import { Candle } from "../../src/lib/technicals/indicators";
 import { evaluateAll, SignalContext } from "../../src/lib/signals/evaluators";
+import { classifyRegime, regimeTagsToStrings } from "./regimes";
 import { buildMarketBias } from "../../src/lib/signals/marketBias";
 import { LocalHistoryPoint, AggregateMarketData, ExchangeSnapshot, FearGreed, EtfFlowSummary } from "../../src/types/market";
 import type { StablecoinSummary } from "../../src/lib/providers/stablecoins";
@@ -53,7 +54,7 @@ interface SpotBar {
   volumeUsd: number;
 }
 
-interface RawAssetData {
+export interface RawAssetData {
   asset: "BTC" | "ETH";
   futuresKlines: HourlyBar[];
   spotKlines: SpotBar[];
@@ -63,7 +64,7 @@ interface RawAssetData {
   etfFlows: Array<{ t: number; netFlowUsd: number }>;
 }
 
-interface MarketWideData {
+export interface MarketWideData {
   fearGreed: Array<{ t: number; value: number }>;
   stablecoins: Array<{ t: number; totalUsd: number }>;
 }
@@ -101,7 +102,7 @@ function oiPoint(t: number, oiUsd: number): LocalHistoryPoint {
   return { t, totalOpenInterestUsd: oiUsd, weightedFundingRatePct: 0, price: 0, longShortRatio: null, venueCount: 1 };
 }
 
-interface DayRecord {
+export interface DayRecord {
   asset: string;
   date: string;
   t: number;
@@ -131,6 +132,8 @@ interface DayRecord {
    * per-metric list underneath it.
    */
   metrics: Array<{ id: string; verdict: string }>;
+  /** Independent trend/volatility/range-bound tags for this day — see regimes.ts. */
+  regimeTags: string[];
   forwardReturn1h: number | null;
   forwardReturn4h: number | null;
   forwardReturn1d: number | null;
@@ -280,15 +283,39 @@ function singleVenueExchanges(asset: "BTC" | "ETH", t: number): ExchangeSnapshot
   ];
 }
 
-function replayAsset(data: RawAssetData, marketWide: MarketWideData): DayRecord[] {
+/**
+ * `windowStart`/`windowEnd` (ms, inclusive/exclusive) restrict WHICH days get
+ * evaluated and reported — not what data backs each day's computation. Every
+ * percentile/prior-history read below still draws on the FULL underlying
+ * series regardless of the window, exactly as a live, non-windowed run
+ * would: a rolling window asks "how did the signals behave during this
+ * stretch," using the model's normal history-relative math, not an
+ * artificially amnesiac version of it. `undefined` (the default) evaluates
+ * every day the burn-in/buffer bounds allow — byte-for-byte the same as
+ * before this parameter existed, so the single-window `backtest` script
+ * needs zero changes.
+ */
+export function replayAsset(
+  data: RawAssetData,
+  marketWide: MarketWideData,
+  windowStart?: number,
+  windowEnd?: number
+): DayRecord[] {
   const { asset, futuresKlines, spotKlines, fundingRate, oiHistory, longShortHistory, etfFlows } = data;
   const records: DayRecord[] = [];
 
   const dailyCandles = rollUpToDaily(futuresKlines);
+  // Date-string -> index, so each evaluated day can look up its OWN candle
+  // (not a prior one) for regime classification — describing conditions AS
+  // OF t is not lookahead; only forward returns (computed from data AFTER
+  // t) would be.
+  const dailyCandleIndex = new Map(dailyCandles.map((c, idx) => [new Date(c.t).toISOString().slice(0, 10), idx]));
   const lastEvalIndex = oiHistory.length - 1 - FORWARD_BUFFER_DAYS;
 
   for (let i = OI_BURN_IN_DAYS; i <= lastEvalIndex; i++) {
     const t = oiHistory[i].t;
+    if (windowStart !== undefined && t < windowStart) continue;
+    if (windowEnd !== undefined && t >= windowEnd) continue;
     const priorOi = oiHistory.slice(0, i).map((p) => oiPoint(p.t, p.oiUsd));
     const priorFunding = fundingRate.filter((p) => p.t < t).map((p) => fundingPoint(p.t, p.fundingRatePct));
 
@@ -437,6 +464,10 @@ function replayAsset(data: RawAssetData, marketWide: MarketWideData): DayRecord[
       now: t,
     });
 
+    const candleIdx = dailyCandleIndex.get(new Date(t).toISOString().slice(0, 10));
+    const regime = candleIdx !== undefined ? classifyRegime(dailyCandles, candleIdx) : null;
+    const regimeTags = regime ? regimeTagsToStrings(regime) : [];
+
     records.push({
       asset,
       date: new Date(t).toISOString().slice(0, 10),
@@ -458,6 +489,7 @@ function replayAsset(data: RawAssetData, marketWide: MarketWideData): DayRecord[
       biasHealthScore: bias?.healthScore ?? null,
       categories: (bias?.categories ?? []).map((c) => ({ category: c.category, score: c.score, verdict: c.verdict })),
       metrics: metricVerdicts.map((m) => ({ id: m.id, verdict: m.verdict })),
+      regimeTags,
       forwardReturn1h: forwardReturn(futuresKlines, t, 1 * 3_600_000, 30 * 60_000),
       forwardReturn4h: forwardReturn(futuresKlines, t, 4 * 3_600_000, 30 * 60_000),
       forwardReturn1d: forwardReturn(futuresKlines, t, 1 * DAY_MS, 3 * 3_600_000),
@@ -494,4 +526,11 @@ function main() {
   console.log(`[run] wrote ${allRecords.length} total day-records to scripts/backtest/data/results.json`);
 }
 
-main();
+// Guarded, not unconditional: rolling.ts imports `replayAsset` from this
+// module, and an unconditional call here would run this file's OWN full
+// unbounded replay (plus overwrite results.json) as a side effect of that
+// import — confirmed happening before this guard was added. Same pattern
+// already used in combinations.ts/weightReview.ts.
+if (process.argv[1] && process.argv[1].endsWith("run.ts")) {
+  main();
+}

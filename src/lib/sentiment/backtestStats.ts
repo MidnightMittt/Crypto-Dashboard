@@ -6,9 +6,22 @@ import { HoldingPeriod } from "@/lib/signals/hypothesis";
  * Lookup layer for `scripts/backtest/`'s output. Deliberately separate from
  * `positioning.ts`/`marketThesis.ts`: those are the pure functions the
  * backtest exists to evaluate, so they must not reference their own
- * evaluation. This module only reads the static, committed
- * `src/data/backtestStats.json` snapshot and answers "does a stat exist for
- * this reading, and is it thick enough to state."
+ * evaluation.
+ *
+ * TWO SEPARATE FILES, ON PURPOSE — not two views of one blob:
+ *  - `src/data/backtestStats.json` (typed `BacktestStats` below) is small
+ *    (squeeze/thesis/categories/biasVerdict only, a few KB) and is the ONE
+ *    live components import directly, so it ships in the client bundle.
+ *  - `src/data/backtestResearch.json` (typed `BacktestResearch` below) holds
+ *    everything else — hypotheses, combinations, regime crosstabs, rolling
+ *    windows — which is genuinely large (400+ KB) and, as of this writing,
+ *    read by NOTHING live. Before this split, both lived in one file and
+ *    that whole 630KB blob was shipped to every visitor's browser via the
+ *    3 live components' `import backtestStats from "@/data/backtestStats.json"`
+ *    even though they only ever read a few KB of it — confirmed directly:
+ *    the production bundle's First Load JS jumped from 246KB to 309KB the
+ *    moment rollingWindows/metricRegimeCrosstab were added to the single
+ *    file. Splitting isn't just tidiness, it fixes a real regression.
  *
  * The bucket definitions live here, not duplicated in report.ts, so the
  * live lookup and the report generator can never drift apart — report.ts
@@ -24,6 +37,13 @@ export interface RegimeStat {
   fadeHitRatePct: number | null;
 }
 
+/**
+ * The small, live-bundled snapshot — `src/data/backtestStats.json`.
+ * Every field here is read by at least one live component today
+ * (`lookupSqueezeStat`/`lookupCategoryStat`/`lookupBiasVerdictStat`); keep
+ * it that way. Anything not read live belongs in `BacktestResearch` below,
+ * not here.
+ */
 export interface BacktestStats {
   generatedAt: number;
   coverageStart: string;
@@ -41,6 +61,20 @@ export interface BacktestStats {
   categories: Partial<Record<`${Category}:${Verdict}`, RegimeStat>>;
   /** The overall marketBias verdict (not marketThesis's regime), bucketed the same way. */
   biasVerdict: Partial<Record<Verdict, RegimeStat>>;
+}
+
+/**
+ * The large, research-only snapshot — `src/data/backtestResearch.json`.
+ * NOT imported by any live component; reserved for the internal-only
+ * Signal Research Center page (a future server-rendered `/internal/*`
+ * route, never a client bundle import) to read directly. Committed to the
+ * repo the same way `backtestStats.json` is, just via a separate file so
+ * its size never touches what ships to a normal visitor's browser.
+ */
+export interface BacktestResearch {
+  generatedAt: number;
+  coverageStart: string;
+  coverageEnd: string;
   /**
    * The hypothesis-testing framework's per-metric, per-holding-period stats
    * (src/lib/signals/hypothesis.ts). Only populated for metric ids with a
@@ -56,15 +90,53 @@ export interface BacktestStats {
    * opening a second file.
    */
   combinations: CombinationStat[];
+  /**
+   * Bare regime-tag breakdown (scripts/backtest/regimes.ts): how price
+   * moved on days carrying each independent trend/volatility/range-bound
+   * tag, with NO metric crossed in — e.g. "on Bull-tagged days, mean 7d
+   * return was X%". A separate, coarser question from metricRegimeCrosstab
+   * below, which asks "how did THIS metric specifically perform when this
+   * tag was present."
+   */
+  regimes: Partial<Record<string, RegimeStat>>;
+  /**
+   * Per-metric, per-regime-tag, per-holding-period stats — the same
+   * HypothesisStat shape `hypotheses` already uses, just sliced by an
+   * additional regime-tag filter before scoring (regimeOccurrencesFor in
+   * report.ts; no new statistics code, purely a pre-filter on the same
+   * summarizeOccurrences()). Key: `${metricId}:${regimeTag}:${HoldingPeriod}`,
+   * e.g. "funding:bull:24h". Only populated for metrics with a real
+   * historical source, same restriction `hypotheses` already has.
+   */
+  metricRegimeCrosstab: Partial<Record<`${string}:${string}:${HoldingPeriod}`, HypothesisStat>>;
+  /**
+   * The SAME top-level {squeeze, thesis, categories, biasVerdict,
+   * hypotheses} stat shapes, recomputed separately per overlapping
+   * historical window (scripts/backtest/rolling.ts) — the direct answer to
+   * "is this edge real across market cycles, or was it one lucky/unlucky
+   * stretch." Optional: only present when `npm run backtest:rolling` has
+   * been run; the standard `npm run backtest` doesn't populate it, since
+   * it's a slower, opt-in deeper pass, not part of the default flow.
+   */
+  rollingWindows?: Record<string, RollingWindowStats>;
+}
+
+export interface RollingWindowStats {
+  windowStart: string;
+  windowEnd: string;
+  squeeze: Record<string, RegimeStat>;
+  thesis: Partial<Record<MarketRegime, RegimeStat>>;
+  categories: Partial<Record<`${Category}:${Verdict}`, RegimeStat>>;
+  biasVerdict: Partial<Record<Verdict, RegimeStat>>;
+  hypotheses: Partial<Record<`${string}:${HoldingPeriod}`, HypothesisStat>>;
 }
 
 export interface CombinationStat {
   /**
    * Category ids in the subset. Typed as `string[]`, not `Category[]`: this
-   * gets read back from committed JSON (via `@/data/backtestStats.json`),
-   * and a literal union can't survive a JSON round-trip — the values ARE
-   * always valid Category ids, this just doesn't ask the type system to
-   * take that on faith.
+   * gets read back from committed JSON, and a literal union can't survive a
+   * JSON round-trip — the values ARE always valid Category ids, this just
+   * doesn't ask the type system to take that on faith.
    */
   subset: string[];
   label: string;
@@ -143,12 +215,6 @@ export function lookupThesisStat(stats: BacktestStats, regime: MarketRegime): Re
   return stat && stat.n >= MIN_SAMPLE_N ? stat : null;
 }
 
-/**
- * Not yet wired into any UI component — this backtest pass only establishes
- * that the category engine CAN be validated, and produces the first real
- * numbers. Whether/how to surface them is a separate decision, same
- * discipline the original squeeze/thesis backtest was built under.
- */
 export function lookupCategoryStat(stats: BacktestStats, category: Category, verdict: Verdict): RegimeStat | null {
   const stat = stats.categories[`${category}:${verdict}`];
   return stat && stat.n >= MIN_SAMPLE_N ? stat : null;
@@ -160,16 +226,35 @@ export function lookupBiasVerdictStat(stats: BacktestStats, verdict: Verdict): R
 }
 
 /**
- * Not yet wired into any UI component — same status as lookupCategoryStat
- * when it was first built. Metric-level cards are the natural place for
- * this ("historically, when this metric read bullish over the next 24h...")
- * but that wiring is a separate decision from building the stat itself.
+ * Reads from `BacktestResearch`, not `BacktestStats` — not yet wired into
+ * any UI component. Metric-level cards are the natural place for this
+ * ("historically, when this metric read bullish over the next 24h...") but
+ * that wiring is a separate decision from building the stat itself, and
+ * when it happens it should go through a server component reading
+ * `backtestResearch.json` directly, never a client-bundled import.
  */
 export function lookupHypothesisStat(
-  stats: BacktestStats,
+  research: BacktestResearch,
   metricId: string,
   holdingPeriod: HoldingPeriod
 ): HypothesisStat | null {
-  const stat = stats.hypotheses[`${metricId}:${holdingPeriod}`];
+  const stat = research.hypotheses[`${metricId}:${holdingPeriod}`];
+  return stat && stat.n >= MIN_SAMPLE_N ? stat : null;
+}
+
+/** Reads from `BacktestResearch` — same not-yet-wired status as lookupHypothesisStat. */
+export function lookupRegimeStat(research: BacktestResearch, tag: string): RegimeStat | null {
+  const stat = research.regimes[tag];
+  return stat && stat.n >= MIN_SAMPLE_N ? stat : null;
+}
+
+/** Reads from `BacktestResearch` — same not-yet-wired status as lookupHypothesisStat. */
+export function lookupMetricRegimeStat(
+  research: BacktestResearch,
+  metricId: string,
+  tag: string,
+  holdingPeriod: HoldingPeriod
+): HypothesisStat | null {
+  const stat = research.metricRegimeCrosstab[`${metricId}:${tag}:${holdingPeriod}`];
   return stat && stat.n >= MIN_SAMPLE_N ? stat : null;
 }

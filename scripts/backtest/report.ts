@@ -1,7 +1,15 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { SQUEEZE_SCORE_BUCKETS, RegimeStat, BacktestStats, HypothesisStat, MIN_SAMPLE_N } from "../../src/lib/sentiment/backtestStats";
+import {
+  SQUEEZE_SCORE_BUCKETS,
+  RegimeStat,
+  BacktestStats,
+  BacktestResearch,
+  HypothesisStat,
+  MIN_SAMPLE_N,
+  RollingWindowStats,
+} from "../../src/lib/sentiment/backtestStats";
 import { MarketRegime } from "../../src/types/market";
 import { SIGNAL_HYPOTHESES, HOLDING_PERIODS, HoldingPeriod } from "../../src/lib/signals/hypothesis";
 import { summarizeOccurrences, Occurrence } from "./metrics";
@@ -27,6 +35,7 @@ import { buildWeightReview, WeightReviewDayRecord } from "./weightReview";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, "data");
 const STATS_OUT_PATH = path.join(__dirname, "..", "..", "src", "data", "backtestStats.json");
+const RESEARCH_OUT_PATH = path.join(__dirname, "..", "..", "src", "data", "backtestResearch.json");
 
 interface DayRecord {
   asset: string;
@@ -38,11 +47,16 @@ interface DayRecord {
   biasVerdict: string | null;
   categories: Array<{ category: string; score: number; verdict: string }>;
   metrics: Array<{ id: string; verdict: string }>;
+  regimeTags: string[];
   forwardReturn1h: number | null;
   forwardReturn4h: number | null;
   forwardReturn1d: number | null;
   forwardReturn3d: number | null;
   forwardReturn7d: number | null;
+}
+
+interface RollingDayRecord extends DayRecord {
+  windowLabel: string;
 }
 
 function mean(xs: number[]): number | null {
@@ -230,6 +244,129 @@ function hypothesesSection(records: DayRecord[]): {
   return { markdown: rows.join("\n"), stats };
 }
 
+/** Every tag classifyRegime/regimeTagsToStrings can produce — see regimes.ts. Listed explicitly here rather than derived from the data, so a tag with zero occurrences this run still shows as "0" instead of silently vanishing from the table. */
+const ALL_REGIME_TAGS = ["bull", "bear", "neutral", "high-vol", "low-vol", "normal-vol", "range-bound"];
+
+/**
+ * Bare regime-tag breakdown — no metric crossed in, just "how did price move
+ * on days carrying this tag." Answers the coarsest version of item 5 in the
+ * reprioritized backtesting spec: does the regime ITSELF carry information.
+ */
+function regimesSection(records: DayRecord[]): { markdown: string; stats: Partial<Record<string, RegimeStat>> } {
+  const rows: string[] = ["| Regime tag | N | Mean 1d | Mean 3d | Mean 7d |", "|---|---|---|---|---|"];
+  const stats: Partial<Record<string, RegimeStat>> = {};
+
+  for (const tag of ALL_REGIME_TAGS) {
+    const bucket = records.filter((r) => r.regimeTags.includes(tag));
+    const stat = buildRegimeStat(bucket);
+    stats[tag] = stat;
+    rows.push(`| ${tag} | ${bucket.length} | ${fmt(stat.mean1dPct)} | ${fmt(stat.mean3dPct)} | ${fmt(stat.mean7dPct)} |`);
+  }
+
+  return { markdown: rows.join("\n"), stats };
+}
+
+/** Same shape as occurrencesFor, plus a regime-tag pre-filter — no new statistics code, `summarizeOccurrences` is still the only thing that scores anything. */
+function regimeOccurrencesFor(records: DayRecord[], metricId: string, hp: HoldingPeriod, tag: string): Occurrence[] {
+  const field = holdingPeriodField(hp);
+  const occurrences: Occurrence[] = [];
+  for (const r of records) {
+    if (!r.regimeTags.includes(tag)) continue;
+    const m = r.metrics.find((x) => x.id === metricId);
+    if (!m) continue;
+    occurrences.push({ t: r.t, verdict: m.verdict as Occurrence["verdict"], forwardReturnPct: r[field] });
+  }
+  return occurrences;
+}
+
+/**
+ * Per-metric, per-regime-tag stats — item 5's actual ask ("report signal
+ * performance separately for each regime"), not just the bare regime read
+ * above. Every (metric x tag x holding period) combination is computed and
+ * stored in `stats` regardless of sample size (so a future UI can decide
+ * for itself), but the printed markdown table is limited to 24h — 10
+ * metrics x 7 tags x 4 holding periods is 280 rows, unreadable in full; 24h
+ * alone is still 70 and already makes the point.
+ */
+function metricRegimeCrosstabSection(records: DayRecord[]): {
+  markdown: string;
+  stats: Partial<Record<`${string}:${string}:${HoldingPeriod}`, HypothesisStat>>;
+} {
+  const rows: string[] = ["| Metric | Regime | N | Win rate | Mean | p-value |", "|---|---|---|---|---|---|"];
+  const stats: Partial<Record<`${string}:${string}:${HoldingPeriod}`, HypothesisStat>> = {};
+
+  for (const h of SIGNAL_HYPOTHESES) {
+    if (!h.hasHistoricalSource) continue;
+    for (const tag of ALL_REGIME_TAGS) {
+      for (const hp of HOLDING_PERIODS) {
+        const occurrences = regimeOccurrencesFor(records, h.id, hp, tag);
+        const stat = summarizeOccurrences(occurrences, MIN_SAMPLE_N);
+        stats[`${h.id}:${tag}:${hp}`] = stat;
+
+        if (hp !== "24h") continue;
+        if (stat.n < MIN_SAMPLE_N) {
+          rows.push(`| ${h.label} | ${tag} | ${stat.n} | insufficient data | | |`);
+          continue;
+        }
+        rows.push(
+          `| ${h.label} | ${tag} | ${stat.n} | ${stat.winRate === null ? "—" : `${(stat.winRate * 100).toFixed(0)}%`} | ${fmt(stat.meanReturnPct)} | ${stat.significance ? stat.significance.pValue.toFixed(4) : "—"} |`
+        );
+      }
+    }
+  }
+
+  return { markdown: rows.join("\n"), stats };
+}
+
+/**
+ * Recomputes the SAME top-level sections (squeeze/thesis/categories/
+ * biasVerdict/hypotheses — every function above, unmodified) separately per
+ * overlapping historical window, so a signal's stats can be compared across
+ * different stretches of history rather than reported as one number that
+ * might just describe one lucky/unlucky period. Optional: returns null
+ * when `npm run backtest:rolling` hasn't been run (resultsRolling.json
+ * doesn't exist) — the standard `npm run backtest` doesn't require it.
+ */
+function rollingWindowsSection(): { markdown: string; stats: Record<string, RollingWindowStats> } | null {
+  const rollingPath = path.join(DATA_DIR, "resultsRolling.json");
+  if (!fs.existsSync(rollingPath)) return null;
+
+  const rollingRecords: RollingDayRecord[] = JSON.parse(fs.readFileSync(rollingPath, "utf8"));
+  const labels = Array.from(new Set(rollingRecords.map((r) => r.windowLabel)));
+
+  const stats: Record<string, RollingWindowStats> = {};
+  const sections: string[] = [];
+
+  for (const label of labels) {
+    const windowRecords = rollingRecords.filter((r) => r.windowLabel === label);
+    const dates = windowRecords.map((r) => r.date).sort();
+
+    const squeeze = squeezeSection(windowRecords);
+    const thesis = thesisSection(windowRecords);
+    const categories = categoriesSection(windowRecords);
+    const biasVerdict = biasVerdictSection(windowRecords);
+    const hypotheses = hypothesesSection(windowRecords);
+
+    stats[label] = {
+      windowStart: dates[0],
+      windowEnd: dates[dates.length - 1],
+      squeeze: squeeze.stats,
+      thesis: thesis.stats,
+      categories: categories.stats,
+      biasVerdict: biasVerdict.stats,
+      hypotheses: hypotheses.stats,
+    };
+
+    // Markdown stays lean (biasVerdict + hypotheses only) even though the
+    // JSON carries the full stat set above — the point of printing this per
+    // window is "does the headline read and the per-metric win rates hold
+    // steady," not reproducing every squeeze/thesis/category table 6 times.
+    sections.push(`### ${label} (${windowRecords.length} day-records)\n\n${biasVerdict.markdown}\n\n${hypotheses.markdown}`);
+  }
+
+  return { markdown: sections.join("\n\n"), stats };
+}
+
 function main() {
   const resultsPath = path.join(DATA_DIR, "results.json");
   if (!fs.existsSync(resultsPath)) {
@@ -249,16 +386,21 @@ function main() {
   const hypotheses = hypothesesSection(records);
   const combinations = buildCombinations(records as CombinationDayRecord[]);
   const weightReview = buildWeightReview(records as WeightReviewDayRecord[]);
+  const regimes = regimesSection(records);
+  const metricRegimeCrosstab = metricRegimeCrosstabSection(records);
+  const rolling = rollingWindowsSection();
 
   const header = `# Backtest Report
 
 Generated ${new Date().toISOString()}
 
 **Coverage:** ${assets.join(", ")}, ${coverageStart} to ${coverageEnd} (${records.length} evaluated days total).
-Window length is bounded by OKX's open-interest and long/short history, which is hard-capped at
-180 daily points with no pagination — this covers roughly one market stretch, not multiple
-cycles. Treat everything below as descriptive statistics over that one window, not a validated,
-out-of-sample probability.
+Open interest and long/short ratio now come from Coinalyze (migrated off OKX's rubik endpoint,
+which was hard-capped at 180 daily points with no pagination) — OI reaches back to roughly
+2022-06-25 and long/short to roughly 2020-05-31 as of the last fetch, both a rolling retention
+window rather than a fixed archive, so the exact start date creeps forward on every future
+re-fetch. Treat everything below as descriptive statistics over the window actually on disk right
+now, not a validated, out-of-sample probability.
 
 **Evidence included:** funding rate, funding percentile, open interest percentile/change,
 long/short ratio, price change, basis vs. spot — all of squeezeRisk's inputs, and 0.62 of
@@ -271,8 +413,8 @@ renormalized (the same "missing source" behavior buildMarketThesis already has f
 
 **Methodology note:** funding rate is Binance's own rate, used as a single-venue proxy — the
 live dashboard's OI-weighted composite across many venues isn't reconstructable historically.
-Open interest and long/short ratio are daily-resolution (OKX's native granularity for this
-endpoint); the live dashboard samples roughly every 5 minutes. All inputs for day *t* are built
+Open interest and long/short ratio are daily-resolution (Coinalyze's native granularity for these
+endpoints); the live dashboard samples roughly every 5 minutes. All inputs for day *t* are built
 only from data strictly before *t*, matching this app's own live "prior series" convention — no
 lookahead.
 
@@ -318,13 +460,38 @@ ${combinations.markdown}
 ## Weight Review (proposal only — no file below this line is touched by any script)
 
 ${weightReview.markdown}
-`;
+
+## Market Regimes
+
+Every day tagged with independent trend (bull/bear/neutral), volatility (high/low/normal), and
+range-bound flags — see scripts/backtest/regimes.ts for the exact thresholds, each checked
+against this app's own real trailing-return/volatility distributions rather than guessed. A day
+can carry more than one tag (e.g. bull + high-vol).
+
+${regimes.markdown}
+
+## Per-Metric, Per-Regime Performance (24h holding period)
+
+The same hypothesis-testing measurement as the section above, sliced by regime tag — does this
+metric perform differently in a bull market than a bear market, in high vol than low vol. Every
+(metric x tag x holding period) combination is computed and stored in backtestStats.json
+regardless of N; this table shows 24h only for readability.
+
+${metricRegimeCrosstab.markdown}
+${
+  rolling
+    ? `\n## Rolling Windows\n\nThe same overall-bias-verdict and per-metric hypothesis stats above, recomputed separately per overlapping historical window (run \`npm run backtest:rolling\` to regenerate) — the direct answer to "is this edge real across market cycles, or was it one lucky/unlucky stretch."\n\n${rolling.markdown}\n`
+    : `\n## Rolling Windows\n\nNot generated this run — run \`npm run backtest:rolling\` to produce scripts/backtest/data/resultsRolling.json first, then re-run \`npm run backtest\`'s report step.\n`
+}`;
 
   const report = header + body;
   fs.writeFileSync(path.join(DATA_DIR, "..", "report.md"), report);
   console.log(report);
   console.log(`[report] wrote scripts/backtest/report.md`);
 
+  // Small, live-bundled snapshot — only what the 3 live components actually
+  // read. Keep this file small on purpose; see backtestStats.ts's header
+  // comment for why the split exists.
   const statsOut: BacktestStats = {
     generatedAt: Date.now(),
     coverageStart,
@@ -333,12 +500,25 @@ ${weightReview.markdown}
     thesis: thesis.stats,
     categories: categories.stats,
     biasVerdict: biasVerdict.stats,
-    hypotheses: hypotheses.stats,
-    combinations: combinations.results,
   };
   fs.mkdirSync(path.dirname(STATS_OUT_PATH), { recursive: true });
   fs.writeFileSync(STATS_OUT_PATH, JSON.stringify(statsOut, null, 2));
   console.log(`[report] wrote src/data/backtestStats.json`);
+
+  // Large, research-only snapshot — never imported by a live component.
+  const researchOut: BacktestResearch = {
+    generatedAt: Date.now(),
+    coverageStart,
+    coverageEnd,
+    hypotheses: hypotheses.stats,
+    combinations: combinations.results,
+    regimes: regimes.stats,
+    metricRegimeCrosstab: metricRegimeCrosstab.stats,
+    ...(rolling ? { rollingWindows: rolling.stats } : {}),
+  };
+  fs.mkdirSync(path.dirname(RESEARCH_OUT_PATH), { recursive: true });
+  fs.writeFileSync(RESEARCH_OUT_PATH, JSON.stringify(researchOut, null, 2));
+  console.log(`[report] wrote src/data/backtestResearch.json`);
 }
 
 main();
