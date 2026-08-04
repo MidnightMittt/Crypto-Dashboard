@@ -9,12 +9,15 @@ import {
   HypothesisStat,
   MIN_SAMPLE_N,
   RollingWindowStats,
+  MetricComboStat,
+  SignalResearchReport,
 } from "../../src/lib/sentiment/backtestStats";
 import { MarketRegime } from "../../src/types/market";
 import { SIGNAL_HYPOTHESES, HOLDING_PERIODS, HoldingPeriod } from "../../src/lib/signals/hypothesis";
 import { summarizeOccurrences, Occurrence } from "./metrics";
 import { buildCombinations, CombinationDayRecord } from "./combinations";
 import { buildWeightReview, WeightReviewDayRecord } from "./weightReview";
+import { buildMetricCombinations, MetricComboDayRecord } from "./metricCombinations";
 
 /**
  * Aggregates run.ts's per-day output into descriptive statistics. These are
@@ -367,6 +370,93 @@ function rollingWindowsSection(): { markdown: string; stats: Record<string, Roll
   return { markdown: sections.join("\n\n"), stats };
 }
 
+/** Among a metric's 4 holding-period buckets (N >= MIN_SAMPLE_N, real win rate), which had the best/worst win rate. */
+function bestWorstHoldingPeriod(
+  hypothesesStats: Partial<Record<`${string}:${HoldingPeriod}`, HypothesisStat>>,
+  metricId: string
+): { best: { holdingPeriod: string; winRate: number } | null; worst: { holdingPeriod: string; winRate: number } | null } {
+  const candidates = HOLDING_PERIODS.map((hp) => ({ hp, stat: hypothesesStats[`${metricId}:${hp}`] })).filter(
+    (c): c is { hp: HoldingPeriod; stat: HypothesisStat } => !!c.stat && c.stat.n >= MIN_SAMPLE_N && c.stat.winRate !== null
+  );
+  if (candidates.length === 0) return { best: null, worst: null };
+  const sorted = [...candidates].sort((a, b) => b.stat.winRate! - a.stat.winRate!);
+  return {
+    best: { holdingPeriod: sorted[0].hp, winRate: sorted[0].stat.winRate! },
+    worst: { holdingPeriod: sorted[sorted.length - 1].hp, winRate: sorted[sorted.length - 1].stat.winRate! },
+  };
+}
+
+/** Same idea as bestWorstHoldingPeriod, sliced across regime tags at 24h instead of holding periods. */
+function bestWorstRegime(
+  metricRegimeStats: Partial<Record<`${string}:${string}:${HoldingPeriod}`, HypothesisStat>>,
+  metricId: string
+): { best: { tag: string; winRate: number } | null; worst: { tag: string; winRate: number } | null } {
+  const candidates = ALL_REGIME_TAGS.map((tag) => ({ tag, stat: metricRegimeStats[`${metricId}:${tag}:24h`] })).filter(
+    (c): c is { tag: string; stat: HypothesisStat } => !!c.stat && c.stat.n >= MIN_SAMPLE_N && c.stat.winRate !== null
+  );
+  if (candidates.length === 0) return { best: null, worst: null };
+  const sorted = [...candidates].sort((a, b) => b.stat.winRate! - a.stat.winRate!);
+  return {
+    best: { tag: sorted[0].tag, winRate: sorted[0].stat.winRate! },
+    worst: { tag: sorted[sorted.length - 1].tag, winRate: sorted[sorted.length - 1].stat.winRate! },
+  };
+}
+
+/** Combo entries (named, or automatic AND BH-significant) at 24h that include this metric, most significant first, capped at 5 so one metric's report can't balloon. */
+function interactionsFor(combos: MetricComboStat[], metricId: string): MetricComboStat[] {
+  return combos
+    .filter((c) => c.holdingPeriod === "24h" && c.metricIds.includes(metricId) && (c.isNamed || c.fdr?.significant))
+    .sort((a, b) => (a.stat.significance?.pValue ?? 1) - (b.stat.significance?.pValue ?? 1))
+    .slice(0, 5);
+}
+
+/**
+ * One assembled report per metric — pure aggregation of hypothesesSection,
+ * metricRegimeCrosstabSection, and metricCombinations' already-computed
+ * output. No new statistics anywhere in this function; it only reads
+ * max/min out of stats built earlier in this same file.
+ */
+function signalResearchSection(
+  hypothesesStats: Partial<Record<`${string}:${HoldingPeriod}`, HypothesisStat>>,
+  metricRegimeStats: Partial<Record<`${string}:${string}:${HoldingPeriod}`, HypothesisStat>>,
+  combos: MetricComboStat[]
+): { markdown: string; stats: Record<string, SignalResearchReport> } {
+  const stats: Record<string, SignalResearchReport> = {};
+  const rows: string[] = [
+    "| Metric | 24h N | 24h Win Rate | Best Holding | Worst Holding | Best Regime | Worst Regime | Interactions |",
+    "|---|---|---|---|---|---|---|---|",
+  ];
+
+  for (const h of SIGNAL_HYPOTHESES) {
+    const rawHeadline = hypothesesStats[`${h.id}:24h`] ?? null;
+    const headline = rawHeadline && rawHeadline.n >= MIN_SAMPLE_N ? rawHeadline : null;
+    const { best: bestHp, worst: worstHp } = bestWorstHoldingPeriod(hypothesesStats, h.id);
+    const { best: bestRegime, worst: worstRegime } = bestWorstRegime(metricRegimeStats, h.id);
+    const interactions = interactionsFor(combos, h.id);
+
+    stats[h.id] = {
+      metricId: h.id,
+      label: h.label,
+      hasHistoricalSource: h.hasHistoricalSource,
+      headline,
+      bestHoldingPeriod: bestHp,
+      worstHoldingPeriod: worstHp,
+      bestRegime,
+      worstRegime,
+      interactions,
+    };
+
+    if (!h.hasHistoricalSource) continue; // guaranteed-empty row, skip rather than print all dashes
+
+    const pctStr = (v: { winRate: number } | null, extra: string) => (v ? `${extra} (${(v.winRate * 100).toFixed(0)}%)` : "—");
+    rows.push(
+      `| ${h.label} | ${rawHeadline?.n ?? 0} | ${headline?.winRate !== null && headline?.winRate !== undefined ? `${(headline.winRate * 100).toFixed(0)}%` : "—"} | ${pctStr(bestHp, bestHp?.holdingPeriod ?? "")} | ${pctStr(worstHp, worstHp?.holdingPeriod ?? "")} | ${pctStr(bestRegime, bestRegime?.tag ?? "")} | ${pctStr(worstRegime, worstRegime?.tag ?? "")} | ${interactions.length} |`
+    );
+  }
+
+  return { markdown: rows.join("\n"), stats };
+}
+
 function main() {
   const resultsPath = path.join(DATA_DIR, "results.json");
   if (!fs.existsSync(resultsPath)) {
@@ -389,6 +479,8 @@ function main() {
   const regimes = regimesSection(records);
   const metricRegimeCrosstab = metricRegimeCrosstabSection(records);
   const rolling = rollingWindowsSection();
+  const metricCombinations = buildMetricCombinations(records as MetricComboDayRecord[]);
+  const signalResearch = signalResearchSection(hypotheses.stats, metricRegimeCrosstab.stats, metricCombinations.results);
 
   const header = `# Backtest Report
 
@@ -482,7 +574,27 @@ ${
   rolling
     ? `\n## Rolling Windows\n\nThe same overall-bias-verdict and per-metric hypothesis stats above, recomputed separately per overlapping historical window (run \`npm run backtest:rolling\` to regenerate) — the direct answer to "is this edge real across market cycles, or was it one lucky/unlucky stretch."\n\n${rolling.markdown}\n`
     : `\n## Rolling Windows\n\nNot generated this run — run \`npm run backtest:rolling\` to produce scripts/backtest/data/resultsRolling.json first, then re-run \`npm run backtest\`'s report step.\n`
-}`;
+}
+
+## Metric Combinations
+
+Named, pre-registered combinations (specified before this file was written, exempt from multiple-
+testing correction), plus a bounded automatic scan of all C(15,2)=105 metric pairs with a real
+Benjamini-Hochberg FDR correction — see scripts/backtest/metricCombinations.ts for exactly why
+these two tiers are treated differently.
+
+${metricCombinations.markdown}
+
+## Per-Signal Research Report
+
+One row per metric, entirely aggregated from the sections above — no new computation. "Best/Worst
+Holding" and "Best/Worst Regime" only consider buckets that clear N >= ${MIN_SAMPLE_N};
+"Interactions" counts named combos plus BH-significant automatic pairs at 24h that include this
+metric (see backtestResearch.json's \`signalResearch\` field for the full per-metric detail,
+including which specific combos).
+
+${signalResearch.markdown}
+`;
 
   const report = header + body;
   fs.writeFileSync(path.join(DATA_DIR, "..", "report.md"), report);
@@ -515,6 +627,8 @@ ${
     regimes: regimes.stats,
     metricRegimeCrosstab: metricRegimeCrosstab.stats,
     ...(rolling ? { rollingWindows: rolling.stats } : {}),
+    metricCombinations: metricCombinations.results,
+    signalResearch: signalResearch.stats,
   };
   fs.mkdirSync(path.dirname(RESEARCH_OUT_PATH), { recursive: true });
   fs.writeFileSync(RESEARCH_OUT_PATH, JSON.stringify(researchOut, null, 2));

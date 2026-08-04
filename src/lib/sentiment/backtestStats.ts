@@ -119,6 +119,47 @@ export interface BacktestResearch {
    * it's a slower, opt-in deeper pass, not part of the default flow.
    */
   rollingWindows?: Record<string, RollingWindowStats>;
+  /**
+   * Metric-level combination testing (scripts/backtest/metricCombinations.ts):
+   * 7 named, pre-registered combos (no correction) plus all C(15,2)=105
+   * automatic pairs at each holding period (Benjamini-Hochberg FDR
+   * corrected — see multipleTesting.ts). A RESEARCH ARTIFACT, same status
+   * as `combinations` above; nothing on the live site reads this field.
+   */
+  metricCombinations: MetricComboStat[];
+  /**
+   * One assembled report per metric — every field here is read straight
+   * from `hypotheses`/`metricRegimeCrosstab`/`metricCombinations` above,
+   * nothing new computed. Answers "what's the single most useful summary
+   * of this signal" without a human having to cross-reference three
+   * different sections by hand.
+   */
+  signalResearch: Record<string, SignalResearchReport>;
+}
+
+export interface SignalResearchReport {
+  metricId: string;
+  label: string;
+  hasHistoricalSource: boolean;
+  /** The metric's own headline stat at 24h — the horizon every other section treats as primary. Null if N < MIN_SAMPLE_N. */
+  headline: HypothesisStat | null;
+  bestHoldingPeriod: { holdingPeriod: string; winRate: number } | null;
+  worstHoldingPeriod: { holdingPeriod: string; winRate: number } | null;
+  bestRegime: { tag: string; winRate: number } | null;
+  worstRegime: { tag: string; winRate: number } | null;
+  /** Combo entries (named + BH-significant automatic) that include this metric, at 24h, most significant first. */
+  interactions: MetricComboStat[];
+}
+
+export interface MetricComboStat {
+  label: string;
+  metricIds: string[];
+  /** Always one of HOLDING_PERIODS; typed `string` for the same JSON-round-trip reason `CombinationStat.holdingPeriod` is. */
+  holdingPeriod: string;
+  isNamed: boolean;
+  stat: HypothesisStat;
+  /** Only present for automatic pairs (see file doc comment on metricCombinations.ts for why named combos are exempt). */
+  fdr?: { rank: number; significant: boolean };
 }
 
 export interface RollingWindowStats {
