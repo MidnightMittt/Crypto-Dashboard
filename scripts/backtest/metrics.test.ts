@@ -143,6 +143,33 @@ describe("signTestPValue", () => {
     expect(p).toBeGreaterThan(0);
     expect(p).toBeLessThanOrEqual(1);
   });
+
+  /**
+   * Regression test for a real bug: the raw-coefficient implementation
+   * (C(n,k) times 0.5**n, computed directly rather than in log space)
+   * silently produced NaN once real backtest sample sizes grew into the
+   * thousands after the CoinGlass/Coinalyze migration — C(2704,1352)
+   * overflows a double while 0.5**2704 underflows to 0, and Infinity * 0
+   * is NaN. `JSON.stringify(NaN)` is `null`, which then failed `tsc`
+   * against `HypothesisStat`'s non-nullable `pValue: number` — caught by
+   * the type checker on real production data, not by a synthetic test
+   * that happened to use a small N. N=2704 is the exact scale (basis vs
+   * spot's 24h bucket) that surfaced it.
+   */
+  it("stays finite and correct at N in the thousands (the exact scale that broke the old implementation)", () => {
+    const exactHalf = signTestPValue(2704, 1352);
+    expect(Number.isFinite(exactHalf)).toBe(true);
+    expect(exactHalf).toBeCloseTo(1, 10);
+
+    const skewed = signTestPValue(2704, 1800);
+    expect(Number.isFinite(skewed)).toBe(true);
+    expect(skewed).toBeGreaterThan(0);
+    expect(skewed).toBeLessThan(0.0001);
+
+    // Symmetry must still hold at this scale, same property already
+    // verified at N=20 above.
+    expect(signTestPValue(2704, 1800)).toBeCloseTo(signTestPValue(2704, 904), 10);
+  });
 });
 
 describe("testSignificance", () => {

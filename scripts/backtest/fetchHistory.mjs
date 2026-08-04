@@ -2,6 +2,9 @@ import { execSync } from "child_process";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import dotenv from "dotenv";
+
+dotenv.config({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", ".env.local") });
 
 /**
  * Downloads and caches the raw historical series the backtest replay harness
@@ -11,7 +14,7 @@ import { fileURLToPath } from "url";
  * of them have historical archives anyway — see the plan doc for the full
  * data-availability audit).
  *
- * Two sources, chosen because they were the only ones confirmed (by direct
+ * Three sources, chosen because they were the only ones confirmed (by direct
  * request, not documentation) to have real historical depth and no
  * geo-block from this environment:
  *
@@ -19,9 +22,19 @@ import { fileURLToPath } from "url";
  *    Separate infrastructure from the live trading API (which IS
  *    geo-blocked here, same 451 this app already works around elsewhere).
  *    Multi-year depth for klines and funding rate.
- *  - OKX's `rubik` stats endpoints — live, not geo-blocked, but capped at
- *    exactly 180 daily points with no pagination (`before`/`after` params
- *    are silently ignored). This is what bounds the whole backtest window.
+ *  - Coinalyze's history endpoints — used for open interest and long/short
+ *    ratio. REPLACES OKX's `rubik` endpoints, which were capped at exactly
+ *    180 daily points with no pagination and bounded the ENTIRE backtest
+ *    window to a few months regardless of how much Binance history existed.
+ *    Confirmed by a direct validation spike (not vendor marketing) before
+ *    switching: Binance's perpetual on Coinalyze goes back to 2022-06-25 for
+ *    open interest (~4.1 years) and 2020-05-31 for long/short ratio
+ *    (~6.2 years) — both look like a rolling retention window, not a fixed
+ *    archive, so re-running this fetch later will NOT reproduce the exact
+ *    same earliest date. Requires `COINALYZE_API_KEY` in `.env.local`
+ *    (free signup at coinalyze.net/account/api-key/).
+ *  - OKX's `rubik` stats endpoint — kept ONLY for the live dashboard's
+ *    current-value reads; no longer used for backtest history.
  *
  * Re-run with --refresh to force re-downloading months already cached.
  */
@@ -32,18 +45,27 @@ const REFRESH = process.argv.includes("--refresh");
 /*
  * Full months back, plus the elapsed days of the current month.
  *
- * Sized by the LONGEST moving average the replay needs, not by the
- * evaluation window. The OKX-bounded eval window starts ~5 months back, and
- * computing EMA200 on the first evaluated day needs 200 daily bars BEFORE
- * that — so ~7 months of runway on top. At the previous value of 7 the
- * EMA200 was null across most of the replay, silently giving the backtest a
- * different technical read than the live site.
+ * Sized by the LONGER of two constraints, not guessed:
+ *  1. Coinalyze's open-interest history — the new binding constraint on the
+ *     eval window after the OKX migration (open interest reaches back to
+ *     2022-06-25 as of the last check, ~49 months). Binance klines/funding
+ *     must reach back AT LEAST that far, or most of that OI depth has no
+ *     matching price/funding data and gets skipped by run.ts's `continue`
+ *     guards — silently wasting the whole point of the migration.
+ *  2. EMA200 runway: the first evaluated day needs 200 daily bars BEFORE it,
+ *     ~7 months of buffer on top of constraint 1 (this was the ONLY
+ *     constraint before the migration, when OKX's 180-day OI cap was
+ *     already the tighter bound).
+ * 49 + 7 ≈ 56, rounded up to 57 for margin — OI's own earliest date is a
+ * rolling retention window, not a fixed archive (confirmed by direct check),
+ * so it creeps forward on every future re-fetch; a `--refresh` run in a few
+ * months should not immediately fall short again.
  */
-const MONTHS_BACK = 14;
+const MONTHS_BACK = 57;
 
 const ASSETS = [
-  { asset: "BTC", symbol: "BTCUSDT", okxCcy: "BTC", sosoType: "us-btc-spot" },
-  { asset: "ETH", symbol: "ETHUSDT", okxCcy: "ETH", sosoType: "us-eth-spot" },
+  { asset: "BTC", symbol: "BTCUSDT", sosoType: "us-btc-spot" },
+  { asset: "ETH", symbol: "ETHUSDT", sosoType: "us-eth-spot" },
 ];
 
 function log(msg) {
@@ -109,6 +131,25 @@ function elapsedDaysThisMonth() {
 
 const pad2 = (n) => String(n).padStart(2, "0");
 
+/**
+ * Binance's spot-kline archive silently CHANGES timestamp precision partway
+ * through its history: recent months are microseconds, older months (at
+ * least back to 2021) are already milliseconds — the same archive endpoint,
+ * two different units, no version field to tell them apart. Discovered when
+ * the backtest window was extended past ~14 months and a chunk of "recent"
+ * data suddenly read as 1970 — a fixed "always divide by 1000" conversion
+ * (the previous approach, confirmed correct only against the recent window)
+ * silently wrecked every older row instead of erroring.
+ *
+ * Detected by magnitude, not by date: a millisecond Unix timestamp for any
+ * real trading date is 13 digits (~1e12–1e13); the same date in microseconds
+ * is 16 digits (~1e15–1e16) — three orders of magnitude apart, an
+ * unambiguous split with a wide margin on either side.
+ */
+function normalizeToMs(rawTimestamp) {
+  return rawTimestamp > 1e14 ? Math.round(rawTimestamp / 1000) : rawTimestamp;
+}
+
 function daysInMonth(year, month) {
   const out = [];
   const start = Date.UTC(year, month - 1, 1);
@@ -161,13 +202,73 @@ async function fetchSeries(label, monthlyUrlFor, dailyUrlFor, parseRow) {
   return rows;
 }
 
-async function fetchOkxRubik(path_, ccy, mapRow) {
-  const url = `https://www.okx.com/api/v5/rubik/stat/contracts/${path_}?ccy=${ccy}&period=1D`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`OKX ${path_} HTTP ${res.status}`);
-  const json = await res.json();
-  const rows = (json.data ?? []).map(mapRow).sort((a, b) => a.t - b.t);
-  return rows;
+const COINALYZE_BASE = "https://api.coinalyze.net/v1";
+
+function coinalyzeApiKey() {
+  const key = process.env.COINALYZE_API_KEY?.trim();
+  if (!key) {
+    throw new Error(
+      "COINALYZE_API_KEY not set in .env.local — required to fetch OI/long-short history. Free key at https://coinalyze.net/account/api-key/"
+    );
+  }
+  return key;
+}
+
+async function coinalyzeCall(path_, params) {
+  const qs = new URLSearchParams({ ...params, api_key: coinalyzeApiKey() });
+  const res = await fetch(`${COINALYZE_BASE}${path_}?${qs}`, { headers: { accept: "application/json" } });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Coinalyze ${path_} HTTP ${res.status}: ${text.slice(0, 200)}`);
+  }
+  return res.json();
+}
+
+let coinalyzeMarketsCache = null;
+
+/** Fetched once, shared across both assets — the market directory doesn't change per-asset. */
+async function coinalyzeMarkets() {
+  if (!coinalyzeMarketsCache) coinalyzeMarketsCache = await coinalyzeCall("/future-markets", {});
+  return coinalyzeMarketsCache;
+}
+
+/**
+ * Binance's USDT perpetual for this asset — chosen deliberately, not the
+ * first match found. Binance is the longest-running major venue Coinalyze
+ * redistributes, confirmed by direct check (scripts/backtest/coinalyzeSpike.ts,
+ * since deleted) to have the deepest OI/long-short history of any venue
+ * tested. Exchange code "A" is Coinalyze's own directory id for Binance,
+ * read back from the SAME /future-markets response the live coinalyze.ts
+ * provider already resolves symbols from — never hardcoded independently.
+ */
+async function coinalyzeBinancePerpSymbol(asset) {
+  const markets = await coinalyzeMarkets();
+  const match = markets.find(
+    (m) => m.is_perpetual && m.base_asset.toUpperCase() === asset && m.quote_asset.toUpperCase() === "USDT" && m.exchange === "A"
+  );
+  if (!match) throw new Error(`No Binance ${asset}/USDT perpetual found in Coinalyze's /future-markets`);
+  return match.symbol;
+}
+
+/**
+ * `from` is set far earlier than any exchange's real history (2016, before
+ * perpetual futures existed) so the response's own earliest point reveals
+ * the TRUE retention limit, rather than us guessing a start date and simply
+ * getting back exactly what we asked for — the same principle the OKX
+ * `before`/`after`-ignoring bug was caught with.
+ */
+async function fetchCoinalyzeHistory(path_, symbol, extraParams = {}) {
+  const fromSec = Math.floor(new Date("2016-01-01T00:00:00Z").getTime() / 1000);
+  const toSec = Math.floor(Date.now() / 1000);
+  const rows = await coinalyzeCall(path_, {
+    symbols: symbol,
+    interval: "daily",
+    from: String(fromSec),
+    to: String(toSec),
+    ...extraParams,
+  });
+  const row = rows.find((r) => r.symbol === symbol);
+  return row?.history ?? [];
 }
 
 /**
@@ -230,7 +331,7 @@ async function fetchEtfFlowsHistory(sosoType) {
   return rows;
 }
 
-async function fetchAsset({ asset, symbol, okxCcy, sosoType }) {
+async function fetchAsset({ asset, symbol, sosoType }) {
   log(`${asset}:`);
 
   /*
@@ -256,10 +357,11 @@ async function fetchAsset({ asset, symbol, okxCcy, sosoType }) {
     })
   );
 
-  // Spot klines: same columns, but timestamps are in MICROSECONDS in this
-  // archive vintage (confirmed against the futures archive's millisecond
-  // values for the same period — a factor-of-1000 mismatch that's easy to
-  // miss and silently misaligns every join against it).
+  // Spot klines: same columns, but the timestamp UNIT changes partway
+  // through history (microseconds recently, milliseconds further back) —
+  // see normalizeToMs's doc comment. Detected per-row, not assumed from a
+  // single "confirmed" period, since that's exactly what broke once the
+  // window extended past the vintage boundary.
   const spotKlines = await fetchSeries(
     "spot klines",
     (m) => `https://data.binance.vision/data/spot/monthly/klines/${symbol}/1h/${symbol}-1h-${m.year}-${pad2(m.month)}.zip`,
@@ -267,7 +369,7 @@ async function fetchAsset({ asset, symbol, okxCcy, sosoType }) {
     // volumeUsd (index 7, quote-denominated) added alongside close so the
     // backtest can compute spot-vs-perp turnover, the same way the live
     // spotVolume.ts provider reads a spot ticker's quote volume.
-    (cols) => ({ t: Math.round(Number(cols[0]) / 1000), close: Number(cols[4]), volumeUsd: Number(cols[7]) })
+    (cols) => ({ t: normalizeToMs(Number(cols[0])), close: Number(cols[4]), volumeUsd: Number(cols[7]) })
   );
 
   // Funding: [calc_time, funding_interval_hours, last_funding_rate], rate as
@@ -279,19 +381,37 @@ async function fetchAsset({ asset, symbol, okxCcy, sosoType }) {
     (cols) => ({ t: Number(cols[0]), fundingRatePct: Number(cols[2]) * 100 })
   );
 
-  // OKX rubik: [ts, oiUsd, volUsd] and [ts, longRatio] — both hard-capped at
-  // 180 daily points, no pagination possible. This is what bounds the whole
-  // replay window, regardless of how much Binance history was fetched above.
-  const oiHistory = await fetchOkxRubik("open-interest-volume", okxCcy, (row) => ({
-    t: Number(row[0]),
-    oiUsd: Number(row[1]),
-  }));
-  const longShortHistory = await fetchOkxRubik("long-short-account-ratio", okxCcy, (row) => ({
-    t: Number(row[0]),
-    ratio: Number(row[1]),
-  }));
-  log(`  OKX OI history: ${oiHistory.length} pts, ${oiHistory.length ? new Date(oiHistory[0].t).toISOString().slice(0, 10) : "—"} to ${oiHistory.length ? new Date(oiHistory[oiHistory.length - 1].t).toISOString().slice(0, 10) : "—"}`);
-  log(`  OKX long/short history: ${longShortHistory.length} pts`);
+  // Coinalyze: replaces OKX's rubik OI/long-short endpoints (180-day hard
+  // cap). Daily granularity, retention confirmed multi-year by direct check
+  // — see the header comment for the exact confirmed depths.
+  const coinalyzeSymbol = await coinalyzeBinancePerpSymbol(asset);
+
+  // /open-interest-history returns an OHLC-of-OI-value struct per day (OI is
+  // itself a continuously tracked series, so a "daily candle" of it is
+  // meaningful); CLOSE is used as "this day's OI reading" — the same
+  // end-of-day convention rollUpToDaily already uses for price candles
+  // elsewhere in this pipeline, kept consistent rather than picking a
+  // different statistic for a different series.
+  const oiHistoryRaw = await fetchCoinalyzeHistory("/open-interest-history", coinalyzeSymbol, {
+    convert_to_usd: "true",
+  });
+  const oiHistory = oiHistoryRaw
+    .filter((row) => Number.isFinite(row.c))
+    .map((row) => ({ t: row.t * 1000, oiUsd: row.c }))
+    .sort((a, b) => a.t - b.t);
+
+  // /long-short-ratio-history returns `r` (the ratio) directly per row, no
+  // OHLC struct — same field the live coinalyze.ts provider already reads
+  // (`latestLs?.r`) for its own long/short reading, so this can't drift from
+  // what "ratio" means on the live dashboard.
+  const longShortHistoryRaw = await fetchCoinalyzeHistory("/long-short-ratio-history", coinalyzeSymbol);
+  const longShortHistory = longShortHistoryRaw
+    .filter((row) => Number.isFinite(row.r))
+    .map((row) => ({ t: row.t * 1000, ratio: row.r }))
+    .sort((a, b) => a.t - b.t);
+
+  log(`  Coinalyze OI history: ${oiHistory.length} pts, ${oiHistory.length ? new Date(oiHistory[0].t).toISOString().slice(0, 10) : "—"} to ${oiHistory.length ? new Date(oiHistory[oiHistory.length - 1].t).toISOString().slice(0, 10) : "—"}`);
+  log(`  Coinalyze long/short history: ${longShortHistory.length} pts, ${longShortHistory.length ? new Date(longShortHistory[0].t).toISOString().slice(0, 10) : "—"} to ${longShortHistory.length ? new Date(longShortHistory[longShortHistory.length - 1].t).toISOString().slice(0, 10) : "—"}`);
 
   const etfFlows = await fetchEtfFlowsHistory(sosoType);
 

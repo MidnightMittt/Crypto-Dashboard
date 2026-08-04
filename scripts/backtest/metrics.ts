@@ -133,16 +133,35 @@ export function confusionMatrix(occurrences: Occurrence[], forClass: "bullish" |
 // ── Statistical significance ────────────────────────────────────────────
 
 /**
- * Exact binomial pmf at p=0.5, computed iteratively via the standard
- * C(n,k) = C(n,k-1) * (n-k+1)/k recurrence rather than raw factorials —
- * factorials of n~200 overflow long before the final ratio would, while
- * this stays numerically stable at any N this app will ever see.
+ * log(binomial pmf at p=0.5), computed in LOG SPACE via the cumulative
+ * recurrence log(C(n,i)) = log(C(n,i-1)) + log((n-i+1)/i) — not the raw
+ * coefficient.
+ *
+ * The previous version multiplied out the raw coefficient (C(n,k) times
+ * 0.5**n) directly. That is exactly correct for the small samples this
+ * framework originally ran on (N in the tens to low hundreds), but once the
+ * CoinGlass/Coinalyze migration pushed real sample sizes into the
+ * thousands, C(n, n/2) itself overflows a double (e.g. C(2000,1000) is
+ * roughly 10^600, far past ~1.8e308) while 0.5**n underflows to exactly 0 —
+ * and `Infinity * 0` is NaN, which `JSON.stringify` silently turns into
+ * `null`, breaking the (non-nullable) `HypothesisStat.significance.pValue`
+ * type. This was caught by `tsc`, not by a passing-but-wrong test: the type
+ * checker refused a `null` where `HypothesisStat` promises a `number`.
+ * Staying in log space the whole way keeps every intermediate value (a sum
+ * of logs, in the hundreds at most) in a normal, representable range —
+ * `Math.exp` only converts back to a linear probability at the very end,
+ * where a true probability below double precision correctly rounds to 0,
+ * not NaN.
  */
-function binomialPmf(n: number, k: number): number {
-  const half = 0.5 ** n;
-  let coeff = 1;
-  for (let i = 1; i <= k; i++) coeff *= (n - i + 1) / i;
-  return coeff * half;
+function logBinomialPmf(n: number): number[] {
+  const logPmf = new Array(n + 1);
+  let logCoeff = 0; // log(C(n,0)) = log(1) = 0
+  logPmf[0] = logCoeff - n * Math.LN2;
+  for (let i = 1; i <= n; i++) {
+    logCoeff += Math.log((n - i + 1) / i);
+    logPmf[i] = logCoeff - n * Math.LN2;
+  }
+  return logPmf;
 }
 
 /**
@@ -150,14 +169,15 @@ function binomialPmf(n: number, k: number): number {
  * `wins` out of `n` trials, tested against the null that wins ~ Binomial(n, 0.5).
  *
  * Deliberately EXACT (summing the binomial pmf), not a normal approximation
- * — the sample sizes in this app (10-200) are exactly the range where a
- * normal approximation is least reliable, and an exact test needs no
- * justification for why the approximation is valid here.
+ * — small samples are exactly the range where a normal approximation is
+ * least reliable, and an exact test needs no justification for why the
+ * approximation is valid. Numerically stable at any N via logBinomialPmf
+ * above, so this holds for both the tens-of-occurrences buckets and the
+ * thousands-of-occurrences buckets the same framework now also produces.
  */
 export function signTestPValue(n: number, wins: number): number {
   if (n === 0) return 1;
-  const pmf: number[] = [];
-  for (let i = 0; i <= n; i++) pmf.push(binomialPmf(n, i));
+  const pmf = logBinomialPmf(n).map((logP) => Math.exp(logP));
   const cdfLE = pmf.slice(0, wins + 1).reduce((a, b) => a + b, 0);
   const cdfGE = pmf.slice(wins).reduce((a, b) => a + b, 0);
   return Math.min(1, 2 * Math.min(cdfLE, cdfGE));

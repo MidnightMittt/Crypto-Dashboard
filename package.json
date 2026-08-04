@@ -46,6 +46,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitest/coverage-v8": "^4.1.10",
     "autoprefixer": "^10.4.20",
+    "dotenv": "^17.4.2",
     "eslint": "^8.57.1",
     "eslint-config-next": "^15.5.22",
     "postcss": "^8.4.47",

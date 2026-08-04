@@ -11,3 +11,4 @@ out
 coverage
 scripts/backtest/data
 scripts/backtest/report.md
+.env*
