@@ -1,32 +1,66 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { formatCompactUsd } from "@/lib/utils/format";
 import { NetworkHealthPayload } from "@/lib/hooks/useMarketData";
+import { StablecoinSummary } from "@/lib/providers/stablecoins";
 
 /**
- * Raw blockchain network state — hash rate, gas, TPS, DeFi TVL by chain.
- * Deliberately informational, not a sentiment signal: a busy mempool or
- * high gas price isn't bullish or bearish, it's just network congestion,
- * so unlike most of this dashboard, nothing here gets a lean/gauge.
+ * Raw blockchain network state — hash rate, gas, TPS, DeFi TVL by chain,
+ * stablecoin supply. Deliberately informational, not a sentiment signal: a
+ * busy mempool or high gas price isn't bullish or bearish, it's just network
+ * congestion, so unlike most of this dashboard, nothing here gets a
+ * lean/gauge or a `Category` (see Part 1c of the taxonomy redesign — this is
+ * the one section deliberately excluded from `bias.score`).
  *
- * Each of the 4 sources reuses infrastructure already configured
+ * Stablecoin supply is folded in here as DISPLAY ONLY — the same
+ * `StablecoinSummary` the `stablecoins` metric already scores under Spot
+ * Demand, shown a second time in its raw on-chain-supply form rather than as
+ * a directional read, so it doesn't disagree with itself across two cards.
+ *
+ * Each of the other 4 sources reuses infrastructure already configured
  * elsewhere in this app (mempool.space already used by Exchange Flow's
  * BTC fallback, Etherscan already used for ETH balances, Solana RPC
  * already used for Drift, DefiLlama already used for stablecoin supply)
  * — no new keys or signups needed for any of it.
  */
-export function NetworkHealth({ data }: { data: NetworkHealthPayload | undefined }) {
-  if (!data || (!data.bitcoin && !data.ethereum && !data.solana && !data.chainTvl)) return null;
+export function NetworkHealth({
+  data,
+  stablecoins,
+}: {
+  data: NetworkHealthPayload | undefined;
+  stablecoins?: StablecoinSummary | null;
+}) {
+  if (!data || (!data.bitcoin && !data.ethereum && !data.solana && !data.chainTvl && !stablecoins)) return null;
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Network Health</CardTitle>
+        <div className="flex items-center gap-1.5">
+          <CardTitle>Network Health</CardTitle>
+          <InfoTooltip
+            measures="Raw blockchain and stablecoin state: hash rate, gas, transaction throughput, DeFi TVL, and stablecoin supply."
+            whyItMatters="A simple assessment of on-chain strength — context for the rest of the read, not a bullish/bearish signal of its own."
+          />
+        </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-3 pt-0">
-        {data.bitcoin && (
+        {stablecoins && (
           <div className="grid grid-cols-3 gap-3">
+            <Stat label="Stablecoin supply" value={formatCompactUsd(stablecoins.totalMcapUsd)} />
+            <Stat
+              label="24h change"
+              value={`${stablecoins.netChange24hPct >= 0 ? "+" : ""}${stablecoins.netChange24hPct.toFixed(2)}%`}
+            />
+            <Stat
+              label="7d change"
+              value={`${stablecoins.netChange7dPct >= 0 ? "+" : ""}${stablecoins.netChange7dPct.toFixed(2)}%`}
+            />
+          </div>
+        )}
+        {data.bitcoin && (
+          <div className={`grid grid-cols-3 gap-3 ${stablecoins ? "border-t border-hairline pt-3" : ""}`}>
             <Stat label="BTC hash rate" value={`${data.bitcoin.hashrateEhs.toFixed(0)} EH/s`} />
             <Stat label="BTC fastest fee" value={`${data.bitcoin.fastestFeeSatVb} sat/vB`} />
             <Stat label="BTC mempool" value={data.bitcoin.mempoolCount.toLocaleString()} />

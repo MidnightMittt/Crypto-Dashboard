@@ -2,10 +2,9 @@
 
 import { AlertTriangle } from "lucide-react";
 import { Header } from "@/components/layout/Header";
-import { SentimentIndex } from "@/components/dashboard/SentimentIndex";
-import { MarketBriefing } from "@/components/dashboard/MarketBriefing";
-import { MarketSnapshotBar } from "@/components/dashboard/MarketSnapshotBar";
+import { AiMarketSummary } from "@/components/dashboard/AiMarketSummary";
 import { CategoryCard } from "@/components/dashboard/CategoryCard";
+import { LiquidityMapCard } from "@/components/dashboard/LiquidityMapCard";
 import { MarketThesisTimeline } from "@/components/dashboard/MarketThesisTimeline";
 import { SignalBreakdown } from "@/components/dashboard/SignalBreakdown";
 import { FundingGauge } from "@/components/gauges/FundingGauge";
@@ -59,8 +58,6 @@ export default function DashboardPage() {
       <Header venueCount={venueCount} updatedAt={data?.meta.generatedAt} />
 
       <main className="mx-auto flex max-w-[1600px] flex-col gap-6 px-4 py-6 sm:px-6">
-        <MarketSnapshotBar bias={aggregate?.marketBias ?? null} />
-
         {isError && (
           <div className="flex items-center justify-between gap-4 rounded-lg border border-danger/30 bg-danger/5 px-4 py-3">
             <span className="flex items-center gap-2 text-sm text-danger">
@@ -113,17 +110,13 @@ export default function DashboardPage() {
             </div>
 
             {/*
-              The composite gauge and the four core readings, at a glance,
-              before the synthesis below. These are the numbers a trader
-              checks reflexively on opening the page.
-
-              Note the composite score and the briefing's bias score are
-              two DIFFERENT numbers and can disagree: the composite is the
-              older weighted sentiment index, the bias score is the decision
-              engine's read across all 15 metric verdicts. Both are labelled
-              on their own cards.
+              The single answer to "what's the highest-probability direction
+              right now, and why" — the first thing a reader interprets.
+              Everything below is either the four raw readings that feed it,
+              the composite sections that explain it, or the audit trail
+              behind it.
             */}
-            <SentimentIndex data={aggregate} fearGreed={data?.fearGreed} />
+            <AiMarketSummary bias={aggregate.marketBias} thesis={aggregate.marketThesis} />
 
             <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
               <FundingGauge data={aggregate} />
@@ -133,41 +126,55 @@ export default function DashboardPage() {
             </section>
 
             {/*
-              Five category rollups — Liquidity/Momentum/Derivatives/
-              On-chain/Sentiment — sitting between the raw gauges above and
-              the single synthesized briefing below. Same 15 metric verdicts
-              the briefing uses, regrouped; nothing new is fetched.
+              The five composite sections — Leveraged Positioning, Spot
+              Demand, Market Stress, Liquidity Map, Network Health — the
+              dashboard's default reading surface. Same underlying metrics
+              the summary above synthesizes, regrouped into how a trader
+              actually thinks about the market; nothing new is fetched.
+              Liquidity Map and Network Health are structural/contextual, not
+              directional, so they render their own card shapes rather than
+              CategoryCard's score+verdict layout — see LiquidityMapCard.tsx
+              and NetworkHealth.tsx.
             */}
             {aggregate.marketBias && aggregate.marketBias.categories.length > 0 && (
               <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
-                {aggregate.marketBias.categories.map((c) => (
-                  <CategoryCard key={c.category} category={c} />
-                ))}
+                {aggregate.marketBias.categories
+                  .filter((c) => c.category !== "liquidityMap")
+                  .map((c) => (
+                    <CategoryCard key={c.category} category={c} />
+                  ))}
+                <LiquidityMapCard
+                  liquidityMap={aggregate.liquidityMap}
+                  orderFlow={aggregate.orderFlow}
+                  liquidationsMetric={
+                    aggregate.marketBias.metrics.find((m) => m.id === "liquidations") ?? null
+                  }
+                />
+                <NetworkHealth data={data?.networkHealth} stablecoins={data?.stablecoins ?? null} />
               </section>
             )}
 
             {/*
-              ── TIER 1 — THE BRIEFING ─────────────────────────────────────
-              The whole answer. Regime, conviction, agreement, evidence both
-              ways, opportunity, risk, what changed, what to watch.
-              Everything below this is the working behind it.
-            */}
-            <MarketBriefing bias={aggregate.marketBias} thesis={aggregate.marketThesis} />
-
-            {/*
-              How the read got here. Sits directly under the briefing because
-              the arc and the current state are one story — a cautiously
-              bullish thesis that has been decaying all day means something
-              different from one that has been building.
+              How the read got here. Sits directly under the sections above
+              because the arc and the current state are one story — a
+              cautiously bullish thesis that has been decaying all day means
+              something different from one that has been building.
             */}
             <MarketThesisTimeline timeline={aggregate.biasTimeline} bias={aggregate.marketBias} />
 
             {/*
-              ── TIER 2 — THE EVIDENCE ─────────────────────────────────────
-              Every metric in one uniform shape, so the briefing above is
-              auditable rather than taken on trust.
+              ── THE AUDIT TRAIL ───────────────────────────────────────────
+              Every metric in one uniform shape, so the summary and sections
+              above are auditable rather than taken on trust. Collapsed by
+              default — this is raw-data depth, not the default reading
+              surface.
             */}
-            <SignalBreakdown metrics={aggregate.marketBias?.metrics ?? []} />
+            <Collapsible
+              title="All 15 Signals"
+              summary={`${aggregate.marketBias?.metrics.length ?? 0} metrics`}
+            >
+              <SignalBreakdown metrics={aggregate.marketBias?.metrics ?? []} />
+            </Collapsible>
 
             {/*
               ── TIER 3 — THE DETAIL ───────────────────────────────────────
@@ -177,7 +184,10 @@ export default function DashboardPage() {
               wants to audit a specific number opens the relevant group; a
               trader who wants the market read never has to.
             */}
-            <Collapsible title="Positioning Detail" summary="squeeze, funding percentile, CEX/DEX, order flow">
+            <Collapsible
+              title="Leveraged Positioning & Liquidity Detail"
+              summary="squeeze, funding percentile, CEX/DEX, order flow"
+            >
               <div className="flex flex-col gap-4">
                 <PositioningIntelligence data={aggregate} />
                 <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -187,7 +197,7 @@ export default function DashboardPage() {
               </div>
             </Collapsible>
 
-            <Collapsible title="Flow & Options Detail" summary="exchange netflow, Deribit, pool exposure">
+            <Collapsible title="Spot Demand & Options Detail" summary="exchange netflow, Deribit, pool exposure">
               <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <ExchangeFlowIntelligence data={aggregate} />
                 <DeribitOptionsIntelligence data={aggregate} />
@@ -195,14 +205,11 @@ export default function DashboardPage() {
               </section>
             </Collapsible>
 
-            <Collapsible title="Market Context" summary="breadth, correlation, chain health">
-              <div className="flex flex-col gap-4">
-                <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                  <MarketBreadth stablecoins={data?.stablecoins ?? null} globalMarket={data?.globalMarket ?? null} />
-                  <CorrelationHeatmap correlation={data?.correlation ?? null} />
-                </section>
-                <NetworkHealth data={data?.networkHealth} />
-              </div>
+            <Collapsible title="Market Context" summary="breadth, correlation">
+              <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <MarketBreadth stablecoins={data?.stablecoins ?? null} globalMarket={data?.globalMarket ?? null} />
+                <CorrelationHeatmap correlation={data?.correlation ?? null} />
+              </section>
             </Collapsible>
 
             <Collapsible

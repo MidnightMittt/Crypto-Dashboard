@@ -25,9 +25,8 @@ export const METRIC_DESCRIPTIONS: Record<string, string> = {
 };
 
 export const CATEGORY_DESCRIPTIONS: Record<Category, string> = {
-  liquidity: "How much capital and leverage is actively deployed — open interest, stablecoin supply, and exchange-wallet flow.",
-  momentum: "What price action itself is doing right now, independent of positioning.",
-  derivatives: "How leveraged traders are positioned across funding, open interest skew, and long/short ratios.",
-  onchain: "Capital moving on-chain and through regulated wrappers — exchange netflow and US ETF flows.",
-  sentiment: "Crowd psychology and hedging demand — Fear & Greed, Coinbase premium, and options positioning.",
+  leveragedPositioning: "How traders are positioned with leverage right now — funding, open interest, long/short skew, squeeze risk, and basis.",
+  spotDemand: "Whether real, unleveraged buying power is behind the move — exchange flow, ETF flows, stablecoin supply, Coinbase premium, taker flow, and spot-vs-perp turnover.",
+  marketStress: "Whether this move is backed by real conviction or stretched and fragile — price volatility, Fear & Greed extremes, options hedging demand, and funding cost.",
+  liquidityMap: "Where price structure suggests the market is likely to move next — approximated volume profile, support/resistance, and resting order-book depth.",
 };

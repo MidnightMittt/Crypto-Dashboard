@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildMarketBias, snapshotVerdicts } from "./marketBias";
+import { buildMarketBias, snapshotVerdicts, topReasons } from "./marketBias";
 import { MetricVerdict, Verdict } from "./types";
 
 const metric = (id: string, verdict: Verdict, confidence = 80): MetricVerdict => ({
@@ -97,6 +97,39 @@ describe("top reasons", () => {
     const bias = build([metric("funding", "bullish"), metric("basis", "bearish")])!;
     expect(bias.topBullish.map((m) => m.id)).toEqual(["funding"]);
     expect(bias.topBearish.map((m) => m.id)).toEqual(["basis"]);
+  });
+});
+
+describe("topReasons", () => {
+  it("interleaves bullish and bearish by rank, not by side", () => {
+    // Hand-computed rankMetric (weight x confidence/100) at confidence 90:
+    // funding 0.15*0.9=0.135, technicals 0.13*0.9=0.117, basis 0.08*0.9=0.072,
+    // coinbasePremium 0.03*0.9=0.027 — so the merged, re-ranked order should
+    // be funding(bull), technicals(bear), basis(bear), coinbasePremium(bull),
+    // NOT the two topBullish entries first followed by the two topBearish.
+    const bias = build([
+      metric("funding", "bullish", 90),
+      metric("basis", "bearish", 90),
+      metric("coinbasePremium", "bullish", 90),
+      metric("technicals", "bearish", 90),
+    ])!;
+    const reasons = topReasons(bias, 4);
+    expect(reasons.map((r) => r.id)).toEqual(["funding", "technicals", "basis", "coinbasePremium"]);
+    expect(reasons.map((r) => r.side)).toEqual(["bullish", "bearish", "bearish", "bullish"]);
+  });
+
+  it("defaults to five and respects a smaller explicit limit", () => {
+    const ids = ["funding", "squeezeRisk", "technicals", "orderFlow", "openInterest", "basis", "longShort"];
+    const bias = build(ids.map((id) => metric(id, "bullish")))!;
+    expect(topReasons(bias)).toHaveLength(5);
+    expect(topReasons(bias, 2)).toHaveLength(2);
+  });
+
+  it("returns an empty list when neither side has a reason", () => {
+    const bias = build([metric("funding", "neutral")])!;
+    expect(bias.topBullish).toHaveLength(0);
+    expect(bias.topBearish).toHaveLength(0);
+    expect(topReasons(bias)).toHaveLength(0);
   });
 });
 
@@ -321,25 +354,28 @@ describe("watchNext", () => {
 
 describe("category rollup fields", () => {
   it("attaches the category breakdown that produced the score", () => {
+    // funding is the one deliberate dual-membership metric (leveragedPositioning
+    // + marketStress); technicals also feeds marketStress, so the two produce
+    // exactly these two categories, not three.
     const bias = build([metric("funding", "bullish", 90), metric("technicals", "bullish", 90)])!;
-    expect(bias.categories.map((c) => c.category).sort()).toEqual(["derivatives", "momentum"]);
+    expect(bias.categories.map((c) => c.category).sort()).toEqual(["leveragedPositioning", "marketStress"]);
   });
 
   it("computes the overall score BY combining categories, not the old flat per-metric sum", () => {
-    // Two derivatives metrics (funding, basis) at full weight vs. one
-    // sentiment metric (fearGreed) at full weight: under flat weighting
-    // funding+basis (0.15+0.08=0.23) would swamp fearGreed (0.03). Under
-    // category weighting derivatives (20%) vs sentiment (15%) is a much
-    // closer contest, so the bearish side should meaningfully cut into the
-    // bullish score rather than being nearly erased.
+    // openInterest+longShort (both leveragedPositioning-only, weights
+    // 0.09+0.08=0.17) at full weight vs. fearGreed (marketStress-only,
+    // weight 0.03) at full weight: under FLAT per-metric weighting fearGreed's
+    // tiny 0.03 would barely dent a combined 0.17 bullish weight. Under
+    // CATEGORY weighting marketStress gets its full 20% category weight
+    // to fight leveragedPositioning's 35%, a much closer contest — hand-
+    // verified directly (npx tsx against the real buildMarketBias): score
+    // lands at 64, not the >90 a flat sum would produce.
     const bias = build([
-      metric("funding", "bullish", 100),
-      metric("basis", "bullish", 100),
+      metric("openInterest", "bullish", 100),
+      metric("longShort", "bullish", 100),
       metric("fearGreed", "bearish", 100),
     ])!;
     expect(bias.verdict).toBe("bullish");
-    // Under the OLD flat scheme this would land above 90; under category
-    // weighting sentiment's full 15% pulls back much harder.
     expect(bias.score).toBeLessThan(90);
   });
 

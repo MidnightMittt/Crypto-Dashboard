@@ -204,3 +204,23 @@ export function buildMarketBias(inputs: MarketBiasInputs): MarketBias | null {
 export function snapshotVerdicts(metrics: MetricVerdict[]): Record<string, Verdict> {
   return Object.fromEntries(metrics.map((m) => [m.id, m.verdict]));
 }
+
+export interface RankedReason extends MetricVerdict {
+  side: "bullish" | "bearish";
+}
+
+/**
+ * Merges `topBullish`/`topBearish` into ONE ranked list — the AI Market
+ * Summary header's "top 5 reasons," interleaved by strength rather than
+ * shown as two separate 5-max columns. Pure presentation logic: reuses
+ * `rankMetric` (weight x confidence, the same ranking `topBullish`/
+ * `topBearish` themselves were built with), no new signal.
+ */
+export function topReasons(bias: MarketBias, limit = 5): RankedReason[] {
+  return [
+    ...bias.topBullish.map((m) => ({ ...m, side: "bullish" as const })),
+    ...bias.topBearish.map((m) => ({ ...m, side: "bearish" as const })),
+  ]
+    .sort((a, b) => rankMetric(b) - rankMetric(a))
+    .slice(0, limit);
+}

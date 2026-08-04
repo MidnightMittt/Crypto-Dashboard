@@ -25,39 +25,44 @@ const metric = (id: string, verdict: Verdict, confidence = 80, explanation = "te
 
 describe("buildCategoryScore", () => {
   it("returns null when no metric belonging to the category has weight", () => {
-    // liquidations belongs to liquidity but carries weight 0 by design.
-    expect(buildCategoryScore([metric("liquidations", "bearish")], "liquidity")).toBeNull();
+    // liquidations belongs to liquidityMap but carries weight 0 by design —
+    // liquidityMap's card reads its own volume-profile/S-R data instead, not
+    // this score (see categories.ts's own doc comment on liquidityMap).
+    expect(buildCategoryScore([metric("liquidations", "bearish")], "liquidityMap")).toBeNull();
   });
 
   it("returns null when no metric belongs to the category at all", () => {
-    expect(buildCategoryScore([metric("fearGreed", "bullish")], "derivatives")).toBeNull();
+    expect(buildCategoryScore([metric("fearGreed", "bullish")], "liquidityMap")).toBeNull();
   });
 
   it("scores a category from only the metrics that belong to it", () => {
-    // openInterest is liquidity; funding is derivatives — must not leak across.
+    // openInterest is leveragedPositioning-only; coinbasePremium is spotDemand-only — must not leak across.
     const cat = buildCategoryScore(
-      [metric("openInterest", "bullish", 100), metric("funding", "bearish", 100)],
-      "liquidity"
+      [metric("openInterest", "bullish", 100), metric("coinbasePremium", "bearish", 100)],
+      "leveragedPositioning"
     )!;
     expect(cat.verdict).toBe("bullish");
     expect(cat.metrics.map((m) => m.id)).toEqual(["openInterest"]);
   });
 
-  it("lets a metric feed two categories at once (exchangeFlow)", () => {
-    const metrics = [metric("exchangeFlow", "bullish", 90)];
-    const liquidity = buildCategoryScore(metrics, "liquidity");
-    const onchain = buildCategoryScore(metrics, "onchain");
-    expect(liquidity?.verdict).toBe("bullish");
-    expect(onchain?.verdict).toBe("bullish");
+  it("lets a metric feed two categories at once (funding)", () => {
+    // funding is the one deliberate dual-membership in the new taxonomy —
+    // "which side is crowded" (leveragedPositioning) vs. "how extreme is the
+    // cost of holding leverage" (marketStress), same number, two questions.
+    const metrics = [metric("funding", "bullish", 90)];
+    const leveragedPositioning = buildCategoryScore(metrics, "leveragedPositioning");
+    const marketStress = buildCategoryScore(metrics, "marketStress");
+    expect(leveragedPositioning?.verdict).toBe("bullish");
+    expect(marketStress?.verdict).toBe("bullish");
   });
 
   it("picks the highest weight-x-confidence metric as the top reason", () => {
     const cat = buildCategoryScore(
       [
-        metric("spotPerpVolume", "bullish", 90, "weak signal"), // lightest derivatives weight
-        metric("funding", "bullish", 90, "strong signal"), // heaviest derivatives weight
+        metric("openInterest", "bullish", 90, "weak signal"), // lighter leveragedPositioning weight (0.09)
+        metric("funding", "bullish", 90, "strong signal"), // heavier leveragedPositioning weight (0.15)
       ],
-      "derivatives"
+      "leveragedPositioning"
     )!;
     expect(cat.topReason).toContain("strong signal");
   });
@@ -65,26 +70,20 @@ describe("buildCategoryScore", () => {
 
 describe("buildAllCategories", () => {
   it("only returns categories that actually have contributing metrics", () => {
-    const cats = buildAllCategories([metric("funding", "bullish", 90)]);
-    expect(cats.map((c) => c.category)).toEqual(["derivatives"]);
+    // openInterest has single membership (leveragedPositioning only) — funding
+    // would return two categories here since it's the deliberate dual-member.
+    const cats = buildAllCategories([metric("openInterest", "bullish", 90)]);
+    expect(cats.map((c) => c.category)).toEqual(["leveragedPositioning"]);
   });
 
   it("keeps a stable, weight-ordered display sequence", () => {
-    const all = [
-      "openInterest",
-      "technicals",
-      "funding",
-      "etfFlows",
-      "fearGreed",
-    ].map((id) => metric(id, "bullish", 90));
+    // liquidityMap is deliberately excluded here: its only member
+    // (liquidations) is weight-0, so buildCategoryScore always returns null
+    // for it regardless of which metrics are passed — verified directly
+    // against computeWeightedScore's `if (totalWeight <= 0) return null`.
+    const all = ["openInterest", "orderFlow", "technicals"].map((id) => metric(id, "bullish", 90));
     const cats = buildAllCategories(all);
-    expect(cats.map((c) => c.category)).toEqual([
-      "liquidity",
-      "momentum",
-      "derivatives",
-      "onchain",
-      "sentiment",
-    ]);
+    expect(cats.map((c) => c.category)).toEqual(["leveragedPositioning", "spotDemand", "marketStress"]);
   });
 });
 
@@ -103,29 +102,33 @@ describe("combineCategoryScores", () => {
     expect(combineCategoryScores([])).toBeNull();
   });
 
-  it("weights liquidity heaviest, matching CATEGORY_WEIGHTS", () => {
-    expect(CATEGORY_WEIGHTS.liquidity).toBeGreaterThan(CATEGORY_WEIGHTS.sentiment);
-    // A strong liquidity read against an equally strong opposite sentiment
-    // read should pull the combined score toward liquidity's direction,
-    // since it carries 25% vs sentiment's 15%.
-    const combined = combineCategoryScores([cat("liquidity", 90), cat("sentiment", 10)])!;
+  it("weights leveragedPositioning heaviest, matching CATEGORY_WEIGHTS", () => {
+    expect(CATEGORY_WEIGHTS.leveragedPositioning).toBeGreaterThan(CATEGORY_WEIGHTS.liquidityMap);
+    // A strong leveragedPositioning read against an equally strong opposite
+    // liquidityMap read should pull the combined score toward
+    // leveragedPositioning's direction, since it carries 35% vs 15%.
+    const combined = combineCategoryScores([cat("leveragedPositioning", 90), cat("liquidityMap", 10)])!;
     expect(combined.score).toBeGreaterThan(50);
   });
 
-  it("lands at exactly 50 when weighted-equal categories fully offset", () => {
-    // momentum (20%) and derivatives (20%) carry equal weight, so mirrored
-    // scores at equal confidence should cancel exactly.
-    const combined = combineCategoryScores([cat("momentum", 80), cat("derivatives", 20)])!;
+  it("lands at exactly 50 when two unequal-weight categories exactly cancel", () => {
+    // Hand-verified: w_A = 0.35*0.8=0.28, w_B = 0.30*0.8=0.24; pull_A =
+    // (80-50)/50=0.6, pull_B = (15-50)/50=-0.7. weightedSum =
+    // 0.6*0.28 + (-0.7)*0.24 = 0.168 - 0.168 = 0 exactly, so score = 50.
+    // (No two categories share a weight in the new 35/30/20/15 scheme, unlike
+    // the old 25/20/20/20/15 scheme's momentum/derivatives tie — this test
+    // picks scores that cancel the UNEQUAL weights exactly instead.)
+    const combined = combineCategoryScores([cat("leveragedPositioning", 80), cat("spotDemand", 15)])!;
     expect(combined.score).toBe(50);
   });
 
   it("renormalizes across whatever categories reported rather than diluting toward neutral", () => {
-    const combined = combineCategoryScores([cat("liquidity", 90, 100)])!;
+    const combined = combineCategoryScores([cat("leveragedPositioning", 90, 100)])!;
     expect(combined.score).toBeGreaterThan(80);
   });
 
   it("lets a low-confidence category pull less than a well-evidenced one", () => {
-    const combined = combineCategoryScores([cat("liquidity", 90, 100), cat("sentiment", 10, 10)])!;
+    const combined = combineCategoryScores([cat("leveragedPositioning", 90, 100), cat("liquidityMap", 10, 10)])!;
     expect(combined.verdict).toBe("bullish");
   });
 });

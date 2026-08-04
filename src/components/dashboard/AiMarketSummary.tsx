@@ -3,30 +3,28 @@
 import { Card, CardContent } from "@/components/ui/Card";
 import { VerdictBadge, ConfidenceLabel } from "@/components/ui/VerdictBadge";
 import { MarketBias, MetricVerdict } from "@/lib/signals/types";
+import { topReasons, RankedReason } from "@/lib/signals/marketBias";
 import { MarketThesis } from "@/types/market";
+import { intensityLabel } from "@/lib/signals/scoring";
 import { lookupBiasVerdictStat } from "@/lib/sentiment/backtestStats";
 import backtestStats from "@/data/backtestStats.json";
 
 /**
- * The morning briefing. One card that answers, in reading order:
+ * The dashboard's single "what's the highest-probability direction right
+ * now, and why" surface — replaces the old sticky `MarketSnapshotBar` AND
+ * the full `MarketBriefing` card, which between them showed overlapping
+ * verdict/confidence/reasoning in two different places. One card now, not
+ * sticky (the full Score/Direction/Confidence/Top-5/trade-bias/invalidation/
+ * risk shape is too much content to usefully pin across a long scroll — a
+ * sticky version of this would just be the old snapshot bar under a new
+ * name, the exact "two overlapping summaries" problem this collapses).
  *
- *   1. Current market regime          5. Biggest opportunity
- *   2. Overall conviction             6. Biggest risk
- *   3. Bullish vs bearish evidence    7. What changed
- *   4. Signal agreement               8. What to watch next
- *
- * Replaces the old MarketBiasCard and MarketThesisBriefing, which between
- * them showed two competing 0-100 scores and two overlapping narratives.
- * Everything either card said is here; nothing is computed twice.
- *
- * Every line traces to a real value the engine already produced. There are
- * no probabilities anywhere in this component, and the two headline numbers
- * are deliberately different things: CONVICTION is the weighted direction,
- * AGREEMENT is how much the metrics concur, CONFIDENCE is how good the
- * evidence is. Collapsing them would hide the case where everything agrees
- * on very little data.
+ * Every field is a relabel of MarketBias's own output, not a new
+ * computation — see marketBias.ts's `topReasons()` for the one small new
+ * merge helper this needed (interleaving topBullish/topBearish into one
+ * ranked list instead of two columns).
  */
-export function MarketBriefing({
+export function AiMarketSummary({
   bias,
   thesis,
 }: {
@@ -46,12 +44,15 @@ export function MarketBriefing({
     );
   }
 
+  const reasons = topReasons(bias, 5);
+  const invalidationLines = thesis?.invalidation ?? [];
+
   return (
     <Card>
       <CardContent className="flex flex-col gap-7 py-6">
-        <Headline bias={bias} thesis={thesis} />
+        <Header bias={bias} thesis={thesis} />
 
-        <Evidence bias={bias} />
+        <TopReasons reasons={reasons} />
 
         <div className="grid grid-cols-1 gap-6 border-t border-hairline pt-5 lg:grid-cols-2">
           <Highlight
@@ -61,7 +62,7 @@ export function MarketBriefing({
             tone="bull"
           />
           <Highlight
-            label="Biggest risk to this view"
+            label="Biggest risk"
             metric={bias.counterRisk}
             empty="Nothing material is arguing the other way right now."
             tone="bear"
@@ -69,10 +70,9 @@ export function MarketBriefing({
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-6 border-t border-hairline pt-5 lg:grid-cols-2">
-          <WhatChanged bias={bias} />
-          <WhatToWatch bias={bias} thesis={thesis} />
-        </div>
+        <InvalidationLevel watchNext={bias.watchNext} invalidationLines={invalidationLines} />
+
+        <SinceLastUpdate bias={bias} />
 
         <p className="border-t border-hairline pt-4 text-xs leading-relaxed text-ink-faint">
           Weighted read of {bias.metrics.length} metrics, each scaled by how much evidence backs
@@ -84,9 +84,9 @@ export function MarketBriefing({
   );
 }
 
-/* ── 1, 2 & 4: regime, conviction, agreement ─────────────────────────── */
+/* ── Score / Direction / Confidence + trade bias ─────────────────────── */
 
-function Headline({ bias, thesis }: { bias: MarketBias; thesis: MarketThesis | null }) {
+function Header({ bias, thesis }: { bias: MarketBias; thesis: MarketThesis | null }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
@@ -99,24 +99,28 @@ function Headline({ bias, thesis }: { bias: MarketBias; thesis: MarketThesis | n
               {bias.score}
             </span>
             <VerdictBadge verdict={bias.verdict} size="lg" />
+            <span className="text-xs text-ink-faint">{intensityLabel(bias.score)}</span>
           </div>
         </div>
 
-        <div className="flex items-start gap-6">
+        <div className="flex flex-wrap items-start gap-6">
+          <Stat label="Confidence" value={`${bias.confidence}%`} hint="How good the evidence behind this read is — not the odds of a move." />
           <Stat label="Agreement" value={`${bias.agreement}%`} hint="How much the metrics concur with each other." />
-          <Stat label="Confidence" value={`${bias.confidence}%`} hint="How good the evidence behind them is — not the odds of a move." />
+          {bias.trendStrength && (
+            <Stat label="Trend Strength" value={bias.trendStrength.label} hint="How strongly price action itself is trending, from the technical read." />
+          )}
           <Stat label="Risk" value={bias.riskLevel.toUpperCase()} hint={bias.riskRationale} />
+          <Stat label="Market Health" value={`${bias.healthScore}%`} hint="Direction-agnostic: how trustworthy and calm the picture is, regardless of which way it leans." />
         </div>
       </div>
 
       <ScoreBar score={bias.score} />
 
+      {/* Trade bias — the headline is the plainest statement of direction + conviction this app makes. */}
       <p className="max-w-4xl text-[15px] leading-relaxed text-ink">{bias.headline}</p>
 
       {thesis && (
-        <p className="max-w-4xl text-[13px] leading-relaxed text-ink-muted">
-          {thesis.regimeDescription}
-        </p>
+        <p className="max-w-4xl text-[13px] leading-relaxed text-ink-muted">{thesis.regimeDescription}</p>
       )}
 
       <BiasBacktestStatLine verdict={bias.verdict} />
@@ -171,36 +175,21 @@ function ScoreBar({ score }: { score: number }) {
   );
 }
 
-/* ── 3: bullish vs bearish evidence ──────────────────────────────────── */
+/* ── Top 5 reasons (merged bullish + bearish, ranked together) ───────── */
 
-function Evidence({ bias }: { bias: MarketBias }) {
+function TopReasons({ reasons }: { reasons: RankedReason[] }) {
   return (
-    <div className="grid grid-cols-1 gap-6 border-t border-hairline pt-5 sm:grid-cols-2">
-      <EvidenceColumn title="Bullish evidence" reasons={bias.topBullish} tone="bull" />
-      <EvidenceColumn title="Bearish evidence" reasons={bias.topBearish} tone="bear" />
-    </div>
-  );
-}
-
-function EvidenceColumn({
-  title,
-  reasons,
-  tone,
-}: {
-  title: string;
-  reasons: MetricVerdict[];
-  tone: "bull" | "bear";
-}) {
-  return (
-    <div>
-      <SectionLabel>{title}</SectionLabel>
+    <div className="border-t border-hairline pt-5">
+      <SectionLabel>Top 5 reasons</SectionLabel>
       {reasons.length === 0 ? (
-        <p className="mt-3 text-xs text-ink-faint">Nothing on this side right now.</p>
+        <p className="mt-3 text-xs text-ink-faint">No metric currently reports enough evidence to rank.</p>
       ) : (
         <ul className="mt-3 flex flex-col gap-2.5">
           {reasons.map((r) => (
-            <li key={r.id} className="text-xs leading-relaxed">
-              <span className={tone === "bull" ? "text-success" : "text-danger"}>{r.label}</span>
+            <li key={r.id} className="flex items-start gap-2 text-xs leading-relaxed">
+              <span className={r.side === "bullish" ? "shrink-0 text-success" : "shrink-0 text-danger"}>
+                {r.label}
+              </span>
               <span className="text-ink-faint"> — {r.explanation}</span>
             </li>
           ))}
@@ -210,7 +199,7 @@ function EvidenceColumn({
   );
 }
 
-/* ── 5 & 6: opportunity and risk ─────────────────────────────────────── */
+/* ── Biggest opportunity / biggest risk ───────────────────────────────── */
 
 function Highlight({
   label,
@@ -247,12 +236,63 @@ function Highlight({
   );
 }
 
-/* ── 7: what changed ─────────────────────────────────────────────────── */
+/* ── Invalidation level (watchNext + thesis.invalidation) ─────────────── */
 
-function WhatChanged({ bias }: { bias: MarketBias }) {
+function InvalidationLevel({
+  watchNext,
+  invalidationLines,
+}: {
+  watchNext: MetricVerdict[];
+  invalidationLines: string[];
+}) {
   return (
-    <div>
-      <SectionLabel>What changed</SectionLabel>
+    <div className="border-t border-hairline pt-5">
+      <SectionLabel>Invalidation level</SectionLabel>
+
+      {watchNext.length === 0 && invalidationLines.length === 0 ? (
+        <p className="mt-3 text-xs leading-relaxed text-ink-faint">
+          No metric is close enough to a threshold to call out a level.
+        </p>
+      ) : (
+        <ul className="mt-3 flex flex-col gap-2">
+          {/*
+            Each trigger is read back out of the same band table that produced
+            the verdict, so the level quoted here can never drift from the
+            logic it describes. See bandTrigger in sentiment/bands.ts.
+          */}
+          {watchNext.map((m) => (
+            <li key={m.id} className="text-xs leading-relaxed">
+              <span className="text-ink">{m.label}</span>
+              <span className="text-ink-faint"> — {m.nextTrigger}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {invalidationLines.length > 0 && (
+        <>
+          <p className="mt-4 text-[11px] uppercase tracking-[0.16em] text-ink-muted">
+            What would invalidate this
+          </p>
+          <ul className="mt-2 flex flex-col gap-1.5">
+            {invalidationLines.slice(0, 2).map((line, i) => (
+              <li key={i} className="text-xs leading-relaxed text-ink-faint">
+                {line}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ── Since last update (what changed — lower priority, not in the user's explicit field list but real, kept) ── */
+
+function SinceLastUpdate({ bias }: { bias: MarketBias }) {
+  return (
+    <div className="border-t border-hairline pt-5">
+      <SectionLabel>Since last update</SectionLabel>
       {bias.isFirstReading ? (
         <p className="mt-3 text-xs leading-relaxed text-ink-faint">
           First reading for this asset — there is no earlier snapshot to compare against yet.
@@ -272,53 +312,6 @@ function WhatChanged({ bias }: { bias: MarketBias }) {
             </li>
           ))}
         </ul>
-      )}
-    </div>
-  );
-}
-
-/* ── 8: what to watch next ───────────────────────────────────────────── */
-
-function WhatToWatch({ bias, thesis }: { bias: MarketBias; thesis: MarketThesis | null }) {
-  const invalidation = thesis?.invalidation ?? [];
-
-  return (
-    <div>
-      <SectionLabel>What to watch next</SectionLabel>
-
-      {bias.watchNext.length === 0 && invalidation.length === 0 ? (
-        <p className="mt-3 text-xs leading-relaxed text-ink-faint">
-          No metric is close enough to a threshold to call out a level.
-        </p>
-      ) : (
-        <ul className="mt-3 flex flex-col gap-2">
-          {/*
-            Each trigger is read back out of the same band table that produced
-            the verdict, so the level quoted here can never drift from the
-            logic it describes. See bandTrigger in sentiment/bands.ts.
-          */}
-          {bias.watchNext.map((m) => (
-            <li key={m.id} className="text-xs leading-relaxed">
-              <span className="text-ink">{m.label}</span>
-              <span className="text-ink-faint"> — {m.nextTrigger}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {invalidation.length > 0 && (
-        <>
-          <p className="mt-4 text-[11px] uppercase tracking-[0.16em] text-ink-muted">
-            What would invalidate this
-          </p>
-          <ul className="mt-2 flex flex-col gap-1.5">
-            {invalidation.slice(0, 2).map((line, i) => (
-              <li key={i} className="text-xs leading-relaxed text-ink-faint">
-                {line}
-              </li>
-            ))}
-          </ul>
-        </>
       )}
     </div>
   );

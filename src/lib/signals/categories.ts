@@ -11,64 +11,97 @@ import { computeWeightedScore, metricWeight, rankMetric, verdictFromScore } from
 import { TechnicalRead } from "@/types/market";
 
 /**
- * Groups the 15 flat metric verdicts into five categories, and combines
- * those into the overall score — a real hierarchy instead of one flat
- * list, per the user's explicit spec (Liquidity/Momentum/Derivatives/
- * On-chain/Sentiment, weighted 25/20/20/20/15).
+ * Groups the 15 flat metric verdicts into four composite sections, and
+ * combines those into the overall score — a real hierarchy instead of one
+ * flat list, organized by the QUESTION each section answers rather than by
+ * data-source type (the prior taxonomy: Liquidity/Momentum/Derivatives/
+ * On-chain/Sentiment, weighted 25/20/20/20/15 — replaced outright, not run
+ * in parallel, per the redesign's explicit "reduce cognitive load" goal).
  *
  * Nothing here computes a new signal. Every category score is the SAME
  * verdicts `evaluateAll()` already produces, regrouped and reweighted —
  * this is purely an aggregation layer.
+ *
+ * Network Health is NOT one of these four — see `Category`'s own doc
+ * comment in types.ts for why.
  */
 
 /**
  * Which categories each metric feeds. A metric CAN belong to more than
- * one — `exchangeFlow` genuinely is both a liquidity signal (coins moving
- * to/from exchanges) and an on-chain one (wallet-level netflow), and
- * forcing a single owner would just be a worse model of what the metric
- * actually measures.
+ * one — see the placement reasoning below for `funding` (the one deliberate
+ * dual-membership in the new taxonomy; `exchangeFlow` had this role in the
+ * old one).
+ *
+ * - Leveraged Positioning: how traders are positioned WITH LEVERAGE, and
+ *   how crowded that positioning is.
+ * - Spot Demand: is real, unleveraged buying/selling power behind the
+ *   move — exchange wallets, ETF wrappers, stablecoin supply, Coinbase's
+ *   US-demand premium, taker flow, and spot-vs-perp turnover are the six
+ *   metrics that most directly answer this.
+ * - Market Stress: is this move backed by real conviction or
+ *   stretched/fragile — `fearGreed`'s own evaluator already reads it as
+ *   contrarian-extremes-only (a fragility signal), `options` put/call is a
+ *   hedging-demand read, and `technicals` carries the market's own
+ *   volatility/strength character. `funding` is read a SECOND time here
+ *   under a different framing than Leveraged Positioning: "which side is
+ *   crowded" (directional) vs. "how extreme is the cost of holding
+ *   leverage right now" (magnitude). `computeWeightedScore` renormalizes
+ *   independently per category, so this is not double-counted in the
+ *   overall score.
+ * - Liquidity Map: market MICROSTRUCTURE — where price is likely to move
+ *   next based on liquidity, not a directional read. `liquidations` is its
+ *   only member from the scored 15, and stays weight-0 (its evaluator is
+ *   deliberately always-neutral, "context only, not predictive" — see
+ *   evaluators.ts) — the rest of Liquidity Map's card content comes from
+ *   `src/lib/technicals/marketStructure.ts`'s volume-profile/support-
+ *   resistance approximation, not from this weighted-score machinery.
  */
 const CATEGORY_MAP: Record<string, Category[]> = {
-  openInterest: ["liquidity"],
-  stablecoins: ["liquidity"],
-  exchangeFlow: ["liquidity", "onchain"],
-  liquidations: ["liquidity"],
+  funding: ["leveragedPositioning", "marketStress"],
+  openInterest: ["leveragedPositioning"],
+  longShort: ["leveragedPositioning"],
+  squeezeRisk: ["leveragedPositioning"],
+  basis: ["leveragedPositioning"],
 
-  technicals: ["momentum"],
-  orderFlow: ["momentum"],
+  orderFlow: ["spotDemand"],
+  spotPerpVolume: ["spotDemand"],
+  coinbasePremium: ["spotDemand"],
+  exchangeFlow: ["spotDemand"],
+  etfFlows: ["spotDemand"],
+  stablecoins: ["spotDemand"],
 
-  funding: ["derivatives"],
-  squeezeRisk: ["derivatives"],
-  longShort: ["derivatives"],
-  basis: ["derivatives"],
-  spotPerpVolume: ["derivatives"],
+  technicals: ["marketStress"],
+  fearGreed: ["marketStress"],
+  options: ["marketStress"],
 
-  etfFlows: ["onchain"],
-
-  fearGreed: ["sentiment"],
-  coinbasePremium: ["sentiment"],
-  options: ["sentiment"],
+  liquidations: ["liquidityMap"],
 };
 
-/** The user's explicit weights. Sum to 1.00; ratios are what matter since an absent category renormalizes. */
+/**
+ * Sum to 1.00; ratios are what matter since an absent category renormalizes.
+ * Leveraged Positioning and Spot Demand carry the most weight because they
+ * have the most (and most directly directional) contributing metrics;
+ * Liquidity Map is weighted lowest because its only scored metric
+ * (`liquidations`) is weight-0 — it barely moves the overall score by
+ * design, since it's a structural read, not a directional one (see its
+ * card, which doesn't show this score at all).
+ */
 export const CATEGORY_WEIGHTS: Record<Category, number> = {
-  liquidity: 0.25,
-  momentum: 0.2,
-  derivatives: 0.2,
-  onchain: 0.2,
-  sentiment: 0.15,
+  leveragedPositioning: 0.35,
+  spotDemand: 0.3,
+  marketStress: 0.2,
+  liquidityMap: 0.15,
 };
 
 export const CATEGORY_LABELS: Record<Category, string> = {
-  liquidity: "Liquidity",
-  momentum: "Momentum",
-  derivatives: "Derivatives",
-  onchain: "On-Chain",
-  sentiment: "Sentiment",
+  leveragedPositioning: "Leveraged Positioning",
+  spotDemand: "Spot Demand",
+  marketStress: "Market Stress",
+  liquidityMap: "Liquidity Map",
 };
 
 /** Display order — heaviest-weighted category first. */
-export const CATEGORY_ORDER: Category[] = ["liquidity", "momentum", "derivatives", "onchain", "sentiment"];
+export const CATEGORY_ORDER: Category[] = ["leveragedPositioning", "spotDemand", "marketStress", "liquidityMap"];
 
 function metricsForCategory(metrics: MetricVerdict[], category: Category): MetricVerdict[] {
   return metrics.filter((m) => CATEGORY_MAP[m.id]?.includes(category));

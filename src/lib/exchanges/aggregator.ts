@@ -87,13 +87,15 @@ import {
 import { recordDailyPoint } from "../history/dailyStore";
 import { fetchOkxDailyCandles } from "../providers/okxCandles";
 import { buildTechnicalRead } from "../sentiment/technicals";
+import { fibonacciRetracement } from "../technicals/indicators";
+import { buildVolumeProfile, buildSupportResistance } from "../technicals/marketStructure";
 import { fetchEtfFlows } from "../providers/etfFlows";
 import { fetchSpotVolumeUsd } from "../providers/spotVolume";
 import { evaluateAll } from "../signals/evaluators";
 import { buildMarketBias, snapshotVerdicts } from "../signals/marketBias";
 import { readBiasSnapshot, writeBiasSnapshot } from "../history/biasStore";
 import { recordBiasHistory, BiasHistoryEntry } from "../history/biasHistory";
-import type { TechnicalRead, EtfFlowSummary, SpotPerpVolume } from "@/types/market";
+import type { TechnicalRead, EtfFlowSummary, SpotPerpVolume, LiquidityMapRead } from "@/types/market";
 
 const ADAPTER_MAP: Record<string, LiveAdapter> = {
   binance: fetchBinance,
@@ -501,6 +503,7 @@ async function withRecordedHistory(
     exchangeFlow,
     deribitOptions,
     technicals,
+    liquidityMap,
     etfFlows,
     spotPerpVolume,
     stablecoins,
@@ -512,6 +515,7 @@ async function withRecordedHistory(
     buildExchangeFlow(asset, point.price, point.t),
     buildDeribitOptions(asset, point.t),
     buildTechnicals(asset),
+    buildLiquidityMap(asset),
     buildEtfFlows(asset),
     buildSpotPerpVolume(asset, agg.exchanges),
     /*
@@ -689,6 +693,7 @@ async function withRecordedHistory(
     exchangeFlowConfigured,
     deribitOptions,
     technicals,
+    liquidityMap,
     etfFlows,
     spotPerpVolume,
     marketBias,
@@ -798,6 +803,7 @@ function buildAggregate(
       exchangeFlowConfigured: false,
       deribitOptions: null,
       technicals: null,
+      liquidityMap: null,
       etfFlows: null,
       spotPerpVolume: null,
       marketBias: null,
@@ -936,6 +942,7 @@ function buildAggregate(
     exchangeFlowConfigured: false,
     deribitOptions: null,
     technicals: null,
+    liquidityMap: null,
     etfFlows: null,
     spotPerpVolume: null,
     marketBias: null,
@@ -1113,6 +1120,28 @@ async function buildTechnicals(asset: AssetSymbol | "MARKET"): Promise<Technical
 
   const candles = await fetchOkxDailyCandles(asset).catch(() => []);
   return buildTechnicalRead(candles);
+}
+
+/**
+ * Approximated market structure for the Liquidity Map dashboard section —
+ * same candles `buildTechnicals` above uses, re-fetched rather than
+ * threaded through: `fetchOkxDailyCandles` is already swr-cached (same
+ * "second call costs nothing" precedent already used for stablecoins/
+ * fearGreed below), so this costs one cache hit, not a second real fetch.
+ * `fibonacciRetracement` is recomputed here too for the same reason — cheap
+ * pure math over already-cached candles, not worth threading a second field
+ * through `TechnicalRead` to avoid.
+ */
+async function buildLiquidityMap(asset: AssetSymbol | "MARKET"): Promise<LiquidityMapRead | null> {
+  if (asset === "MARKET") return null;
+
+  const candles = await fetchOkxDailyCandles(asset).catch(() => []);
+  if (candles.length === 0) return null;
+
+  const fib = fibonacciRetracement(candles);
+  const volumeProfile = buildVolumeProfile(candles);
+  const supportResistance = buildSupportResistance(candles, fib, volumeProfile);
+  return { volumeProfile, supportResistance };
 }
 
 /** US spot ETF flows. BTC/ETH only — no such complex exists for the rest. */

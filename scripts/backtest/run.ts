@@ -437,6 +437,7 @@ export function replayAsset(
       deribitOptions: null,
       marketThesis: thesis,
       technicals,
+      liquidityMap: null, // Liquidity Map's card reads live-only market structure, not backtested — see marketStructure.ts
       etfFlows: etfSummary,
       spotPerpVolume,
       marketBias: null,

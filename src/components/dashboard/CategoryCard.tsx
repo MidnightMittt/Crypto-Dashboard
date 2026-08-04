@@ -4,23 +4,40 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { VerdictBadge, IntensityMeter, ConfidenceLabel } from "@/components/ui/VerdictBadge";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { Collapsible } from "@/components/ui/Collapsible";
-import { CategoryScore } from "@/lib/signals/types";
-import { intensityLabel } from "@/lib/signals/scoring";
+import { CategoryScore, MetricVerdict } from "@/lib/signals/types";
+import { intensityLabel, metricWeight, rankMetric } from "@/lib/signals/scoring";
 import { CATEGORY_DESCRIPTIONS, METRIC_DESCRIPTIONS } from "@/lib/signals/descriptions";
 import { lookupCategoryStat } from "@/lib/sentiment/backtestStats";
 import backtestStats from "@/data/backtestStats.json";
 
 /**
- * One shared card for all five categories — same component, five instances,
- * rather than five bespoke layouts. Headline score, intensity meter, the
- * single top-ranked contributing metric's own explanation, and a
- * Collapsible "Why?" listing every metric that fed the score.
+ * One shared card for 3 of the dashboard's 4 composite sections (Leveraged
+ * Positioning, Spot Demand, Market Stress — Liquidity Map has its own
+ * differently-shaped card, LiquidityMapCard.tsx, since its content is
+ * structural, not a directional score) — same component, multiple
+ * instances, rather than one bespoke layout per section.
+ *
+ * Shows the top 3-5 contributing metrics' own explanations inline (ranked
+ * by weight x confidence), not just one line + a collapsed list — the
+ * dashboard's own "3 to 5 reasons explaining the rating" requirement — with
+ * the full `Collapsible "Why?"` list underneath for anyone who wants the
+ * complete audit trail.
  *
  * Nothing here is a new computation: `score`/`verdict`/`confidence`/
- * `topReason` all come straight from `buildCategoryScore` in
+ * `metrics` all come straight from `buildCategoryScore` in
  * lib/signals/categories.ts.
  */
+const TOP_REASONS_LIMIT = 5;
+
+function topReasonsFor(category: CategoryScore, limit = TOP_REASONS_LIMIT): MetricVerdict[] {
+  return [...category.metrics]
+    .filter((m) => metricWeight(m.id) > 0)
+    .sort((a, b) => rankMetric(b) - rankMetric(a))
+    .slice(0, limit);
+}
 export function CategoryCard({ category }: { category: CategoryScore }) {
+  const topReasons = topReasonsFor(category);
+
   return (
     <Card>
       <CardContent className="flex flex-col gap-3 py-4">
@@ -46,7 +63,20 @@ export function CategoryCard({ category }: { category: CategoryScore }) {
 
         <IntensityMeter value={category.score} tone={category.verdict} />
 
-        <p className="text-[11px] leading-relaxed text-ink-faint">{category.topReason}</p>
+        {topReasons.length === 0 ? (
+          <p className="text-[11px] leading-relaxed text-ink-faint">{category.topReason}</p>
+        ) : (
+          <ul className="flex flex-col gap-1.5">
+            {topReasons.map((m) => (
+              <li key={m.id} className="text-[11px] leading-relaxed">
+                <span className={m.verdict === "bullish" ? "text-success" : m.verdict === "bearish" ? "text-danger" : "text-ink-faint"}>
+                  {m.label}
+                </span>
+                <span className="text-ink-faint"> — {m.explanation}</span>
+              </li>
+            ))}
+          </ul>
+        )}
 
         <div className="flex items-center justify-between">
           <ConfidenceLabel confidence={category.confidence} />

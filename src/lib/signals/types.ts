@@ -53,12 +53,20 @@ export interface MetricVerdict {
 export type RiskLevel = "low" | "medium" | "high";
 
 /**
- * The five groupings metrics roll up into before the overall score — a
+ * The four groupings metrics roll up into before the overall score — a
  * layer between the flat 15-metric list and the single headline number.
- * `onchain` is spelled without punctuation to stay a valid object key;
- * display uses `CATEGORY_LABELS` in categories.ts.
+ * Named after the QUESTION each answers (is positioning leveraged and
+ * crowded; is real spot demand behind the move; is the move fragile or
+ * well-supported; where does price structure suggest it goes next) rather
+ * than the old data-source-shaped taxonomy (liquidity/momentum/derivatives/
+ * on-chain/sentiment) it replaced — display uses `CATEGORY_LABELS` in
+ * categories.ts. Network Health is deliberately NOT a member: it has no
+ * bullish/bearish reading (see NetworkHealth.tsx's own doc comment), so
+ * forcing it into a weighted score would mean inventing a fake directional
+ * threshold for numbers that have never had one. It stays a separate,
+ * non-scored context panel instead.
  */
-export type Category = "liquidity" | "momentum" | "derivatives" | "onchain" | "sentiment";
+export type Category = "leveragedPositioning" | "spotDemand" | "marketStress" | "liquidityMap";
 
 /** One category's rollup — same shape as MarketBias, one tier down. */
 export interface CategoryScore {

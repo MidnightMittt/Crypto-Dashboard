@@ -1,5 +1,6 @@
 import type { MarketBias } from "@/lib/signals/types";
 import type { BiasHistoryEntry } from "@/lib/history/biasHistory";
+import type { VolumeProfileResult, SupportResistanceLevel } from "@/lib/technicals/marketStructure";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Core domain types. Every exchange adapter resolves to this shape.
@@ -190,6 +191,16 @@ export interface AggregateMarketData {
   etfFlows: EtfFlowSummary | null;
   /** Spot vs perpetual turnover. Null when either leg is unavailable. */
   spotPerpVolume: SpotPerpVolume | null;
+  /**
+   * Approximated market structure feeding the Liquidity Map dashboard
+   * section — volume profile and support/resistance, computed off the SAME
+   * daily candles `technicals` above already uses (see
+   * lib/technicals/marketStructure.ts). Null for MARKET (no single price
+   * series) and whenever candle data is unavailable, same conditions as
+   * `technicals`. A structural read, not a directional one — deliberately
+   * has no verdict/score shape.
+   */
+  liquidityMap: LiquidityMapRead | null;
   /**
    * The decision engine's roll-up: every metric's verdict plus the weighted
    * overall bias. See lib/signals/types.ts for what `confidence` does and
@@ -524,6 +535,17 @@ export interface TechnicalRead {
   ichimokuPosition: "above" | "below" | "inside" | null;
   /** The Fibonacci ratio price currently sits closest to, if within the proximity band. */
   fibonacciNearestLevel: number | null;
+}
+
+/**
+ * Approximated market structure for the Liquidity Map dashboard section —
+ * see lib/technicals/marketStructure.ts for how each field is computed and
+ * why it's disclosed as an OHLCV-based approximation, not a tick-level
+ * reconstruction.
+ */
+export interface LiquidityMapRead {
+  volumeProfile: VolumeProfileResult | null;
+  supportResistance: SupportResistanceLevel[];
 }
 
 /**
