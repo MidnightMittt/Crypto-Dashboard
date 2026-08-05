@@ -11,7 +11,7 @@ import { SqueezeRisk } from "@/types/market";
  *
  * Thresholds below are a defensible starting point, not settled science —
  * same framing this app already uses for FUNDING_BANDS, chartLean's
- * flat-price bands, and computeCompositeSentiment's weights.
+ * flat-price bands, and METRIC_WEIGHTS (lib/signals/scoring.ts).
  */
 
 /**

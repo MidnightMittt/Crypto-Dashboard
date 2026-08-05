@@ -75,7 +75,7 @@ function buildPrompt(a: AggregateMarketData): string {
     `Total open interest: ${formatCompactUsd(a.totalOpenInterestUsd)} (24h ${a.oiChange24hPct !== null ? a.oiChange24hPct.toFixed(1) + "%" : "unavailable"}, percentile ${a.oiPercentile ?? "unavailable"})`,
     `Long/short ratio: ${a.longShortRatio !== null ? a.longShortRatio.toFixed(2) : "unavailable"}`,
     `Leverage heat score: ${a.leverageHeatScore !== null ? a.leverageHeatScore + "/100" : "unavailable"}`,
-    `Composite sentiment: ${a.compositeSentimentScore}/100`,
+    `Market bias score: ${a.marketBias ? `${a.marketBias.score}/100 (${a.marketBias.verdict})` : "unavailable"}`,
     `Largest venues — ${topVenues}`,
   ].join("\n");
 }
@@ -84,7 +84,7 @@ function buildPrompt(a: AggregateMarketData): string {
 function ruleBasedSummary(a: AggregateMarketData): string {
   const fundingBand = bandFor(a.weightedFundingRatePct, FUNDING_BANDS);
   const heatBand = a.leverageHeatScore !== null ? bandFor(a.leverageHeatScore, LEVERAGE_HEAT_BANDS) : null;
-  const compositeBand = bandFor(a.compositeSentimentScore, COMPOSITE_BANDS);
+  const biasBand = a.marketBias ? bandFor(a.marketBias.score, COMPOSITE_BANDS) : null;
   const priceChange = a.priceChange24hPct;
 
   const parts: string[] = [];
@@ -116,7 +116,9 @@ function ruleBasedSummary(a: AggregateMarketData): string {
   }
 
   parts.push(
-    `The composite index reads ${a.compositeSentimentScore}/100 — ${compositeBand.label}. ${compositeBand.description}`
+    a.marketBias && biasBand
+      ? `The weighted market read reads ${a.marketBias.score}/100 — ${biasBand.label}. ${biasBand.description}`
+      : "Not enough metrics have reported yet to form a weighted market read."
   );
 
   return parts.join(" ");

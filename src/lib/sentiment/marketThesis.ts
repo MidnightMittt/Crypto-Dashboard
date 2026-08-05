@@ -66,9 +66,9 @@ export interface MarketThesisInputs {
 /**
  * Weights are a defensible starting point, not settled science — same
  * framing this app already uses for FUNDING_BANDS, chartLean's flat-price
- * bands, and computeCompositeSentiment's weights. Sum to 1.0 when every
+ * bands, and lib/signals/scoring.ts's METRIC_WEIGHTS. Sum to 1.0 when every
  * source answers; missing sources are dropped and the rest renormalized,
- * same rule as computeCompositeSentiment.
+ * the same renormalization rule buildMarketBias uses.
  */
 const WEIGHTS = {
   funding: 0.17,

@@ -69,7 +69,7 @@ const PROVIDERS: MarketDataProvider[] = [
   coingeckoProvider, // broad venue coverage, no key
   defillamaProvider, // DEX-leaning, no key
 ];
-import { computeCompositeSentiment, computeLeverageHeat, computeOiPercentile } from "../sentiment/compositeIndex";
+import { computeLeverageHeat, computeOiPercentile } from "../sentiment/compositeIndex";
 import { buildMarketThesis } from "../sentiment/marketThesis";
 import {
   computeCexDexSplit,
@@ -567,24 +567,6 @@ async function withRecordedHistory(
   });
 
   /*
-   * Recomputed here rather than left as buildAggregate's synchronous-only
-   * version — orderFlow, exchangeFlow, and poolExposure aren't available
-   * until the async Promise.all above resolves. This overrides the earlier
-   * value in the `...agg` spread below.
-   */
-  const compositeSentimentScore = computeCompositeSentiment({
-    weightedFundingRatePct: agg.weightedFundingRatePct,
-    oiChange24hPct,
-    oiPercentile,
-    longShortRatio: agg.longShortRatio,
-    priceChange24hPct: agg.priceChange24hPct,
-    exchanges: agg.exchanges,
-    orderFlow,
-    exchangeFlow,
-    poolExposure,
-  });
-
-  /*
    * Computed last of all — reads every other derived field above, the way
    * an analyst reads the whole board rather than one gauge at a time. See
    * sentiment/marketThesis.ts and MarketThesis's own doc comment for what
@@ -694,7 +676,6 @@ async function withRecordedHistory(
 
   return {
     ...agg,
-    compositeSentimentScore,
     poolExposure,
     liquidations,
     orderFlow,
@@ -798,7 +779,6 @@ function buildAggregate(
       oiPercentile: null,
       longShortRatio: null,
       leverageHeatScore: null,
-      compositeSentimentScore: 50,
       priceChange24hPct: 0,
       exchanges: [],
       unavailableExchanges,
@@ -898,15 +878,6 @@ function buildAggregate(
     priceChange24hPct,
   });
 
-  const compositeSentimentScore = computeCompositeSentiment({
-    weightedFundingRatePct,
-    oiChange24hPct,
-    oiPercentile,
-    longShortRatio,
-    priceChange24hPct,
-    exchanges,
-  });
-
   /*
    * These two need only the current venue set, so they belong here. The
    * funding percentile and squeeze score need the recorded history and are
@@ -929,7 +900,6 @@ function buildAggregate(
     oiPercentile,
     longShortRatio,
     leverageHeatScore,
-    compositeSentimentScore,
     priceChange24hPct,
     exchanges,
     unavailableExchanges,
@@ -1126,11 +1096,10 @@ async function buildExchangeFlow(
 
 /**
  * BTC/ETH options positioning, Deribit only — see DeribitOptionsSummary's
- * doc comment for why this isn't cross-venue aggregated and isn't folded
- * into computeCompositeSentiment (put/call ratio and max pain don't have
- * the kind of unambiguous bullish/bearish reading that composite's other
- * inputs do — same reasoning already applied to leaving liquidations,
- * squeezeRisk, fundingDivergence, cexDex, and arbitrage spreads out of it).
+ * doc comment for why this isn't cross-venue aggregated. Scored via
+ * evaluateOptions (lib/signals/evaluators.ts) into the single market-bias
+ * engine, the same as every other directional metric — no separate
+ * composite exists anymore for it to be folded into or excluded from.
  */
 /**
  * Daily price-action read. Null for MARKET, which is a roll-up across ten

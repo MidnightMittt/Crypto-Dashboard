@@ -184,8 +184,8 @@ function scale(v: number, inMin: number, inMax: number): number {
  * rewarding it (stalling).
  *
  * Components whose data is missing are dropped and remaining weights
- * renormalized, matching computeCompositeSentiment — a missing input must not
- * quietly pull the score toward the middle.
+ * renormalized, the same rule buildMarketBias uses — a missing input must
+ * not quietly pull the score toward the middle.
  */
 export function computeSqueezeRisk(inputs: SqueezeInputs): SqueezeRisk | null {
   const components: SqueezeComponent[] = [];

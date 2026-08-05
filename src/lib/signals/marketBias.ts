@@ -16,9 +16,9 @@ import { TechnicalRead } from "@/types/market";
  *      a high-weight metric built on thin data can't dominate a
  *      well-evidenced one.
  *   2. Missing metrics are dropped and the remaining weights renormalized —
- *      never defaulted to neutral. Same rule as computeCompositeSentiment
- *      and buildMarketThesis; defaulting absent data to 50 would drag every
- *      reading toward the middle and make a data outage look like calm.
+ *      never defaulted to neutral. Same rule buildMarketThesis uses;
+ *      defaulting absent data to 50 would drag every reading toward the
+ *      middle and make a data outage look like calm.
  */
 
 /**

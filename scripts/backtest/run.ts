@@ -424,7 +424,6 @@ export function replayAsset(
       oiPercentile,
       longShortRatio,
       leverageHeatScore,
-      compositeSentimentScore: 50,
       priceChange24hPct,
       exchanges: singleVenueExchanges(asset as "BTC" | "ETH", t),
       unavailableExchanges: [],

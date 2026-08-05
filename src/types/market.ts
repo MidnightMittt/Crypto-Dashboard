@@ -80,7 +80,6 @@ export interface AggregateMarketData {
   oiPercentile: number | null;
   longShortRatio: number | null;
   leverageHeatScore: number | null;
-  compositeSentimentScore: number;
   priceChange24hPct: number;
   exchanges: ExchangeSnapshot[];
   /** Venues that were queried but returned nothing, for UI transparency. */

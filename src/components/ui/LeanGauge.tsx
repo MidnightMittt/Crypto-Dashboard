@@ -11,8 +11,9 @@
  * measures whether assets move together, which isn't inherently bullish or
  * bearish, and forcing a lean onto it would be the same "looks precise but
  * means nothing" trap this app avoids everywhere else (see why
- * fundingDivergence/squeezeRisk/cexDex/arbitrage spreads stay out of
- * computeCompositeSentiment for the same reason).
+ * fundingDivergence/squeezeRisk/cexDex/arbitrage spreads carry no
+ * directional weight in lib/signals/scoring.ts's METRIC_WEIGHTS for the
+ * same reason).
  */
 
 export type Lean = "extreme-bearish" | "bearish" | "neutral" | "bullish" | "extreme-bullish";

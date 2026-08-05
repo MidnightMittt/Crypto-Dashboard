@@ -12,7 +12,7 @@ import { ExchangeFlowSummary } from "@/types/market";
  * the same thing at different balance sizes: 50 BTC of movement is noise
  * against a quarter-million-BTC wallet but not against a small one. 0.1% is
  * a starting point, not settled science — the same honest framing this
- * codebase already uses for computeCompositeSentiment's weights and
+ * codebase already uses for METRIC_WEIGHTS (lib/signals/scoring.ts) and
  * chartLean's flat-price thresholds.
  */
 const BALANCED_THRESHOLD_PCT = 0.1;
