@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { kvConfigured, kvGet, kvSet } from "../store/kv";
 
 /**
@@ -129,7 +130,19 @@ export async function swr<T>(
 
   // Stale but usable: hand back what we have now, warm the cache behind it.
   if (best && now - best.fetchedAt < maxAgeMs) {
-    void refresh().catch(() => {});
+    const background = refresh().catch(() => {});
+    // Vercel is free to freeze the instance the moment the response is sent,
+    // which can kill this refresh mid-flight — the degraded snapshot it was
+    // meant to replace then sits in the shared cache until maxAgeMs expires.
+    // after() tells the runtime to keep the function alive until `background`
+    // settles. It only works inside a request's async context, so outside one
+    // (a script, a test) it throws synchronously and this just falls back to
+    // fire-and-forget, same as before.
+    try {
+      after(background);
+    } catch {
+      void background;
+    }
     return best.value;
   }
 
