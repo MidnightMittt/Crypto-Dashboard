@@ -16,6 +16,7 @@ import { HeatMap } from "@/components/dashboard/HeatMap";
 import { Leaderboards } from "@/components/dashboard/Leaderboards";
 import { AlertsPanel } from "@/components/dashboard/AlertsPanel";
 import { AiSummary } from "@/components/dashboard/AiSummary";
+import { SimilarSetupsPanel } from "@/components/dashboard/SimilarSetupsPanel";
 import { ArbitrageScanner } from "@/components/dashboard/ArbitrageScanner";
 import { PoolExposure } from "@/components/dashboard/PoolExposure";
 import { PositioningIntelligence } from "@/components/dashboard/PositioningIntelligence";
@@ -244,6 +245,7 @@ export default function DashboardPage() {
             <Collapsible title="Tools & Narrative" summary="AI summary, arbitrage, alerts">
               <div className="flex flex-col gap-4">
                 <AiSummary aggregate={aggregate} />
+                <SimilarSetupsPanel aggregate={aggregate} />
                 <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                   <ArbitrageScanner exchanges={aggregate.exchanges} />
                   <AlertsPanel aggregate={aggregate} />

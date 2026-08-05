@@ -24,6 +24,7 @@ import { summarizeOccurrences, Occurrence } from "./metrics";
 import { buildCombinations, CombinationDayRecord } from "./combinations";
 import { buildWeightReview, WeightReviewDayRecord } from "./weightReview";
 import { buildMetricCombinations, MetricComboDayRecord } from "./metricCombinations";
+import { DayFingerprint } from "../../src/lib/signals/similarity";
 
 /**
  * Aggregates run.ts's per-day output into descriptive statistics. These are
@@ -46,6 +47,7 @@ const DATA_DIR = path.join(__dirname, "data");
 const STATS_OUT_PATH = path.join(__dirname, "..", "..", "src", "data", "backtestStats.json");
 const RESEARCH_OUT_PATH = path.join(__dirname, "..", "..", "src", "data", "backtestResearch.json");
 const METRIC_STATS_OUT_PATH = path.join(__dirname, "..", "..", "src", "data", "backtestMetricStats.json");
+const FINGERPRINTS_OUT_PATH = path.join(__dirname, "..", "..", "src", "data", "historicalFingerprints.json");
 
 export interface DayRecord {
   asset: string;
@@ -523,6 +525,32 @@ export function agreementValidationSection(records: DayRecord[]): {
   return { markdown: rows.join("\n"), stats };
 }
 
+/** bullish -> 1, bearish -> -1, neutral -> 0 — same mapping as scoring.ts's directionSign, duplicated locally since DayRecord.metrics stores verdict as a loose string, not the strict Verdict union. */
+function signOf(verdict: string): -1 | 0 | 1 {
+  return verdict === "bullish" ? 1 : verdict === "bearish" ? -1 : 0;
+}
+
+/**
+ * Projects each day's full evaluation down to just what similarity.ts's
+ * nearest-neighbor matching needs — every metric's directional verdict, the
+ * regime it occurred in, and what happened next. Not new computation: every
+ * field here already exists on DayRecord, this is purely a smaller shape for
+ * the "Similar Historical Setups" feature.
+ */
+function buildFingerprints(records: DayRecord[]): DayFingerprint[] {
+  return records.map((r) => ({
+    asset: r.asset,
+    date: r.date,
+    metricVerdicts: Object.fromEntries(r.metrics.map((m) => [m.id, signOf(m.verdict)])) as Record<
+      string,
+      -1 | 0 | 1
+    >,
+    regimeTags: r.regimeTags,
+    forwardReturn1d: r.forwardReturn1d,
+    forwardReturn7d: r.forwardReturn7d,
+  }));
+}
+
 export function computeStability(
   rollingStats: Record<string, RollingWindowStats> | undefined,
   metricId: string,
@@ -616,6 +644,7 @@ function main() {
   const signalResearch = signalResearchSection(hypotheses.stats, metricRegimeCrosstab.stats, metricCombinations.results);
   const metricPerformance = metricPerformanceSection(signalResearch.stats, hypotheses.stats, rolling?.stats);
   const agreementValidation = agreementValidationSection(records);
+  const fingerprints = buildFingerprints(records);
 
   const header = `# Backtest Report
 
@@ -792,6 +821,17 @@ ${agreementValidation.markdown}
   fs.mkdirSync(path.dirname(METRIC_STATS_OUT_PATH), { recursive: true });
   fs.writeFileSync(METRIC_STATS_OUT_PATH, JSON.stringify(metricStatsOut, null, 2));
   console.log(`[report] wrote src/data/backtestMetricStats.json`);
+
+  // "Similar Historical Setups" source data — every day's fingerprint, no
+  // markdown formatting, minified (not pretty-printed like the files above)
+  // since this one is sized to matter. Delivery shape (bundled vs. a server
+  // route) is decided after checking the real byte size below, not guessed.
+  fs.mkdirSync(path.dirname(FINGERPRINTS_OUT_PATH), { recursive: true });
+  fs.writeFileSync(FINGERPRINTS_OUT_PATH, JSON.stringify(fingerprints));
+  const fingerprintsBytes = fs.statSync(FINGERPRINTS_OUT_PATH).size;
+  console.log(
+    `[report] wrote src/data/historicalFingerprints.json (${fingerprints.length} days, ${(fingerprintsBytes / 1024).toFixed(1)} KB)`
+  );
 }
 
 // Guarded the same way run.ts's own main() is: importing this file for its

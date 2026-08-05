@@ -23,12 +23,15 @@ export function Collapsible({
   title,
   summary,
   defaultOpen = false,
+  onOpen,
   children,
 }: {
   title: string;
   /** Shown next to the toggle while collapsed, e.g. "24 venues". */
   summary?: string;
   defaultOpen?: boolean;
+  /** Fires the first time this section is expanded — for panels that fetch on demand rather than on mount (see SimilarSetupsPanel). Never re-fires on subsequent toggles. */
+  onOpen?: () => void;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = React.useState(defaultOpen);
@@ -37,7 +40,10 @@ export function Collapsible({
     <section>
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          if (!open) onOpen?.();
+          setOpen((v) => !v);
+        }}
         aria-expanded={open}
         className="group mb-3 flex w-full items-center gap-2 text-left"
       >
