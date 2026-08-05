@@ -11,6 +11,7 @@ import {
   ThesisDirection,
   ThesisEvidence,
 } from "@/types/market";
+import type { RegimeTags } from "@/lib/technicals/regimes";
 import { technicalConfirmation } from "./technicals";
 import { bandFor, FUNDING_BANDS, LONG_SHORT_BANDS } from "./bands";
 import { coinbasePremiumLean, deribitOptionsLean, SQUEEZE_MEANINGFUL_SCORE } from "./leans";
@@ -58,6 +59,8 @@ export interface MarketThesisInputs {
   liquidations: LiquidationSummary | null;
   priceChange24hPct: number;
   leverageHeatScore: number | null;
+  /** Live trend/volatility/range-bound classification for TODAY — see MarketThesis.regimeTags's own doc comment for why this is a separate concept from `regime` below. */
+  regimeTags: RegimeTags | null;
 }
 
 /**
@@ -407,6 +410,7 @@ export function buildMarketThesis(inputs: MarketThesisInputs, now: number): Mark
     asset: inputs.asset,
     regime: regime.label,
     regimeDescription: regime.description,
+    regimeTags: inputs.regimeTags,
     dominant,
     bullishEvidence: bullish,
     bearishEvidence: bearish,

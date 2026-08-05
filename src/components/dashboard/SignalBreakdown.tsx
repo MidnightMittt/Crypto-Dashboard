@@ -2,6 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { VerdictBadge, ConfidenceLabel } from "@/components/ui/VerdictBadge";
+import { HistoricalPerformancePanel } from "./HistoricalPerformancePanel";
 import { MetricVerdict } from "@/lib/signals/types";
 
 /**
@@ -15,7 +16,14 @@ import { MetricVerdict } from "@/lib/signals/types";
  * the opposite of the "learn the format once, scan anything" goal. The
  * existing cards keep their detailed views; this is the scannable index.
  */
-export function SignalBreakdown({ metrics }: { metrics: MetricVerdict[] }) {
+export function SignalBreakdown({
+  metrics,
+  currentRegimeTags,
+}: {
+  metrics: MetricVerdict[];
+  /** Today's live regime tags, so a metric's best/worst backtested environment can be marked "(current)" — see HistoricalPerformancePanel. */
+  currentRegimeTags?: string[];
+}) {
   if (metrics.length === 0) return null;
 
   return (
@@ -30,7 +38,7 @@ export function SignalBreakdown({ metrics }: { metrics: MetricVerdict[] }) {
       <CardContent className="pt-0">
         <ul className="flex flex-col divide-y divide-hairline">
           {metrics.map((m) => (
-            <SignalRow key={m.id} metric={m} />
+            <SignalRow key={m.id} metric={m} currentRegimeTags={currentRegimeTags} />
           ))}
         </ul>
       </CardContent>
@@ -38,7 +46,7 @@ export function SignalBreakdown({ metrics }: { metrics: MetricVerdict[] }) {
   );
 }
 
-function SignalRow({ metric }: { metric: MetricVerdict }) {
+function SignalRow({ metric, currentRegimeTags }: { metric: MetricVerdict; currentRegimeTags?: string[] }) {
   return (
     <li className="flex flex-col gap-1.5 py-3 first:pt-0 last:pb-0">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
@@ -69,6 +77,8 @@ function SignalRow({ metric }: { metric: MetricVerdict }) {
           ))}
         </ul>
       )}
+
+      <HistoricalPerformancePanel metricId={metric.id} currentRegimeTags={currentRegimeTags} />
 
       <span className="font-mono text-[11px] text-ink-faint/60">
         Updated {new Date(metric.asOf).toLocaleTimeString()}

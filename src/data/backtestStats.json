@@ -1,21 +1,21 @@
 {
-  "generatedAt": 1785834230461,
-  "coverageStart": "2022-08-12",
-  "coverageEnd": "2026-07-28",
+  "generatedAt": 1785907927900,
+  "coverageStart": "2022-08-13",
+  "coverageEnd": "2026-07-29",
   "squeeze": {
     "0-30 (quiet):long": {
-      "n": 32,
-      "mean1dPct": -0.1834299526905417,
-      "mean3dPct": -0.4574148208002375,
-      "mean7dPct": -0.15494134703376777,
-      "fadeHitRatePct": 53.125
+      "n": 33,
+      "mean1dPct": -0.1724375153943855,
+      "mean3dPct": -0.41815541730707173,
+      "mean7dPct": -0.14100603928893363,
+      "fadeHitRatePct": 51.515151515151516
     },
     "30-50:long": {
-      "n": 421,
-      "mean1dPct": -0.021513471275247765,
-      "mean3dPct": 0.39148142004936726,
-      "mean7dPct": 0.6620556768249877,
-      "fadeHitRatePct": 46.904761904761905
+      "n": 422,
+      "mean1dPct": -0.028498903708274268,
+      "mean3dPct": 0.37628076276524014,
+      "mean7dPct": 0.6563159568314286,
+      "fadeHitRatePct": 47.03087885985748
     },
     "30-50:short": {
       "n": 10,
@@ -25,25 +25,25 @@
       "fadeHitRatePct": 80
     },
     "50-70:long": {
-      "n": 997,
-      "mean1dPct": -0.024315553890846914,
-      "mean3dPct": -0.0731082201141155,
-      "mean7dPct": 0.23316341701352675,
-      "fadeHitRatePct": 50.80321285140562
+      "n": 998,
+      "mean1dPct": -0.022248433756570405,
+      "mean3dPct": -0.06355867772017479,
+      "mean7dPct": 0.2394122799642735,
+      "fadeHitRatePct": 50.80160320641283
     },
     "50-70:short": {
-      "n": 78,
-      "mean1dPct": 0.48869371901819136,
-      "mean3dPct": 1.1703985970324116,
-      "mean7dPct": 0.7480711013053918,
-      "fadeHitRatePct": 64.1025641025641
+      "n": 77,
+      "mean1dPct": 0.4371797473228171,
+      "mean3dPct": 1.1362557719354578,
+      "mean7dPct": 0.798569932074664,
+      "fadeHitRatePct": 64.93506493506493
     },
     "70-100 (crowded):long": {
-      "n": 916,
-      "mean1dPct": 0.19293839869707627,
-      "mean3dPct": 0.38306980346596486,
-      "mean7dPct": 0.6161983815486367,
-      "fadeHitRatePct": 49.0174672489083
+      "n": 915,
+      "mean1dPct": 0.19245409974241276,
+      "mean3dPct": 0.3740903569933957,
+      "mean7dPct": 0.6097637970753099,
+      "fadeHitRatePct": 49.01531728665208
     },
     "70-100 (crowded):short": {
       "n": 27,
@@ -54,32 +54,32 @@
     }
   },
   "thesis": {
-    "Mixed / Low Conviction": {
-      "n": 306,
-      "mean1dPct": 0.5818812274785745,
-      "mean3dPct": 0.8057672589601199,
-      "mean7dPct": 1.161595249426755,
+    "Leaning Bearish": {
+      "n": 1011,
+      "mean1dPct": 0.2622511783120287,
+      "mean3dPct": 0.24486077789227725,
+      "mean7dPct": 0.4095842957607332,
       "fadeHitRatePct": null
     },
-    "Leaning Bearish": {
-      "n": 1009,
-      "mean1dPct": 0.26382600897143255,
-      "mean3dPct": 0.2356518148033901,
-      "mean7dPct": 0.4017184609797221,
+    "Mixed / Low Conviction": {
+      "n": 306,
+      "mean1dPct": 0.5758351390823518,
+      "mean3dPct": 0.7817975610983882,
+      "mean7dPct": 1.164138259927983,
       "fadeHitRatePct": null
     },
     "Consolidation": {
       "n": 494,
       "mean1dPct": -0.8829885373382386,
       "mean3dPct": -0.6396674818446237,
-      "mean7dPct": -0.22974716406485768,
+      "mean7dPct": -0.23052789025774573,
       "fadeHitRatePct": null
     },
     "Squeeze Setup — Longs Exposed": {
-      "n": 916,
-      "mean1dPct": 0.19293839869707627,
-      "mean3dPct": 0.38306980346596486,
-      "mean7dPct": 0.6161983815486367,
+      "n": 915,
+      "mean1dPct": 0.19245409974241276,
+      "mean3dPct": 0.3740903569933957,
+      "mean7dPct": 0.6097637970753099,
       "fadeHitRatePct": null
     },
     "Squeeze Setup — Shorts Exposed": {
@@ -90,34 +90,98 @@
       "fadeHitRatePct": null
     },
     "Leaning Bullish": {
-      "n": 142,
-      "mean1dPct": 0.20362987461610466,
-      "mean3dPct": 0.7905143909606712,
-      "mean7dPct": 1.5996019204523262,
+      "n": 141,
+      "mean1dPct": 0.17347640181506976,
+      "mean3dPct": 0.7691748041625353,
+      "mean7dPct": 1.6332185217883604,
       "fadeHitRatePct": null
     }
   },
-  "categories": {},
+  "categories": {
+    "leveragedPositioning:bullish": {
+      "n": 204,
+      "mean1dPct": 0.7877378242889579,
+      "mean3dPct": 1.2668643954107373,
+      "mean7dPct": 2.0554536027227344,
+      "fadeHitRatePct": null
+    },
+    "leveragedPositioning:bearish": {
+      "n": 2523,
+      "mean1dPct": -0.016954611755366507,
+      "mean3dPct": 0.13077437301353764,
+      "mean7dPct": 0.3501301264855348,
+      "fadeHitRatePct": null
+    },
+    "leveragedPositioning:neutral": {
+      "n": 167,
+      "mean1dPct": 0.5906407217141089,
+      "mean3dPct": 0.3234770142510945,
+      "mean7dPct": 1.3316163437154296,
+      "fadeHitRatePct": null
+    },
+    "marketStress:bullish": {
+      "n": 1203,
+      "mean1dPct": 0.09366704999190266,
+      "mean3dPct": 0.22603139124091087,
+      "mean7dPct": 0.5524508544223581,
+      "fadeHitRatePct": null
+    },
+    "marketStress:bearish": {
+      "n": 1204,
+      "mean1dPct": 0.06782049155676417,
+      "mean3dPct": 0.14435542757778536,
+      "mean7dPct": 0.4627878843531679,
+      "fadeHitRatePct": null
+    },
+    "marketStress:neutral": {
+      "n": 487,
+      "mean1dPct": 0.04562977052938648,
+      "mean3dPct": 0.40387072421028525,
+      "mean7dPct": 0.6237201099774835,
+      "fadeHitRatePct": null
+    },
+    "spotDemand:bullish": {
+      "n": 1518,
+      "mean1dPct": 0.3130227465922446,
+      "mean3dPct": 0.5024769315168953,
+      "mean7dPct": 0.9598670129001096,
+      "fadeHitRatePct": null
+    },
+    "spotDemand:bearish": {
+      "n": 1116,
+      "mean1dPct": -0.1933946638767239,
+      "mean3dPct": -0.10457251181772942,
+      "mean7dPct": -0.03074511281865712,
+      "fadeHitRatePct": null
+    },
+    "spotDemand:neutral": {
+      "n": 260,
+      "mean1dPct": -0.1645425123776496,
+      "mean3dPct": -0.014047375758393892,
+      "mean7dPct": 0.3905478589367808,
+      "fadeHitRatePct": null
+    }
+  },
   "biasVerdict": {
     "bullish": {
-      "n": 911,
-      "mean1dPct": 0.4052308333916084,
-      "mean3dPct": 0.5876315682646974,
-      "mean7dPct": 1.0588085527424782,
+      "n": 807,
+      "mean1dPct": 0.26977163457903247,
+      "mean3dPct": 0.4783341683459599,
+      "mean7dPct": 0.9298708182985846,
       "fadeHitRatePct": null
     },
     "bearish": {
-      "n": 1329,
-      "mean1dPct": -0.023468059739967923,
-      "mean3dPct": 0.1598275148635801,
-      "mean7dPct": 0.3903956442458238,
+      "n": 1631,
+      "mean1dPct": -0.0568522539354282,
+      "mean3dPct": 0.0911315810340347,
+      "mean7dPct": 0.3098675664709832,
       "fadeHitRatePct": null
     },
     "neutral": {
-      "n": 654,
-      "mean1dPct": -0.17341171298652738,
-      "mean3dPct": -0.14585101391036262,
-      "mean7dPct": 0.05633096603941372,
+      "n": 456,
+      "mean1dPct": 0.20083190413556634,
+      "mean3dPct": 0.23630144437539155,
+      "mean7dPct": 0.59033003745122,
       "fadeHitRatePct": null
     }
   }

@@ -1,0 +1,98 @@
+import { describe, expect, it } from "vitest";
+import { computeStability } from "./report";
+import { HypothesisStat, MIN_SAMPLE_N, RollingWindowStats } from "../../src/lib/sentiment/backtestStats";
+
+const CONFUSION = { truePositives: 0, falsePositives: 0, falseNegatives: 0, trueNegatives: 0, precision: null, recall: null };
+
+function hypStat(n: number, winRate: number | null): HypothesisStat {
+  return {
+    n,
+    winRate,
+    meanReturnPct: 0,
+    medianReturnPct: 0,
+    maxDrawdownPct: 0,
+    bullish: CONFUSION,
+    bearish: CONFUSION,
+    significance: null,
+  };
+}
+
+function windowWithFundingStat(n: number, winRate: number | null): RollingWindowStats {
+  return {
+    windowStart: "2022-01-01",
+    windowEnd: "2023-01-01",
+    squeeze: {},
+    thesis: {},
+    categories: {},
+    biasVerdict: {},
+    hypotheses: { "funding:24h": hypStat(n, winRate) },
+  };
+}
+
+describe("computeStability", () => {
+  it("returns null when there are no rolling windows at all", () => {
+    expect(computeStability(undefined, "funding", 0.3)).toBeNull();
+  });
+
+  it("returns null when the headline win rate itself is null", () => {
+    const windows = { w1: windowWithFundingStat(50, 0.3) };
+    expect(computeStability(windows, "funding", null)).toBeNull();
+  });
+
+  it("returns null when fewer than 3 windows have enough of their own sample to judge", () => {
+    // Hand-verified real case: funding's own headline win rate is below 50%
+    // (bearish direction), and only 2 windows clear MIN_SAMPLE_N here.
+    const windows = {
+      w1: windowWithFundingStat(15, 0.2),
+      w2: windowWithFundingStat(20, 0.25),
+      w3: windowWithFundingStat(5, 0.1), // below MIN_SAMPLE_N, doesn't count
+    };
+    expect(computeStability(windows, "funding", 0.3)).toBeNull();
+  });
+
+  it("returns true when a clear majority of qualifying windows agree with the headline direction", () => {
+    // Headline win rate 0.30 -> direction "below 50%". 4 windows qualify
+    // (n >= MIN_SAMPLE_N), all 4 also read below 50% -> 4/4 = 1.0 >= 2/3.
+    const windows = {
+      w1: windowWithFundingStat(13, 0.23),
+      w2: windowWithFundingStat(28, 0.32),
+      w3: windowWithFundingStat(29, 0.31),
+      w4: windowWithFundingStat(20, 0.35),
+      w5: windowWithFundingStat(1, 0), // below MIN_SAMPLE_N, excluded
+      w6: windowWithFundingStat(0, null), // no data, excluded
+    };
+    expect(computeStability(windows, "funding", 0.30303030303030304)).toBe(true);
+  });
+
+  it("returns false when qualifying windows disagree with the headline direction more than 1/3 of the time", () => {
+    // Headline direction "above 50%". Of 3 qualifying windows, only 1 agrees
+    // (1/3 < 2/3 threshold).
+    const windows = {
+      w1: windowWithFundingStat(15, 0.6), // agrees (above 50%)
+      w2: windowWithFundingStat(20, 0.4), // disagrees
+      w3: windowWithFundingStat(30, 0.45), // disagrees
+    };
+    expect(computeStability(windows, "funding", 0.6)).toBe(false);
+  });
+
+  it("ignores a window whose own winRate is null even if n clears MIN_SAMPLE_N", () => {
+    const windows = {
+      w1: windowWithFundingStat(15, null),
+      w2: windowWithFundingStat(20, 0.3),
+      w3: windowWithFundingStat(30, 0.3),
+    };
+    // Only 2 windows have a usable winRate -> below the 3-window floor.
+    expect(computeStability(windows, "funding", 0.3)).toBeNull();
+  });
+
+  it("exercises the exact real boundary this function is built around (MIN_SAMPLE_N itself)", () => {
+    const windows = {
+      w1: windowWithFundingStat(MIN_SAMPLE_N, 0.3),
+      w2: windowWithFundingStat(MIN_SAMPLE_N - 1, 0.9), // excluded, one below floor
+      w3: windowWithFundingStat(MIN_SAMPLE_N, 0.3),
+      w4: windowWithFundingStat(MIN_SAMPLE_N, 0.3),
+    };
+    // 3 qualifying windows (w1, w3, w4), all agree -> stable.
+    expect(computeStability(windows, "funding", 0.3)).toBe(true);
+  });
+});

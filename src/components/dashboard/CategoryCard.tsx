@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { VerdictBadge, IntensityMeter, ConfidenceLabel } from "@/components/ui/VerdictBadge";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { Collapsible } from "@/components/ui/Collapsible";
+import { HistoricalPerformancePanel } from "./HistoricalPerformancePanel";
 import { CategoryScore, MetricVerdict } from "@/lib/signals/types";
 import { intensityLabel, metricWeight, rankMetric } from "@/lib/signals/scoring";
 import { CATEGORY_DESCRIPTIONS, METRIC_DESCRIPTIONS } from "@/lib/signals/descriptions";
@@ -35,7 +36,14 @@ function topReasonsFor(category: CategoryScore, limit = TOP_REASONS_LIMIT): Metr
     .sort((a, b) => rankMetric(b) - rankMetric(a))
     .slice(0, limit);
 }
-export function CategoryCard({ category }: { category: CategoryScore }) {
+export function CategoryCard({
+  category,
+  currentRegimeTags,
+}: {
+  category: CategoryScore;
+  /** Today's live regime tags, threaded to each contributing metric's HistoricalPerformancePanel — see that component's doc comment. */
+  currentRegimeTags?: string[];
+}) {
   const topReasons = topReasonsFor(category);
 
   return (
@@ -100,6 +108,7 @@ export function CategoryCard({ category }: { category: CategoryScore }) {
                   <VerdictBadge verdict={m.verdict} />
                 </div>
                 <p className="text-[11px] leading-relaxed text-ink-faint">{m.explanation}</p>
+                <HistoricalPerformancePanel metricId={m.id} currentRegimeTags={currentRegimeTags} />
               </li>
             ))}
           </ul>

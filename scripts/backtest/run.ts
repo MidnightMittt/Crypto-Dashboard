@@ -8,7 +8,7 @@ import { buildMarketThesis, MarketThesisInputs } from "../../src/lib/sentiment/m
 import { buildTechnicalRead } from "../../src/lib/sentiment/technicals";
 import { Candle } from "../../src/lib/technicals/indicators";
 import { evaluateAll, SignalContext } from "../../src/lib/signals/evaluators";
-import { classifyRegime, regimeTagsToStrings } from "./regimes";
+import { classifyRegime, regimeTagsToStrings } from "../../src/lib/technicals/regimes";
 import { buildMarketBias } from "../../src/lib/signals/marketBias";
 import { LocalHistoryPoint, AggregateMarketData, ExchangeSnapshot, FearGreed, EtfFlowSummary } from "../../src/types/market";
 import type { StablecoinSummary } from "../../src/lib/providers/stablecoins";
@@ -355,6 +355,12 @@ export function replayAsset(
       priceChange24hPct,
     });
 
+    // Computed here (not just at record-push time below) so the SAME
+    // classification feeds both thesisInputs.regimeTags and DayRecord's
+    // string-tag array — one classification per day, not two.
+    const candleIdx = dailyCandleIndex.get(new Date(t).toISOString().slice(0, 10));
+    const regime = candleIdx !== undefined ? classifyRegime(dailyCandles, candleIdx) : null;
+
     const thesisInputs: MarketThesisInputs = {
       asset: asset as "BTC" | "ETH",
       weightedFundingRatePct: currentFunding.fundingRatePct,
@@ -373,6 +379,7 @@ export function replayAsset(
       liquidations: null,
       priceChange24hPct,
       leverageHeatScore,
+      regimeTags: regime,
     };
     const thesis = buildMarketThesis(thesisInputs, t);
 
@@ -465,8 +472,6 @@ export function replayAsset(
       now: t,
     });
 
-    const candleIdx = dailyCandleIndex.get(new Date(t).toISOString().slice(0, 10));
-    const regime = candleIdx !== undefined ? classifyRegime(dailyCandles, candleIdx) : null;
     const regimeTags = regime ? regimeTagsToStrings(regime) : [];
 
     records.push({

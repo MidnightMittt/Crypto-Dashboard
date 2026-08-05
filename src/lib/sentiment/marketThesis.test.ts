@@ -25,6 +25,7 @@ function baseInputs(overrides: Partial<MarketThesisInputs> = {}): MarketThesisIn
     liquidations: null,
     priceChange24hPct: 0,
     leverageHeatScore: 50,
+    regimeTags: null,
     ...overrides,
   };
 }

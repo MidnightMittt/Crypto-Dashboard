@@ -1,6 +1,7 @@
 import type { MarketBias } from "@/lib/signals/types";
 import type { BiasHistoryEntry } from "@/lib/history/biasHistory";
 import type { VolumeProfileResult, SupportResistanceLevel } from "@/lib/technicals/marketStructure";
+import type { RegimeTags } from "@/lib/technicals/regimes";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Core domain types. Every exchange adapter resolves to this shape.
@@ -595,6 +596,17 @@ export interface MarketThesis {
   asset: AssetSymbol | "MARKET";
   regime: MarketRegime;
   regimeDescription: string;
+  /**
+   * The SEPARATE trend/volatility/range-bound classification from
+   * src/lib/technicals/regimes.ts — a genuinely different taxonomy from
+   * `regime` above, which is derived from positioning conviction, not price
+   * action. Same function the backtest classifies every historical day
+   * with, called here against TODAY's daily candles, so a metric's
+   * backtested `bestRegime`/`worstRegime` tags can be compared directly
+   * against what's actually happening right now. Null when daily candles
+   * aren't available (MARKET view, or too little history).
+   */
+  regimeTags: RegimeTags | null;
   /** Which side has more weighted evidence — "neutral" when bullish and bearish weight tie. */
   dominant: ThesisDirection;
   bullishEvidence: ThesisEvidence[];

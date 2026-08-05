@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { classifyRegime, regimeTagsToStrings } from "./regimes";
-import { Candle } from "../../src/lib/technicals/indicators";
+import { Candle } from "./indicators";
 
 const DAY_MS = 86_400_000;
 

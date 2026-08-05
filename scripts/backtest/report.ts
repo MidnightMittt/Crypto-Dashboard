@@ -6,11 +6,15 @@ import {
   RegimeStat,
   BacktestStats,
   BacktestResearch,
+  BacktestMetricStats,
+  MetricPerformanceSummary,
   HypothesisStat,
   MIN_SAMPLE_N,
   RollingWindowStats,
   MetricComboStat,
   SignalResearchReport,
+  deriveSampleSizeLabel,
+  deriveConfidenceLabel,
 } from "../../src/lib/sentiment/backtestStats";
 import { MarketRegime } from "../../src/types/market";
 import { SIGNAL_HYPOTHESES, HOLDING_PERIODS, HoldingPeriod } from "../../src/lib/signals/hypothesis";
@@ -39,6 +43,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, "data");
 const STATS_OUT_PATH = path.join(__dirname, "..", "..", "src", "data", "backtestStats.json");
 const RESEARCH_OUT_PATH = path.join(__dirname, "..", "..", "src", "data", "backtestResearch.json");
+const METRIC_STATS_OUT_PATH = path.join(__dirname, "..", "..", "src", "data", "backtestMetricStats.json");
 
 interface DayRecord {
   asset: string;
@@ -457,6 +462,82 @@ function signalResearchSection(
   return { markdown: rows.join("\n"), stats };
 }
 
+/**
+ * Does the 24h win-rate's direction (above/below 50%) agree across a
+ * majority of the rolling windows? Only counts windows whose OWN sample at
+ * 24h clears MIN_SAMPLE_N — a window with too few occurrences to judge is
+ * skipped rather than treated as disagreement. Requires at least 3
+ * qualifying windows before making any claim at all; below that, "stable"
+ * or "unstable" would itself be a thin-sample guess, so this returns null
+ * (honest "can't tell yet") instead.
+ */
+export function computeStability(
+  rollingStats: Record<string, RollingWindowStats> | undefined,
+  metricId: string,
+  headlineWinRate: number | null
+): boolean | null {
+  if (!rollingStats || headlineWinRate === null) return null;
+  const headlineDirection = headlineWinRate > 0.5;
+
+  let agree = 0;
+  let qualifying = 0;
+  for (const window of Object.values(rollingStats)) {
+    const stat = window.hypotheses[`${metricId}:24h`];
+    if (!stat || stat.n < MIN_SAMPLE_N || stat.winRate === null) continue;
+    qualifying++;
+    if ((stat.winRate > 0.5) === headlineDirection) agree++;
+  }
+
+  if (qualifying < 3) return null;
+  return agree / qualifying >= 2 / 3;
+}
+
+/**
+ * Trims signalResearchSection's already-computed output (plus one direct
+ * 7d lookup and the rolling-window stability check above) down to the
+ * small live-bundled shape `HistoricalPerformancePanel` reads. No new
+ * statistics — pure projection, same "aggregation only" spirit as
+ * signalResearchSection itself.
+ */
+export function metricPerformanceSection(
+  signalResearch: Record<string, SignalResearchReport>,
+  hypothesesStats: Partial<Record<`${string}:${HoldingPeriod}`, HypothesisStat>>,
+  rollingStats: Record<string, RollingWindowStats> | undefined
+): Record<string, MetricPerformanceSummary> {
+  const out: Record<string, MetricPerformanceSummary> = {};
+
+  for (const h of SIGNAL_HYPOTHESES) {
+    const research = signalResearch[h.id];
+    const headline = research?.headline ?? null; // already gated at N >= MIN_SAMPLE_N by signalResearchSection
+    const raw7d = hypothesesStats[`${h.id}:7d`] ?? null;
+    const winRate7d = raw7d && raw7d.n >= MIN_SAMPLE_N ? raw7d.winRate : null;
+
+    const n24h = headline?.n ?? null;
+    const significant24h = headline?.significance?.significant ?? null;
+    const size = headline !== null ? deriveSampleSizeLabel(headline.n) : null;
+    const confidence = size !== null && significant24h !== null ? deriveConfidenceLabel(size, significant24h) : null;
+
+    out[h.id] = {
+      metricId: h.id,
+      label: h.label,
+      hasHistoricalSource: h.hasHistoricalSource,
+      n24h,
+      winRate24h: headline?.winRate ?? null,
+      winRate7d,
+      significant24h,
+      bestRegime: research?.bestRegime ?? null,
+      worstRegime: research?.worstRegime ?? null,
+      bestHoldingPeriod: research?.bestHoldingPeriod ?? null,
+      worstHoldingPeriod: research?.worstHoldingPeriod ?? null,
+      sampleSizeLabel: size,
+      confidenceLabel: confidence,
+      stableAcrossWindows: computeStability(rollingStats, h.id, headline?.winRate ?? null),
+    };
+  }
+
+  return out;
+}
+
 function main() {
   const resultsPath = path.join(DATA_DIR, "results.json");
   if (!fs.existsSync(resultsPath)) {
@@ -481,6 +562,7 @@ function main() {
   const rolling = rollingWindowsSection();
   const metricCombinations = buildMetricCombinations(records as MetricComboDayRecord[]);
   const signalResearch = signalResearchSection(hypotheses.stats, metricRegimeCrosstab.stats, metricCombinations.results);
+  const metricPerformance = metricPerformanceSection(signalResearch.stats, hypotheses.stats, rolling?.stats);
 
   const header = `# Backtest Report
 
@@ -556,7 +638,7 @@ ${weightReview.markdown}
 ## Market Regimes
 
 Every day tagged with independent trend (bull/bear/neutral), volatility (high/low/normal), and
-range-bound flags — see scripts/backtest/regimes.ts for the exact thresholds, each checked
+range-bound flags — see src/lib/technicals/regimes.ts for the exact thresholds, each checked
 against this app's own real trailing-return/volatility distributions rather than guessed. A day
 can carry more than one tag (e.g. bull + high-vol).
 
@@ -633,6 +715,24 @@ ${signalResearch.markdown}
   fs.mkdirSync(path.dirname(RESEARCH_OUT_PATH), { recursive: true });
   fs.writeFileSync(RESEARCH_OUT_PATH, JSON.stringify(researchOut, null, 2));
   console.log(`[report] wrote src/data/backtestResearch.json`);
+
+  // Small, live-bundled per-metric performance snapshot — see
+  // backtestStats.ts's MetricPerformanceSummary doc comment for what's
+  // trimmed out and why.
+  const metricStatsOut: BacktestMetricStats = {
+    generatedAt: Date.now(),
+    coverageStart,
+    coverageEnd,
+    metrics: metricPerformance,
+  };
+  fs.mkdirSync(path.dirname(METRIC_STATS_OUT_PATH), { recursive: true });
+  fs.writeFileSync(METRIC_STATS_OUT_PATH, JSON.stringify(metricStatsOut, null, 2));
+  console.log(`[report] wrote src/data/backtestMetricStats.json`);
 }
 
-main();
+// Guarded the same way run.ts's own main() is: importing this file for its
+// pure functions (report.test.ts) must not trigger a full report
+// regeneration as a side effect.
+if (process.argv[1] && process.argv[1].endsWith("report.ts")) {
+  main();
+}

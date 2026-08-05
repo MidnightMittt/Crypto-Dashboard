@@ -1,4 +1,4 @@
-import { Candle } from "../../src/lib/technicals/indicators";
+import { Candle } from "./indicators";
 
 /**
  * Classifies each daily candle into independent regime flags — trend,
@@ -6,13 +6,15 @@ import { Candle } from "../../src/lib/technicals/indicators";
  * genuinely be both "Bull" and "High-Vol" during a sharp rally), so this
  * intentionally returns three separate reads rather than one label,
  * matching the same "which subset of tags is true" pattern
- * combinations.ts already uses for categories.
+ * scripts/backtest/combinations.ts already uses for categories.
  *
- * Pure function over the SAME daily candles run.ts already builds via
- * `rollUpToDaily` — no new data source. Purely descriptive: nothing here
- * predicts anything, it only labels what already happened, then report.ts
- * slices existing win-rate/significance stats by these labels the same way
- * it already slices by category or holding period.
+ * Lives here (not in scripts/backtest/) because it's shared: the backtest
+ * (scripts/backtest/run.ts) classifies every historical day with it, and
+ * the live aggregator (src/lib/exchanges/aggregator.ts) classifies TODAY
+ * with the exact same function — the whole point of a live "current
+ * regime" read is that it can never drift from what the backtest measured
+ * against. Pure function over the same daily candles both callers already
+ * have in hand; no new data source either side.
  */
 
 // ── Trend ────────────────────────────────────────────────────────────────
@@ -131,4 +133,25 @@ export function regimeTagsToStrings(tags: RegimeTags): string[] {
   const out: string[] = [tags.trend, `${tags.volatility}-vol`];
   if (tags.rangeBound) out.push("range-bound");
   return out;
+}
+
+/**
+ * Every tag string classifyRegime/regimeTagsToStrings can produce, mapped
+ * to plain English — the single label source for both the live regime
+ * badge (AiMarketSummary.tsx) and each metric's Best/Worst Environment
+ * (HistoricalPerformancePanel.tsx), so the two can never use different
+ * wording for the same tag.
+ */
+export const REGIME_TAG_LABELS: Record<string, string> = {
+  bull: "Bull Markets",
+  bear: "Bear Markets",
+  neutral: "Neutral Trend",
+  "high-vol": "High Volatility",
+  "low-vol": "Low Volatility",
+  "normal-vol": "Normal Volatility",
+  "range-bound": "Range-Bound",
+};
+
+export function regimeTagLabel(tag: string): string {
+  return REGIME_TAG_LABELS[tag] ?? tag;
 }

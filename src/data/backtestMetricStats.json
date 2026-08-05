@@ -1,0 +1,367 @@
+{
+  "generatedAt": 1785907927904,
+  "coverageStart": "2022-08-13",
+  "coverageEnd": "2026-07-29",
+  "metrics": {
+    "funding": {
+      "metricId": "funding",
+      "label": "Funding Rate",
+      "hasHistoricalSource": true,
+      "n24h": 33,
+      "winRate24h": 0.30303030303030304,
+      "winRate7d": 0.5757575757575758,
+      "significant24h": true,
+      "bestRegime": {
+        "tag": "bull",
+        "winRate": 0.45
+      },
+      "worstRegime": {
+        "tag": "neutral",
+        "winRate": 0.08333333333333333
+      },
+      "bestHoldingPeriod": {
+        "holdingPeriod": "7d",
+        "winRate": 0.5757575757575758
+      },
+      "worstHoldingPeriod": {
+        "holdingPeriod": "24h",
+        "winRate": 0.30303030303030304
+      },
+      "sampleSizeLabel": "Small",
+      "confidenceLabel": "Low",
+      "stableAcrossWindows": true
+    },
+    "openInterest": {
+      "metricId": "openInterest",
+      "label": "Open Interest",
+      "hasHistoricalSource": true,
+      "n24h": 647,
+      "winRate24h": 0.517774343122102,
+      "winRate7d": 0.482225656877898,
+      "significant24h": false,
+      "bestRegime": {
+        "tag": "low-vol",
+        "winRate": 0.5929203539823009
+      },
+      "worstRegime": {
+        "tag": "bear",
+        "winRate": 0.41025641025641024
+      },
+      "bestHoldingPeriod": {
+        "holdingPeriod": "24h",
+        "winRate": 0.517774343122102
+      },
+      "worstHoldingPeriod": {
+        "holdingPeriod": "1h",
+        "winRate": 0.44513137557959814
+      },
+      "sampleSizeLabel": "Medium",
+      "confidenceLabel": "Low",
+      "stableAcrossWindows": true
+    },
+    "squeezeRisk": {
+      "metricId": "squeezeRisk",
+      "label": "Squeeze Setup",
+      "hasHistoricalSource": true,
+      "n24h": 2338,
+      "winRate24h": 0.5068434559452524,
+      "winRate7d": 0.5051369863013698,
+      "significant24h": false,
+      "bestRegime": {
+        "tag": "bear",
+        "winRate": 0.5691489361702128
+      },
+      "worstRegime": {
+        "tag": "bull",
+        "winRate": 0.44745762711864406
+      },
+      "bestHoldingPeriod": {
+        "holdingPeriod": "24h",
+        "winRate": 0.5068434559452524
+      },
+      "worstHoldingPeriod": {
+        "holdingPeriod": "4h",
+        "winRate": 0.481180496150556
+      },
+      "sampleSizeLabel": "Large",
+      "confidenceLabel": "Medium",
+      "stableAcrossWindows": true
+    },
+    "longShort": {
+      "metricId": "longShort",
+      "label": "Long/Short Positioning",
+      "hasHistoricalSource": true,
+      "n24h": 1270,
+      "winRate24h": 0.5118110236220472,
+      "winRate7d": 0.5059101654846335,
+      "significant24h": false,
+      "bestRegime": {
+        "tag": "range-bound",
+        "winRate": 0.5739795918367347
+      },
+      "worstRegime": {
+        "tag": "bear",
+        "winRate": 0.44650205761316875
+      },
+      "bestHoldingPeriod": {
+        "holdingPeriod": "24h",
+        "winRate": 0.5118110236220472
+      },
+      "worstHoldingPeriod": {
+        "holdingPeriod": "1h",
+        "winRate": 0.5
+      },
+      "sampleSizeLabel": "Large",
+      "confidenceLabel": "Medium",
+      "stableAcrossWindows": true
+    },
+    "basis": {
+      "metricId": "basis",
+      "label": "Basis vs Spot",
+      "hasHistoricalSource": true,
+      "n24h": 2704,
+      "winRate24h": 0.4966715976331361,
+      "winRate7d": 0.5011102886750555,
+      "significant24h": false,
+      "bestRegime": {
+        "tag": "bear",
+        "winRate": 0.5792778649921507
+      },
+      "worstRegime": {
+        "tag": "bull",
+        "winRate": 0.4544179523141655
+      },
+      "bestHoldingPeriod": {
+        "holdingPeriod": "7d",
+        "winRate": 0.5011102886750555
+      },
+      "worstHoldingPeriod": {
+        "holdingPeriod": "24h",
+        "winRate": 0.4966715976331361
+      },
+      "sampleSizeLabel": "Large",
+      "confidenceLabel": "Medium",
+      "stableAcrossWindows": true
+    },
+    "orderFlow": {
+      "metricId": "orderFlow",
+      "label": "Order Flow",
+      "hasHistoricalSource": false,
+      "n24h": null,
+      "winRate24h": null,
+      "winRate7d": null,
+      "significant24h": null,
+      "bestRegime": null,
+      "worstRegime": null,
+      "bestHoldingPeriod": null,
+      "worstHoldingPeriod": null,
+      "sampleSizeLabel": null,
+      "confidenceLabel": null,
+      "stableAcrossWindows": null
+    },
+    "technicals": {
+      "metricId": "technicals",
+      "label": "Price Action",
+      "hasHistoricalSource": true,
+      "n24h": 2276,
+      "winRate24h": 0.48154657293497366,
+      "winRate7d": 0.4843956043956044,
+      "significant24h": false,
+      "bestRegime": {
+        "tag": "bear",
+        "winRate": 0.5505804311774462
+      },
+      "worstRegime": {
+        "tag": "neutral",
+        "winRate": 0.38611713665943603
+      },
+      "bestHoldingPeriod": {
+        "holdingPeriod": "4h",
+        "winRate": 0.4938488576449912
+      },
+      "worstHoldingPeriod": {
+        "holdingPeriod": "24h",
+        "winRate": 0.48154657293497366
+      },
+      "sampleSizeLabel": "Large",
+      "confidenceLabel": "Medium",
+      "stableAcrossWindows": true
+    },
+    "etfFlows": {
+      "metricId": "etfFlows",
+      "label": "ETF Flows",
+      "hasHistoricalSource": true,
+      "n24h": 540,
+      "winRate24h": 0.6555555555555556,
+      "winRate7d": 0.5703703703703704,
+      "significant24h": true,
+      "bestRegime": {
+        "tag": "bear",
+        "winRate": 0.7346938775510204
+      },
+      "worstRegime": {
+        "tag": "neutral",
+        "winRate": 0.6193548387096774
+      },
+      "bestHoldingPeriod": {
+        "holdingPeriod": "24h",
+        "winRate": 0.6555555555555556
+      },
+      "worstHoldingPeriod": {
+        "holdingPeriod": "1h",
+        "winRate": 0.5166666666666667
+      },
+      "sampleSizeLabel": "Medium",
+      "confidenceLabel": "Medium",
+      "stableAcrossWindows": true
+    },
+    "spotPerpVolume": {
+      "metricId": "spotPerpVolume",
+      "label": "Spot vs Perp Volume",
+      "hasHistoricalSource": true,
+      "n24h": 2069,
+      "winRate24h": 0.4765587240212663,
+      "winRate7d": 0.4927466150870406,
+      "significant24h": true,
+      "bestRegime": {
+        "tag": "bull",
+        "winRate": 0.5420560747663551
+      },
+      "worstRegime": {
+        "tag": "neutral",
+        "winRate": 0.40847983453981385
+      },
+      "bestHoldingPeriod": {
+        "holdingPeriod": "1h",
+        "winRate": 0.5103914934751087
+      },
+      "worstHoldingPeriod": {
+        "holdingPeriod": "24h",
+        "winRate": 0.4765587240212663
+      },
+      "sampleSizeLabel": "Large",
+      "confidenceLabel": "High",
+      "stableAcrossWindows": true
+    },
+    "exchangeFlow": {
+      "metricId": "exchangeFlow",
+      "label": "Exchange Netflow",
+      "hasHistoricalSource": false,
+      "n24h": null,
+      "winRate24h": null,
+      "winRate7d": null,
+      "significant24h": null,
+      "bestRegime": null,
+      "worstRegime": null,
+      "bestHoldingPeriod": null,
+      "worstHoldingPeriod": null,
+      "sampleSizeLabel": null,
+      "confidenceLabel": null,
+      "stableAcrossWindows": null
+    },
+    "options": {
+      "metricId": "options",
+      "label": "Options Put/Call",
+      "hasHistoricalSource": false,
+      "n24h": null,
+      "winRate24h": null,
+      "winRate7d": null,
+      "significant24h": null,
+      "bestRegime": null,
+      "worstRegime": null,
+      "bestHoldingPeriod": null,
+      "worstHoldingPeriod": null,
+      "sampleSizeLabel": null,
+      "confidenceLabel": null,
+      "stableAcrossWindows": null
+    },
+    "coinbasePremium": {
+      "metricId": "coinbasePremium",
+      "label": "Coinbase Premium",
+      "hasHistoricalSource": false,
+      "n24h": null,
+      "winRate24h": null,
+      "winRate7d": null,
+      "significant24h": null,
+      "bestRegime": null,
+      "worstRegime": null,
+      "bestHoldingPeriod": null,
+      "worstHoldingPeriod": null,
+      "sampleSizeLabel": null,
+      "confidenceLabel": null,
+      "stableAcrossWindows": null
+    },
+    "stablecoins": {
+      "metricId": "stablecoins",
+      "label": "Stablecoin Supply",
+      "hasHistoricalSource": true,
+      "n24h": 2260,
+      "winRate24h": 0.5013274336283186,
+      "winRate7d": 0.5354295837023915,
+      "significant24h": false,
+      "bestRegime": {
+        "tag": "bull",
+        "winRate": 0.5403726708074534
+      },
+      "worstRegime": {
+        "tag": "neutral",
+        "winRate": 0.4731084776663628
+      },
+      "bestHoldingPeriod": {
+        "holdingPeriod": "7d",
+        "winRate": 0.5354295837023915
+      },
+      "worstHoldingPeriod": {
+        "holdingPeriod": "24h",
+        "winRate": 0.5013274336283186
+      },
+      "sampleSizeLabel": "Large",
+      "confidenceLabel": "Medium",
+      "stableAcrossWindows": true
+    },
+    "fearGreed": {
+      "metricId": "fearGreed",
+      "label": "Fear & Greed",
+      "hasHistoricalSource": true,
+      "n24h": 806,
+      "winRate24h": 0.5359801488833746,
+      "winRate7d": 0.543424317617866,
+      "significant24h": true,
+      "bestRegime": {
+        "tag": "normal-vol",
+        "winRate": 0.6018518518518519
+      },
+      "worstRegime": {
+        "tag": "bear",
+        "winRate": 0.4479166666666667
+      },
+      "bestHoldingPeriod": {
+        "holdingPeriod": "7d",
+        "winRate": 0.543424317617866
+      },
+      "worstHoldingPeriod": {
+        "holdingPeriod": "1h",
+        "winRate": 0.5037220843672456
+      },
+      "sampleSizeLabel": "Medium",
+      "confidenceLabel": "Medium",
+      "stableAcrossWindows": true
+    },
+    "liquidations": {
+      "metricId": "liquidations",
+      "label": "Liquidations",
+      "hasHistoricalSource": false,
+      "n24h": null,
+      "winRate24h": null,
+      "winRate7d": null,
+      "significant24h": null,
+      "bestRegime": null,
+      "worstRegime": null,
+      "bestHoldingPeriod": null,
+      "worstHoldingPeriod": null,
+      "sampleSizeLabel": null,
+      "confidenceLabel": null,
+      "stableAcrossWindows": null
+    }
+  }
+}

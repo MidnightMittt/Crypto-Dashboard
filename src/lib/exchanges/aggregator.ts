@@ -89,6 +89,7 @@ import { fetchOkxDailyCandles } from "../providers/okxCandles";
 import { buildTechnicalRead } from "../sentiment/technicals";
 import { fibonacciRetracement } from "../technicals/indicators";
 import { buildVolumeProfile, buildSupportResistance } from "../technicals/marketStructure";
+import { classifyRegime } from "../technicals/regimes";
 import { fetchEtfFlows } from "../providers/etfFlows";
 import { fetchSpotVolumeUsd } from "../providers/spotVolume";
 import { evaluateAll } from "../signals/evaluators";
@@ -504,6 +505,7 @@ async function withRecordedHistory(
     deribitOptions,
     technicals,
     liquidityMap,
+    regimeTags,
     etfFlows,
     spotPerpVolume,
     stablecoins,
@@ -516,6 +518,7 @@ async function withRecordedHistory(
     buildDeribitOptions(asset, point.t),
     buildTechnicals(asset),
     buildLiquidityMap(asset),
+    buildMarketRegimeTags(asset),
     buildEtfFlows(asset),
     buildSpotPerpVolume(asset, agg.exchanges),
     /*
@@ -598,6 +601,7 @@ async function withRecordedHistory(
       priceChange24hPct: agg.priceChange24hPct,
       leverageHeatScore,
       technicals,
+      regimeTags,
     },
     agg.updatedAt
   );
@@ -1142,6 +1146,23 @@ async function buildLiquidityMap(asset: AssetSymbol | "MARKET"): Promise<Liquidi
   const volumeProfile = buildVolumeProfile(candles);
   const supportResistance = buildSupportResistance(candles, fib, volumeProfile);
   return { volumeProfile, supportResistance };
+}
+
+/**
+ * TODAY's trend/volatility/range-bound classification — the exact same
+ * `classifyRegime` scripts/backtest/run.ts uses to tag every historical
+ * day, called against the most recent index instead of a historical one.
+ * Re-fetches the same swr-cached daily candles `buildTechnicals`/
+ * `buildLiquidityMap` above already use, same "second call costs nothing"
+ * precedent as those two.
+ */
+async function buildMarketRegimeTags(asset: AssetSymbol | "MARKET") {
+  if (asset === "MARKET") return null;
+
+  const candles = await fetchOkxDailyCandles(asset).catch(() => []);
+  if (candles.length === 0) return null;
+
+  return classifyRegime(candles, candles.length - 1);
 }
 
 /** US spot ETF flows. BTC/ETH only — no such complex exists for the rest. */

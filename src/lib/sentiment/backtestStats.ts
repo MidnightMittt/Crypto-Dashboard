@@ -91,7 +91,7 @@ export interface BacktestResearch {
    */
   combinations: CombinationStat[];
   /**
-   * Bare regime-tag breakdown (scripts/backtest/regimes.ts): how price
+   * Bare regime-tag breakdown (src/lib/technicals/regimes.ts): how price
    * moved on days carrying each independent trend/volatility/range-bound
    * tag, with NO metric crossed in — e.g. "on Bull-tagged days, mean 7d
    * return was X%". A separate, coarser question from metricRegimeCrosstab
@@ -135,6 +135,79 @@ export interface BacktestResearch {
    * different sections by hand.
    */
   signalResearch: Record<string, SignalResearchReport>;
+}
+
+/**
+ * The small, live-bundled per-metric performance snapshot —
+ * `src/data/backtestMetricStats.json`. A trimmed projection of
+ * `SignalResearchReport`/`HypothesisStat` (both `BacktestResearch`-only,
+ * never client-bundled) down to exactly what a "Historical Performance"
+ * panel needs. Deliberately excludes the full `interactions` array, the
+ * full regime crosstab, and the full 6-window rolling breakdown — those
+ * stay research-only, same split rationale as `BacktestStats` vs.
+ * `BacktestResearch` above.
+ */
+export interface MetricPerformanceSummary {
+  metricId: string;
+  label: string;
+  hasHistoricalSource: boolean;
+  n24h: number | null;
+  winRate24h: number | null;
+  /** Looked up separately from the 24h headline — the panel wants both explicitly, not just whichever holding period happens to be best/worst. */
+  winRate7d: number | null;
+  significant24h: boolean | null;
+  bestRegime: { tag: string; winRate: number } | null;
+  worstRegime: { tag: string; winRate: number } | null;
+  bestHoldingPeriod: { holdingPeriod: string; winRate: number } | null;
+  worstHoldingPeriod: { holdingPeriod: string; winRate: number } | null;
+  sampleSizeLabel: "Small" | "Medium" | "Large" | null;
+  confidenceLabel: "Low" | "Medium" | "High" | null;
+  /**
+   * Does the 24h win-rate's direction (above/below 50%) agree across a
+   * majority of the 6 rolling windows (scripts/backtest/rolling.ts)? Null
+   * when fewer than 3 windows have enough of their own sample to judge —
+   * an honest "can't tell yet" rather than a shaky true/false from 1-2
+   * windows.
+   */
+  stableAcrossWindows: boolean | null;
+}
+
+export interface BacktestMetricStats {
+  generatedAt: number;
+  coverageStart: string;
+  coverageEnd: string;
+  metrics: Record<string, MetricPerformanceSummary>;
+}
+
+/**
+ * Bucket definitions for `sampleSizeLabel`, checked against the real `n`
+ * distribution across this app's 10 backtestable metrics (hand-verified
+ * against a real run: 33, 536, 647, 806, 1269, 2070, 2260, 2277, 2339,
+ * 2704) — the two widest gaps in that sorted list sit at 33→536 and
+ * 806→1269, so the cut points below (200, 1000) land in real gaps rather
+ * than round numbers picked without looking. A one-time judgment call, not
+ * a derived constant like MIN_SAMPLE_N — worth revisiting if the metric
+ * roster or window length changes materially.
+ */
+export function deriveSampleSizeLabel(n: number): "Small" | "Medium" | "Large" {
+  return n < 200 ? "Small" : n < 1000 ? "Medium" : "Large";
+}
+
+/**
+ * Confidence is deliberately a JOINT function of sample size AND
+ * significance, never size alone — a large sample that doesn't clear
+ * significance is not "High" confidence just because N is big. This is
+ * the concrete mechanism behind "do not create... unsupported confidence
+ * scores": a metric can only reach High by being both well-sampled and
+ * statistically real.
+ */
+export function deriveConfidenceLabel(
+  size: "Small" | "Medium" | "Large",
+  significant: boolean
+): "Low" | "Medium" | "High" {
+  if (size === "Large" && significant) return "High";
+  if ((size === "Large" && !significant) || (size === "Medium" && significant)) return "Medium";
+  return "Low";
 }
 
 export interface SignalResearchReport {
@@ -264,6 +337,24 @@ export function lookupCategoryStat(stats: BacktestStats, category: Category, ver
 export function lookupBiasVerdictStat(stats: BacktestStats, verdict: Verdict): RegimeStat | null {
   const stat = stats.biasVerdict[verdict];
   return stat && stat.n >= MIN_SAMPLE_N ? stat : null;
+}
+
+/**
+ * Reads from `BacktestMetricStats` (the small live-bundled file) — unlike
+ * `lookupHypothesisStat`/`lookupRegimeStat`/`lookupMetricRegimeStat` below,
+ * this one IS wired into live components (`HistoricalPerformancePanel`).
+ * Same universal rule as every other lookup in this file: renders nothing
+ * below MIN_SAMPLE_N rather than a number with false confidence — checked
+ * here in addition to the generator's own gating in report.ts, since a
+ * stat with no historical source at all (n24h === null) must never render
+ * either, even though it technically fails the ">=" comparison the same way.
+ */
+export function lookupMetricPerformance(
+  stats: BacktestMetricStats,
+  metricId: string
+): MetricPerformanceSummary | null {
+  const stat = stats.metrics[metricId];
+  return stat && stat.hasHistoricalSource && stat.n24h !== null && stat.n24h >= MIN_SAMPLE_N ? stat : null;
 }
 
 /**

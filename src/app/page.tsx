@@ -32,6 +32,7 @@ import { Button } from "@/components/ui/Button";
 import { useMarketData } from "@/lib/hooks/useMarketData";
 import { useDashboardStore } from "@/lib/store/dashboardStore";
 import { getExchange } from "@/lib/exchanges/registry";
+import { regimeTagsToStrings } from "@/lib/technicals/regimes";
 
 export default function DashboardPage() {
   const asset = useDashboardStore((s) => s.asset);
@@ -43,6 +44,13 @@ export default function DashboardPage() {
   // rendered in both branches because it sources its series independently.
   const ready = !isLoading && !!aggregate && aggregate.exchanges.length > 0;
   const noData = !isLoading && !!aggregate && aggregate.exchanges.length === 0;
+
+  // Today's live trend/volatility/range-bound tags, threaded to every
+  // per-metric HistoricalPerformancePanel so a backtested best/worst
+  // environment can be marked "(current)" — see that component's doc comment.
+  const currentRegimeTags = aggregate?.marketThesis?.regimeTags
+    ? regimeTagsToStrings(aggregate.marketThesis.regimeTags)
+    : undefined;
 
   const venueCount = aggregate ? new Set(aggregate.exchanges.map((e) => e.exchangeId)).size : undefined;
   const unavailable = (aggregate?.unavailableExchanges ?? [])
@@ -145,7 +153,7 @@ export default function DashboardPage() {
                 {aggregate.marketBias.categories
                   .filter((c) => c.category !== "liquidityMap")
                   .map((c) => (
-                    <CategoryCard key={c.category} category={c} />
+                    <CategoryCard key={c.category} category={c} currentRegimeTags={currentRegimeTags} />
                   ))}
                 <LiquidityMapCard
                   liquidityMap={aggregate.liquidityMap}
@@ -177,7 +185,7 @@ export default function DashboardPage() {
               title="All 15 Signals"
               summary={`${aggregate.marketBias?.metrics.length ?? 0} metrics`}
             >
-              <SignalBreakdown metrics={aggregate.marketBias?.metrics ?? []} />
+              <SignalBreakdown metrics={aggregate.marketBias?.metrics ?? []} currentRegimeTags={currentRegimeTags} />
             </Collapsible>
 
             {/*

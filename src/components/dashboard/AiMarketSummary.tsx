@@ -8,7 +8,17 @@ import { MarketThesis, TechnicalRead } from "@/types/market";
 import { intensityLabel } from "@/lib/signals/scoring";
 import { technicalAgreement, TechnicalAgreement } from "@/lib/sentiment/technicals";
 import { lookupBiasVerdictStat } from "@/lib/sentiment/backtestStats";
+import { RegimeTags } from "@/lib/technicals/regimes";
 import backtestStats from "@/data/backtestStats.json";
+
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/** Compact form for the header stat row — "Bull · Normal Vol", optionally + "Range-Bound". Distinct from HistoricalPerformancePanel's longer "Bull Markets"/"Normal Volatility" labels, which have more room. */
+function regimeBadgeText(tags: RegimeTags): string {
+  const parts = [capitalize(tags.trend), `${capitalize(tags.volatility)} Vol`];
+  if (tags.rangeBound) parts.push("Range-Bound");
+  return parts.join(" · ");
+}
 
 /**
  * The dashboard's single "what's the highest-probability direction right
@@ -116,6 +126,13 @@ function Header({ bias, thesis }: { bias: MarketBias; thesis: MarketThesis | nul
           )}
           <Stat label="Risk" value={bias.riskLevel.toUpperCase()} hint={bias.riskRationale} />
           <Stat label="Market Health" value={`${bias.healthScore}%`} hint="Direction-agnostic: how trustworthy and calm the picture is, regardless of which way it leans." />
+          {thesis?.regimeTags && (
+            <Stat
+              label="Market Regime"
+              value={regimeBadgeText(thesis.regimeTags)}
+              hint="Today's trend/volatility classification — the same one every metric's backtested Best/Worst Environment below is measured against."
+            />
+          )}
         </div>
       </div>
 
