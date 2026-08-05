@@ -8,6 +8,8 @@ import {
   Verdict,
 } from "./types";
 import { computeWeightedScore, metricWeight, rankMetric, verdictFromScore } from "./scoring";
+import { regimeAdjustedCategoryWeights } from "./regimeWeights";
+import { RegimeTags } from "@/lib/technicals/regimes";
 import { TechnicalRead } from "@/types/market";
 
 /**
@@ -158,15 +160,24 @@ export interface CombinedCategoryScore {
  * Same shape of math as `computeWeightedScore`, one level up: each
  * category's pull is its weight x its own confidence, missing categories
  * renormalize rather than defaulting to neutral.
+ *
+ * `regime` (default null) lets the weights shift by market regime via
+ * regimeWeights.ts's regimeAdjustedCategoryWeights — null reproduces the
+ * exact pre-regime-adjustment behavior, so every caller not yet passing a
+ * regime sees zero change.
  */
-export function combineCategoryScores(categories: CategoryScore[]): CombinedCategoryScore | null {
+export function combineCategoryScores(
+  categories: CategoryScore[],
+  regime: RegimeTags | null = null
+): CombinedCategoryScore | null {
+  const weights = regimeAdjustedCategoryWeights(CATEGORY_WEIGHTS, regime);
   let weightedSum = 0;
   let totalWeight = 0;
   let confWeightTotal = 0;
   let confWeightedSum = 0;
 
   for (const c of categories) {
-    const baseWeight = CATEGORY_WEIGHTS[c.category];
+    const baseWeight = weights[c.category];
     confWeightTotal += baseWeight;
     confWeightedSum += c.confidence * baseWeight;
 

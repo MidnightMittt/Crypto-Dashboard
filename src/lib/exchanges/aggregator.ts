@@ -641,6 +641,7 @@ async function withRecordedHistory(
     squeezeScore: squeezeRisk?.score ?? null,
     previous: priorBias?.verdicts ?? null,
     now: agg.updatedAt,
+    regimeTags,
   });
 
   let biasTimeline: BiasHistoryEntry[] = [];

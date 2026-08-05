@@ -3,6 +3,7 @@ import { agreementOf } from "./confidence";
 import { computeWeightedScore, metricWeight, rankMetric } from "./scoring";
 import { buildAllCategories, buildMarketHealth, buildTrendStrength, combineCategoryScores } from "./categories";
 import { TechnicalRead } from "@/types/market";
+import { RegimeTags } from "@/lib/technicals/regimes";
 
 /**
  * Rolls every MetricVerdict into one answer: is the market leaning bullish,
@@ -100,23 +101,30 @@ export interface MarketBiasInputs {
   /** Verdicts from the previous reading, keyed by metric id. Null on first run. */
   previous: Record<string, Verdict> | null;
   now: number;
+  /**
+   * Today's trend/volatility/range-bound classification (the same
+   * classifyRegime() output the live regime badge and backtest bucketing
+   * already use) — shifts CATEGORY_WEIGHTS via regimeWeights.ts before
+   * combining. Defaults to null, which reproduces the exact pre-regime-
+   * adjustment weighting; every existing caller not yet passing this sees
+   * zero change.
+   */
+  regimeTags?: RegimeTags | null;
 }
 
 export function buildMarketBias(inputs: MarketBiasInputs): MarketBias | null {
-  const { asset, metrics, technicals, squeezeScore, previous, now } = inputs;
+  const { asset, metrics, technicals, squeezeScore, previous, now, regimeTags = null } = inputs;
   if (metrics.length === 0) return null;
 
   /*
-   * The headline score is now CATEGORY-weighted, not a flat per-metric sum:
-   * group into Liquidity/Momentum/Derivatives/On-chain/Sentiment first,
-   * then combine those five via CATEGORY_WEIGHTS (25/20/20/20/15). This is
-   * a deliberate behavior change, not a refactor artifact — it moves the
-   * headline number for some readings versus the old flat weighting,
-   * because a metric's pull is now also shaped by how much weight its
-   * whole category carries. See categories.ts.
+   * The headline score is CATEGORY-weighted, not a flat per-metric sum:
+   * group into Leveraged Positioning / Spot Demand / Market Stress /
+   * Liquidity Map first, then combine those four via CATEGORY_WEIGHTS,
+   * optionally shifted by today's market regime (regimeWeights.ts). See
+   * categories.ts for the full taxonomy rationale.
    */
   const categories = buildAllCategories(metrics);
-  const combined = combineCategoryScores(categories);
+  const combined = combineCategoryScores(categories, regimeTags);
   if (!combined) return null;
 
   const { score, verdict, confidence } = combined;

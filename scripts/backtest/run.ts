@@ -472,6 +472,11 @@ export function replayAsset(
       squeezeScore: squeezeRisk?.score ?? null,
       previous: null, // no sequential "what changed" concept in a batch replay
       now: t,
+      // Same `regime` this loop already computes for DayRecord.regimeTags
+      // below — replaying with the ACTUAL regime-adjusted weights, not the
+      // old fixed ones, is the whole point of the Phase 1 backtest
+      // comparison this file's re-run feeds.
+      regimeTags: regime,
     });
 
     const regimeTags = regime ? regimeTagsToStrings(regime) : [];
