@@ -3,11 +3,13 @@ import path from "path";
 import { fileURLToPath } from "url";
 import {
   SQUEEZE_SCORE_BUCKETS,
+  AGREEMENT_BUCKETS,
   RegimeStat,
   BacktestStats,
   BacktestResearch,
   BacktestMetricStats,
   MetricPerformanceSummary,
+  AgreementBucketStat,
   HypothesisStat,
   MIN_SAMPLE_N,
   RollingWindowStats,
@@ -45,7 +47,7 @@ const STATS_OUT_PATH = path.join(__dirname, "..", "..", "src", "data", "backtest
 const RESEARCH_OUT_PATH = path.join(__dirname, "..", "..", "src", "data", "backtestResearch.json");
 const METRIC_STATS_OUT_PATH = path.join(__dirname, "..", "..", "src", "data", "backtestMetricStats.json");
 
-interface DayRecord {
+export interface DayRecord {
   asset: string;
   date: string;
   t: number;
@@ -53,6 +55,10 @@ interface DayRecord {
   squeezeSide: string | null;
   thesisRegime: string | null;
   biasVerdict: string | null;
+  /** 0-100, run.ts's bias?.confidence — evidence QUALITY, not concurrence. */
+  biasConfidence: number | null;
+  /** 0-100, run.ts's bias?.agreement — how much the metrics concur with each other, a DIFFERENT axis from confidence. */
+  biasAgreement: number | null;
   categories: Array<{ category: string; score: number; verdict: string }>;
   metrics: Array<{ id: string; verdict: string }>;
   regimeTags: string[];
@@ -471,6 +477,52 @@ function signalResearchSection(
  * or "unstable" would itself be a thin-sample guess, so this returns null
  * (honest "can't tell yet") instead.
  */
+/**
+ * Tests whether the composite bias score's own "agreement" figure (how
+ * much the 15 metrics concur, src/lib/signals/confidence.ts's agreementOf)
+ * is doing real predictive work or is cosmetic — buckets every historical
+ * day by its agreement quartile and checks whether the overall verdict's
+ * sign-match rate against the next day's return actually differs across
+ * buckets. Reuses summarizeOccurrences/testSignificance from metrics.ts,
+ * the exact same machinery hypothesesSection above already uses — no new
+ * statistics, only a new grouping of the same forward-return data.
+ */
+export function agreementValidationSection(records: DayRecord[]): {
+  markdown: string;
+  stats: AgreementBucketStat[];
+} {
+  const rows: string[] = [
+    "| Agreement bucket | N | Win rate | Mean 1d | p-value |",
+    "|---|---|---|---|---|",
+  ];
+  const stats: AgreementBucketStat[] = [];
+
+  for (const bucket of AGREEMENT_BUCKETS) {
+    const occurrences: Occurrence[] = records
+      .filter((r) => r.biasAgreement !== null && bucket.test(r.biasAgreement) && r.biasVerdict !== null)
+      .map((r) => ({ t: r.t, verdict: r.biasVerdict as Occurrence["verdict"], forwardReturnPct: r.forwardReturn1d }));
+    const stat = summarizeOccurrences(occurrences, MIN_SAMPLE_N);
+
+    stats.push({
+      bucketLabel: bucket.label,
+      n: stat.n,
+      winRate: stat.n >= MIN_SAMPLE_N ? stat.winRate : null,
+      meanReturnPct: stat.n >= MIN_SAMPLE_N ? stat.meanReturnPct : null,
+      significant: stat.significance?.significant ?? null,
+    });
+
+    if (stat.n < MIN_SAMPLE_N) {
+      rows.push(`| ${bucket.label} | ${stat.n} | insufficient data | | |`);
+      continue;
+    }
+    rows.push(
+      `| ${bucket.label} | ${stat.n} | ${stat.winRate === null ? "—" : `${(stat.winRate * 100).toFixed(0)}%`} | ${fmt(stat.meanReturnPct)} | ${stat.significance ? stat.significance.pValue.toFixed(4) : "—"} |`
+    );
+  }
+
+  return { markdown: rows.join("\n"), stats };
+}
+
 export function computeStability(
   rollingStats: Record<string, RollingWindowStats> | undefined,
   metricId: string,
@@ -563,6 +615,7 @@ function main() {
   const metricCombinations = buildMetricCombinations(records as MetricComboDayRecord[]);
   const signalResearch = signalResearchSection(hypotheses.stats, metricRegimeCrosstab.stats, metricCombinations.results);
   const metricPerformance = metricPerformanceSection(signalResearch.stats, hypotheses.stats, rolling?.stats);
+  const agreementValidation = agreementValidationSection(records);
 
   const header = `# Backtest Report
 
@@ -676,6 +729,16 @@ metric (see backtestResearch.json's \`signalResearch\` field for the full per-me
 including which specific combos).
 
 ${signalResearch.markdown}
+
+## Agreement Validation
+
+Does \`bias.agreement\` (how much the 15 metrics concur, NOT the same axis as confidence — see
+marketBias.ts) historically correlate with a better hit rate? Every historical day bucketed into
+an agreement quartile; within each bucket, does the overall bias verdict's direction match the
+next day's return sign more often than chance. Same sign-test machinery every other section here
+already uses.
+
+${agreementValidation.markdown}
 `;
 
   const report = header + body;
@@ -724,6 +787,7 @@ ${signalResearch.markdown}
     coverageStart,
     coverageEnd,
     metrics: metricPerformance,
+    agreementBuckets: agreementValidation.stats,
   };
   fs.mkdirSync(path.dirname(METRIC_STATS_OUT_PATH), { recursive: true });
   fs.writeFileSync(METRIC_STATS_OUT_PATH, JSON.stringify(metricStatsOut, null, 2));

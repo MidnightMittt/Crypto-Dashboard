@@ -121,6 +121,8 @@ export interface DayRecord {
   biasScore: number | null;
   biasVerdict: string | null;
   biasConfidence: number | null;
+  /** How much the metrics concur with each other — a DIFFERENT number from biasConfidence (evidence quality), see marketBias.ts's own doc comment. */
+  biasAgreement: number | null;
   biasHealthScore: number | null;
   /** One entry per category that reported, for the category-level backtest report. */
   categories: Array<{ category: string; score: number; verdict: string }>;
@@ -492,6 +494,7 @@ export function replayAsset(
       biasScore: bias?.score ?? null,
       biasVerdict: bias?.verdict ?? null,
       biasConfidence: bias?.confidence ?? null,
+      biasAgreement: bias?.agreement ?? null,
       biasHealthScore: bias?.healthScore ?? null,
       categories: (bias?.categories ?? []).map((c) => ({ category: c.category, score: c.score, verdict: c.verdict })),
       metrics: metricVerdicts.map((m) => ({ id: m.id, verdict: m.verdict })),

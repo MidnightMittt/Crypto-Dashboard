@@ -7,9 +7,13 @@ import { topReasons, RankedReason } from "@/lib/signals/marketBias";
 import { MarketThesis, TechnicalRead } from "@/types/market";
 import { intensityLabel } from "@/lib/signals/scoring";
 import { technicalAgreement, TechnicalAgreement } from "@/lib/sentiment/technicals";
-import { lookupBiasVerdictStat } from "@/lib/sentiment/backtestStats";
+import { lookupBiasVerdictStat, lookupAgreementBucket, BacktestMetricStats } from "@/lib/sentiment/backtestStats";
 import { RegimeTags } from "@/lib/technicals/regimes";
 import backtestStats from "@/data/backtestStats.json";
+import backtestMetricStatsJson from "@/data/backtestMetricStats.json";
+
+/** Same widening-cast reasoning as HistoricalPerformancePanel.tsx — JSON imports lose string-literal unions. */
+const backtestMetricStats = backtestMetricStatsJson as BacktestMetricStats;
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -146,6 +150,7 @@ function Header({ bias, thesis }: { bias: MarketBias; thesis: MarketThesis | nul
       )}
 
       <BiasBacktestStatLine verdict={bias.verdict} />
+      <AgreementBacktestStatLine agreement={bias.agreement} />
     </div>
   );
 }
@@ -166,6 +171,27 @@ function BiasBacktestStatLine({ verdict }: { verdict: MarketBias["verdict"] }) {
       {backtestStats.coverageEnd}, N={stat.n} days the overall read was {verdict}): price moved a
       mean {stat.mean1dPct >= 0 ? "+" : ""}
       {stat.mean1dPct.toFixed(1)}% over the next 24h. One narrow window, not a guarantee.
+    </p>
+  );
+}
+
+/**
+ * Does the "Agreement" figure above actually mean anything historically —
+ * tests whether higher agreement correlates with a better hit rate, or is
+ * cosmetic. Same MIN_SAMPLE_N-gated null-if-thin convention as every other
+ * stat line in this file.
+ */
+function AgreementBacktestStatLine({ agreement }: { agreement: number }) {
+  const stat = lookupAgreementBucket(backtestMetricStats, agreement);
+  if (!stat || stat.winRate === null) return null;
+
+  return (
+    <p className="max-w-4xl text-[13px] leading-relaxed text-ink-faint">
+      Historically, in the backtested window ({backtestMetricStats.coverageStart} to{" "}
+      {backtestMetricStats.coverageEnd}, N={stat.n} days with agreement in this range): the overall
+      read matched the next day&apos;s move {(stat.winRate * 100).toFixed(0)}% of the time. Not
+      necessarily higher or lower than other agreement levels — check the full breakdown before
+      treating agreement itself as a signal.
     </p>
   );
 }

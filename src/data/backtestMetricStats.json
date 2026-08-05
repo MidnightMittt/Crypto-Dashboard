@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1785907927904,
+  "generatedAt": 1785908798817,
   "coverageStart": "2022-08-13",
   "coverageEnd": "2026-07-29",
   "metrics": {
@@ -363,5 +363,35 @@
       "confidenceLabel": null,
       "stableAcrossWindows": null
     }
-  }
+  },
+  "agreementBuckets": [
+    {
+      "bucketLabel": "0-25%",
+      "n": 499,
+      "winRate": 0.5450901803607214,
+      "meanReturnPct": 0.001400933025906545,
+      "significant": true
+    },
+    {
+      "bucketLabel": "25-50%",
+      "n": 791,
+      "winRate": 0.48166877370417194,
+      "meanReturnPct": 0.22540514372845524,
+      "significant": false
+    },
+    {
+      "bucketLabel": "50-75%",
+      "n": 923,
+      "winRate": 0.5254604550379198,
+      "meanReturnPct": -0.034358280669510605,
+      "significant": false
+    },
+    {
+      "bucketLabel": "75-100%",
+      "n": 225,
+      "winRate": 0.5466666666666666,
+      "meanReturnPct": -0.09912070344258499,
+      "significant": false
+    }
+  ]
 }

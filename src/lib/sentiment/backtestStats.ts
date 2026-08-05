@@ -177,6 +177,22 @@ export interface BacktestMetricStats {
   coverageStart: string;
   coverageEnd: string;
   metrics: Record<string, MetricPerformanceSummary>;
+  /**
+   * Does the composite bias score's own "agreement" figure (how much the
+   * metrics concur, src/lib/signals/confidence.ts's agreementOf) historically
+   * correlate with a better hit rate — one bucket per agreement quartile,
+   * tests whether `bias.agreement` is doing real predictive work or is
+   * cosmetic. Same MIN_SAMPLE_N-gated shape as everything else here.
+   */
+  agreementBuckets: AgreementBucketStat[];
+}
+
+export interface AgreementBucketStat {
+  bucketLabel: string;
+  n: number;
+  winRate: number | null;
+  meanReturnPct: number | null;
+  significant: boolean | null;
 }
 
 /**
@@ -306,6 +322,14 @@ export const SQUEEZE_SCORE_BUCKETS: Array<{ label: string; test: (score: number)
   { label: "70-100 (crowded)", test: (s) => s >= 70 },
 ];
 
+/** Quartiles of `bias.agreement` (0-100 scale) — shared by report.ts's generator and the live lookup below so they can never bucket a given agreement value differently. */
+export const AGREEMENT_BUCKETS: Array<{ label: string; test: (agreement: number) => boolean }> = [
+  { label: "0-25%", test: (a) => a < 25 },
+  { label: "25-50%", test: (a) => a >= 25 && a < 50 },
+  { label: "50-75%", test: (a) => a >= 50 && a < 75 },
+  { label: "75-100%", test: (a) => a >= 75 },
+];
+
 /** Same key scheme used when building the stats file — keep in sync with buildSqueezeKey callers. */
 export function squeezeBucketKey(score: number, side: "long" | "short" | "balanced"): string | null {
   if (side === "balanced") return null;
@@ -355,6 +379,14 @@ export function lookupMetricPerformance(
 ): MetricPerformanceSummary | null {
   const stat = stats.metrics[metricId];
   return stat && stat.hasHistoricalSource && stat.n24h !== null && stat.n24h >= MIN_SAMPLE_N ? stat : null;
+}
+
+/** Same MIN_SAMPLE_N gate as every other lookup here. `agreement` is bias.agreement (0-100), not a fraction. */
+export function lookupAgreementBucket(stats: BacktestMetricStats, agreement: number): AgreementBucketStat | null {
+  const bucket = AGREEMENT_BUCKETS.find((b) => b.test(agreement));
+  if (!bucket) return null;
+  const stat = stats.agreementBuckets.find((s) => s.bucketLabel === bucket.label);
+  return stat && stat.n >= MIN_SAMPLE_N ? stat : null;
 }
 
 /**

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeStability } from "./report";
+import { computeStability, agreementValidationSection, DayRecord } from "./report";
 import { HypothesisStat, MIN_SAMPLE_N, RollingWindowStats } from "../../src/lib/sentiment/backtestStats";
 
 const CONFUSION = { truePositives: 0, falsePositives: 0, falseNegatives: 0, trueNegatives: 0, precision: null, recall: null };
@@ -94,5 +94,80 @@ describe("computeStability", () => {
     };
     // 3 qualifying windows (w1, w3, w4), all agree -> stable.
     expect(computeStability(windows, "funding", 0.3)).toBe(true);
+  });
+});
+
+function dayRecord(overrides: Partial<DayRecord> = {}): DayRecord {
+  return {
+    asset: "BTC",
+    date: "2024-01-01",
+    t: 0,
+    squeezeScore: null,
+    squeezeSide: null,
+    thesisRegime: null,
+    biasVerdict: null,
+    biasConfidence: null,
+    biasAgreement: null,
+    categories: [],
+    metrics: [],
+    regimeTags: [],
+    forwardReturn1h: null,
+    forwardReturn4h: null,
+    forwardReturn1d: null,
+    forwardReturn3d: null,
+    forwardReturn7d: null,
+    ...overrides,
+  };
+}
+
+describe("agreementValidationSection", () => {
+  it("reports insufficient data below MIN_SAMPLE_N without fabricating a win rate", () => {
+    const records = Array.from({ length: MIN_SAMPLE_N - 1 }, (_, i) =>
+      dayRecord({ biasAgreement: 10, biasVerdict: "bullish", forwardReturn1d: 1 })
+    );
+    const { stats } = agreementValidationSection(records);
+    const bucket = stats.find((s) => s.bucketLabel === "0-25%")!;
+    expect(bucket.n).toBe(MIN_SAMPLE_N - 1);
+    expect(bucket.winRate).toBeNull();
+    expect(bucket.meanReturnPct).toBeNull();
+  });
+
+  it("computes a real win rate once N clears the floor, hand-verified", () => {
+    // 7 bullish-and-correct (return > 0), 3 bullish-and-wrong (return < 0) —
+    // exactly 10 days, all agreement=80 (75-100% bucket) -> winRate 0.7.
+    const wins = Array.from({ length: 7 }, () => dayRecord({ biasAgreement: 80, biasVerdict: "bullish", forwardReturn1d: 1 }));
+    const losses = Array.from({ length: 3 }, () => dayRecord({ biasAgreement: 80, biasVerdict: "bullish", forwardReturn1d: -1 }));
+    const { stats } = agreementValidationSection([...wins, ...losses]);
+    const bucket = stats.find((s) => s.bucketLabel === "75-100%")!;
+    expect(bucket.n).toBe(10);
+    expect(bucket.winRate).toBeCloseTo(0.7, 5);
+  });
+
+  it("sorts days into the correct quartile at the exact boundary values", () => {
+    // a=24.999 -> 0-25%; a=25 -> 25-50%; a=49.999 -> 25-50%; a=50 -> 50-75%;
+    // a=74.999 -> 50-75%; a=75 -> 75-100%. One day per bucket, well below
+    // MIN_SAMPLE_N, so this only checks bucketing (via `n`), not win rate.
+    const records = [
+      dayRecord({ biasAgreement: 24.999, biasVerdict: "bullish", forwardReturn1d: 1 }),
+      dayRecord({ biasAgreement: 25, biasVerdict: "bullish", forwardReturn1d: 1 }),
+      dayRecord({ biasAgreement: 49.999, biasVerdict: "bullish", forwardReturn1d: 1 }),
+      dayRecord({ biasAgreement: 50, biasVerdict: "bullish", forwardReturn1d: 1 }),
+      dayRecord({ biasAgreement: 74.999, biasVerdict: "bullish", forwardReturn1d: 1 }),
+      dayRecord({ biasAgreement: 75, biasVerdict: "bullish", forwardReturn1d: 1 }),
+    ];
+    const { stats } = agreementValidationSection(records);
+    expect(stats.find((s) => s.bucketLabel === "0-25%")!.n).toBe(1);
+    expect(stats.find((s) => s.bucketLabel === "25-50%")!.n).toBe(2);
+    expect(stats.find((s) => s.bucketLabel === "50-75%")!.n).toBe(2);
+    expect(stats.find((s) => s.bucketLabel === "75-100%")!.n).toBe(1);
+  });
+
+  it("excludes days with null agreement or null verdict from every bucket", () => {
+    const records = [
+      dayRecord({ biasAgreement: null, biasVerdict: "bullish" }),
+      dayRecord({ biasAgreement: 10, biasVerdict: null }),
+    ];
+    const { stats } = agreementValidationSection(records);
+    expect(stats.every((s) => s.n === 0)).toBe(true);
   });
 });
