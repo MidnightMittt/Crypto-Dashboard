@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1785908798813,
+  "generatedAt": 1785916252075,
   "coverageStart": "2022-08-13",
   "coverageEnd": "2026-07-29",
   "hypotheses": {
@@ -20802,6 +20802,39 @@
       }
     },
     {
+      "label": "Funding Rate + Spot CVD",
+      "metricIds": [
+        "funding",
+        "spotCvd"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1443,
+          "trueNegatives": 1451,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Funding Rate + Price Action",
       "metricIds": [
         "funding",
@@ -21285,6 +21318,39 @@
       }
     },
     {
+      "label": "Open Interest + Spot CVD",
+      "metricIds": [
+        "openInterest",
+        "spotCvd"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1443,
+          "trueNegatives": 1451,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Open Interest + Price Action",
       "metricIds": [
         "openInterest",
@@ -21697,6 +21763,39 @@
       "metricIds": [
         "squeezeRisk",
         "orderFlow"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1443,
+          "trueNegatives": 1451,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Squeeze Setup + Spot CVD",
+      "metricIds": [
+        "squeezeRisk",
+        "spotCvd"
       ],
       "holdingPeriod": "1h",
       "isNamed": false,
@@ -22143,6 +22242,39 @@
       }
     },
     {
+      "label": "Long/Short Positioning + Spot CVD",
+      "metricIds": [
+        "longShort",
+        "spotCvd"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1443,
+          "trueNegatives": 1451,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Long/Short Positioning + Price Action",
       "metricIds": [
         "longShort",
@@ -22518,6 +22650,39 @@
       }
     },
     {
+      "label": "Basis vs Spot + Spot CVD",
+      "metricIds": [
+        "basis",
+        "spotCvd"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1443,
+          "trueNegatives": 1451,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Basis vs Spot + Price Action",
       "metricIds": [
         "basis",
@@ -22842,6 +23007,39 @@
       }
     },
     {
+      "label": "Order Flow + Spot CVD",
+      "metricIds": [
+        "orderFlow",
+        "spotCvd"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1443,
+          "trueNegatives": 1451,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Order Flow + Price Action",
       "metricIds": [
         "orderFlow",
@@ -23109,6 +23307,303 @@
       "label": "Order Flow + Liquidations",
       "metricIds": [
         "orderFlow",
+        "liquidations"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1443,
+          "trueNegatives": 1451,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + Price Action",
+      "metricIds": [
+        "spotCvd",
+        "technicals"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1443,
+          "trueNegatives": 1451,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + ETF Flows",
+      "metricIds": [
+        "spotCvd",
+        "etfFlows"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1443,
+          "trueNegatives": 1451,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + Spot vs Perp Volume",
+      "metricIds": [
+        "spotCvd",
+        "spotPerpVolume"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1443,
+          "trueNegatives": 1451,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + Exchange Netflow",
+      "metricIds": [
+        "spotCvd",
+        "exchangeFlow"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1443,
+          "trueNegatives": 1451,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + Options Put/Call",
+      "metricIds": [
+        "spotCvd",
+        "options"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1443,
+          "trueNegatives": 1451,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + Coinbase Premium",
+      "metricIds": [
+        "spotCvd",
+        "coinbasePremium"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1443,
+          "trueNegatives": 1451,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + Stablecoin Supply",
+      "metricIds": [
+        "spotCvd",
+        "stablecoins"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1443,
+          "trueNegatives": 1451,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + Fear & Greed",
+      "metricIds": [
+        "spotCvd",
+        "fearGreed"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1443,
+          "trueNegatives": 1451,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + Liquidations",
+      "metricIds": [
+        "spotCvd",
         "liquidations"
       ],
       "holdingPeriod": "1h",
@@ -24609,6 +25104,39 @@
       }
     },
     {
+      "label": "Funding Rate + Spot CVD",
+      "metricIds": [
+        "funding",
+        "spotCvd"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1468,
+          "trueNegatives": 1426,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1468,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Funding Rate + Price Action",
       "metricIds": [
         "funding",
@@ -25092,6 +25620,39 @@
       }
     },
     {
+      "label": "Open Interest + Spot CVD",
+      "metricIds": [
+        "openInterest",
+        "spotCvd"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1468,
+          "trueNegatives": 1426,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1468,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Open Interest + Price Action",
       "metricIds": [
         "openInterest",
@@ -25504,6 +26065,39 @@
       "metricIds": [
         "squeezeRisk",
         "orderFlow"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1468,
+          "trueNegatives": 1426,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1468,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Squeeze Setup + Spot CVD",
+      "metricIds": [
+        "squeezeRisk",
+        "spotCvd"
       ],
       "holdingPeriod": "4h",
       "isNamed": false,
@@ -25950,6 +26544,39 @@
       }
     },
     {
+      "label": "Long/Short Positioning + Spot CVD",
+      "metricIds": [
+        "longShort",
+        "spotCvd"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1468,
+          "trueNegatives": 1426,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1468,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Long/Short Positioning + Price Action",
       "metricIds": [
         "longShort",
@@ -26325,6 +26952,39 @@
       }
     },
     {
+      "label": "Basis vs Spot + Spot CVD",
+      "metricIds": [
+        "basis",
+        "spotCvd"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1468,
+          "trueNegatives": 1426,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1468,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Basis vs Spot + Price Action",
       "metricIds": [
         "basis",
@@ -26649,6 +27309,39 @@
       }
     },
     {
+      "label": "Order Flow + Spot CVD",
+      "metricIds": [
+        "orderFlow",
+        "spotCvd"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1468,
+          "trueNegatives": 1426,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1468,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Order Flow + Price Action",
       "metricIds": [
         "orderFlow",
@@ -26916,6 +27609,303 @@
       "label": "Order Flow + Liquidations",
       "metricIds": [
         "orderFlow",
+        "liquidations"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1468,
+          "trueNegatives": 1426,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1468,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + Price Action",
+      "metricIds": [
+        "spotCvd",
+        "technicals"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1468,
+          "trueNegatives": 1426,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1468,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + ETF Flows",
+      "metricIds": [
+        "spotCvd",
+        "etfFlows"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1468,
+          "trueNegatives": 1426,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1468,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + Spot vs Perp Volume",
+      "metricIds": [
+        "spotCvd",
+        "spotPerpVolume"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1468,
+          "trueNegatives": 1426,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1468,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + Exchange Netflow",
+      "metricIds": [
+        "spotCvd",
+        "exchangeFlow"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1468,
+          "trueNegatives": 1426,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1468,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + Options Put/Call",
+      "metricIds": [
+        "spotCvd",
+        "options"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1468,
+          "trueNegatives": 1426,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1468,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + Coinbase Premium",
+      "metricIds": [
+        "spotCvd",
+        "coinbasePremium"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1468,
+          "trueNegatives": 1426,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1468,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + Stablecoin Supply",
+      "metricIds": [
+        "spotCvd",
+        "stablecoins"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1468,
+          "trueNegatives": 1426,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1468,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + Fear & Greed",
+      "metricIds": [
+        "spotCvd",
+        "fearGreed"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1468,
+          "trueNegatives": 1426,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1468,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + Liquidations",
+      "metricIds": [
+        "spotCvd",
         "liquidations"
       ],
       "holdingPeriod": "4h",
@@ -28416,6 +29406,39 @@
       }
     },
     {
+      "label": "Funding Rate + Spot CVD",
+      "metricIds": [
+        "funding",
+        "spotCvd"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1450,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Funding Rate + Price Action",
       "metricIds": [
         "funding",
@@ -28899,6 +29922,39 @@
       }
     },
     {
+      "label": "Open Interest + Spot CVD",
+      "metricIds": [
+        "openInterest",
+        "spotCvd"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1450,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Open Interest + Price Action",
       "metricIds": [
         "openInterest",
@@ -29311,6 +30367,39 @@
       "metricIds": [
         "squeezeRisk",
         "orderFlow"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1450,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Squeeze Setup + Spot CVD",
+      "metricIds": [
+        "squeezeRisk",
+        "spotCvd"
       ],
       "holdingPeriod": "24h",
       "isNamed": false,
@@ -29757,6 +30846,39 @@
       }
     },
     {
+      "label": "Long/Short Positioning + Spot CVD",
+      "metricIds": [
+        "longShort",
+        "spotCvd"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1450,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Long/Short Positioning + Price Action",
       "metricIds": [
         "longShort",
@@ -30132,6 +31254,39 @@
       }
     },
     {
+      "label": "Basis vs Spot + Spot CVD",
+      "metricIds": [
+        "basis",
+        "spotCvd"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1450,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Basis vs Spot + Price Action",
       "metricIds": [
         "basis",
@@ -30456,6 +31611,39 @@
       }
     },
     {
+      "label": "Order Flow + Spot CVD",
+      "metricIds": [
+        "orderFlow",
+        "spotCvd"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1450,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Order Flow + Price Action",
       "metricIds": [
         "orderFlow",
@@ -30723,6 +31911,303 @@
       "label": "Order Flow + Liquidations",
       "metricIds": [
         "orderFlow",
+        "liquidations"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1450,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + Price Action",
+      "metricIds": [
+        "spotCvd",
+        "technicals"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1450,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + ETF Flows",
+      "metricIds": [
+        "spotCvd",
+        "etfFlows"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1450,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + Spot vs Perp Volume",
+      "metricIds": [
+        "spotCvd",
+        "spotPerpVolume"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1450,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + Exchange Netflow",
+      "metricIds": [
+        "spotCvd",
+        "exchangeFlow"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1450,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + Options Put/Call",
+      "metricIds": [
+        "spotCvd",
+        "options"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1450,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + Coinbase Premium",
+      "metricIds": [
+        "spotCvd",
+        "coinbasePremium"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1450,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + Stablecoin Supply",
+      "metricIds": [
+        "spotCvd",
+        "stablecoins"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1450,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + Fear & Greed",
+      "metricIds": [
+        "spotCvd",
+        "fearGreed"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1450,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + Liquidations",
+      "metricIds": [
+        "spotCvd",
         "liquidations"
       ],
       "holdingPeriod": "24h",
@@ -32223,6 +33708,39 @@
       }
     },
     {
+      "label": "Funding Rate + Spot CVD",
+      "metricIds": [
+        "funding",
+        "spotCvd"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1486,
+          "trueNegatives": 1406,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1406,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Funding Rate + Price Action",
       "metricIds": [
         "funding",
@@ -32706,6 +34224,39 @@
       }
     },
     {
+      "label": "Open Interest + Spot CVD",
+      "metricIds": [
+        "openInterest",
+        "spotCvd"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1486,
+          "trueNegatives": 1406,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1406,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Open Interest + Price Action",
       "metricIds": [
         "openInterest",
@@ -33118,6 +34669,39 @@
       "metricIds": [
         "squeezeRisk",
         "orderFlow"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1486,
+          "trueNegatives": 1406,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1406,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Squeeze Setup + Spot CVD",
+      "metricIds": [
+        "squeezeRisk",
+        "spotCvd"
       ],
       "holdingPeriod": "7d",
       "isNamed": false,
@@ -33564,6 +35148,39 @@
       }
     },
     {
+      "label": "Long/Short Positioning + Spot CVD",
+      "metricIds": [
+        "longShort",
+        "spotCvd"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1486,
+          "trueNegatives": 1406,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1406,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Long/Short Positioning + Price Action",
       "metricIds": [
         "longShort",
@@ -33939,6 +35556,39 @@
       }
     },
     {
+      "label": "Basis vs Spot + Spot CVD",
+      "metricIds": [
+        "basis",
+        "spotCvd"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1486,
+          "trueNegatives": 1406,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1406,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Basis vs Spot + Price Action",
       "metricIds": [
         "basis",
@@ -34263,6 +35913,39 @@
       }
     },
     {
+      "label": "Order Flow + Spot CVD",
+      "metricIds": [
+        "orderFlow",
+        "spotCvd"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1486,
+          "trueNegatives": 1406,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1406,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Order Flow + Price Action",
       "metricIds": [
         "orderFlow",
@@ -34530,6 +36213,303 @@
       "label": "Order Flow + Liquidations",
       "metricIds": [
         "orderFlow",
+        "liquidations"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1486,
+          "trueNegatives": 1406,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1406,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + Price Action",
+      "metricIds": [
+        "spotCvd",
+        "technicals"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1486,
+          "trueNegatives": 1406,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1406,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + ETF Flows",
+      "metricIds": [
+        "spotCvd",
+        "etfFlows"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1486,
+          "trueNegatives": 1406,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1406,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + Spot vs Perp Volume",
+      "metricIds": [
+        "spotCvd",
+        "spotPerpVolume"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1486,
+          "trueNegatives": 1406,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1406,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + Exchange Netflow",
+      "metricIds": [
+        "spotCvd",
+        "exchangeFlow"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1486,
+          "trueNegatives": 1406,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1406,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + Options Put/Call",
+      "metricIds": [
+        "spotCvd",
+        "options"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1486,
+          "trueNegatives": 1406,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1406,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + Coinbase Premium",
+      "metricIds": [
+        "spotCvd",
+        "coinbasePremium"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1486,
+          "trueNegatives": 1406,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1406,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + Stablecoin Supply",
+      "metricIds": [
+        "spotCvd",
+        "stablecoins"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1486,
+          "trueNegatives": 1406,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1406,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + Fear & Greed",
+      "metricIds": [
+        "spotCvd",
+        "fearGreed"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1486,
+          "trueNegatives": 1406,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1406,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Spot CVD + Liquidations",
+      "metricIds": [
+        "spotCvd",
         "liquidations"
       ],
       "holdingPeriod": "7d",
@@ -36672,6 +38652,17 @@
     "orderFlow": {
       "metricId": "orderFlow",
       "label": "Order Flow",
+      "hasHistoricalSource": false,
+      "headline": null,
+      "bestHoldingPeriod": null,
+      "worstHoldingPeriod": null,
+      "bestRegime": null,
+      "worstRegime": null,
+      "interactions": []
+    },
+    "spotCvd": {
+      "metricId": "spotCvd",
+      "label": "Spot CVD",
       "hasHistoricalSource": false,
       "headline": null,
       "bestHoldingPeriod": null,

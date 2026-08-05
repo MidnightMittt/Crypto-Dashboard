@@ -441,6 +441,7 @@ export function replayAsset(
       squeezeRisk,
       liquidations: null,
       orderFlow: null,
+      spotCvd: null, // live-only metric, no historical source — see spotCvd.ts
       exchangeFlow: null,
       exchangeFlowConfigured: false,
       deribitOptions: null,

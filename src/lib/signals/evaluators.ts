@@ -372,6 +372,50 @@ function evaluateOrderFlow(data: AggregateMarketData, ctx: SignalContext): Metri
   };
 }
 
+// ── Spot CVD ─────────────────────────────────────────────────────────────
+
+/**
+ * OKX SPOT taker flow — genuinely distinct from evaluateOrderFlow above
+ * (perp-only). No book-depth cross-check exists for this one (spot book
+ * depth isn't fetched — see okxSpotFlow.ts), so this is simpler than
+ * evaluateOrderFlow: just the CVD direction itself, checked against price
+ * action the same way every directional metric here is.
+ */
+function evaluateSpotCvd(data: AggregateMarketData, ctx: SignalContext): MetricVerdict | null {
+  const flow = data.spotCvd;
+  if (!flow) return null;
+
+  const verdict: Verdict =
+    flow.dominantSide === "buyers" ? "bullish" : flow.dominantSide === "sellers" ? "bearish" : "neutral";
+
+  const conflicts: string[] = priceActionConflict(verdict, ctx, "spot taker flow");
+
+  const inputs = {
+    completeness: 0.7, // single-venue, no book-depth cross-check to raise this — same completeness ceiling orderFlow.ts's book-imbalance-absent case uses
+    agreement: agreementOf([verdict, priceActionVerdict(ctx) ?? "neutral"]),
+    backtested: false,
+  };
+
+  const share = flow.dominantSide === "buyers" ? flow.buyerSharePct : 100 - flow.buyerSharePct;
+
+  return {
+    id: "spotCvd",
+    label: "Spot CVD",
+    verdict,
+    confidence: scoreConfidence(inputs),
+    confidenceBasis: describeConfidence(inputs),
+    explanation:
+      verdict === "neutral"
+        ? `Real spot buying and selling are near balanced on ${flow.venue} over ${flow.windowHours}h.`
+        : `${flow.dominantSide === "buyers" ? "Buyers" : "Sellers"} took ${share.toFixed(0)}% of SPOT taker volume on ${flow.venue} over ${flow.windowHours}h — real, unleveraged demand.`,
+    whyItMatters:
+      "This measures actual coin changing hands, not leveraged positioning — the metric this app's other flow reads (funding, OI, order flow) structurally cannot see, since those are all derivatives.",
+    asOf: data.updatedAt,
+    conflicts,
+    nextTrigger: `Buyers currently ${flow.buyerSharePct.toFixed(0)}% of spot taker volume — turns bullish at ${DOMINANT_SHARE_HIGH}% or above, bearish at ${DOMINANT_SHARE_LOW}% or below.`,
+  };
+}
+
 // ── Liquidations ───────────────────────────────────────────────────────
 
 function evaluateLiquidations(data: AggregateMarketData): MetricVerdict | null {
@@ -723,6 +767,7 @@ export function evaluateAll(data: AggregateMarketData, ctx: SignalContext): Metr
     evaluateLongShort(data, ctx),
     evaluateBasis(data, ctx),
     evaluateOrderFlow(data, ctx),
+    evaluateSpotCvd(data, ctx),
     evaluateTechnicals(data, ctx),
     evaluateEtfFlows(data),
     evaluateSpotPerpVolume(data, ctx),

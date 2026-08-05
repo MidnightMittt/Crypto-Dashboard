@@ -148,6 +148,14 @@ export const SIGNAL_HYPOTHESES: SignalHypothesis[] = [
     hasHistoricalSource: false, // no historical taker-flow/CVD source exists for the replay
   }),
   hypothesis({
+    id: "spotCvd",
+    label: "Spot CVD",
+    bullishCondition: `Buyers take ${DOMINANT_SHARE_HIGH}% or more of SPOT taker volume over the measured window.`,
+    bearishCondition: `Sellers take enough share that buyers fall to ${DOMINANT_SHARE_LOW}% or below.`,
+    neutralCondition: "Real spot buying and selling are near balanced.",
+    hasHistoricalSource: false, // OKX's spot taker-volume endpoint has limited retention, not a multi-year archive — see okxSpotFlow.ts
+  }),
+  hypothesis({
     id: "technicals",
     label: "Price Action",
     bullishCondition: "The combined technical-indicator vote direction is bullish AND its strength is 20/100 or higher (mirrors TECHNICAL_MEANINGFUL_STRENGTH in evaluators.ts).",

@@ -64,6 +64,7 @@ const CATEGORY_MAP: Record<string, Category[]> = {
   basis: ["leveragedPositioning"],
 
   orderFlow: ["spotDemand"],
+  spotCvd: ["spotDemand"],
   spotPerpVolume: ["spotDemand"],
   coinbasePremium: ["spotDemand"],
   exchangeFlow: ["spotDemand"],

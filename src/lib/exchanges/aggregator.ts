@@ -37,7 +37,7 @@ import { resolveSpotWithConfidence } from "../providers/spotPrice";
 import { fetchJlpExposure } from "../providers/jlpExposure";
 import { fetchGmxExposure } from "../providers/gmxExposure";
 import { synthetixExposure } from "./adapters/synthetix";
-import { PoolExposureSummary, LiquidationSummary, OrderFlowSummary, ExchangeFlowSummary, DeribitOptionsSummary } from "@/types/market";
+import { PoolExposureSummary, LiquidationSummary, OrderFlowSummary, SpotCvdSummary, ExchangeFlowSummary, DeribitOptionsSummary } from "@/types/market";
 import { LiveAdapter } from "./adapters/types";
 import { fundingPer8h } from "../utils/format";
 import { MarketDataProvider } from "../providers/types";
@@ -45,8 +45,10 @@ import { defillamaProvider } from "../providers/defillama";
 import { coinalyzeProvider, fetchCoinalyzeLiquidations } from "../providers/coinalyze";
 import { coingeckoProvider } from "../providers/coingecko";
 import { fetchOkxBookDepth, fetchOkxTakerVolume } from "../providers/okxOrderFlow";
+import { fetchOkxSpotTakerVolume } from "../providers/okxSpotFlow";
 import { summarizeLiquidations } from "../sentiment/liquidations";
 import { summarizeOrderFlow } from "../sentiment/orderFlow";
+import { summarizeSpotCvd } from "../sentiment/spotCvd";
 import { fetchBtcExchangeBalance } from "../providers/exchangeFlows/btc";
 import { fetchEthExchangeBalance, etherscanConfigured } from "../providers/exchangeFlows/eth";
 import { trackedVenues, BTC_ADDRESSES, ETH_ADDRESSES } from "../providers/exchangeFlows/addresses";
@@ -501,6 +503,7 @@ async function withRecordedHistory(
     poolExposure,
     liquidations,
     orderFlow,
+    spotCvd,
     exchangeFlow,
     deribitOptions,
     technicals,
@@ -514,6 +517,7 @@ async function withRecordedHistory(
     buildPoolExposure(asset, agg.exchanges),
     buildLiquidationSummary(asset),
     buildOrderFlowSummary(asset),
+    buildSpotCvdSummary(asset),
     buildExchangeFlow(asset, point.price, point.t),
     buildDeribitOptions(asset, point.t),
     buildTechnicals(asset),
@@ -630,6 +634,7 @@ async function withRecordedHistory(
       squeezeRisk,
       liquidations,
       orderFlow,
+      spotCvd,
       exchangeFlow,
       deribitOptions,
       technicals,
@@ -693,6 +698,7 @@ async function withRecordedHistory(
     poolExposure,
     liquidations,
     orderFlow,
+    spotCvd,
     exchangeFlow,
     exchangeFlowConfigured,
     deribitOptions,
@@ -803,6 +809,7 @@ function buildAggregate(
       squeezeRisk: null,
       liquidations: null,
       orderFlow: null,
+      spotCvd: null,
       exchangeFlow: null,
       exchangeFlowConfigured: false,
       deribitOptions: null,
@@ -942,6 +949,7 @@ function buildAggregate(
     // Both need their own async fetch; see withRecordedHistory.
     liquidations: null,
     orderFlow: null,
+    spotCvd: null,
     exchangeFlow: null,
     exchangeFlowConfigured: false,
     deribitOptions: null,
@@ -1057,6 +1065,17 @@ async function buildOrderFlowSummary(
     fetchOkxTakerVolume(asset).catch(() => []),
   ]);
   return summarizeOrderFlow(bookDepth, takerVolume);
+}
+
+/**
+ * OKX SPOT taker flow, single-asset only — same MARKET-mode skip as
+ * buildOrderFlowSummary above, and same OKX rate-budget headroom (2 more
+ * calls per asset per poll, well inside the 150/min public REST limit).
+ */
+async function buildSpotCvdSummary(asset: AssetSymbol | "MARKET"): Promise<SpotCvdSummary | null> {
+  if (asset === "MARKET") return null;
+  const takerVolume = await fetchOkxSpotTakerVolume(asset).catch(() => []);
+  return summarizeSpotCvd(takerVolume);
 }
 
 /** Matches every other "24h" figure in this app (oiChange24hPct, priceChange24hPct, ...). */

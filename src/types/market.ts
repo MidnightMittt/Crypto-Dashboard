@@ -150,6 +150,8 @@ export interface AggregateMarketData {
    * aggressive taker volume that just executed — neither is a position.
    */
   orderFlow: OrderFlowSummary | null;
+  /** OKX SPOT taker flow — see SpotCvdSummary's own doc comment for how this is distinct from orderFlow (perp) above. */
+  spotCvd: SpotCvdSummary | null;
   /**
    * Net movement of coins into or out of a small set of known, verified
    * exchange wallets. Only ever populated for BTC and ETH — see
@@ -300,6 +302,25 @@ export interface OrderFlowSummary {
   totalSellUsd: number;
   dominantFlow: "buyers" | "sellers" | "balanced";
   /** Buyers' share of total taker volume, 0-100. */
+  buyerSharePct: number;
+  windowHours: number;
+  venue: string;
+}
+
+/**
+ * OKX SPOT taker buy/sell flow — genuinely distinct from OrderFlowSummary
+ * above, which is PERP (SWAP) taker flow only. This isolates real
+ * unleveraged spot buying/selling pressure, which perp flow structurally
+ * cannot (a perp trade is a leveraged bet, not a spot purchase). See
+ * sentiment/spotCvd.ts and providers/okxSpotFlow.ts for the full rationale.
+ */
+export interface SpotCvdSummary {
+  /** Oldest first. */
+  cvdHistory: CvdPoint[];
+  totalBuyUsd: number;
+  totalSellUsd: number;
+  dominantSide: "buyers" | "sellers" | "balanced";
+  /** Buyers' share of total spot taker volume, 0-100. */
   buyerSharePct: number;
   windowHours: number;
   venue: string;

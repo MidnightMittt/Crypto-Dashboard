@@ -33,6 +33,7 @@ export const METRIC_WEIGHTS: Record<string, number> = {
   options: 0.06,
   exchangeFlow: 0.06,
   spotPerpVolume: 0.05,
+  spotCvd: 0.05,
   stablecoins: 0.04,
   coinbasePremium: 0.03,
   fearGreed: 0.03,

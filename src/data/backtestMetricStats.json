@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1785908798817,
+  "generatedAt": 1785916252080,
   "coverageStart": "2022-08-13",
   "coverageEnd": "2026-07-29",
   "metrics": {
@@ -146,6 +146,22 @@
     "orderFlow": {
       "metricId": "orderFlow",
       "label": "Order Flow",
+      "hasHistoricalSource": false,
+      "n24h": null,
+      "winRate24h": null,
+      "winRate7d": null,
+      "significant24h": null,
+      "bestRegime": null,
+      "worstRegime": null,
+      "bestHoldingPeriod": null,
+      "worstHoldingPeriod": null,
+      "sampleSizeLabel": null,
+      "confidenceLabel": null,
+      "stableAcrossWindows": null
+    },
+    "spotCvd": {
+      "metricId": "spotCvd",
+      "label": "Spot CVD",
       "hasHistoricalSource": false,
       "n24h": null,
       "winRate24h": null,

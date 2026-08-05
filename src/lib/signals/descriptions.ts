@@ -13,6 +13,7 @@ export const METRIC_DESCRIPTIONS: Record<string, string> = {
   longShort: "The ratio of long to short accounts across reporting venues.",
   basis: "The gap between perpetual futures price and spot price.",
   orderFlow: "Aggressive taker buy vs. sell volume on OKX over a rolling window.",
+  spotCvd: "Aggressive taker buy vs. sell volume on OKX's SPOT market (not perp) over a rolling window — real, unleveraged demand.",
   liquidations: "Forced position closes over the trailing window, split by side.",
   options: "The ratio of open put contracts to open call contracts on Deribit.",
   exchangeFlow: "Net coin movement into or out of a tracked set of known exchange wallets.",
