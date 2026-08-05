@@ -9,6 +9,7 @@ import { BitcoinNetworkSummary } from "@/lib/providers/bitcoinNetwork";
 import { EthereumGasSummary } from "@/lib/providers/ethereumGas";
 import { SolanaNetworkSummary } from "@/lib/providers/solanaNetwork";
 import { ChainTvlSummary } from "@/lib/providers/chainTvl";
+import { MacroSnapshot } from "@/lib/providers/macro";
 
 const POLL_MS = Number(process.env.NEXT_PUBLIC_POLL_INTERVAL_MS ?? 15_000);
 
@@ -28,6 +29,7 @@ export interface MarketPayload {
   globalMarket: GlobalMarketSummary | null;
   correlation: CorrelationMatrix | null;
   networkHealth: NetworkHealthPayload;
+  macro: MacroSnapshot | null;
   meta: { generatedAt: number };
 }
 

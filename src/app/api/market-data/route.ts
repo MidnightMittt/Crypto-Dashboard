@@ -11,6 +11,7 @@ import { fetchBitcoinNetworkSummary } from "@/lib/providers/bitcoinNetwork";
 import { fetchEthereumGasSummary } from "@/lib/providers/ethereumGas";
 import { fetchSolanaNetworkSummary } from "@/lib/providers/solanaNetwork";
 import { fetchChainTvlSummary } from "@/lib/providers/chainTvl";
+import { fetchMacroSnapshot } from "@/lib/providers/macro";
 
 export const dynamic = "force-dynamic";
 // swr()'s background refresh now runs via after(), which keeps this
@@ -42,6 +43,7 @@ export async function GET(req: NextRequest) {
       ethereumGas,
       solanaNetwork,
       chainTvl,
+      macro,
     ] = await Promise.all([
       assetParam === "MARKET"
         ? getAggregateForMarket()
@@ -59,6 +61,7 @@ export async function GET(req: NextRequest) {
       fetchEthereumGasSummary().catch(() => null),
       fetchSolanaNetworkSummary().catch(() => null),
       fetchChainTvlSummary().catch(() => null),
+      fetchMacroSnapshot().catch(() => null),
     ]);
 
     if (!aggregate) {
@@ -77,6 +80,7 @@ export async function GET(req: NextRequest) {
       globalMarket,
       correlation,
       networkHealth: { bitcoin: bitcoinNetwork, ethereum: ethereumGas, solana: solanaNetwork, chainTvl },
+      macro,
       meta: { generatedAt: Date.now() },
     });
   } catch (err) {

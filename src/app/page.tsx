@@ -29,6 +29,7 @@ import { DeribitOptionsIntelligence } from "@/components/dashboard/DeribitOption
 import { MarketBreadth } from "@/components/dashboard/MarketBreadth";
 import { CorrelationHeatmap } from "@/components/dashboard/CorrelationHeatmap";
 import { NetworkHealth } from "@/components/dashboard/NetworkHealth";
+import { MacroCard } from "@/components/dashboard/MacroCard";
 import { DashboardSkeleton, LowerSkeleton, Skeleton } from "@/components/ui/Skeleton";
 import { Collapsible } from "@/components/ui/Collapsible";
 import { Button } from "@/components/ui/Button";
@@ -230,10 +231,11 @@ export default function DashboardPage() {
               </section>
             </Collapsible>
 
-            <Collapsible title="Market Context" summary="breadth, correlation">
+            <Collapsible title="Market Context" summary="breadth, correlation, macro">
               <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <MarketBreadth stablecoins={data?.stablecoins ?? null} globalMarket={data?.globalMarket ?? null} />
                 <CorrelationHeatmap correlation={data?.correlation ?? null} />
+                <MacroCard macro={data?.macro} />
               </section>
             </Collapsible>
 
