@@ -20,7 +20,7 @@ import {
 } from "../../src/lib/sentiment/backtestStats";
 import { MarketRegime } from "../../src/types/market";
 import { SIGNAL_HYPOTHESES, HOLDING_PERIODS, HoldingPeriod } from "../../src/lib/signals/hypothesis";
-import { summarizeOccurrences, Occurrence } from "./metrics";
+import { summarizeOccurrences, winRate, Occurrence } from "./metrics";
 import { buildCombinations, CombinationDayRecord } from "./combinations";
 import { buildWeightReview, WeightReviewDayRecord } from "./weightReview";
 import { buildMetricCombinations, MetricComboDayRecord } from "./metricCombinations";
@@ -97,6 +97,7 @@ function buildRegimeStat(bucket: DayRecord[]): RegimeStat {
     mean3dPct: mean(r3) ?? 0,
     mean7dPct: mean(r7) ?? 0,
     fadeHitRatePct: null, // filled in by callers that have a "side" to fade against
+    winRatePct: null, // filled in by biasVerdictSection, the only bucket with a real directional verdict per record
   };
 }
 
@@ -175,17 +176,30 @@ function categoriesSection(records: DayRecord[]): {
   return { markdown: rows.join("\n"), stats };
 }
 
-/** The overall marketBias verdict (category-weighted engine), bucketed the same simple way. */
+/**
+ * The overall marketBias verdict (category-weighted engine), bucketed the
+ * same simple way. Also the only RegimeStat producer that populates
+ * winRatePct: unlike squeeze/thesis/categories, each record here carries a
+ * real bullish/bearish/neutral verdict, so "did next-day return match that
+ * direction" (metrics.ts's winRate(), sign-only, same rule every other win
+ * rate in this app uses) is a meaningful, honest question to ask. Entry
+ * Quality's historical win-rate figure reads this.
+ */
 function biasVerdictSection(records: DayRecord[]): { markdown: string; stats: Partial<Record<string, RegimeStat>> } {
-  const rows: string[] = ["| Bias verdict | N | Mean 1d | Mean 3d | Mean 7d |", "|---|---|---|---|---|"];
+  const rows: string[] = ["| Bias verdict | N | Mean 1d | Mean 3d | Mean 7d | Win Rate |", "|---|---|---|---|---|---|"];
   const stats: Partial<Record<string, RegimeStat>> = {};
 
   for (const verdict of ["bullish", "bearish", "neutral"] as const) {
     const bucket = records.filter((r) => r.biasVerdict === verdict);
     if (bucket.length === 0) continue;
     const stat = buildRegimeStat(bucket);
+    const occurrences: Occurrence[] = bucket.map((r) => ({ t: r.t, verdict, forwardReturnPct: r.forwardReturn1d }));
+    const wr = winRate(occurrences);
+    stat.winRatePct = wr === null ? null : wr * 100;
     stats[verdict] = stat;
-    rows.push(`| ${verdict} | ${bucket.length} | ${fmt(stat.mean1dPct)} | ${fmt(stat.mean3dPct)} | ${fmt(stat.mean7dPct)} |`);
+    rows.push(
+      `| ${verdict} | ${bucket.length} | ${fmt(stat.mean1dPct)} | ${fmt(stat.mean3dPct)} | ${fmt(stat.mean7dPct)} | ${stat.winRatePct === null ? "—" : `${stat.winRatePct.toFixed(0)}%`} |`
+    );
   }
 
   return { markdown: rows.join("\n"), stats };

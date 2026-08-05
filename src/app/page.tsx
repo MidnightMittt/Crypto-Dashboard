@@ -3,6 +3,7 @@
 import { AlertTriangle } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { AiMarketSummary } from "@/components/dashboard/AiMarketSummary";
+import { EntryQualityCard } from "@/components/dashboard/EntryQualityCard";
 import { CategoryCard } from "@/components/dashboard/CategoryCard";
 import { LiquidityMapCard } from "@/components/dashboard/LiquidityMapCard";
 import { MarketThesisTimeline } from "@/components/dashboard/MarketThesisTimeline";
@@ -137,6 +138,15 @@ export default function DashboardPage() {
               <LeverageHeatGauge data={aggregate} />
               <LongShortGauge data={aggregate} />
             </section>
+
+            {/*
+              "Is this actually a high-quality entry?" — the third homepage
+              question. Sits right after the state/raw-readings above and
+              before the category breakdown below, matching the order a
+              trader actually reasons in: what's happening, then is this
+              worth acting on, then why.
+            */}
+            <EntryQualityCard aggregate={aggregate} />
 
             {/*
               The five composite sections — Leveraged Positioning, Spot

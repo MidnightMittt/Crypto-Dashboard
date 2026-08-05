@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1785918804909,
+  "generatedAt": 1785920166547,
   "coverageStart": "2022-08-13",
   "coverageEnd": "2026-07-29",
   "hypotheses": {
@@ -3376,49 +3376,56 @@
       "mean1dPct": 0.8283516285427048,
       "mean3dPct": 0.9813527168092224,
       "mean7dPct": 1.3431936530482969,
-      "fadeHitRatePct": null
+      "fadeHitRatePct": null,
+      "winRatePct": null
     },
     "bear": {
       "n": 650,
       "mean1dPct": -0.7535033783534539,
       "mean3dPct": -0.4021882342848909,
       "mean7dPct": -0.26910208909696975,
-      "fadeHitRatePct": null
+      "fadeHitRatePct": null,
+      "winRatePct": null
     },
     "neutral": {
       "n": 1431,
       "mean1dPct": 0.022981378858798477,
       "mean3dPct": 0.07406522339354324,
       "mean7dPct": 0.4256039334711602,
-      "fadeHitRatePct": null
+      "fadeHitRatePct": null,
+      "winRatePct": null
     },
     "high-vol": {
       "n": 871,
       "mean1dPct": 0.13239971840116127,
       "mean3dPct": 0.3208896227979242,
       "mean7dPct": 0.5509803894771237,
-      "fadeHitRatePct": null
+      "fadeHitRatePct": null,
+      "winRatePct": null
     },
     "low-vol": {
       "n": 1163,
       "mean1dPct": 0.09480288780523491,
       "mean3dPct": 0.11133203806839656,
       "mean7dPct": 0.2816930332393208,
-      "fadeHitRatePct": null
+      "fadeHitRatePct": null,
+      "winRatePct": null
     },
     "normal-vol": {
       "n": 860,
       "mean1dPct": -0.010484746537774075,
       "mean3dPct": 0.2714310691003967,
       "mean7dPct": 0.8342104446517656,
-      "fadeHitRatePct": null
+      "fadeHitRatePct": null,
+      "winRatePct": null
     },
     "range-bound": {
       "n": 1063,
       "mean1dPct": 0.04749104213139831,
       "mean3dPct": 0.18581871100040778,
       "mean7dPct": 0.2670555848148503,
-      "fadeHitRatePct": null
+      "fadeHitRatePct": null,
+      "winRatePct": null
     }
   },
   "metricRegimeCrosstab": {
@@ -11553,49 +11560,56 @@
           "mean1dPct": 0.08206144838163351,
           "mean3dPct": -0.32968602339149033,
           "mean7dPct": -0.05817205528189403,
-          "fadeHitRatePct": 53.57142857142857
+          "fadeHitRatePct": 53.57142857142857,
+          "winRatePct": null
         },
         "30-50:long": {
           "n": 230,
           "mean1dPct": -0.02623110249776404,
           "mean3dPct": 0.6966792874270585,
           "mean7dPct": 0.7631116326408709,
-          "fadeHitRatePct": 46.52173913043478
+          "fadeHitRatePct": 46.52173913043478,
+          "winRatePct": null
         },
         "30-50:short": {
           "n": 6,
           "mean1dPct": -0.6930305163006745,
           "mean3dPct": 3.5468243923998646,
           "mean7dPct": 4.4431716429308326,
-          "fadeHitRatePct": 100
+          "fadeHitRatePct": 100,
+          "winRatePct": null
         },
         "50-70:long": {
           "n": 361,
           "mean1dPct": 0.11892211658363282,
           "mean3dPct": 0.21657821793493706,
           "mean7dPct": 1.308453199216032,
-          "fadeHitRatePct": 49.307479224376735
+          "fadeHitRatePct": 49.307479224376735,
+          "winRatePct": null
         },
         "50-70:short": {
           "n": 18,
           "mean1dPct": 0.8888562164635141,
           "mean3dPct": 1.6983875260398504,
           "mean7dPct": -2.7691814308269476,
-          "fadeHitRatePct": 44.44444444444444
+          "fadeHitRatePct": 44.44444444444444,
+          "winRatePct": null
         },
         "70-100 (crowded):long": {
           "n": 261,
           "mean1dPct": 0.2145513597876546,
           "mean3dPct": 0.2888237572319135,
           "mean7dPct": 0.6959181135297069,
-          "fadeHitRatePct": 47.509578544061306
+          "fadeHitRatePct": 47.509578544061306,
+          "winRatePct": null
         },
         "70-100 (crowded):short": {
           "n": 1,
           "mean1dPct": -0.8230611692878466,
           "mean3dPct": -0.9442984659376328,
           "mean7dPct": 2.953649677344565,
-          "fadeHitRatePct": 100
+          "fadeHitRatePct": 100,
+          "winRatePct": null
         }
       },
       "thesis": {
@@ -11604,42 +11618,48 @@
           "mean1dPct": 0.36013993237545117,
           "mean3dPct": 0.5163699278043264,
           "mean7dPct": 1.3665156505556915,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "Mixed / Low Conviction": {
           "n": 161,
           "mean1dPct": 0.6255554771905388,
           "mean3dPct": 1.1409172887581591,
           "mean7dPct": 1.6044359002159385,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "Consolidation": {
           "n": 209,
           "mean1dPct": -0.6790696251531887,
           "mean3dPct": -0.3300406515227683,
           "mean7dPct": 0.3870707782606846,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "Squeeze Setup — Longs Exposed": {
           "n": 261,
           "mean1dPct": 0.2145513597876546,
           "mean3dPct": 0.2888237572319135,
           "mean7dPct": 0.6959181135297069,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "Squeeze Setup — Shorts Exposed": {
           "n": 1,
           "mean1dPct": -0.8230611692878466,
           "mean3dPct": -0.9442984659376328,
           "mean7dPct": 2.953649677344565,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "Leaning Bullish": {
           "n": 63,
           "mean1dPct": -0.2421872796750977,
           "mean3dPct": 0.5864978241649641,
           "mean7dPct": 0.17503257986332355,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         }
       },
       "categories": {
@@ -11648,63 +11668,72 @@
           "mean1dPct": 0.9582691502735547,
           "mean3dPct": 1.490132170335235,
           "mean7dPct": 1.409176394261168,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "leveragedPositioning:bearish": {
           "n": 943,
           "mean1dPct": 0.017604489522940726,
           "mean3dPct": 0.30732514312999426,
           "mean7dPct": 0.88314979166524,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "leveragedPositioning:neutral": {
           "n": 78,
           "mean1dPct": 0.6853148697760121,
           "mean3dPct": 0.38008392607096614,
           "mean7dPct": 1.8489265859839543,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "marketStress:bullish": {
           "n": 484,
           "mean1dPct": 0.03866870306475208,
           "mean3dPct": 0.11871632638572018,
           "mean7dPct": 0.1896458820843165,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "marketStress:bearish": {
           "n": 408,
           "mean1dPct": 0.237939679781864,
           "mean3dPct": 0.7235048541858825,
           "mean7dPct": 2.0859481590853064,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "marketStress:neutral": {
           "n": 206,
           "mean1dPct": 0.136151827181482,
           "mean3dPct": 0.3958526739922552,
           "mean7dPct": 0.6926099697551766,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "spotDemand:bullish": {
           "n": 407,
           "mean1dPct": 0.19730214971353363,
           "mean3dPct": 0.36792014662200323,
           "mean7dPct": 0.871645157900035,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "spotDemand:bearish": {
           "n": 615,
           "mean1dPct": 0.1354527676761748,
           "mean3dPct": 0.5249158488992516,
           "mean7dPct": 1.2373579525491842,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "spotDemand:neutral": {
           "n": 76,
           "mean1dPct": -0.2600409081648666,
           "mean3dPct": -0.5049001766744915,
           "mean7dPct": -0.39738961155107455,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         }
       },
       "biasVerdict": {
@@ -11713,21 +11742,24 @@
           "mean1dPct": 0.05694164663906643,
           "mean3dPct": 0.1893733845915063,
           "mean7dPct": 0.6582004777663091,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": 47.22222222222222
         },
         "bearish": {
           "n": 667,
           "mean1dPct": 0.11722523131204837,
           "mean3dPct": 0.43890709264714217,
           "mean7dPct": 1.1885140321890253,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": 49.02548725637181
         },
         "neutral": {
           "n": 179,
           "mean1dPct": 0.28661337315946833,
           "mean3dPct": 0.5235821765822911,
           "mean7dPct": 0.7090934622234158,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         }
       },
       "hypotheses": {
@@ -12882,49 +12914,56 @@
           "mean1dPct": 0.5015319339630777,
           "mean3dPct": 0.41080847865834846,
           "mean7dPct": 1.9277654552350907,
-          "fadeHitRatePct": 53.84615384615385
+          "fadeHitRatePct": 53.84615384615385,
+          "winRatePct": null
         },
         "30-50:long": {
           "n": 168,
           "mean1dPct": 0.2616376629745904,
           "mean3dPct": 1.0024393302882015,
           "mean7dPct": 1.5736335453265535,
-          "fadeHitRatePct": 42.26190476190476
+          "fadeHitRatePct": 42.26190476190476,
+          "winRatePct": null
         },
         "30-50:short": {
           "n": 2,
           "mean1dPct": -2.6684497345162486,
           "mean3dPct": 5.301978505702106,
           "mean7dPct": 4.262271729296317,
-          "fadeHitRatePct": 100
+          "fadeHitRatePct": 100,
+          "winRatePct": null
         },
         "50-70:long": {
           "n": 342,
           "mean1dPct": 0.14917693230208337,
           "mean3dPct": 0.45361100635092905,
           "mean7dPct": 1.7503276284135567,
-          "fadeHitRatePct": 48.53801169590643
+          "fadeHitRatePct": 48.53801169590643,
+          "winRatePct": null
         },
         "50-70:short": {
           "n": 9,
           "mean1dPct": 2.2527579325604936,
           "mean3dPct": 4.805991102525072,
           "mean7dPct": 5.741289612785683,
-          "fadeHitRatePct": 66.66666666666666
+          "fadeHitRatePct": 66.66666666666666,
+          "winRatePct": null
         },
         "70-100 (crowded):long": {
           "n": 444,
           "mean1dPct": 0.12103345618319408,
           "mean3dPct": 0.18671731121885984,
           "mean7dPct": 0.12056582396167952,
-          "fadeHitRatePct": 53.6036036036036
+          "fadeHitRatePct": 53.6036036036036,
+          "winRatePct": null
         },
         "70-100 (crowded):short": {
           "n": 1,
           "mean1dPct": 1.6966423727928461,
           "mean3dPct": -1.8847769165926953,
           "mean7dPct": 1.3470791403400062,
-          "fadeHitRatePct": 100
+          "fadeHitRatePct": 100,
+          "winRatePct": null
         }
       },
       "thesis": {
@@ -12933,42 +12972,48 @@
           "mean1dPct": 0.5074611384985637,
           "mean3dPct": 0.8620732208702147,
           "mean7dPct": 1.9945394879534306,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "Squeeze Setup — Longs Exposed": {
           "n": 444,
           "mean1dPct": 0.12103345618319408,
           "mean3dPct": 0.18671731121885984,
           "mean7dPct": 0.12056582396167952,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "Leaning Bullish": {
           "n": 71,
           "mean1dPct": 0.12163628110687136,
           "mean3dPct": 1.2247236353947244,
           "mean7dPct": 1.872063048815484,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "Consolidation": {
           "n": 156,
           "mean1dPct": -0.6231033455143119,
           "mean3dPct": -0.0728975913076811,
           "mean7dPct": 1.096450647535026,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "Mixed / Low Conviction": {
           "n": 111,
           "mean1dPct": 0.6794242126851139,
           "mean3dPct": 1.51252678224576,
           "mean7dPct": 2.8155312318703727,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "Squeeze Setup — Shorts Exposed": {
           "n": 1,
           "mean1dPct": 1.6966423727928461,
           "mean3dPct": -1.8847769165926953,
           "mean7dPct": 1.3470791403400062,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         }
       },
       "categories": {
@@ -12977,63 +13022,72 @@
           "mean1dPct": 0.9217928130593873,
           "mean3dPct": 2.515953864106063,
           "mean7dPct": 3.92528146391765,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "leveragedPositioning:bearish": {
           "n": 977,
           "mean1dPct": 0.04507964593783684,
           "mean3dPct": 0.37823422396304074,
           "mean7dPct": 0.9503434722258464,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "leveragedPositioning:neutral": {
           "n": 71,
           "mean1dPct": 1.600827734867446,
           "mean3dPct": 1.5116562407430298,
           "mean7dPct": 2.5720888767176433,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "marketStress:bullish": {
           "n": 480,
           "mean1dPct": 0.129581962773389,
           "mean3dPct": 0.5339698398890286,
           "mean7dPct": 1.0233496193685059,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "marketStress:bearish": {
           "n": 406,
           "mean1dPct": 0.22882637228569447,
           "mean3dPct": 0.6141309213110101,
           "mean7dPct": 1.8049972173309907,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "marketStress:neutral": {
           "n": 208,
           "mean1dPct": 0.2163519393190791,
           "mean3dPct": 0.418046300262117,
           "mean7dPct": 0.32514491547380686,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "spotDemand:bullish": {
           "n": 595,
           "mean1dPct": 0.3929288893575258,
           "mean3dPct": 1.0272728476921293,
           "mean7dPct": 2.0784823312886274,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "spotDemand:bearish": {
           "n": 441,
           "mean1dPct": -0.0673501901407109,
           "mean3dPct": -0.0689845213327437,
           "mean7dPct": 0.17489058316258652,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "spotDemand:neutral": {
           "n": 58,
           "mean1dPct": -0.06874487341529412,
           "mean3dPct": 0.20329546869736478,
           "mean7dPct": -0.3820155920623753,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         }
       },
       "biasVerdict": {
@@ -13042,21 +13096,24 @@
           "mean1dPct": 0.18245871090813784,
           "mean3dPct": 0.6258831156573306,
           "mean7dPct": 1.5068573485376924,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": 47.647058823529406
         },
         "bearish": {
           "n": 606,
           "mean1dPct": 0.08519892572275464,
           "mean3dPct": 0.3112510913690177,
           "mean7dPct": 0.6994217471559291,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": 50.330033003300336
         },
         "neutral": {
           "n": 148,
           "mean1dPct": 0.5840374456812896,
           "mean3dPct": 1.2917424794622119,
           "mean7dPct": 2.401930761300734,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         }
       },
       "hypotheses": {
@@ -14211,42 +14268,48 @@
           "mean1dPct": -1.1565401135460716,
           "mean3dPct": -3.6356526799958124,
           "mean7dPct": -2.8000582947644723,
-          "fadeHitRatePct": 75
+          "fadeHitRatePct": 75,
+          "winRatePct": null
         },
         "30-50:long": {
           "n": 109,
           "mean1dPct": 0.25831809185127214,
           "mean3dPct": 0.6080822633848044,
           "mean7dPct": 1.5895094917811974,
-          "fadeHitRatePct": 42.201834862385326
+          "fadeHitRatePct": 42.201834862385326,
+          "winRatePct": null
         },
         "50-70:long": {
           "n": 309,
           "mean1dPct": 0.027943853894918148,
           "mean3dPct": 0.37054434072249137,
           "mean7dPct": 1.7002837615705244,
-          "fadeHitRatePct": 43.36569579288026
+          "fadeHitRatePct": 43.36569579288026,
+          "winRatePct": null
         },
         "50-70:short": {
           "n": 11,
           "mean1dPct": 0.2510937809169841,
           "mean3dPct": 1.6680411505250143,
           "mean7dPct": 4.826803118795168,
-          "fadeHitRatePct": 63.63636363636363
+          "fadeHitRatePct": 63.63636363636363,
+          "winRatePct": null
         },
         "70-100 (crowded):long": {
           "n": 542,
           "mean1dPct": 0.2072140211328341,
           "mean3dPct": 0.4788905525125781,
           "mean7dPct": 0.8232985095785007,
-          "fadeHitRatePct": 48.708487084870846
+          "fadeHitRatePct": 48.708487084870846,
+          "winRatePct": null
         },
         "70-100 (crowded):short": {
           "n": 1,
           "mean1dPct": 1.6966423727928461,
           "mean3dPct": -1.8847769165926953,
           "mean7dPct": 1.3470791403400062,
-          "fadeHitRatePct": 100
+          "fadeHitRatePct": 100,
+          "winRatePct": null
         }
       },
       "thesis": {
@@ -14255,42 +14318,48 @@
           "mean1dPct": 0.2072140211328341,
           "mean3dPct": 0.4788905525125781,
           "mean7dPct": 0.8232985095785007,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "Leaning Bearish": {
           "n": 253,
           "mean1dPct": 0.4886010273029787,
           "mean3dPct": 0.7577723915279916,
           "mean7dPct": 1.7642958104656044,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "Consolidation": {
           "n": 135,
           "mean1dPct": -0.941117604943499,
           "mean3dPct": -0.5953284090969944,
           "mean7dPct": 0.5471028763332882,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "Mixed / Low Conviction": {
           "n": 91,
           "mean1dPct": 0.8489423823990907,
           "mean3dPct": 1.9378276632590978,
           "mean7dPct": 3.3922044227942445,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "Leaning Bullish": {
           "n": 78,
           "mean1dPct": 0.19507427424519866,
           "mean3dPct": 0.8158724427036892,
           "mean7dPct": 2.4833231486045437,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "Squeeze Setup — Shorts Exposed": {
           "n": 1,
           "mean1dPct": 1.6966423727928461,
           "mean3dPct": -1.8847769165926953,
           "mean7dPct": 1.3470791403400062,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         }
       },
       "categories": {
@@ -14299,63 +14368,72 @@
           "mean1dPct": 0.9606704092166942,
           "mean3dPct": 2.3776801008688633,
           "mean7dPct": 4.175972497209604,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "leveragedPositioning:bearish": {
           "n": 970,
           "mean1dPct": 0.03896477049258996,
           "mean3dPct": 0.40568572260759694,
           "mean7dPct": 1.1192681320289988,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "leveragedPositioning:neutral": {
           "n": 72,
           "mean1dPct": 1.5212036686685046,
           "mean3dPct": 1.0775104650196454,
           "mean7dPct": 1.9763043728308978,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "marketStress:bullish": {
           "n": 487,
           "mean1dPct": 0.16925443947555546,
           "mean3dPct": 0.5316529255965368,
           "mean7dPct": 1.2096929379231613,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "marketStress:bearish": {
           "n": 433,
           "mean1dPct": 0.14197308951831836,
           "mean3dPct": 0.4647645884505,
           "mean7dPct": 1.2690968046719493,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "marketStress:neutral": {
           "n": 180,
           "mean1dPct": 0.3285561970582536,
           "mean3dPct": 0.8269072705366545,
           "mean7dPct": 1.8419501697698668,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "spotDemand:bullish": {
           "n": 827,
           "mean1dPct": 0.3301004007978163,
           "mean3dPct": 0.8693661101930683,
           "mean7dPct": 1.809152506074958,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "spotDemand:bearish": {
           "n": 222,
           "mean1dPct": -0.2767681093967398,
           "mean3dPct": -0.4842566944539035,
           "mean7dPct": -0.229076338760234,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "spotDemand:neutral": {
           "n": 51,
           "mean1dPct": -0.16684580229812707,
           "mean3dPct": -0.04822424901418785,
           "mean7dPct": 0.48776926335079923,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         }
       },
       "biasVerdict": {
@@ -14364,21 +14442,24 @@
           "mean1dPct": 0.21073689014374347,
           "mean3dPct": 0.6624976220135975,
           "mean7dPct": 1.5093274402913293,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": 50
         },
         "bearish": {
           "n": 512,
           "mean1dPct": 0.09091787227396206,
           "mean3dPct": 0.4476049128144828,
           "mean7dPct": 1.0146172738467032,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": 49.0234375
         },
         "neutral": {
           "n": 136,
           "mean1dPct": 0.45028198755347293,
           "mean3dPct": 0.5910199246324711,
           "mean7dPct": 1.9741938274185107,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         }
       },
       "hypotheses": {
@@ -15533,49 +15614,56 @@
           "mean1dPct": -2.4700431241767564,
           "mean3dPct": 2.147725967617461,
           "mean7dPct": -0.32383475164773,
-          "fadeHitRatePct": 50
+          "fadeHitRatePct": 50,
+          "winRatePct": null
         },
         "30-50:long": {
           "n": 93,
           "mean1dPct": 0.4993658606719306,
           "mean3dPct": 1.0600905762179398,
           "mean7dPct": 2.1626902289802747,
-          "fadeHitRatePct": 40.86021505376344
+          "fadeHitRatePct": 40.86021505376344,
+          "winRatePct": null
         },
         "30-50:short": {
           "n": 2,
           "mean1dPct": 1.8868280068894814,
           "mean3dPct": 1.6638209811591314,
           "mean7dPct": 1.7085985005476652,
-          "fadeHitRatePct": 100
+          "fadeHitRatePct": 100,
+          "winRatePct": null
         },
         "50-70:long": {
           "n": 322,
           "mean1dPct": 0.011564814441686094,
           "mean3dPct": 0.32978486265735496,
           "mean7dPct": 1.296918253481196,
-          "fadeHitRatePct": 43.7888198757764
+          "fadeHitRatePct": 43.7888198757764,
+          "winRatePct": null
         },
         "50-70:short": {
           "n": 40,
           "mean1dPct": 0.5242836979698933,
           "mean3dPct": 1.4235480062385717,
           "mean7dPct": 2.7379628256639825,
-          "fadeHitRatePct": 77.5
+          "fadeHitRatePct": 77.5,
+          "winRatePct": null
         },
         "70-100 (crowded):long": {
           "n": 479,
           "mean1dPct": 0.17593095448949977,
           "mean3dPct": 0.48742718762784587,
           "mean7dPct": 0.8060757083861395,
-          "fadeHitRatePct": 50.10438413361169
+          "fadeHitRatePct": 50.10438413361169,
+          "winRatePct": null
         },
         "70-100 (crowded):short": {
           "n": 14,
           "mean1dPct": 0.4500944638027243,
           "mean3dPct": 0.7161373904878151,
           "mean7dPct": 3.9734916311215436,
-          "fadeHitRatePct": 85.71428571428571
+          "fadeHitRatePct": 85.71428571428571,
+          "winRatePct": null
         }
       },
       "thesis": {
@@ -15584,42 +15672,48 @@
           "mean1dPct": 0.7076602281454737,
           "mean3dPct": 1.3993225615029226,
           "mean7dPct": 3.7396606062210744,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "Mixed / Low Conviction": {
           "n": 95,
           "mean1dPct": 0.590561261523944,
           "mean3dPct": 1.0461677253924444,
           "mean7dPct": 1.7612801876148114,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "Consolidation": {
           "n": 151,
           "mean1dPct": -1.094064550417379,
           "mean3dPct": -0.5651210941441787,
           "mean7dPct": 0.33383733959159967,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "Squeeze Setup — Longs Exposed": {
           "n": 479,
           "mean1dPct": 0.17593095448949977,
           "mean3dPct": 0.48742718762784587,
           "mean7dPct": 0.8060757083861395,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "Leaning Bearish": {
           "n": 292,
           "mean1dPct": 0.5846562575612566,
           "mean3dPct": 0.8193862044523057,
           "mean7dPct": 1.4459692172432015,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "Squeeze Setup — Shorts Exposed": {
           "n": 14,
           "mean1dPct": 0.4500944638027243,
           "mean3dPct": 0.7161373904878151,
           "mean7dPct": 3.9734916311215436,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         }
       },
       "categories": {
@@ -15628,63 +15722,72 @@
           "mean1dPct": 0.8689680232755765,
           "mean3dPct": 1.7104377088965876,
           "mean7dPct": 3.5959495769405505,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "leveragedPositioning:bearish": {
           "n": 951,
           "mean1dPct": 0.028984698229509987,
           "mean3dPct": 0.3684008186029078,
           "mean7dPct": 0.9160181217040586,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "leveragedPositioning:neutral": {
           "n": 56,
           "mean1dPct": 1.6715960350941348,
           "mean3dPct": 1.532446945472636,
           "mean7dPct": 2.3805533204813587,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "marketStress:bullish": {
           "n": 452,
           "mean1dPct": 0.2789462658806778,
           "mean3dPct": 0.708304552510221,
           "mean7dPct": 1.7479983431381376,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "marketStress:bearish": {
           "n": 446,
           "mean1dPct": 0.1221813805512842,
           "mean3dPct": 0.25841408178845393,
           "mean7dPct": 0.594228419258696,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "marketStress:neutral": {
           "n": 196,
           "mean1dPct": 0.08263998011516166,
           "mean3dPct": 0.7631017852018639,
           "mean7dPct": 1.3376056469057451,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "spotDemand:bullish": {
           "n": 854,
           "mean1dPct": 0.319594832905322,
           "mean3dPct": 0.6837817569793442,
           "mean7dPct": 1.5229797082586094,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "spotDemand:bearish": {
           "n": 181,
           "mean1dPct": -0.33818773174714384,
           "mean3dPct": -0.3303488744711948,
           "mean7dPct": -0.7878719857758285,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "spotDemand:neutral": {
           "n": 59,
           "mean1dPct": -0.25335531946443124,
           "mean3dPct": 1.0308104056061371,
           "mean7dPct": 2.699525278879954,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         }
       },
       "biasVerdict": {
@@ -15693,21 +15796,24 @@
           "mean1dPct": 0.36686106564678095,
           "mean3dPct": 0.7874185818532977,
           "mean7dPct": 1.6809234757099796,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": 53.31807780320366
         },
         "bearish": {
           "n": 499,
           "mean1dPct": 0.0198075648748472,
           "mean3dPct": 0.3161221227073147,
           "mean7dPct": 0.5544640673535972,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": 50.1002004008016
         },
         "neutral": {
           "n": 158,
           "mean1dPct": 0.1681758445969542,
           "mean3dPct": 0.526122965892371,
           "mean7dPct": 1.9370297745989702,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         }
       },
       "hypotheses": {
@@ -16882,49 +16988,56 @@
           "mean1dPct": -2.4700431241767564,
           "mean3dPct": 2.147725967617461,
           "mean7dPct": -0.32383475164773,
-          "fadeHitRatePct": 50
+          "fadeHitRatePct": 50,
+          "winRatePct": null
         },
         "30-50:long": {
           "n": 111,
           "mean1dPct": -0.1380331267445169,
           "mean3dPct": -0.12594925992942582,
           "mean7dPct": 0.2392018969910568,
-          "fadeHitRatePct": 49.549549549549546
+          "fadeHitRatePct": 49.549549549549546,
+          "winRatePct": null
         },
         "30-50:short": {
           "n": 2,
           "mean1dPct": 1.8868280068894814,
           "mean3dPct": 1.6638209811591314,
           "mean7dPct": 1.7085985005476652,
-          "fadeHitRatePct": 100
+          "fadeHitRatePct": 100,
+          "winRatePct": null
         },
         "50-70:long": {
           "n": 415,
           "mean1dPct": -0.07633318020122189,
           "mean3dPct": -0.31903401668330644,
           "mean7dPct": -0.6668831078976449,
-          "fadeHitRatePct": 52.04819277108433
+          "fadeHitRatePct": 52.04819277108433,
+          "winRatePct": null
         },
         "50-70:short": {
           "n": 40,
           "mean1dPct": 0.5085579497227386,
           "mean3dPct": 1.2694575121270144,
           "mean7dPct": 2.4433926154179293,
-          "fadeHitRatePct": 75
+          "fadeHitRatePct": 75,
+          "winRatePct": null
         },
         "70-100 (crowded):long": {
           "n": 360,
           "mean1dPct": 0.18797184280433213,
           "mean3dPct": 0.5871694645164127,
           "mean7dPct": 1.2181324246631204,
-          "fadeHitRatePct": 45.27777777777778
+          "fadeHitRatePct": 45.27777777777778,
+          "winRatePct": null
         },
         "70-100 (crowded):short": {
           "n": 13,
           "mean1dPct": 0.35420616311117653,
           "mean3dPct": 0.9162077218017005,
           "mean7dPct": 4.175523361181662,
-          "fadeHitRatePct": 84.61538461538461
+          "fadeHitRatePct": 84.61538461538461,
+          "winRatePct": null
         }
       },
       "thesis": {
@@ -16933,42 +17046,48 @@
           "mean1dPct": 0.16167492074174983,
           "mean3dPct": -0.05779935012409778,
           "mean7dPct": -0.6570679539008035,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "Consolidation": {
           "n": 188,
           "mean1dPct": -1.0002747982074713,
           "mean3dPct": -0.8998611908820217,
           "mean7dPct": -0.7974956634514893,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "Squeeze Setup — Longs Exposed": {
           "n": 360,
           "mean1dPct": 0.18797184280433213,
           "mean3dPct": 0.5871694645164127,
           "mean7dPct": 1.2181324246631204,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "Mixed / Low Conviction": {
           "n": 102,
           "mean1dPct": 0.5356843578215078,
           "mean3dPct": 0.49970617908395915,
           "mean7dPct": 0.6958584187962163,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "Leaning Bullish": {
           "n": 37,
           "mean1dPct": 0.6976592606368371,
           "mean3dPct": 0.874290832099162,
           "mean7dPct": 3.063975432496947,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "Squeeze Setup — Shorts Exposed": {
           "n": 13,
           "mean1dPct": 0.35420616311117653,
           "mean3dPct": 0.9162077218017005,
           "mean7dPct": 4.175523361181662,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         }
       },
       "categories": {
@@ -16977,63 +17096,72 @@
           "mean1dPct": 0.8606277002494889,
           "mean3dPct": 1.4274242767475533,
           "mean7dPct": 2.8242489950118035,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "leveragedPositioning:bearish": {
           "n": 971,
           "mean1dPct": -0.03825956484868412,
           "mean3dPct": 0.035985742472658226,
           "mean7dPct": 0.06360861490871345,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "leveragedPositioning:neutral": {
           "n": 46,
           "mean1dPct": -0.07691541714267218,
           "mean3dPct": -0.7854580201989227,
           "mean7dPct": -0.5394834295658705,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "marketStress:bullish": {
           "n": 405,
           "mean1dPct": 0.14233902008500457,
           "mean3dPct": 0.260019217702833,
           "mean7dPct": 0.8285597391201424,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "marketStress:bearish": {
           "n": 477,
           "mean1dPct": -0.051822423813227436,
           "mean3dPct": -0.21887187258952895,
           "mean7dPct": -0.6522250304507449,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "marketStress:neutral": {
           "n": 216,
           "mean1dPct": -0.018080138481222047,
           "mean3dPct": 0.5255858957588457,
           "mean7dPct": 1.1169284309890468,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "spotDemand:bullish": {
           "n": 711,
           "mean1dPct": 0.2550666031805894,
           "mean3dPct": 0.2912418958773878,
           "mean7dPct": 0.6598646280278841,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "spotDemand:bearish": {
           "n": 273,
           "mean1dPct": -0.5070494911759933,
           "mean3dPct": -0.6110305764218904,
           "mean7dPct": -1.467296685393986,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "spotDemand:neutral": {
           "n": 114,
           "mean1dPct": -0.12197497111209873,
           "mean3dPct": 0.6506211651114524,
           "mean7dPct": 1.7291240394475265,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         }
       },
       "biasVerdict": {
@@ -17042,21 +17170,24 @@
           "mean1dPct": 0.4298595472805634,
           "mean3dPct": 0.7427827559294554,
           "mean7dPct": 1.0982696151778728,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": 55.23255813953488
         },
         "bearish": {
           "n": 568,
           "mean1dPct": -0.2120529092308005,
           "mean3dPct": -0.13594897085990873,
           "mean7dPct": -0.3511610101720757,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": 53.69718309859155
         },
         "neutral": {
           "n": 186,
           "mean1dPct": 0.008586372269646604,
           "mean3dPct": -0.34336451162877285,
           "mean7dPct": 0.46971291434858614,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         }
       },
       "hypotheses": {
@@ -18231,49 +18362,56 @@
           "mean1dPct": -1.5976317125400927,
           "mean3dPct": -0.9135840232343273,
           "mean7dPct": -0.6048763497283552,
-          "fadeHitRatePct": 40
+          "fadeHitRatePct": 40,
+          "winRatePct": null
         },
         "30-50:long": {
           "n": 139,
           "mean1dPct": -0.18962136806497465,
           "mean3dPct": -0.20642611578126116,
           "mean7dPct": 0.3578554717694778,
-          "fadeHitRatePct": 46.3768115942029
+          "fadeHitRatePct": 46.3768115942029,
+          "winRatePct": null
         },
         "30-50:short": {
           "n": 4,
           "mean1dPct": -0.15159672923203804,
           "mean3dPct": -2.7823333126975385,
           "mean7dPct": -1.5604459282373369,
-          "fadeHitRatePct": 50
+          "fadeHitRatePct": 50,
+          "winRatePct": null
         },
         "50-70:long": {
           "n": 445,
           "mean1dPct": -0.09200646763358504,
           "mean3dPct": -0.37324430614068826,
           "mean7dPct": -1.143947157688248,
-          "fadeHitRatePct": 55.28089887640449
+          "fadeHitRatePct": 55.28089887640449,
+          "winRatePct": null
         },
         "50-70:short": {
           "n": 52,
           "mean1dPct": 0.46208764044155576,
           "mean3dPct": 1.497682551800616,
           "mean7dPct": 2.309205911590557,
-          "fadeHitRatePct": 75
+          "fadeHitRatePct": 75,
+          "winRatePct": null
         },
         "70-100 (crowded):long": {
           "n": 263,
           "mean1dPct": 0.16337322911933458,
           "mean3dPct": 0.30862573801090204,
           "mean7dPct": 0.5386292225649081,
-          "fadeHitRatePct": 47.70992366412214
+          "fadeHitRatePct": 47.70992366412214,
+          "winRatePct": null
         },
         "70-100 (crowded):short": {
           "n": 25,
           "mean1dPct": 0.39938478844424813,
           "mean3dPct": 0.9479571355831966,
           "mean7dPct": 3.0574477536116063,
-          "fadeHitRatePct": 80
+          "fadeHitRatePct": 80,
+          "winRatePct": null
         }
       },
       "thesis": {
@@ -18282,42 +18420,48 @@
           "mean1dPct": -0.890008945655924,
           "mean3dPct": -0.7322874674351106,
           "mean7dPct": -0.8947374656728606,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "Squeeze Setup — Longs Exposed": {
           "n": 263,
           "mean1dPct": 0.16337322911933458,
           "mean3dPct": 0.30862573801090204,
           "mean7dPct": 0.5386292225649081,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "Leaning Bearish": {
           "n": 450,
           "mean1dPct": 0.06196479917006399,
           "mean3dPct": -0.1860815341873733,
           "mean7dPct": -0.833547544716673,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "Mixed / Low Conviction": {
           "n": 92,
           "mean1dPct": 0.6033601116406561,
           "mean3dPct": 0.11127466765766592,
           "mean7dPct": 0.5223878070079737,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "Leaning Bullish": {
           "n": 31,
           "mean1dPct": 0.44977551475750144,
           "mean3dPct": 0.8120429896015287,
           "mean7dPct": 2.003370276645934,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "Squeeze Setup — Shorts Exposed": {
           "n": 25,
           "mean1dPct": 0.39938478844424813,
           "mean3dPct": 0.9479571355831966,
           "mean7dPct": 3.0574477536116063,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         }
       },
       "categories": {
@@ -18326,63 +18470,72 @@
           "mean1dPct": 0.551612091636229,
           "mean3dPct": 0.9832240952105241,
           "mean7dPct": 2.059241980039237,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "leveragedPositioning:bearish": {
           "n": 929,
           "mean1dPct": -0.053445373920952624,
           "mean3dPct": -0.14605516336103078,
           "mean7dPct": -0.4533945177398618,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "leveragedPositioning:neutral": {
           "n": 45,
           "mean1dPct": -0.6750676004090034,
           "mean3dPct": -0.9981748553687726,
           "mean7dPct": 0.15092430233327747,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "marketStress:bullish": {
           "n": 415,
           "mean1dPct": 0.09281094404008979,
           "mean3dPct": 0.25743663628859287,
           "mean7dPct": 0.8682454034353152,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "marketStress:bearish": {
           "n": 468,
           "mean1dPct": -0.12232054351087084,
           "mean3dPct": -0.5402452329295191,
           "mean7dPct": -1.4126218697547814,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "marketStress:neutral": {
           "n": 181,
           "mean1dPct": -0.06438803070308963,
           "mean3dPct": 0.29771059815582046,
           "mean7dPct": 0.4082227327038578,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "spotDemand:bullish": {
           "n": 543,
           "mean1dPct": 0.3908462770239799,
           "mean3dPct": 0.38937940572000146,
           "mean7dPct": 0.5587320829288488,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "spotDemand:bearish": {
           "n": 371,
           "mean1dPct": -0.6270828633374652,
           "mean3dPct": -0.9541529886945339,
           "mean7dPct": -1.7808454346337508,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         },
         "spotDemand:neutral": {
           "n": 150,
           "mean1dPct": -0.0664366151302063,
           "mean3dPct": 0.3362986320977722,
           "mean7dPct": 0.8371139880877779,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         }
       },
       "biasVerdict": {
@@ -18391,21 +18544,24 @@
           "mean1dPct": 0.5637180579873047,
           "mean3dPct": 0.8304098228397572,
           "mean7dPct": 1.1141789394205597,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": 59.16030534351145
         },
         "bearish": {
           "n": 607,
           "mean1dPct": -0.31332025958794896,
           "mean3dPct": -0.5276570211534576,
           "mean7dPct": -0.9988428528859074,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": 56.17792421746294
         },
         "neutral": {
           "n": 195,
           "mean1dPct": 0.06209005247949488,
           "mean3dPct": 0.05439739267224164,
           "mean7dPct": 0.4318548601613575,
-          "fadeHitRatePct": null
+          "fadeHitRatePct": null,
+          "winRatePct": null
         }
       },
       "hypotheses": {

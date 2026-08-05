@@ -35,6 +35,8 @@ export interface RegimeStat {
   mean7dPct: number;
   /** % of occurrences where price moved opposite the crowded side over 7d. Null for buckets where "fade" isn't a meaningful frame (thesis regimes). */
   fadeHitRatePct: number | null;
+  /** Sign-match rate between the bucket's own direction and next-day return, i.e. metrics.ts's winRate() over 1d occurrences. Only biasVerdictSection populates this (Entry Quality's historical win-rate figure reads it); other producers leave it null the same way fadeHitRatePct is null where "fade" doesn't apply. */
+  winRatePct: number | null;
 }
 
 /**
