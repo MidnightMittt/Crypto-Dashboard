@@ -80,3 +80,72 @@ export function agreementOf(directions: Array<"bullish" | "bearish" | "neutral">
   const ratio = majority / directional.length; // 0.5 (split) .. 1 (unanimous)
   return clamp01((ratio - 0.5) * 2);
 }
+
+/**
+ * One named category/metric pulling the overall MarketBias.confidence
+ * number up or down — the AI Confidence Gauge's "what's actually driving
+ * this" explanation. Cites the real numbers already on CategoryScore/
+ * MetricVerdict (categories.ts's combineCategoryScores already weights the
+ * overall figure by these same per-category confidences), never a new
+ * computation of its own.
+ */
+export interface ConfidenceDriver {
+  categoryLabel: string;
+  categoryConfidence: number;
+  /** categories.ts's CATEGORY_WEIGHTS for this category, as a whole percent — how much its confidence pulls on the overall number. */
+  weightPct: number;
+  metricLabel: string;
+  metricConfidenceBasis: string;
+}
+
+/**
+ * The highest- and lowest-confidence categories, each paired with their own
+ * strongest/weakest metric as the concrete "why." Returns null with fewer
+ * than 2 categories or when every category reads identical confidence —
+ * nothing to honestly contrast in either case. Callers pass `weight`
+ * (categories.ts's CATEGORY_WEIGHTS for that category) directly rather than
+ * this function looking it up by name — keyed lookups by display label are
+ * one rename away from silently breaking.
+ */
+export function findConfidenceDrivers(
+  categories: Array<{
+    label: string;
+    confidence: number;
+    weight: number;
+    metrics: Array<{ label: string; confidence: number; confidenceBasis: string }>;
+  }>
+): { booster: ConfidenceDriver; drag: ConfidenceDriver } | null {
+  if (categories.length < 2) return null;
+  const withMetrics = categories.filter((c) => c.metrics.length > 0);
+  if (withMetrics.length < 2) return null;
+
+  const sorted = [...withMetrics].sort((a, b) => b.confidence - a.confidence);
+  const highest = sorted[0];
+  const lowest = sorted[sorted.length - 1];
+  if (highest.confidence === lowest.confidence) return null;
+
+  const strongestIn = (c: (typeof withMetrics)[number]) =>
+    [...c.metrics].sort((a, b) => b.confidence - a.confidence)[0];
+  const weakestIn = (c: (typeof withMetrics)[number]) =>
+    [...c.metrics].sort((a, b) => a.confidence - b.confidence)[0];
+
+  const boosterMetric = strongestIn(highest);
+  const dragMetric = weakestIn(lowest);
+
+  return {
+    booster: {
+      categoryLabel: highest.label,
+      categoryConfidence: highest.confidence,
+      weightPct: Math.round(highest.weight * 100),
+      metricLabel: boosterMetric.label,
+      metricConfidenceBasis: boosterMetric.confidenceBasis,
+    },
+    drag: {
+      categoryLabel: lowest.label,
+      categoryConfidence: lowest.confidence,
+      weightPct: Math.round(lowest.weight * 100),
+      metricLabel: dragMetric.label,
+      metricConfidenceBasis: dragMetric.confidenceBasis,
+    },
+  };
+}

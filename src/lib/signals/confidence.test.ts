@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { scoreConfidence, describeConfidence, agreementOf } from "./confidence";
+import { scoreConfidence, describeConfidence, agreementOf, findConfidenceDrivers } from "./confidence";
 
 describe("scoreConfidence", () => {
   it("caps an unbacktested metric below 100 even with perfect inputs", () => {
@@ -76,5 +76,64 @@ describe("describeConfidence", () => {
   it("always discloses whether a backtest covers the metric", () => {
     expect(describeConfidence({ completeness: 1, agreement: 1 })).toContain("no backtest");
     expect(describeConfidence({ completeness: 1, agreement: 1, backtested: true })).toContain("backtested");
+  });
+});
+
+describe("findConfidenceDrivers", () => {
+  it("picks the highest-confidence category as booster and lowest as drag", () => {
+    const categories = [
+      {
+        label: "High Cat",
+        confidence: 90,
+        weight: 0.35,
+        metrics: [
+          { label: "A", confidence: 90, confidenceBasis: "full data; sources agree; backtested." },
+          { label: "B", confidence: 70, confidenceBasis: "partial data; sources agree; no backtest." },
+        ],
+      },
+      {
+        label: "Low Cat",
+        confidence: 40,
+        weight: 0.15,
+        metrics: [
+          { label: "C", confidence: 20, confidenceBasis: "thin data; sources disagree; no backtest." },
+          { label: "D", confidence: 60, confidenceBasis: "partial data; sources agree; no backtest." },
+        ],
+      },
+    ];
+    const result = findConfidenceDrivers(categories);
+    expect(result).not.toBeNull();
+    expect(result!.booster.categoryLabel).toBe("High Cat");
+    expect(result!.booster.categoryConfidence).toBe(90);
+    expect(result!.booster.weightPct).toBe(35);
+    // strongest metric IN the booster category -> A (90), not B (70)
+    expect(result!.booster.metricLabel).toBe("A");
+    expect(result!.drag.categoryLabel).toBe("Low Cat");
+    expect(result!.drag.categoryConfidence).toBe(40);
+    expect(result!.drag.weightPct).toBe(15);
+    // weakest metric IN the drag category -> C (20), not D (60)
+    expect(result!.drag.metricLabel).toBe("C");
+    expect(result!.drag.metricConfidenceBasis).toContain("thin data");
+  });
+
+  it("returns null with fewer than 2 categories", () => {
+    const categories = [{ label: "Only", confidence: 50, weight: 0.5, metrics: [{ label: "A", confidence: 50, confidenceBasis: "x" }] }];
+    expect(findConfidenceDrivers(categories)).toBeNull();
+  });
+
+  it("returns null when every category has identical confidence — nothing to contrast", () => {
+    const categories = [
+      { label: "One", confidence: 60, weight: 0.5, metrics: [{ label: "A", confidence: 60, confidenceBasis: "x" }] },
+      { label: "Two", confidence: 60, weight: 0.5, metrics: [{ label: "B", confidence: 60, confidenceBasis: "y" }] },
+    ];
+    expect(findConfidenceDrivers(categories)).toBeNull();
+  });
+
+  it("returns null when a category has no metrics at all", () => {
+    const categories = [
+      { label: "Empty", confidence: 80, weight: 0.5, metrics: [] },
+      { label: "Other", confidence: 40, weight: 0.5, metrics: [{ label: "A", confidence: 40, confidenceBasis: "x" }] },
+    ];
+    expect(findConfidenceDrivers(categories)).toBeNull();
   });
 });

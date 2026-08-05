@@ -12,6 +12,7 @@ import { FundingGauge } from "@/components/gauges/FundingGauge";
 import { OpenInterestGauge } from "@/components/gauges/OpenInterestGauge";
 import { LeverageHeatGauge } from "@/components/gauges/LeverageHeatGauge";
 import { LongShortGauge } from "@/components/gauges/LongShortGauge";
+import { ConfidenceGauge } from "@/components/dashboard/ConfidenceGauge";
 import { ExchangeGrid } from "@/components/dashboard/ExchangeGrid";
 import { HeatMap } from "@/components/dashboard/HeatMap";
 import { Leaderboards } from "@/components/dashboard/Leaderboards";
@@ -132,11 +133,12 @@ export default function DashboardPage() {
               technicals={aggregate.technicals}
             />
 
-            <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
               <FundingGauge data={aggregate} />
               <OpenInterestGauge data={aggregate} />
               <LeverageHeatGauge data={aggregate} />
               <LongShortGauge data={aggregate} />
+              <ConfidenceGauge bias={aggregate.marketBias} />
             </section>
 
             {/*
