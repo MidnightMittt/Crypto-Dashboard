@@ -116,7 +116,11 @@ export default function DashboardPage() {
               the composite sections that explain it, or the audit trail
               behind it.
             */}
-            <AiMarketSummary bias={aggregate.marketBias} thesis={aggregate.marketThesis} />
+            <AiMarketSummary
+              bias={aggregate.marketBias}
+              thesis={aggregate.marketThesis}
+              technicals={aggregate.technicals}
+            />
 
             <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
               <FundingGauge data={aggregate} />

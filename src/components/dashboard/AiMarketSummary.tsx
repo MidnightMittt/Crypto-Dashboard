@@ -4,8 +4,9 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { VerdictBadge, ConfidenceLabel } from "@/components/ui/VerdictBadge";
 import { MarketBias, MetricVerdict } from "@/lib/signals/types";
 import { topReasons, RankedReason } from "@/lib/signals/marketBias";
-import { MarketThesis } from "@/types/market";
+import { MarketThesis, TechnicalRead } from "@/types/market";
 import { intensityLabel } from "@/lib/signals/scoring";
+import { technicalAgreement, TechnicalAgreement } from "@/lib/sentiment/technicals";
 import { lookupBiasVerdictStat } from "@/lib/sentiment/backtestStats";
 import backtestStats from "@/data/backtestStats.json";
 
@@ -27,9 +28,11 @@ import backtestStats from "@/data/backtestStats.json";
 export function AiMarketSummary({
   bias,
   thesis,
+  technicals,
 }: {
   bias: MarketBias | null;
   thesis: MarketThesis | null;
+  technicals: TechnicalRead | null;
 }) {
   if (!bias) {
     return (
@@ -53,6 +56,8 @@ export function AiMarketSummary({
         <Header bias={bias} thesis={thesis} />
 
         <TopReasons reasons={reasons} />
+
+        <TechnicalConfirmation technicals={technicals} thesis={thesis} />
 
         <div className="grid grid-cols-1 gap-6 border-t border-hairline pt-5 lg:grid-cols-2">
           <Highlight
@@ -195,6 +200,58 @@ function TopReasons({ reasons }: { reasons: RankedReason[] }) {
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+/* ── Technical confirmation: does price action back the other metrics? ── */
+
+const AGREEMENT_CONFIG: Record<TechnicalAgreement, { label: string; dot: string; text: string }> = {
+  agrees: { label: "CONFIRMS", dot: "🟢", text: "text-success" },
+  conflicts: { label: "CONFLICTS", dot: "🔴", text: "text-danger" },
+  neutral: { label: "NO CLEAR READ", dot: "🟡", text: "text-amber" },
+};
+
+/**
+ * Every other section above is built from POSITIONING and flow metrics —
+ * this is the one check on whether price itself is actually going along
+ * with that story. Kept separate from `topReasons()` rather than folded in
+ * as one more ranked reason, because its whole value is relational ("does
+ * this agree with everything above") not standalone ("here is a fact").
+ *
+ * `agreement` reuses risk's precedent (VerdictBadge.tsx's own doc comment)
+ * of a second, non-directional color axis layered on the same 3-color
+ * vocabulary — CONFIRMS/CONFLICTS/NO CLEAR READ describe agreement, not
+ * bullish/bearish/neutral direction, so it deliberately isn't a VerdictBadge.
+ */
+function TechnicalConfirmation({
+  technicals,
+  thesis,
+}: {
+  technicals: TechnicalRead | null;
+  thesis: MarketThesis | null;
+}) {
+  if (!technicals || !thesis || thesis.technicalConfirmation.length === 0) return null;
+
+  const agreement = technicalAgreement(technicals, thesis.dominant);
+  const config = AGREEMENT_CONFIG[agreement];
+
+  return (
+    <div className="border-t border-hairline pt-5">
+      <div className="flex items-center gap-2">
+        <SectionLabel>Technical confirmation</SectionLabel>
+        <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold tracking-wider ${config.text}`}>
+          <span aria-hidden>{config.dot}</span>
+          {config.label}
+        </span>
+      </div>
+      <ul className="mt-3 flex flex-col gap-2">
+        {thesis.technicalConfirmation.map((line, i) => (
+          <li key={i} className={`text-xs leading-relaxed ${i === 0 ? "text-ink" : "text-ink-faint"}`}>
+            {line}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

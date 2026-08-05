@@ -391,3 +391,18 @@ export function technicalConfirmation(read: TechnicalRead, dominant: ThesisDirec
 
   return lines.slice(0, 5);
 }
+
+/** Whether price action backs the dominant positioning-based thesis or argues against it. */
+export type TechnicalAgreement = "agrees" | "conflicts" | "neutral";
+
+/**
+ * The structured judgment `technicalConfirmation`'s prose headline is built
+ * from, exposed separately so a UI can color-code "does price action back
+ * the rest of the metrics or fight them" without parsing sentences. Same
+ * agrees/conflicts rule as that function's first bullet: "neutral" covers
+ * both "technicals have no view" and "there's no thesis to confirm."
+ */
+export function technicalAgreement(read: TechnicalRead, dominant: ThesisDirection): TechnicalAgreement {
+  if (read.direction === "neutral" || dominant === "neutral") return "neutral";
+  return read.direction === dominant ? "agrees" : "conflicts";
+}

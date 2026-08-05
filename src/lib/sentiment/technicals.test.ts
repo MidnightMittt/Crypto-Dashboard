@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildTechnicalRead, technicalConfirmation } from "./technicals";
+import { buildTechnicalRead, technicalConfirmation, technicalAgreement } from "./technicals";
 import { Candle } from "../technicals/indicators";
 
 const bar = (high: number, low: number, close: number, i: number, volumeUsd = 1000): Candle => ({
@@ -232,6 +232,47 @@ describe("technicalConfirmation", () => {
     const lines = technicalConfirmation(read, "bullish");
     if (read.macdHistogram !== null && read.macdHistogram < 0 && read.trendStructure === "higher-highs") {
       expect(lines.some((l) => l.includes("losing its engine"))).toBe(true);
+    }
+  });
+});
+
+describe("technicalAgreement", () => {
+  it("agrees when technicals and the dominant thesis point the same way", () => {
+    const read = buildTechnicalRead(uptrend)!;
+    expect(read.direction).toBe("bullish");
+    expect(technicalAgreement(read, "bullish")).toBe("agrees");
+  });
+
+  it("conflicts when technicals point the opposite way from the thesis", () => {
+    const read = buildTechnicalRead(uptrend)!;
+    expect(read.direction).toBe("bullish");
+    expect(technicalAgreement(read, "bearish")).toBe("conflicts");
+  });
+
+  it("is neutral when the thesis itself has no dominant direction", () => {
+    const read = buildTechnicalRead(uptrend)!;
+    expect(technicalAgreement(read, "neutral")).toBe("neutral");
+  });
+
+  it("is neutral when technicals have no view, even if the thesis does", () => {
+    // buildTechnicalRead rarely lands on the literal "neutral" direction
+    // even for a flat/choppy series (a slight net drift usually tips it one
+    // way at low strength) — constructed directly to isolate this branch.
+    const read = { ...buildTechnicalRead(uptrend)!, direction: "neutral" as const };
+    expect(technicalAgreement(read, "bullish")).toBe("neutral");
+  });
+
+  it("matches technicalConfirmation's own headline for every case", () => {
+    // Cross-check: the structured verdict and the prose it's meant to
+    // summarize should never disagree about agree/conflict/neither.
+    for (const series of [uptrend, downtrend, flat]) {
+      for (const dominant of ["bullish", "bearish", "neutral"] as const) {
+        const read = buildTechnicalRead(series)!;
+        const agreement = technicalAgreement(read, dominant);
+        const headline = technicalConfirmation(read, dominant)[0];
+        if (agreement === "agrees") expect(headline).toContain("confirms");
+        if (agreement === "conflicts") expect(headline).toContain("weakens");
+      }
     }
   });
 });
