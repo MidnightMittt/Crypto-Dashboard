@@ -28,8 +28,8 @@ export const METRIC_DESCRIPTIONS: Record<string, string> = {
 };
 
 export const CATEGORY_DESCRIPTIONS: Record<Category, string> = {
-  leveragedPositioning: "How traders are positioned with leverage right now — funding, open interest, long/short skew, squeeze risk, and basis.",
-  spotDemand: "Whether real, unleveraged buying power is behind the move — exchange flow, ETF flows, stablecoin supply, Coinbase premium, taker flow, and spot-vs-perp turnover.",
-  marketStress: "Whether this move is backed by real conviction or stretched and fragile — price volatility, Fear & Greed extremes, options hedging demand, and funding cost.",
-  liquidityMap: "Where price structure suggests the market is likely to move next — approximated volume profile, support/resistance, and resting order-book depth.",
+  positioning: "How traders are positioned with leverage right now — funding, open interest, long/short skew, squeeze risk, basis, and forced liquidations.",
+  marketStructure: "Whether real trend, momentum, and participation confirm the move — price action, sector breadth, taker flow, spot CVD, spot-vs-perp turnover, and Coinbase premium.",
+  leadingDrivers: "The macro and liquidity backdrop upstream of anything crypto-native — Fed/Treasury liquidity conditions, ETF flows, and stablecoin supply.",
+  risk: "Fragility and hedging-demand signals — Fear & Greed extremes, options put/call skew, and whale exchange netflow.",
 };

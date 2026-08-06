@@ -7,13 +7,7 @@ import { AssetCompositeSection } from "@/components/dashboard/AssetCompositeSect
 import { EntryQualityCard } from "@/components/dashboard/EntryQualityCard";
 import { CategoryCard } from "@/components/dashboard/CategoryCard";
 import { LiquidityMapCard } from "@/components/dashboard/LiquidityMapCard";
-import { MarketThesisTimeline } from "@/components/dashboard/MarketThesisTimeline";
 import { SignalBreakdown } from "@/components/dashboard/SignalBreakdown";
-import { FundingGauge } from "@/components/gauges/FundingGauge";
-import { OpenInterestGauge } from "@/components/gauges/OpenInterestGauge";
-import { LeverageHeatGauge } from "@/components/gauges/LeverageHeatGauge";
-import { LongShortGauge } from "@/components/gauges/LongShortGauge";
-import { ConfidenceGauge } from "@/components/dashboard/ConfidenceGauge";
 import { ExchangeGrid } from "@/components/dashboard/ExchangeGrid";
 import { HeatMap } from "@/components/dashboard/HeatMap";
 import { Leaderboards } from "@/components/dashboard/Leaderboards";
@@ -27,7 +21,7 @@ import { LiquidationIntelligence } from "@/components/dashboard/LiquidationIntel
 import { OrderFlowIntelligence } from "@/components/dashboard/OrderFlowIntelligence";
 import { ExchangeFlowIntelligence } from "@/components/dashboard/ExchangeFlowIntelligence";
 import { DeribitOptionsIntelligence } from "@/components/dashboard/DeribitOptionsIntelligence";
-import { MarketBreadth } from "@/components/dashboard/MarketBreadth";
+import { DominanceRotation, StablecoinSupply } from "@/components/dashboard/MarketBreadth";
 import { CorrelationHeatmap } from "@/components/dashboard/CorrelationHeatmap";
 import { NetworkHealth } from "@/components/dashboard/NetworkHealth";
 import { MacroCard } from "@/components/dashboard/MacroCard";
@@ -39,6 +33,16 @@ import { useAssetComposites } from "@/lib/hooks/useAssetComposites";
 import { useDashboardStore } from "@/lib/store/dashboardStore";
 import { getExchange } from "@/lib/exchanges/registry";
 import { regimeTagsToStrings } from "@/lib/technicals/regimes";
+import { Category } from "@/lib/signals/types";
+
+/**
+ * Dashboard V2's reading order: Leading Drivers -> Market Structure ->
+ * Positioning -> Risk Monitor, the user's own explicit "macro backdrop
+ * downstream to structure, then positioning, then risk" narrative order —
+ * deliberately NOT the same as CATEGORY_ORDER in categories.ts (weight-
+ * heaviest first), which drives scoring/renormalization, not page layout.
+ */
+const CATEGORY_DISPLAY_ORDER: Category[] = ["leadingDrivers", "marketStructure", "positioning", "risk"];
 
 export default function DashboardPage() {
   const asset = useDashboardStore((s) => s.asset);
@@ -67,6 +71,10 @@ export default function DashboardPage() {
   const directCount = aggregate?.exchanges.filter((e) => e.source === "direct").length ?? 0;
   const viaProvider = aggregate?.exchanges.filter((e) => e.source && e.source !== "direct") ?? [];
   const providerNames = Array.from(new Set(viaProvider.map((e) => e.source)));
+
+  const categoriesByName = new Map(
+    (aggregate?.marketBias?.categories ?? []).map((c) => [c.category, c] as const)
+  );
 
   return (
     <div className="min-h-screen">
@@ -125,134 +133,77 @@ export default function DashboardPage() {
             </div>
 
             {/*
+              ── EXECUTIVE SUMMARY ─────────────────────────────────────────
               The single answer to "what's the highest-probability direction
-              right now, and why" — the first thing a reader interprets.
-              Everything below is either the four raw readings that feed it,
-              the composite sections that explain it, or the audit trail
-              behind it.
+              right now, and why, and what would change that" — thesis,
+              confidence, top reasons, technical confirmation, biggest
+              opportunity/risk, invalidation, and (expandable) today's
+              trajectory. Everything below either feeds this or audits it.
             */}
             <AiMarketSummary
               bias={aggregate.marketBias}
               thesis={aggregate.marketThesis}
               technicals={aggregate.technicals}
+              timeline={aggregate.biasTimeline}
             />
 
-            {/*
-              BTC / ETH / Altcoin composite scores — the same bias.score
-              every other view reads, just for 3 assets at once. Refreshes
-              far slower than the rest of this page (see
-              useAssetComposites.ts) — a deliberate tradeoff to avoid 10x-ing
-              background exchange-API load for a summary view.
-            */}
-            <AssetCompositeSection data={assetComposites} />
-
-            <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
-              <FundingGauge data={aggregate} />
-              <OpenInterestGauge data={aggregate} />
-              <LeverageHeatGauge data={aggregate} />
-              <LongShortGauge data={aggregate} />
-              <ConfidenceGauge bias={aggregate.marketBias} />
+            <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <div className="lg:col-span-2">
+                <EntryQualityCard aggregate={aggregate} />
+              </div>
+              <AssetCompositeSection data={assetComposites} />
             </section>
 
             {/*
-              "Is this actually a high-quality entry?" — the third homepage
-              question. Sits right after the state/raw-readings above and
-              before the category breakdown below, matching the order a
-              trader actually reasons in: what's happening, then is this
-              worth acting on, then why.
-            */}
-            <EntryQualityCard aggregate={aggregate} />
-
-            {/*
-              The five composite sections — Leveraged Positioning, Spot
-              Demand, Market Stress, Liquidity Map, Network Health — the
-              dashboard's default reading surface. Same underlying metrics
-              the summary above synthesizes, regrouped into how a trader
-              actually thinks about the market; nothing new is fetched.
-              Liquidity Map and Network Health are structural/contextual, not
-              directional, so they render their own card shapes rather than
-              CategoryCard's score+verdict layout — see LiquidityMapCard.tsx
-              and NetworkHealth.tsx.
+              ── LEADING DRIVERS / MARKET STRUCTURE / POSITIONING / RISK ────
+              The four scored categories, one card per trading question —
+              Dashboard V2's "one card = one decision" rule. Same underlying
+              18 metrics `evaluateAll()` already produces; nothing new is
+              fetched here. Each card's "Detail" expandable absorbs the raw
+              Intelligence components that used to render as their own
+              always-visible cards or collapsibles.
             */}
             {aggregate.marketBias && aggregate.marketBias.categories.length > 0 && (
-              <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
-                {aggregate.marketBias.categories
-                  .filter((c) => c.category !== "liquidityMap")
-                  .map((c) => (
-                    <CategoryCard key={c.category} category={c} currentRegimeTags={currentRegimeTags} />
-                  ))}
-                <LiquidityMapCard
-                  liquidityMap={aggregate.liquidityMap}
-                  orderFlow={aggregate.orderFlow}
-                  liquidationsMetric={
-                    aggregate.marketBias.metrics.find((m) => m.id === "liquidations") ?? null
-                  }
-                />
-                <NetworkHealth data={data?.networkHealth} stablecoins={data?.stablecoins ?? null} />
+              <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {CATEGORY_DISPLAY_ORDER.map((catName) => {
+                  const category = categoriesByName.get(catName);
+                  if (!category) return null;
+                  return (
+                    <CategoryCard
+                      key={catName}
+                      category={category}
+                      currentRegimeTags={currentRegimeTags}
+                      rawDetail={rawDetailFor(catName, aggregate, data)}
+                      rawDetailSummary={RAW_DETAIL_SUMMARY[catName]}
+                    />
+                  );
+                })}
               </section>
             )}
 
             {/*
-              How the read got here. Sits directly under the sections above
-              because the arc and the current state are one story — a
-              cautiously bullish thesis that has been decaying all day means
-              something different from one that has been building.
-            */}
-            <MarketThesisTimeline timeline={aggregate.biasTimeline} bias={aggregate.marketBias} />
-
-            {/*
               ── THE AUDIT TRAIL ───────────────────────────────────────────
-              Every metric in one uniform shape, so the summary and sections
-              above are auditable rather than taken on trust. Collapsed by
-              default — this is raw-data depth, not the default reading
+              Every metric in one uniform shape, so the summary and category
+              cards above are auditable rather than taken on trust. Collapsed
+              by default — this is raw-data depth, not the default reading
               surface.
             */}
             <Collapsible
-              title="All 15 Signals"
+              title="All Signals"
               summary={`${aggregate.marketBias?.metrics.length ?? 0} metrics`}
             >
               <SignalBreakdown metrics={aggregate.marketBias?.metrics ?? []} currentRegimeTags={currentRegimeTags} />
             </Collapsible>
 
-            {/*
-              ── TIER 3 — THE DETAIL ───────────────────────────────────────
-              Nothing here is deleted; it is demoted. Each of these cards
-              renders exactly as it did before, but collapsed by default,
-              because the engine above has already read them. A trader who
-              wants to audit a specific number opens the relevant group; a
-              trader who wants the market read never has to.
-            */}
-            <Collapsible
-              title="Leveraged Positioning & Liquidity Detail"
-              summary="squeeze, funding percentile, CEX/DEX, order flow"
-            >
+            <Collapsible title="Research" summary="historical analog, freeform AI narrative">
               <div className="flex flex-col gap-4">
-                <PositioningIntelligence data={aggregate} />
-                <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                  <OrderFlowIntelligence data={aggregate} />
-                  <LiquidationIntelligence data={aggregate} />
-                </section>
+                <SimilarSetupsPanel aggregate={aggregate} />
+                <AiSummary aggregate={aggregate} />
               </div>
             </Collapsible>
 
-            <Collapsible title="Spot Demand & Options Detail" summary="exchange netflow, Deribit, pool exposure">
-              <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <ExchangeFlowIntelligence data={aggregate} />
-                <DeribitOptionsIntelligence data={aggregate} />
-                <PoolExposure data={aggregate} />
-              </section>
-            </Collapsible>
-
-            <Collapsible title="Market Context" summary="breadth, correlation, macro">
-              <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <MarketBreadth stablecoins={data?.stablecoins ?? null} globalMarket={data?.globalMarket ?? null} />
-                <CorrelationHeatmap correlation={data?.correlation ?? null} />
-                <MacroCard macro={data?.macro} />
-              </section>
-            </Collapsible>
-
             <Collapsible
-              title="Venue Breakdown"
+              title="Raw Venue Data"
               summary={`${venueCount ?? aggregate.exchanges.length} venues`}
             >
               <div className="flex flex-col gap-6">
@@ -268,15 +219,11 @@ export default function DashboardPage() {
               </div>
             </Collapsible>
 
-            <Collapsible title="Tools & Narrative" summary="AI summary, arbitrage, alerts">
-              <div className="flex flex-col gap-4">
-                <AiSummary aggregate={aggregate} />
-                <SimilarSetupsPanel aggregate={aggregate} />
-                <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                  <ArbitrageScanner exchanges={aggregate.exchanges} />
-                  <AlertsPanel aggregate={aggregate} />
-                </section>
-              </div>
+            <Collapsible title="Tools" summary="arbitrage scanner, alerts">
+              <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <ArbitrageScanner exchanges={aggregate.exchanges} />
+                <AlertsPanel aggregate={aggregate} />
+              </section>
             </Collapsible>
 
             <footer className="border-t border-hairline pt-6 text-[11px] leading-relaxed text-ink-faint">
@@ -294,6 +241,67 @@ export default function DashboardPage() {
       </main>
     </div>
   );
+}
+
+const RAW_DETAIL_SUMMARY: Record<Category, string> = {
+  positioning: "squeeze, funding percentile, liquidations, liquidity map, pool exposure",
+  marketStructure: "order flow, dominance/altseason rotation, correlation",
+  leadingDrivers: "macro (TradFi), on-chain network health, stablecoin supply",
+  risk: "exchange netflow, options positioning",
+};
+
+/**
+ * The relocated Intelligence/detail components each CategoryCard's "Detail"
+ * expandable absorbs — grouped by which trading question they support, per
+ * the Dashboard V2 IA redesign's audit. Nothing here recomputes anything;
+ * every component keeps reading the exact same `aggregate`/`data` it always
+ * has, just rendered inside a different expandable location.
+ */
+function rawDetailFor(
+  category: Category,
+  aggregate: NonNullable<ReturnType<typeof useMarketData>["data"]>["aggregate"],
+  data: ReturnType<typeof useMarketData>["data"]
+) {
+  switch (category) {
+    case "positioning":
+      return (
+        <div className="flex flex-col gap-4">
+          <PositioningIntelligence data={aggregate} />
+          <LiquidationIntelligence data={aggregate} />
+          <LiquidityMapCard
+            liquidityMap={aggregate.liquidityMap}
+            orderFlow={aggregate.orderFlow}
+            liquidationsMetric={aggregate.marketBias?.metrics.find((m) => m.id === "liquidations") ?? null}
+          />
+          <PoolExposure data={aggregate} />
+        </div>
+      );
+    case "marketStructure":
+      return (
+        <div className="flex flex-col gap-4">
+          <OrderFlowIntelligence data={aggregate} />
+          <DominanceRotation globalMarket={data?.globalMarket ?? null} />
+          <CorrelationHeatmap correlation={data?.correlation ?? null} />
+        </div>
+      );
+    case "leadingDrivers":
+      return (
+        <div className="flex flex-col gap-4">
+          <MacroCard macro={data?.macro} />
+          <NetworkHealth data={data?.networkHealth} stablecoins={data?.stablecoins ?? null} />
+          <StablecoinSupply stablecoins={data?.stablecoins ?? null} />
+        </div>
+      );
+    case "risk":
+      return (
+        <div className="flex flex-col gap-4">
+          <ExchangeFlowIntelligence data={aggregate} />
+          <DeribitOptionsIntelligence data={aggregate} />
+        </div>
+      );
+    default:
+      return null;
+  }
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {

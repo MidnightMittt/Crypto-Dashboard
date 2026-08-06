@@ -13,12 +13,19 @@ import { RegimeTags } from "@/lib/technicals/regimes";
 import { TechnicalRead } from "@/types/market";
 
 /**
- * Groups the 15 flat metric verdicts into four composite sections, and
+ * Groups the 18 flat metric verdicts into four composite sections, and
  * combines those into the overall score — a real hierarchy instead of one
  * flat list, organized by the QUESTION each section answers rather than by
- * data-source type (the prior taxonomy: Liquidity/Momentum/Derivatives/
- * On-chain/Sentiment, weighted 25/20/20/20/15 — replaced outright, not run
- * in parallel, per the redesign's explicit "reduce cognitive load" goal).
+ * data-source type.
+ *
+ * This is Dashboard V2's information-architecture redesign (the "one card
+ * = one decision" mandate): the PRIOR taxonomy (leveragedPositioning /
+ * spotDemand / marketStress / liquidityMap, weighted 35/30/20/15) has been
+ * replaced outright, not run in parallel. That taxonomy grouped metrics by
+ * data source (derivatives vs. spot vs. sentiment); this one groups them by
+ * the trading question each category answers — positioning, structure,
+ * macro backdrop, risk — matching the page's six-section IA one-for-one so
+ * the scoring engine and the UI describe the market the same way.
  *
  * Nothing here computes a new signal. Every category score is the SAME
  * verdicts `evaluateAll()` already produces, regrouped and reweighted —
@@ -29,91 +36,86 @@ import { TechnicalRead } from "@/types/market";
  */
 
 /**
- * Which categories each metric feeds. A metric CAN belong to more than
- * one — see the placement reasoning below for `funding` (the one deliberate
- * dual-membership in the new taxonomy; `exchangeFlow` had this role in the
- * old one).
+ * Which categories each metric feeds. Every metric is single-homed in the
+ * new taxonomy — the prior taxonomy's one dual-membership (`funding` in
+ * both leveragedPositioning and marketStress, read under two different
+ * framings) has been dropped to a single category; the "how extreme is the
+ * cost of holding leverage" nuance is now explanatory text inside
+ * Positioning's own card rather than a second scored category. Deliberate
+ * simplification, not an oversight.
  *
- * - Leveraged Positioning: how traders are positioned WITH LEVERAGE, and
- *   how crowded that positioning is.
- * - Spot Demand: is real, unleveraged buying/selling power behind the
- *   move — exchange wallets, ETF wrappers, stablecoin supply, Coinbase's
- *   US-demand premium, taker flow, and spot-vs-perp turnover are the six
- *   metrics that most directly answer this.
- * - Market Stress: is this move backed by real conviction or
- *   stretched/fragile — `fearGreed`'s own evaluator already reads it as
- *   contrarian-extremes-only (a fragility signal), `options` put/call is a
- *   hedging-demand read, `technicals` carries the market's own
- *   volatility/strength character, and `sectorBreadth` (CoinGecko category
- *   mcap change) asks whether a move is broadly confirmed across sectors or
- *   concentrated/fragile — same "is this move well-supported" question the
- *   rest of this category answers, not a fresh directional opinion.
- *   `macroLiquidity` (FRED) asks the same backdrop question at the
- *   macro level: is the Fed/Treasury liquidity picture and the financial-
- *   conditions/yield-curve read supportive of risk assets, or fragile.
- *   `funding` is read a SECOND time here
- *   under a different framing than Leveraged Positioning: "which side is
- *   crowded" (directional) vs. "how extreme is the cost of holding
- *   leverage right now" (magnitude). `computeWeightedScore` renormalizes
- *   independently per category, so this is not double-counted in the
- *   overall score.
- * - Liquidity Map: market MICROSTRUCTURE — where price is likely to move
- *   next based on liquidity, not a directional read. `liquidations` is its
- *   only member from the scored 15, and stays weight-0 (its evaluator is
- *   deliberately always-neutral, "context only, not predictive" — see
- *   evaluators.ts) — the rest of Liquidity Map's card content comes from
- *   `src/lib/technicals/marketStructure.ts`'s volume-profile/support-
- *   resistance approximation, not from this weighted-score machinery.
+ * - Positioning: how traders are positioned WITH LEVERAGE, how crowded
+ *   that positioning is, and what's already been forced out
+ *   (`liquidations` — always-neutral by design, context only, see its own
+ *   evaluator doc comment — folds in here rather than a separate
+ *   liquidityMap category, since it answers the same "how stretched is
+ *   positioning" question).
+ * - Market Structure: is real trend/momentum/participation confirming the
+ *   move — `technicals` carries trend/momentum/volatility character,
+ *   `sectorBreadth` asks whether the move is broadly confirmed across
+ *   crypto sectors or concentrated, and `orderFlow`/`spotCvd`/
+ *   `spotPerpVolume`/`coinbasePremium` are the four readings on genuine
+ *   spot/taker participation vs. leveraged turnover.
+ * - Leading Drivers: the macro/liquidity backdrop, upstream of anything
+ *   crypto-native — `macroLiquidity` (FRED: Fed/Treasury liquidity flow,
+ *   financial conditions, yield curve), `etfFlows` (TradFi capital
+ *   arriving or leaving through the regulated wrapper), `stablecoins`
+ *   (on-chain buying power waiting on the sidelines).
+ * - Risk: fragility and hedging-demand signals — `fearGreed` is read
+ *   contrarian at the extremes (a stretched-positioning signal, not a
+ *   trend one), `options` put/call is a hedging-demand read, `exchangeFlow`
+ *   (whale wallet netflow onto/off exchanges) is the clearest on-chain
+ *   signal of intent to sell vs. hold.
  */
 const CATEGORY_MAP: Record<string, Category[]> = {
-  funding: ["leveragedPositioning", "marketStress"],
-  openInterest: ["leveragedPositioning"],
-  longShort: ["leveragedPositioning"],
-  squeezeRisk: ["leveragedPositioning"],
-  basis: ["leveragedPositioning"],
+  funding: ["positioning"],
+  openInterest: ["positioning"],
+  longShort: ["positioning"],
+  squeezeRisk: ["positioning"],
+  basis: ["positioning"],
+  liquidations: ["positioning"],
 
-  orderFlow: ["spotDemand"],
-  spotCvd: ["spotDemand"],
-  spotPerpVolume: ["spotDemand"],
-  coinbasePremium: ["spotDemand"],
-  exchangeFlow: ["spotDemand"],
-  etfFlows: ["spotDemand"],
-  stablecoins: ["spotDemand"],
+  technicals: ["marketStructure"],
+  sectorBreadth: ["marketStructure"],
+  orderFlow: ["marketStructure"],
+  spotCvd: ["marketStructure"],
+  spotPerpVolume: ["marketStructure"],
+  coinbasePremium: ["marketStructure"],
 
-  technicals: ["marketStress"],
-  fearGreed: ["marketStress"],
-  options: ["marketStress"],
-  sectorBreadth: ["marketStress"],
-  macroLiquidity: ["marketStress"],
+  macroLiquidity: ["leadingDrivers"],
+  etfFlows: ["leadingDrivers"],
+  stablecoins: ["leadingDrivers"],
 
-  liquidations: ["liquidityMap"],
+  fearGreed: ["risk"],
+  options: ["risk"],
+  exchangeFlow: ["risk"],
 };
 
 /**
  * Sum to 1.00; ratios are what matter since an absent category renormalizes.
- * Leveraged Positioning and Spot Demand carry the most weight because they
- * have the most (and most directly directional) contributing metrics;
- * Liquidity Map is weighted lowest because its only scored metric
- * (`liquidations`) is weight-0 — it barely moves the overall score by
- * design, since it's a structural read, not a directional one (see its
- * card, which doesn't show this score at all).
+ * Positioning carries the most weight because it has the most (and most
+ * directly directional) contributing metrics, same as the prior taxonomy's
+ * leveragedPositioning. Market Structure, Leading Drivers, and Risk split
+ * the remainder roughly evenly, each carrying real directional metrics
+ * (unlike the prior liquidityMap, which was weighted near-zero because its
+ * only scored metric was always-neutral by design).
  */
 export const CATEGORY_WEIGHTS: Record<Category, number> = {
-  leveragedPositioning: 0.35,
-  spotDemand: 0.3,
-  marketStress: 0.2,
-  liquidityMap: 0.15,
+  positioning: 0.35,
+  marketStructure: 0.25,
+  leadingDrivers: 0.2,
+  risk: 0.2,
 };
 
 export const CATEGORY_LABELS: Record<Category, string> = {
-  leveragedPositioning: "Leveraged Positioning",
-  spotDemand: "Spot Demand",
-  marketStress: "Market Stress",
-  liquidityMap: "Liquidity Map",
+  positioning: "Positioning Intelligence",
+  marketStructure: "Market Structure",
+  leadingDrivers: "Leading Drivers",
+  risk: "Risk Monitor",
 };
 
 /** Display order — heaviest-weighted category first. */
-export const CATEGORY_ORDER: Category[] = ["leveragedPositioning", "spotDemand", "marketStress", "liquidityMap"];
+export const CATEGORY_ORDER: Category[] = ["positioning", "marketStructure", "leadingDrivers", "risk"];
 
 function metricsForCategory(metrics: MetricVerdict[], category: Category): MetricVerdict[] {
   return metrics.filter((m) => CATEGORY_MAP[m.id]?.includes(category));
@@ -155,6 +157,31 @@ export function buildAllCategories(metrics: MetricVerdict[]): CategoryScore[] {
   return CATEGORY_ORDER.map((c) => buildCategoryScore(metrics, c)).filter(
     (c): c is CategoryScore => c !== null
   );
+}
+
+/**
+ * Every metric already carries its own `conflicts: string[]` — evidence
+ * pointing the other way, cited per-metric (see MetricVerdict in
+ * types.ts). Never aggregated anywhere before this: a category's card
+ * showed its top supporting reasons, but a reader had to open every
+ * metric's own row to see what contradicted the category's read. This is
+ * the "Contradicting Evidence" line the Dashboard V2 card format calls
+ * for — pure aggregation, no new evidence generated, deduped since the
+ * same conflict sentence can legitimately appear on more than one metric
+ * (e.g. two metrics both citing "price action leans bearish, against this
+ * read").
+ */
+export function aggregateConflicts(metrics: MetricVerdict[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const m of metrics) {
+    for (const c of m.conflicts) {
+      if (seen.has(c)) continue;
+      seen.add(c);
+      result.push(c);
+    }
+  }
+  return result;
 }
 
 export interface CombinedCategoryScore {

@@ -354,20 +354,20 @@ describe("watchNext", () => {
 
 describe("category rollup fields", () => {
   it("attaches the category breakdown that produced the score", () => {
-    // funding is the one deliberate dual-membership metric (leveragedPositioning
-    // + marketStress); technicals also feeds marketStress, so the two produce
-    // exactly these two categories, not three.
+    // funding is positioning-only and technicals is marketStructure-only in
+    // the V2 taxonomy (funding's old dual-membership was dropped), so the
+    // two produce exactly these two categories, not three.
     const bias = build([metric("funding", "bullish", 90), metric("technicals", "bullish", 90)])!;
-    expect(bias.categories.map((c) => c.category).sort()).toEqual(["leveragedPositioning", "marketStress"]);
+    expect(bias.categories.map((c) => c.category).sort()).toEqual(["marketStructure", "positioning"]);
   });
 
   it("computes the overall score BY combining categories, not the old flat per-metric sum", () => {
-    // openInterest+longShort (both leveragedPositioning-only, weights
-    // 0.09+0.08=0.17) at full weight vs. fearGreed (marketStress-only,
+    // openInterest+longShort (both positioning-only, weights
+    // 0.09+0.08=0.17) at full weight vs. fearGreed (risk-only,
     // weight 0.03) at full weight: under FLAT per-metric weighting fearGreed's
     // tiny 0.03 would barely dent a combined 0.17 bullish weight. Under
-    // CATEGORY weighting marketStress gets its full 20% category weight
-    // to fight leveragedPositioning's 35%, a much closer contest — hand-
+    // CATEGORY weighting risk gets its full 20% category weight
+    // to fight positioning's 35%, a much closer contest — hand-
     // verified directly (npx tsx against the real buildMarketBias): score
     // lands at 64, not the >90 a flat sum would produce.
     const bias = build([

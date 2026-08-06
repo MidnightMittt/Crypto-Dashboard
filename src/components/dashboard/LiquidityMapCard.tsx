@@ -1,10 +1,8 @@
 "use client";
 
-import { Card, CardContent } from "@/components/ui/Card";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { LiquidityMapRead, OrderFlowSummary } from "@/types/market";
 import { MetricVerdict } from "@/lib/signals/types";
-import { CATEGORY_DESCRIPTIONS } from "@/lib/signals/descriptions";
 import { formatCompactUsd } from "@/lib/utils/format";
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -16,10 +14,11 @@ const SOURCE_LABELS: Record<string, string> = {
 };
 
 /**
- * Liquidity Map's own card, not a `CategoryCard` variant — this section is a
- * structural read (where is price likely to move next) rather than a
- * directional one, so it deliberately carries no score or verdict badge. See
- * marketStructure.ts and Part 1d of the redesign plan for why.
+ * Structural read (where is price likely to move next) rather than a
+ * directional one, so it deliberately carries no score or verdict badge —
+ * see marketStructure.ts. Dashboard V2: no longer its own top-level card;
+ * embedded as expandable raw detail behind Positioning Intelligence's
+ * CategoryCard (see page.tsx), so no outer Card wrapper here.
  */
 export function LiquidityMapCard({
   liquidityMap,
@@ -43,19 +42,18 @@ export function LiquidityMapCard({
   const imbalance = orderFlow?.bookImbalance ?? null;
 
   return (
-    <Card>
-      <CardContent className="flex flex-col gap-3 py-4">
-        <div className="flex items-center gap-1.5">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
-            Liquidity Map
-          </span>
-          <InfoTooltip
-            measures={CATEGORY_DESCRIPTIONS.liquidityMap}
-            whyItMatters="Estimates where price is most likely to move next based on liquidity, not which direction is favored."
-          />
-        </div>
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-1.5">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
+          Liquidity Map
+        </span>
+        <InfoTooltip
+          measures="Where price structure suggests the market is likely to move next — approximated volume profile, support/resistance, and resting order-book depth."
+          whyItMatters="Estimates where price is most likely to move next based on liquidity, not which direction is favored."
+        />
+      </div>
 
-        {!liquidityMap ? (
+      {!liquidityMap ? (
           <p className="text-[11px] leading-relaxed text-ink-faint">
             Not enough daily candle history yet to map structure for this asset.
           </p>
@@ -113,13 +111,12 @@ export function LiquidityMapCard({
           </div>
         )}
 
-        <p className="border-t border-hairline pt-2.5 text-[10px] leading-relaxed text-ink-faint/75">
-          Structure is estimated from trailing daily OHLCV and top-of-book depth, not a
-          tick-level order book reconstruction. Support/resistance levels are historical
-          reaction zones, not guarantees.
-        </p>
-      </CardContent>
-    </Card>
+      <p className="border-t border-hairline pt-2.5 text-[10px] leading-relaxed text-ink-faint/75">
+        Structure is estimated from trailing daily OHLCV and top-of-book depth, not a
+        tick-level order book reconstruction. Support/resistance levels are historical
+        reaction zones, not guarantees.
+      </p>
+    </div>
   );
 }
 

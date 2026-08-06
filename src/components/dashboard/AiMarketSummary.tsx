@@ -2,6 +2,7 @@
 
 import { Card, CardContent } from "@/components/ui/Card";
 import { VerdictBadge, ConfidenceLabel } from "@/components/ui/VerdictBadge";
+import { Collapsible } from "@/components/ui/Collapsible";
 import { MarketBias, MetricVerdict } from "@/lib/signals/types";
 import { topReasons, RankedReason } from "@/lib/signals/marketBias";
 import { MarketThesis, TechnicalRead } from "@/types/market";
@@ -9,6 +10,8 @@ import { intensityLabel } from "@/lib/signals/scoring";
 import { technicalAgreement, TechnicalAgreement } from "@/lib/sentiment/technicals";
 import { lookupBiasVerdictStat, lookupAgreementBucket, BacktestMetricStats } from "@/lib/sentiment/backtestStats";
 import { RegimeTags } from "@/lib/technicals/regimes";
+import { BiasHistoryEntry } from "@/lib/history/biasHistory";
+import { TimelineList } from "./MarketThesisTimeline";
 import backtestStats from "@/data/backtestStats.json";
 import backtestMetricStatsJson from "@/data/backtestMetricStats.json";
 
@@ -43,10 +46,13 @@ export function AiMarketSummary({
   bias,
   thesis,
   technicals,
+  timeline,
 }: {
   bias: MarketBias | null;
   thesis: MarketThesis | null;
   technicals: TechnicalRead | null;
+  /** Optional — when provided, renders an expandable "today's trajectory" panel absorbing what used to be the standalone MarketThesisTimeline card. */
+  timeline?: BiasHistoryEntry[];
 }) {
   if (!bias) {
     return (
@@ -92,6 +98,16 @@ export function AiMarketSummary({
         <InvalidationLevel watchNext={bias.watchNext} invalidationLines={invalidationLines} />
 
         <SinceLastUpdate bias={bias} />
+
+        {timeline && (
+          <div className="border-t border-hairline pt-5">
+            <Collapsible title="Today's trajectory" summary={`${timeline.length} shift${timeline.length === 1 ? "" : "s"}`}>
+              <div className="pt-2">
+                <TimelineList timeline={timeline} bias={bias} />
+              </div>
+            </Collapsible>
+          </div>
+        )}
 
         <p className="border-t border-hairline pt-4 text-xs leading-relaxed text-ink-faint">
           Weighted read of {bias.metrics.length} metrics, each scaled by how much evidence backs

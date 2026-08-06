@@ -1,6 +1,5 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { LeanGauge } from "@/components/ui/LeanGauge";
 import { BandGauge } from "@/components/ui/BandGauge";
 import { formatCompactUsd, formatPct } from "@/lib/utils/format";
@@ -17,101 +16,88 @@ import { ALTSEASON_WINDOW_DAYS } from "@/lib/providers/globalMarket";
 const DOMINANCE_ROTATION_COLORS = ["#F5A623", "#8890A0", "#2DD4E8"];
 
 /**
- * Market-wide context that no per-asset card here can provide: total crypto
- * market cap and BTC dominance (is capital consolidating into BTC or
- * rotating into alts), and stablecoin supply (is capital entering crypto as
- * dry powder, or leaving it entirely). Same for every asset tab — this
- * doesn't change when you switch from BTC to SOL.
+ * Dashboard V2: this used to be one combined "Market Breadth" card. Split
+ * into two un-wrapped pieces — `DominanceRotation` (mcap/dominance/
+ * altseason) and `StablecoinSupply` — each embedded as expandable raw
+ * detail behind a different CategoryCard (Market Structure and Leading
+ * Drivers respectively, see page.tsx), since they answer genuinely
+ * different questions rather than belonging in one lump. No Card wrapper
+ * here; the parent Collapsible/CategoryCard supplies that.
  */
-export function MarketBreadth({
-  stablecoins,
-  globalMarket,
-}: {
-  stablecoins: StablecoinSummary | null;
-  globalMarket: GlobalMarketSummary | null;
-}) {
-  if (!stablecoins && !globalMarket) return null;
+export function DominanceRotation({ globalMarket }: { globalMarket: GlobalMarketSummary | null }) {
+  if (!globalMarket) return null;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Market Breadth</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-4 pt-0">
-        {globalMarket && (
-          <div>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Stat label="Total mcap" value={formatCompactUsd(globalMarket.totalMcapUsd)} />
-              <Stat label="BTC dominance" value={`${globalMarket.btcDominancePct.toFixed(1)}%`} />
-              <Stat label="ETH dominance" value={`${globalMarket.ethDominancePct.toFixed(1)}%`} />
-              <Stat
-                label="Altseason index"
-                value={`${globalMarket.altseasonIndex.toFixed(0)}/100`}
-                tone={
-                  globalMarket.altseasonIndex >= 75
-                    ? "success"
-                    : globalMarket.altseasonIndex <= 25
-                      ? "danger"
-                      : "neutral"
-                }
-              />
-            </div>
-            <div className="mt-3">
-              <BandGauge
-                value={globalMarket.altseasonIndex}
-                bands={DOMINANCE_ROTATION_BANDS}
-                colors={DOMINANCE_ROTATION_COLORS}
-              />
-            </div>
-            <p className="mt-2 text-[11px] leading-relaxed text-ink-faint">
-              {narrateAltseason(globalMarket.altseasonIndex)} 24h market cap{" "}
-              {globalMarket.mcapChange24hPct >= 0 ? "+" : ""}
-              {formatPct(globalMarket.mcapChange24hPct, 1)}.
-            </p>
-          </div>
-        )}
+    <div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Stat label="Total mcap" value={formatCompactUsd(globalMarket.totalMcapUsd)} />
+        <Stat label="BTC dominance" value={`${globalMarket.btcDominancePct.toFixed(1)}%`} />
+        <Stat label="ETH dominance" value={`${globalMarket.ethDominancePct.toFixed(1)}%`} />
+        <Stat
+          label="Altseason index"
+          value={`${globalMarket.altseasonIndex.toFixed(0)}/100`}
+          tone={
+            globalMarket.altseasonIndex >= 75
+              ? "success"
+              : globalMarket.altseasonIndex <= 25
+                ? "danger"
+                : "neutral"
+          }
+        />
+      </div>
+      <div className="mt-3">
+        <BandGauge
+          value={globalMarket.altseasonIndex}
+          bands={DOMINANCE_ROTATION_BANDS}
+          colors={DOMINANCE_ROTATION_COLORS}
+        />
+      </div>
+      <p className="mt-2 text-[11px] leading-relaxed text-ink-faint">
+        {narrateAltseason(globalMarket.altseasonIndex)} 24h market cap{" "}
+        {globalMarket.mcapChange24hPct >= 0 ? "+" : ""}
+        {formatPct(globalMarket.mcapChange24hPct, 1)}.
+      </p>
+    </div>
+  );
+}
 
-        {stablecoins && (
-          <div className="border-t border-hairline pt-3">
-            <div className="flex items-baseline justify-between gap-3">
-              <span className="text-[11px] uppercase tracking-widest text-ink-muted">
-                Stablecoin supply
-              </span>
-              <span className="font-mono text-sm text-ink">
-                {formatCompactUsd(stablecoins.totalMcapUsd)}
-              </span>
-            </div>
-            <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
-              <span className="text-ink-faint">
-                24h{" "}
-                <span className={stablecoins.netChange24hUsd >= 0 ? "text-success" : "text-danger"}>
-                  {stablecoins.netChange24hUsd >= 0 ? "+" : ""}
-                  {formatCompactUsd(stablecoins.netChange24hUsd)}
-                </span>
-              </span>
-              <span className="text-right text-ink-faint">
-                7d{" "}
-                <span className={stablecoins.netChange7dUsd >= 0 ? "text-success" : "text-danger"}>
-                  {stablecoins.netChange7dUsd >= 0 ? "+" : ""}
-                  {formatCompactUsd(stablecoins.netChange7dUsd)}
-                </span>
-              </span>
-            </div>
-            <div className="mt-3">
-              <LeanGauge lean={stablecoinFlowLean(stablecoins.netChange7dPct)} />
-            </div>
-            <p className="mt-2 text-[11px] leading-relaxed text-ink-faint">
-              {narrateStablecoins(stablecoins)}{" "}
-              {stablecoins.topIssuers
-                .slice(0, 2)
-                .map((i) => `${i.symbol} ${i.dominancePct.toFixed(0)}%`)
-                .join(", ")}
-              .
-            </p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+export function StablecoinSupply({ stablecoins }: { stablecoins: StablecoinSummary | null }) {
+  if (!stablecoins) return null;
+
+  return (
+    <div>
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-[11px] uppercase tracking-widest text-ink-muted">Stablecoin supply</span>
+        <span className="font-mono text-sm text-ink">{formatCompactUsd(stablecoins.totalMcapUsd)}</span>
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+        <span className="text-ink-faint">
+          24h{" "}
+          <span className={stablecoins.netChange24hUsd >= 0 ? "text-success" : "text-danger"}>
+            {stablecoins.netChange24hUsd >= 0 ? "+" : ""}
+            {formatCompactUsd(stablecoins.netChange24hUsd)}
+          </span>
+        </span>
+        <span className="text-right text-ink-faint">
+          7d{" "}
+          <span className={stablecoins.netChange7dUsd >= 0 ? "text-success" : "text-danger"}>
+            {stablecoins.netChange7dUsd >= 0 ? "+" : ""}
+            {formatCompactUsd(stablecoins.netChange7dUsd)}
+          </span>
+        </span>
+      </div>
+      <div className="mt-3">
+        <LeanGauge lean={stablecoinFlowLean(stablecoins.netChange7dPct)} />
+      </div>
+      <p className="mt-2 text-[11px] leading-relaxed text-ink-faint">
+        {narrateStablecoins(stablecoins)}{" "}
+        {stablecoins.topIssuers
+          .slice(0, 2)
+          .map((i) => `${i.symbol} ${i.dominancePct.toFixed(0)}%`)
+          .join(", ")}
+        .
+      </p>
+    </div>
   );
 }
 

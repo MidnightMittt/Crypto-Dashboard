@@ -20,8 +20,15 @@ import { MarketBias } from "@/lib/signals/types";
  * The series accumulates forward from first deployment and is never
  * backfilled — so a new install shows one row and grows. The empty state
  * says that rather than implying the market has been flat.
+ *
+ * Dashboard V2: this no longer renders as its own top-level card — it's
+ * absorbed into AiMarketSummary's "today's trajectory" expandable panel
+ * (see that file). `TimelineList` below is the un-wrapped content
+ * AiMarketSummary embeds; `MarketThesisTimeline` (the Card-wrapped
+ * version) is kept for any future standalone use but isn't rendered from
+ * page.tsx anymore.
  */
-export function MarketThesisTimeline({
+export function TimelineList({
   timeline,
   bias,
 }: {
@@ -36,35 +43,52 @@ export function MarketThesisTimeline({
   const isFirstEver = entries.length <= 1;
 
   return (
+    <>
+      {isFirstEver && (
+        <p className="mb-5 text-xs leading-relaxed text-ink-faint">
+          This timeline records the thesis each time it genuinely shifts, and builds up from
+          here — there is no back-fill, so it starts with today. Nothing historical is being
+          hidden; it simply has not been recorded yet.
+        </p>
+      )}
+
+      <ol className="flex flex-col">
+        {entries.map((entry, i) => (
+          <TimelineRow
+            key={entry.t}
+            entry={entry}
+            previousScore={i > 0 ? entries[i - 1].score : null}
+          />
+        ))}
+
+        {/* The live read always terminates the list, so the arc ends at now. */}
+        <CurrentRow bias={bias} previousScore={entries[entries.length - 1]?.score ?? null} />
+      </ol>
+    </>
+  );
+}
+
+export function MarketThesisTimeline({
+  timeline,
+  bias,
+}: {
+  timeline: BiasHistoryEntry[];
+  bias: MarketBias | null;
+}) {
+  if (!bias) return null;
+  const isFirstEver = [...timeline].filter((e) => e.t).length <= 1;
+
+  return (
     <Card>
       <CardHeader>
         <CardTitle>Thesis Timeline</CardTitle>
         <span className="text-[11px] uppercase tracking-widest text-ink-muted">
-          {isFirstEver ? "collecting" : `${entries.length} shifts`}
+          {isFirstEver ? "collecting" : `${timeline.length} shifts`}
         </span>
       </CardHeader>
 
       <CardContent className="pt-0">
-        {isFirstEver && (
-          <p className="mb-5 text-xs leading-relaxed text-ink-faint">
-            This timeline records the thesis each time it genuinely shifts, and builds up from
-            here — there is no back-fill, so it starts with today. Nothing historical is being
-            hidden; it simply has not been recorded yet.
-          </p>
-        )}
-
-        <ol className="flex flex-col">
-          {entries.map((entry, i) => (
-            <TimelineRow
-              key={entry.t}
-              entry={entry}
-              previousScore={i > 0 ? entries[i - 1].score : null}
-            />
-          ))}
-
-          {/* The live read always terminates the list, so the arc ends at now. */}
-          <CurrentRow bias={bias} previousScore={entries[entries.length - 1]?.score ?? null} />
-        </ol>
+        <TimelineList timeline={timeline} bias={bias} />
       </CardContent>
     </Card>
   );

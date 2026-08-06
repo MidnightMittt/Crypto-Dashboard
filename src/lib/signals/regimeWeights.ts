@@ -7,14 +7,23 @@ import { RegimeTags } from "@/lib/technicals/regimes";
  * classifyRegime() already computes for the live regime badge and backtest
  * bucketing — no new classification, only a new consumer of it.
  *
- * UNVALIDATED HYPOTHESIS, not a backtested edge. Rationale for each:
- *  - marketStress (fragility/liquidation risk) matters more when
- *    volatility is already high — the same positioning is riskier.
- *  - liquidityMap (structure/support-resistance) matters more when
+ * UNVALIDATED HYPOTHESIS, not a backtested edge. Rationale for each
+ * (updated for Dashboard V2's taxonomy — the mapping below preserves the
+ * ORIGINAL reasoning against its new category home, not a fresh guess):
+ *  - risk (fragility/hedging-demand: Fear&Greed, options, exchange flow)
+ *    matters more when volatility is already high — the same positioning
+ *    is riskier. Was `marketStress` under the prior taxonomy.
+ *  - marketStructure (trend/momentum/participation) matters more when
  *    range-bound — mean-reversion context is more informative than in a
- *    strong trend, where structure gets run over.
- *  - leveragedPositioning matters slightly less when range-bound —
- *    positioning extremes resolve less directionally in chop.
+ *    strong trend, where structure gets run over. Was `liquidityMap`
+ *    under the prior taxonomy, but that category's only scored member
+ *    (liquidations) never carried real weight — marketStructure is the
+ *    more honest new home for this rationale, since it's the category
+ *    that actually contains the trend/momentum signals whose
+ *    informativeness genuinely varies with range-bound vs. trending
+ *    conditions.
+ *  - positioning matters slightly less when range-bound — positioning
+ *    extremes resolve less directionally in chop. Was `leveragedPositioning`.
  *
  * These specific numbers must be checked against a real backtest
  * comparison (regime-adjusted vs. fixed weights) before being treated as
@@ -26,13 +35,13 @@ export const REGIME_WEIGHT_MULTIPLIERS: {
   rangeBound: Partial<Record<Category, number>>;
 } = {
   volatility: {
-    high: { marketStress: 1.2 },
+    high: { risk: 1.2 },
     low: {},
     normal: {},
   },
   rangeBound: {
-    liquidityMap: 1.15,
-    leveragedPositioning: 0.9,
+    marketStructure: 1.15,
+    positioning: 0.9,
   },
 };
 

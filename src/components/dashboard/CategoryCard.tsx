@@ -7,16 +7,18 @@ import { Collapsible } from "@/components/ui/Collapsible";
 import { HistoricalPerformancePanel } from "./HistoricalPerformancePanel";
 import { CategoryScore, MetricVerdict } from "@/lib/signals/types";
 import { intensityLabel, metricWeight, rankMetric } from "@/lib/signals/scoring";
+import { aggregateConflicts } from "@/lib/signals/categories";
 import { CATEGORY_DESCRIPTIONS, METRIC_DESCRIPTIONS } from "@/lib/signals/descriptions";
 import { lookupCategoryStat } from "@/lib/sentiment/backtestStats";
 import backtestStats from "@/data/backtestStats.json";
 
 /**
- * One shared card for 3 of the dashboard's 4 composite sections (Leveraged
- * Positioning, Spot Demand, Market Stress — Liquidity Map has its own
- * differently-shaped card, LiquidityMapCard.tsx, since its content is
- * structural, not a directional score) — same component, multiple
- * instances, rather than one bespoke layout per section.
+ * One shared card for the dashboard's four composite sections — Positioning
+ * Intelligence, Market Structure, Leading Drivers, Risk Monitor — same
+ * component, multiple instances, rather than one bespoke layout per
+ * section. Dashboard V2's standard card format: verdict → one-sentence
+ * summary → supporting evidence → contradicting evidence → historical
+ * reliability → expandable raw metrics/detail.
  *
  * Shows the top 3-5 contributing metrics' own explanations inline (ranked
  * by weight x confidence), not just one line + a collapsed list — the
@@ -26,7 +28,9 @@ import backtestStats from "@/data/backtestStats.json";
  *
  * Nothing here is a new computation: `score`/`verdict`/`confidence`/
  * `metrics` all come straight from `buildCategoryScore` in
- * lib/signals/categories.ts.
+ * lib/signals/categories.ts, and the contradicting-evidence line is a pure
+ * aggregation of each metric's own `conflicts[]` (`aggregateConflicts`) —
+ * no new evidence is generated here.
  */
 const TOP_REASONS_LIMIT = 5;
 
@@ -39,12 +43,19 @@ function topReasonsFor(category: CategoryScore, limit = TOP_REASONS_LIMIT): Metr
 export function CategoryCard({
   category,
   currentRegimeTags,
+  rawDetail,
+  rawDetailSummary,
 }: {
   category: CategoryScore;
   /** Today's live regime tags, threaded to each contributing metric's HistoricalPerformancePanel — see that component's doc comment. */
   currentRegimeTags?: string[];
+  /** Optional expandable "raw detail" content — the relocated Intelligence/detail components this category's card absorbs (see Dashboard V2's IA redesign). Rendered as its own Collapsible, separate from the metric-level "Why?" audit trail. */
+  rawDetail?: React.ReactNode;
+  /** Collapsible summary text for `rawDetail`, e.g. "squeeze, funding percentile, order flow". */
+  rawDetailSummary?: string;
 }) {
   const topReasons = topReasonsFor(category);
+  const conflicts = aggregateConflicts(category.metrics);
 
   return (
     <Card>
@@ -92,6 +103,21 @@ export function CategoryCard({
 
         <BacktestStatLine category={category} />
 
+        {conflicts.length > 0 && (
+          <div className="flex flex-col gap-1 rounded-md border border-amber/20 bg-amber/[0.04] px-2.5 py-2">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-amber">
+              Contradicting evidence
+            </span>
+            <ul className="flex flex-col gap-1">
+              {conflicts.map((c, i) => (
+                <li key={i} className="text-[11px] leading-relaxed text-ink-faint">
+                  {c}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <Collapsible title="Why?" summary={`${category.metrics.length} metrics`}>
           <ul className="flex flex-col gap-2.5 pt-1">
             {category.metrics.map((m) => (
@@ -113,6 +139,12 @@ export function CategoryCard({
             ))}
           </ul>
         </Collapsible>
+
+        {rawDetail && (
+          <Collapsible title="Detail" summary={rawDetailSummary}>
+            {rawDetail}
+          </Collapsible>
+        )}
       </CardContent>
     </Card>
   );
