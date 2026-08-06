@@ -40,9 +40,10 @@ export function MarketBreadth({
       <CardContent className="flex flex-col gap-4 pt-0">
         {globalMarket && (
           <div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <Stat label="Total mcap" value={formatCompactUsd(globalMarket.totalMcapUsd)} />
               <Stat label="BTC dominance" value={`${globalMarket.btcDominancePct.toFixed(1)}%`} />
+              <Stat label="ETH dominance" value={`${globalMarket.ethDominancePct.toFixed(1)}%`} />
               <Stat
                 label="Altseason index"
                 value={`${globalMarket.altseasonIndex.toFixed(0)}/100`}

@@ -460,6 +460,7 @@ export function replayAsset(
       technicals,
       stablecoins: stablecoinsAt(marketWide.stablecoins, t),
       fearGreed: fearGreedAt(marketWide.fearGreed, t),
+      sectorBreadth: null, // live-only metric, no historical source — see sectorBreadth.ts
       priceChange24hPct,
       now: t,
     };

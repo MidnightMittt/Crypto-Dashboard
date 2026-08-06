@@ -37,6 +37,7 @@ export const METRIC_WEIGHTS: Record<string, number> = {
   stablecoins: 0.04,
   coinbasePremium: 0.03,
   fearGreed: 0.03,
+  sectorBreadth: 0.03, // same weight class as fearGreed: context/fragility signal, no backtest source (CoinGecko historical category data is paid-tier gated)
   liquidations: 0, // backward-looking; shown for context, never scored
 };
 

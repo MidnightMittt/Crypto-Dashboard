@@ -57,6 +57,7 @@ import { recordFlowBalance, balanceWindowAgo } from "../history/flowStore";
 import { fetchDeribitOptions } from "../providers/deribitOptions";
 import { fetchStablecoinSummary } from "../providers/stablecoins";
 import { fetchFearGreed } from "../providers/fearGreed";
+import { fetchSectorBreadth } from "../providers/sectorBreadth";
 import { summarizeDeribitOptions } from "../sentiment/deribitOptions";
 
 /**
@@ -513,6 +514,7 @@ async function withRecordedHistory(
     spotPerpVolume,
     stablecoins,
     fearGreed,
+    sectorBreadth,
   ] = await Promise.all([
     buildPoolExposure(asset, agg.exchanges),
     buildLiquidationSummary(asset),
@@ -534,6 +536,7 @@ async function withRecordedHistory(
      */
     fetchStablecoinSummary().catch(() => null),
     fetchFearGreed().catch(() => null),
+    fetchSectorBreadth().catch(() => null),
   ]);
   // BTC's fetcher is keyless; ETH's needs ETHERSCAN_API_KEY. Computed
   // separately from the fetch itself so the UI can tell "no key" apart
@@ -629,6 +632,7 @@ async function withRecordedHistory(
       technicals,
       stablecoins,
       fearGreed,
+      sectorBreadth,
       priceChange24hPct: agg.priceChange24hPct,
       now: agg.updatedAt,
     }

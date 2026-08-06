@@ -220,6 +220,14 @@ export const SIGNAL_HYPOTHESES: SignalHypothesis[] = [
     hasHistoricalSource: true,
   }),
   hypothesis({
+    id: "sectorBreadth",
+    label: "Sector Breadth",
+    bullishCondition: "62.5% or more of a tracked basket of 8 CoinGecko sectors (Layer 1, DeFi, AI, Meme, and others) posted positive 24h market-cap change — broad participation.",
+    bearishCondition: "37.5% or fewer of the tracked sectors are positive over 24h — a narrow, concentrated move.",
+    neutralCondition: "Between 37.5% and 62.5% of tracked sectors are positive — mixed participation.",
+    hasHistoricalSource: false, // CoinGecko's historical category data is paid-tier gated — confirmed via a live request, see sectorBreadth.ts
+  }),
+  hypothesis({
     id: "liquidations",
     label: "Liquidations",
     bullishCondition: "Never fires. Liquidations describe positions already forced out, not a lean on what happens next — evaluateLiquidations always returns neutral by design (see its own doc comment in evaluators.ts), and marketThesis.ts gives it weight 0 for the same reason.",

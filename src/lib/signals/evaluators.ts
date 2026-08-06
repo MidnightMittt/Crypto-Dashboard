@@ -1,5 +1,6 @@
 import { AggregateMarketData, FearGreed, TechnicalRead } from "@/types/market";
 import type { StablecoinSummary } from "../providers/stablecoins";
+import type { SectorBreadthSummary } from "../providers/sectorBreadth";
 import { MetricVerdict, Verdict } from "./types";
 import { agreementOf, describeConfidence, scoreConfidence } from "./confidence";
 import { bandFor, bandTrigger, FUNDING_BANDS, LONG_SHORT_BANDS } from "../sentiment/bands";
@@ -34,6 +35,7 @@ export interface SignalContext {
   technicals: TechnicalRead | null;
   stablecoins: StablecoinSummary | null;
   fearGreed: FearGreed | null;
+  sectorBreadth: SectorBreadthSummary | null;
   /** Price change over 24h, used to test whether positioning is being confirmed by price. */
   priceChange24hPct: number;
   now: number;
@@ -652,6 +654,63 @@ function evaluateFearGreed(data: AggregateMarketData, ctx: SignalContext): Metri
   };
 }
 
+// ── Sector breadth ───────────────────────────────────────────────────────
+
+/** Breadth >= this % of tracked sectors green reads as broad participation. */
+const SECTOR_BREADTH_BULLISH_MIN = 62.5; // 5 of 8 tracked sectors
+/** Breadth <= this % reads as a narrow, concentrated move. */
+const SECTOR_BREADTH_BEARISH_MAX = 37.5; // 3 of 8 tracked sectors
+
+/**
+ * Is a move broad-based (most major sectors participating) or narrow
+ * (concentrated in one or two)? A market-wide read, same category as
+ * fearGreed/stablecoins above — not per-asset.
+ *
+ * NOT a directional call on its own the way funding or order flow are:
+ * broad participation makes an EXISTING bullish thesis more credible,
+ * narrow participation is itself a caution sign regardless of price
+ * action. Read the same way squeeze risk and Fear&Greed already are in
+ * this file — a fragility/context signal, not a fresh opinion — hence the
+ * moderate weight and marketStress category placement (see categories.ts).
+ */
+function evaluateSectorBreadth(data: AggregateMarketData, ctx: SignalContext): MetricVerdict | null {
+  const breadth = ctx.sectorBreadth;
+  if (!breadth || breadth.sectors.length === 0) return null;
+
+  const verdict: Verdict =
+    breadth.breadthPct >= SECTOR_BREADTH_BULLISH_MIN
+      ? "bullish"
+      : breadth.breadthPct <= SECTOR_BREADTH_BEARISH_MAX
+        ? "bearish"
+        : "neutral";
+
+  // No backtest source exists for this signal (CoinGecko's historical
+  // category data is paid-tier gated — confirmed directly, see
+  // sectorBreadth.ts's own doc comment) — never claim backtested: true
+  // for a signal with no history behind it.
+  const inputs = { completeness: breadth.sectors.length / 8, agreement: 0.7, backtested: false };
+  const positiveCount = breadth.sectors.filter((s) => s.mcapChange24hPct > 0).length;
+
+  return {
+    id: "sectorBreadth",
+    label: "Sector Breadth",
+    verdict,
+    confidence: scoreConfidence(inputs),
+    confidenceBasis: describeConfidence(inputs),
+    explanation:
+      verdict === "bullish"
+        ? `${positiveCount} of ${breadth.sectors.length} tracked sectors (Layer 1, DeFi, AI, Meme, and others) posted positive 24h market-cap change — broad participation, not a single-sector move.`
+        : verdict === "bearish"
+          ? `Only ${positiveCount} of ${breadth.sectors.length} tracked sectors are positive over 24h — a narrow, concentrated move rather than broad strength.`
+          : `${positiveCount} of ${breadth.sectors.length} tracked sectors are positive over 24h — mixed participation, no clear breadth signal either way.`,
+    whyItMatters:
+      "A rally confirmed across sectors (Layer 1s, DeFi, AI, memecoins) is more durable than one concentrated in a single narrative — narrow participation has historically been the more fragile setup.",
+    asOf: data.updatedAt,
+    conflicts: [],
+    nextTrigger: `${breadth.breadthPct.toFixed(0)}% of sectors positive — reads bullish at ${SECTOR_BREADTH_BULLISH_MIN}%+ (broad), bearish at ${SECTOR_BREADTH_BEARISH_MAX}%- (narrow).`,
+  };
+}
+
 // ── ETF flows ──────────────────────────────────────────────────────────
 
 function evaluateEtfFlows(data: AggregateMarketData): MetricVerdict | null {
@@ -776,6 +835,7 @@ export function evaluateAll(data: AggregateMarketData, ctx: SignalContext): Metr
     evaluateCoinbasePremium(data),
     evaluateStablecoins(data, ctx),
     evaluateFearGreed(data, ctx),
+    evaluateSectorBreadth(data, ctx),
     evaluateLiquidations(data),
   ];
 

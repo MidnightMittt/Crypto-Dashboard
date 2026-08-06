@@ -43,8 +43,12 @@ import { TechnicalRead } from "@/types/market";
  * - Market Stress: is this move backed by real conviction or
  *   stretched/fragile — `fearGreed`'s own evaluator already reads it as
  *   contrarian-extremes-only (a fragility signal), `options` put/call is a
- *   hedging-demand read, and `technicals` carries the market's own
- *   volatility/strength character. `funding` is read a SECOND time here
+ *   hedging-demand read, `technicals` carries the market's own
+ *   volatility/strength character, and `sectorBreadth` (CoinGecko category
+ *   mcap change) asks whether a move is broadly confirmed across sectors or
+ *   concentrated/fragile — same "is this move well-supported" question the
+ *   rest of this category answers, not a fresh directional opinion.
+ *   `funding` is read a SECOND time here
  *   under a different framing than Leveraged Positioning: "which side is
  *   crowded" (directional) vs. "how extreme is the cost of holding
  *   leverage right now" (magnitude). `computeWeightedScore` renormalizes
@@ -76,6 +80,7 @@ const CATEGORY_MAP: Record<string, Category[]> = {
   technicals: ["marketStress"],
   fearGreed: ["marketStress"],
   options: ["marketStress"],
+  sectorBreadth: ["marketStress"],
 
   liquidations: ["liquidityMap"],
 };

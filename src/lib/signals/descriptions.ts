@@ -23,6 +23,7 @@ export const METRIC_DESCRIPTIONS: Record<string, string> = {
   fearGreed: "A composite of volatility, momentum, and volume into a single crowd-sentiment index.",
   etfFlows: "Net daily inflow or outflow across US spot ETFs for this asset.",
   spotPerpVolume: "Spot trading turnover compared to perpetual futures turnover on the same venue.",
+  sectorBreadth: "Share of a tracked basket of crypto sectors (Layer 1, DeFi, AI, Meme, and others) with positive 24h market-cap change.",
 };
 
 export const CATEGORY_DESCRIPTIONS: Record<Category, string> = {
