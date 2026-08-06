@@ -59,6 +59,7 @@ import { fetchStablecoinSummary } from "../providers/stablecoins";
 import { fetchFearGreed } from "../providers/fearGreed";
 import { fetchSectorBreadth } from "../providers/sectorBreadth";
 import { fetchMacroLiquidity } from "../providers/macroLiquidity";
+import { fetchHyperliquidConfirmation } from "../providers/hyperliquidConfirm";
 import { summarizeDeribitOptions } from "../sentiment/deribitOptions";
 
 /**
@@ -517,6 +518,7 @@ async function withRecordedHistory(
     fearGreed,
     sectorBreadth,
     macroLiquidity,
+    hyperliquidConfirm,
   ] = await Promise.all([
     buildPoolExposure(asset, agg.exchanges),
     buildLiquidationSummary(asset),
@@ -540,6 +542,9 @@ async function withRecordedHistory(
     fetchFearGreed().catch(() => null),
     fetchSectorBreadth().catch(() => null),
     fetchMacroLiquidity().catch(() => null),
+    asset === "MARKET"
+      ? Promise.resolve({ funding: null, orderBook: null })
+      : fetchHyperliquidConfirmation(asset).catch(() => ({ funding: null, orderBook: null })),
   ]);
   // BTC's fetcher is keyless; ETH's needs ETHERSCAN_API_KEY. Computed
   // separately from the fetch itself so the UI can tell "no key" apart
@@ -637,6 +642,7 @@ async function withRecordedHistory(
       fearGreed,
       sectorBreadth,
       macroLiquidity,
+      hyperliquidConfirm,
       priceChange24hPct: agg.priceChange24hPct,
       now: agg.updatedAt,
     }

@@ -502,6 +502,7 @@ export function replayAsset(
       fearGreed: fearGreedAt(marketWide.fearGreed, t),
       sectorBreadth: null, // live-only metric, no historical source — see sectorBreadth.ts
       macroLiquidity: macroLiquidityAt(marketWide, t),
+      hyperliquidConfirm: null, // point-in-time order book + live-only confirmation modifier, no historical source — see hyperliquidConfirm.ts
       priceChange24hPct,
       now: t,
     };

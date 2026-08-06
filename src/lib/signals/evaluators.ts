@@ -2,6 +2,7 @@ import { AggregateMarketData, FearGreed, TechnicalRead } from "@/types/market";
 import type { StablecoinSummary } from "../providers/stablecoins";
 import type { SectorBreadthSummary } from "../providers/sectorBreadth";
 import { MacroLiquiditySnapshot, LIQUIDITY_CHANGE_THRESHOLD_BN, NFCI_NEUTRAL_BAND } from "../providers/macroLiquidity";
+import type { HyperliquidConfirmation } from "../providers/hyperliquidConfirm";
 import { MetricVerdict, Verdict } from "./types";
 import { agreementOf, describeConfidence, scoreConfidence } from "./confidence";
 import { bandFor, bandTrigger, FUNDING_BANDS, LONG_SHORT_BANDS } from "../sentiment/bands";
@@ -38,6 +39,8 @@ export interface SignalContext {
   fearGreed: FearGreed | null;
   sectorBreadth: SectorBreadthSummary | null;
   macroLiquidity: MacroLiquiditySnapshot | null;
+  /** Cross-venue confirmation only — never a scored metric of its own, see hyperliquidConfirm.ts. */
+  hyperliquidConfirm: HyperliquidConfirmation | null;
   /** Price change over 24h, used to test whether positioning is being confirmed by price. */
   priceChange24hPct: number;
   now: number;
@@ -85,27 +88,55 @@ function priceActionConflict(verdict: Verdict, ctx: SignalContext, metricLabel: 
 
 // ── Funding ────────────────────────────────────────────────────────────
 
+/**
+ * Fade the extremes, matching marketThesis.ts: crowded longs are BEARISH
+ * evidence, not doubly bullish. FUNDING_BANDS' own descriptions already
+ * frame it that way; this reads them at their word. Shared by the
+ * aggregate CEX funding rate below AND the Hyperliquid cross-check, so
+ * both venues are classified by the identical rule.
+ */
+export function fundingBandVerdict(pct: number): Verdict {
+  const band = bandFor(pct, FUNDING_BANDS);
+  return band.label === "Crowded Longs"
+    ? "bearish"
+    : band.label === "Extreme Shorts"
+      ? "bullish"
+      : band.label === "Bullish"
+        ? "bullish"
+        : band.label === "Bearish"
+          ? "bearish"
+          : "neutral";
+}
+
 function evaluateFunding(data: AggregateMarketData, ctx: SignalContext): MetricVerdict | null {
   const pct = data.weightedFundingRatePct;
   const band = bandFor(pct, FUNDING_BANDS);
-
-  /*
-   * Fade the extremes, matching marketThesis.ts: crowded longs are BEARISH
-   * evidence, not doubly bullish. FUNDING_BANDS' own descriptions already
-   * frame it that way; this reads them at their word.
-   */
-  const verdict: Verdict =
-    band.label === "Crowded Longs"
-      ? "bearish"
-      : band.label === "Extreme Shorts"
-        ? "bullish"
-        : band.label === "Bullish"
-          ? "bullish"
-          : band.label === "Bearish"
-            ? "bearish"
-            : "neutral";
+  const verdict = fundingBandVerdict(pct);
 
   const conflicts = priceActionConflict(verdict, ctx, "funding");
+
+  /*
+   * Hyperliquid is a genuinely independent venue from the CEX venues
+   * aggregated into `pct` above (a DEX, not already folded into the
+   * weighted average) — agreement here is real corroborating evidence.
+   * Confirmation modifier only, per the brief: no new metric id, no new
+   * card, just raises/lowers this metric's own agreement/conflicts.
+   */
+  const hl = ctx.hyperliquidConfirm?.funding;
+  let hlAgreementBonus = 0;
+  if (hl) {
+    const hlVerdict = fundingBandVerdict(hl.fundingRatePct8h);
+    if (hlVerdict !== "neutral" && verdict !== "neutral") {
+      if (hlVerdict === verdict) {
+        hlAgreementBonus = 0.15;
+      } else {
+        hlAgreementBonus = -0.2;
+        conflicts.push(
+          `Hyperliquid's own funding rate (${hl.fundingRatePct8h.toFixed(4)}%/8h) leans ${hlVerdict}, against this reading — a real disagreement between independent venues.`
+        );
+      }
+    }
+  }
 
   /*
    * Cross-venue agreement is real evidence here, not a proxy: funding is
@@ -118,7 +149,7 @@ function evaluateFunding(data: AggregateMarketData, ctx: SignalContext): MetricV
     dispersionBps === null ? 0.7 : dispersionBps < 1 ? 1 : dispersionBps < 3 ? 0.8 : 0.5;
 
   const completeness = Math.min(1, venueCount / 10);
-  const agreement = conflicts.length ? venueAgreement * 0.6 : venueAgreement;
+  const agreement = Math.max(0, Math.min(1, (conflicts.length ? venueAgreement * 0.6 : venueAgreement) + hlAgreementBonus));
   const inputs = { completeness, agreement, backtested: false };
 
   const extreme = band.label === "Crowded Longs" || band.label === "Extreme Shorts";
@@ -320,6 +351,16 @@ function evaluateBasis(data: AggregateMarketData, ctx: SignalContext): MetricVer
 
 // ── Order flow (CVD + book imbalance) ──────────────────────────────────
 
+/** Shared by OKX's resting-book read and the Hyperliquid cross-check below, so both venues switch verdict at the identical imbalance level. */
+const BOOK_IMBALANCE_THRESHOLD_PCT = 5;
+
+export function bookImbalanceVerdict(imbalancePct: number | null): Verdict {
+  if (imbalancePct === null) return "neutral";
+  if (imbalancePct > BOOK_IMBALANCE_THRESHOLD_PCT) return "bullish";
+  if (imbalancePct < -BOOK_IMBALANCE_THRESHOLD_PCT) return "bearish";
+  return "neutral";
+}
+
 function evaluateOrderFlow(data: AggregateMarketData, ctx: SignalContext): MetricVerdict | null {
   const flow = data.orderFlow;
   if (!flow) return null;
@@ -332,13 +373,7 @@ function evaluateOrderFlow(data: AggregateMarketData, ctx: SignalContext): Metri
    * the same question, so when they disagree that is real evidence of
    * uncertainty rather than noise to average away.
    */
-  const bookVerdict: Verdict = flow.bookImbalance
-    ? flow.bookImbalance.imbalancePct > 5
-      ? "bullish"
-      : flow.bookImbalance.imbalancePct < -5
-        ? "bearish"
-        : "neutral"
-    : "neutral";
+  const bookVerdict = bookImbalanceVerdict(flow.bookImbalance?.imbalancePct ?? null);
 
   const conflicts: string[] = [];
   if (flow.bookImbalance && bookVerdict !== "neutral" && verdict !== "neutral" && bookVerdict !== verdict) {
@@ -348,9 +383,23 @@ function evaluateOrderFlow(data: AggregateMarketData, ctx: SignalContext): Metri
   }
   conflicts.push(...priceActionConflict(verdict, ctx, "order flow"));
 
+  /*
+   * Hyperliquid's order book is a genuinely independent venue (a DEX, not
+   * already folded into OKX's book above) — real cross-venue corroboration
+   * when it agrees, real disagreement when it doesn't. Confirmation
+   * modifier only, per the brief: no new metric id, no new card.
+   */
+  const hlBook = ctx.hyperliquidConfirm?.orderBook ?? null;
+  const hlBookVerdict = bookImbalanceVerdict(hlBook?.imbalancePct ?? null);
+  if (hlBook && hlBookVerdict !== "neutral" && verdict !== "neutral" && hlBookVerdict !== verdict) {
+    conflicts.push(
+      `Hyperliquid's order book leans ${hlBookVerdict} (${hlBook.imbalancePct.toFixed(1)}% imbalance), against this executed-flow read.`
+    );
+  }
+
   const inputs = {
     completeness: flow.bookImbalance ? 1 : 0.6,
-    agreement: agreementOf([verdict, bookVerdict, priceActionVerdict(ctx) ?? "neutral"]),
+    agreement: agreementOf([verdict, bookVerdict, priceActionVerdict(ctx) ?? "neutral", hlBook ? hlBookVerdict : "neutral"]),
     backtested: false,
   };
 
