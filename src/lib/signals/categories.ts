@@ -48,6 +48,9 @@ import { TechnicalRead } from "@/types/market";
  *   mcap change) asks whether a move is broadly confirmed across sectors or
  *   concentrated/fragile — same "is this move well-supported" question the
  *   rest of this category answers, not a fresh directional opinion.
+ *   `macroLiquidity` (FRED) asks the same backdrop question at the
+ *   macro level: is the Fed/Treasury liquidity picture and the financial-
+ *   conditions/yield-curve read supportive of risk assets, or fragile.
  *   `funding` is read a SECOND time here
  *   under a different framing than Leveraged Positioning: "which side is
  *   crowded" (directional) vs. "how extreme is the cost of holding
@@ -81,6 +84,7 @@ const CATEGORY_MAP: Record<string, Category[]> = {
   fearGreed: ["marketStress"],
   options: ["marketStress"],
   sectorBreadth: ["marketStress"],
+  macroLiquidity: ["marketStress"],
 
   liquidations: ["liquidityMap"],
 };

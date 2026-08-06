@@ -1,6 +1,7 @@
 import { AggregateMarketData, FearGreed, TechnicalRead } from "@/types/market";
 import type { StablecoinSummary } from "../providers/stablecoins";
 import type { SectorBreadthSummary } from "../providers/sectorBreadth";
+import { MacroLiquiditySnapshot, LIQUIDITY_CHANGE_THRESHOLD_BN, NFCI_NEUTRAL_BAND } from "../providers/macroLiquidity";
 import { MetricVerdict, Verdict } from "./types";
 import { agreementOf, describeConfidence, scoreConfidence } from "./confidence";
 import { bandFor, bandTrigger, FUNDING_BANDS, LONG_SHORT_BANDS } from "../sentiment/bands";
@@ -36,6 +37,7 @@ export interface SignalContext {
   stablecoins: StablecoinSummary | null;
   fearGreed: FearGreed | null;
   sectorBreadth: SectorBreadthSummary | null;
+  macroLiquidity: MacroLiquiditySnapshot | null;
   /** Price change over 24h, used to test whether positioning is being confirmed by price. */
   priceChange24hPct: number;
   now: number;
@@ -711,6 +713,84 @@ function evaluateSectorBreadth(data: AggregateMarketData, ctx: SignalContext): M
   };
 }
 
+// ── Macro liquidity regime (FRED) ────────────────────────────────────────
+
+/**
+ * Is the Fed/Treasury backdrop adding fuel to risk assets or draining it?
+ * Two independent reads combined (see macroLiquidity.ts for the full
+ * reasoning): whether money is flowing into or out of the Fed's overnight
+ * liquidity sinks (reverse repo + Treasury General Account), and whether
+ * financial conditions/the yield curve are calm or flashing stress.
+ *
+ * A backdrop signal, same family as fearGreed/sectorBreadth in this
+ * category — hence bearish is triggered by EITHER warning sign alone
+ * (asymmetric), while bullish requires BOTH to confirm.
+ */
+function evaluateMacroLiquidity(data: AggregateMarketData, ctx: SignalContext): MetricVerdict | null {
+  const macro = ctx.macroLiquidity;
+  if (!macro || (macro.liquidityRegime === null && macro.riskRegime === null)) return null;
+
+  const verdict: Verdict =
+    macro.liquidityRegime === "contracting" || macro.riskRegime === "risk-off"
+      ? "bearish"
+      : macro.liquidityRegime === "expanding" && macro.riskRegime === "risk-on"
+        ? "bullish"
+        : "neutral";
+
+  const combinedChangeBn = (macro.rrpChangeBn ?? 0) + (macro.tgaChangeBn ?? 0);
+  const hasLiquidityRead = macro.rrpChangeBn !== null || macro.tgaChangeBn !== null;
+
+  const liquiditySentence = !hasLiquidityRead
+    ? null
+    : macro.liquidityRegime === "expanding"
+      ? `Fed liquidity sinks (reverse repo + Treasury cash) drained roughly $${Math.abs(combinedChangeBn).toFixed(0)}B back toward markets over the past two weeks.`
+      : macro.liquidityRegime === "contracting"
+        ? `Fed liquidity sinks (reverse repo + Treasury cash) absorbed roughly $${Math.abs(combinedChangeBn).toFixed(0)}B out of markets over the past two weeks.`
+        : "Fed liquidity sinks (reverse repo + Treasury cash) show little net change over the past two weeks.";
+
+  const curveInverted = macro.t10y2y !== null && macro.t10y2y.value < 0;
+  const riskSentence =
+    macro.riskRegime === "risk-off"
+      ? curveInverted
+        ? `The 10y-2y Treasury curve is inverted (${macro.t10y2y!.value.toFixed(2)}pp) — a real recession-risk signal.`
+        : `Financial conditions read tight (NFCI ${macro.nfci?.value.toFixed(2)}) — tighter than the historical average.`
+      : macro.riskRegime === "risk-on"
+        ? `Financial conditions read loose (NFCI ${macro.nfci?.value.toFixed(2)}) with a normal, non-inverted yield curve.`
+        : macro.riskRegime === "neutral"
+          ? "Financial conditions and the yield curve show no clear stress or looseness."
+          : null;
+
+  const explanation = [liquiditySentence, riskSentence].filter(Boolean).join(" ") || "Macro liquidity data is incomplete.";
+
+  const conflicts: string[] = [];
+  if (macro.liquidityRegime === "expanding" && macro.riskRegime === "risk-off") {
+    conflicts.push("Liquidity is flowing back toward markets, but financial conditions or the yield curve are flagging stress — a mixed signal.");
+  } else if (macro.liquidityRegime === "contracting" && macro.riskRegime === "risk-on") {
+    conflicts.push("Financial conditions read calm, but Fed liquidity sinks are draining money out of markets — a mixed signal.");
+  }
+
+  const completenessCount = [macro.nfci, macro.t10y2y, macro.rrpChangeBn, macro.tgaChangeBn].filter((v) => v !== null).length;
+  const inputs = {
+    completeness: completenessCount / 4,
+    agreement: conflicts.length > 0 ? 0.4 : 0.75,
+    backtested: true,
+  };
+
+  return {
+    id: "macroLiquidity",
+    label: "Macro Liquidity",
+    verdict,
+    confidence: scoreConfidence(inputs),
+    confidenceBasis: describeConfidence(inputs),
+    explanation,
+    whyItMatters:
+      "Crypto trades as a high-beta risk asset — Fed liquidity conditions and financial stress have historically mattered as much to price as any crypto-native signal.",
+    asOf: data.updatedAt,
+    conflicts,
+    nextTrigger: `Liquidity: ${macro.liquidityRegime ?? "unknown"} (±$${LIQUIDITY_CHANGE_THRESHOLD_BN}B threshold). Risk regime: ${macro.riskRegime ?? "unknown"} (NFCI ±${NFCI_NEUTRAL_BAND}, curve inversion overrides).`,
+  };
+}
+
 // ── ETF flows ──────────────────────────────────────────────────────────
 
 function evaluateEtfFlows(data: AggregateMarketData): MetricVerdict | null {
@@ -836,6 +916,7 @@ export function evaluateAll(data: AggregateMarketData, ctx: SignalContext): Metr
     evaluateStablecoins(data, ctx),
     evaluateFearGreed(data, ctx),
     evaluateSectorBreadth(data, ctx),
+    evaluateMacroLiquidity(data, ctx),
     evaluateLiquidations(data),
   ];
 

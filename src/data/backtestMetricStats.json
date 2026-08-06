@@ -1,7 +1,7 @@
 {
-  "generatedAt": 1785964260154,
+  "generatedAt": 1785977264436,
   "coverageStart": "2022-08-13",
-  "coverageEnd": "2026-07-29",
+  "coverageEnd": "2026-07-30",
   "metrics": {
     "funding": {
       "metricId": "funding",
@@ -35,13 +35,13 @@
       "metricId": "openInterest",
       "label": "Open Interest",
       "hasHistoricalSource": true,
-      "n24h": 647,
-      "winRate24h": 0.517774343122102,
+      "n24h": 648,
+      "winRate24h": 0.5169753086419753,
       "winRate7d": 0.482225656877898,
       "significant24h": false,
       "bestRegime": {
         "tag": "low-vol",
-        "winRate": 0.5929203539823009
+        "winRate": 0.5903083700440529
       },
       "worstRegime": {
         "tag": "bear",
@@ -49,11 +49,11 @@
       },
       "bestHoldingPeriod": {
         "holdingPeriod": "24h",
-        "winRate": 0.517774343122102
+        "winRate": 0.5169753086419753
       },
       "worstHoldingPeriod": {
         "holdingPeriod": "1h",
-        "winRate": 0.44513137557959814
+        "winRate": 0.4444444444444444
       },
       "sampleSizeLabel": "Medium",
       "confidenceLabel": "Low",
@@ -63,9 +63,9 @@
       "metricId": "squeezeRisk",
       "label": "Squeeze Setup",
       "hasHistoricalSource": true,
-      "n24h": 2338,
-      "winRate24h": 0.5068434559452524,
-      "winRate7d": 0.5051369863013698,
+      "n24h": 2340,
+      "winRate24h": 0.5064102564102564,
+      "winRate7d": 0.5055603079555175,
       "significant24h": false,
       "bestRegime": {
         "tag": "bear",
@@ -77,11 +77,11 @@
       },
       "bestHoldingPeriod": {
         "holdingPeriod": "24h",
-        "winRate": 0.5068434559452524
+        "winRate": 0.5064102564102564
       },
       "worstHoldingPeriod": {
         "holdingPeriod": "4h",
-        "winRate": 0.481180496150556
+        "winRate": 0.4807692307692308
       },
       "sampleSizeLabel": "Large",
       "confidenceLabel": "Medium",
@@ -91,13 +91,13 @@
       "metricId": "longShort",
       "label": "Long/Short Positioning",
       "hasHistoricalSource": true,
-      "n24h": 1270,
-      "winRate24h": 0.5118110236220472,
-      "winRate7d": 0.5059101654846335,
+      "n24h": 1271,
+      "winRate24h": 0.5121951219512195,
+      "winRate7d": 0.5055118110236221,
       "significant24h": false,
       "bestRegime": {
         "tag": "range-bound",
-        "winRate": 0.5739795918367347
+        "winRate": 0.5750636132315522
       },
       "worstRegime": {
         "tag": "bear",
@@ -105,11 +105,11 @@
       },
       "bestHoldingPeriod": {
         "holdingPeriod": "24h",
-        "winRate": 0.5118110236220472
+        "winRate": 0.5121951219512195
       },
       "worstHoldingPeriod": {
         "holdingPeriod": "1h",
-        "winRate": 0.5
+        "winRate": 0.5003933910306845
       },
       "sampleSizeLabel": "Large",
       "confidenceLabel": "Medium",
@@ -119,9 +119,9 @@
       "metricId": "basis",
       "label": "Basis vs Spot",
       "hasHistoricalSource": true,
-      "n24h": 2704,
-      "winRate24h": 0.4966715976331361,
-      "winRate7d": 0.5011102886750555,
+      "n24h": 2706,
+      "winRate24h": 0.4963045084996304,
+      "winRate7d": 0.5014792899408284,
       "significant24h": false,
       "bestRegime": {
         "tag": "bear",
@@ -133,11 +133,11 @@
       },
       "bestHoldingPeriod": {
         "holdingPeriod": "7d",
-        "winRate": 0.5011102886750555
+        "winRate": 0.5014792899408284
       },
       "worstHoldingPeriod": {
         "holdingPeriod": "24h",
-        "winRate": 0.4966715976331361
+        "winRate": 0.4963045084996304
       },
       "sampleSizeLabel": "Large",
       "confidenceLabel": "Medium",
@@ -179,9 +179,9 @@
       "metricId": "technicals",
       "label": "Price Action",
       "hasHistoricalSource": true,
-      "n24h": 2276,
-      "winRate24h": 0.48154657293497366,
-      "winRate7d": 0.4843956043956044,
+      "n24h": 2277,
+      "winRate24h": 0.48177426438296006,
+      "winRate7d": 0.484182776801406,
       "significant24h": false,
       "bestRegime": {
         "tag": "bear",
@@ -189,15 +189,15 @@
       },
       "worstRegime": {
         "tag": "neutral",
-        "winRate": 0.38611713665943603
+        "winRate": 0.38678223185265437
       },
       "bestHoldingPeriod": {
         "holdingPeriod": "4h",
-        "winRate": 0.4938488576449912
+        "winRate": 0.49407114624505927
       },
       "worstHoldingPeriod": {
         "holdingPeriod": "24h",
-        "winRate": 0.48154657293497366
+        "winRate": 0.48177426438296006
       },
       "sampleSizeLabel": "Large",
       "confidenceLabel": "Medium",
@@ -207,8 +207,8 @@
       "metricId": "etfFlows",
       "label": "ETF Flows",
       "hasHistoricalSource": true,
-      "n24h": 540,
-      "winRate24h": 0.6555555555555556,
+      "n24h": 541,
+      "winRate24h": 0.6561922365988909,
       "winRate7d": 0.5703703703703704,
       "significant24h": true,
       "bestRegime": {
@@ -217,15 +217,15 @@
       },
       "worstRegime": {
         "tag": "neutral",
-        "winRate": 0.6193548387096774
+        "winRate": 0.6205787781350482
       },
       "bestHoldingPeriod": {
         "holdingPeriod": "24h",
-        "winRate": 0.6555555555555556
+        "winRate": 0.6561922365988909
       },
       "worstHoldingPeriod": {
         "holdingPeriod": "1h",
-        "winRate": 0.5166666666666667
+        "winRate": 0.5175600739371534
       },
       "sampleSizeLabel": "Medium",
       "confidenceLabel": "Medium",
@@ -235,9 +235,9 @@
       "metricId": "spotPerpVolume",
       "label": "Spot vs Perp Volume",
       "hasHistoricalSource": true,
-      "n24h": 2069,
-      "winRate24h": 0.4765587240212663,
-      "winRate7d": 0.4927466150870406,
+      "n24h": 2070,
+      "winRate24h": 0.47632850241545893,
+      "winRate7d": 0.49250845819236344,
       "significant24h": true,
       "bestRegime": {
         "tag": "bull",
@@ -245,15 +245,15 @@
       },
       "worstRegime": {
         "tag": "neutral",
-        "winRate": 0.40847983453981385
+        "winRate": 0.4080578512396694
       },
       "bestHoldingPeriod": {
         "holdingPeriod": "1h",
-        "winRate": 0.5103914934751087
+        "winRate": 0.5101449275362319
       },
       "worstHoldingPeriod": {
         "holdingPeriod": "24h",
-        "winRate": 0.4765587240212663
+        "winRate": 0.47632850241545893
       },
       "sampleSizeLabel": "Large",
       "confidenceLabel": "High",
@@ -311,9 +311,9 @@
       "metricId": "stablecoins",
       "label": "Stablecoin Supply",
       "hasHistoricalSource": true,
-      "n24h": 2260,
-      "winRate24h": 0.5013274336283186,
-      "winRate7d": 0.5354295837023915,
+      "n24h": 2262,
+      "winRate24h": 0.5008841732979664,
+      "winRate7d": 0.5353982300884956,
       "significant24h": false,
       "bestRegime": {
         "tag": "bull",
@@ -321,15 +321,15 @@
       },
       "worstRegime": {
         "tag": "neutral",
-        "winRate": 0.4731084776663628
+        "winRate": 0.47224749772520475
       },
       "bestHoldingPeriod": {
         "holdingPeriod": "7d",
-        "winRate": 0.5354295837023915
+        "winRate": 0.5353982300884956
       },
       "worstHoldingPeriod": {
         "holdingPeriod": "24h",
-        "winRate": 0.5013274336283186
+        "winRate": 0.5008841732979664
       },
       "sampleSizeLabel": "Large",
       "confidenceLabel": "Medium",
@@ -363,6 +363,50 @@
       "confidenceLabel": "Medium",
       "stableAcrossWindows": true
     },
+    "sectorBreadth": {
+      "metricId": "sectorBreadth",
+      "label": "Sector Breadth",
+      "hasHistoricalSource": false,
+      "n24h": null,
+      "winRate24h": null,
+      "winRate7d": null,
+      "significant24h": null,
+      "bestRegime": null,
+      "worstRegime": null,
+      "bestHoldingPeriod": null,
+      "worstHoldingPeriod": null,
+      "sampleSizeLabel": null,
+      "confidenceLabel": null,
+      "stableAcrossWindows": null
+    },
+    "macroLiquidity": {
+      "metricId": "macroLiquidity",
+      "label": "Macro Liquidity",
+      "hasHistoricalSource": true,
+      "n24h": 2350,
+      "winRate24h": 0.5063829787234042,
+      "winRate7d": 0.5085178875638842,
+      "significant24h": false,
+      "bestRegime": {
+        "tag": "bear",
+        "winRate": 0.5358649789029536
+      },
+      "worstRegime": {
+        "tag": "bull",
+        "winRate": 0.48255813953488375
+      },
+      "bestHoldingPeriod": {
+        "holdingPeriod": "7d",
+        "winRate": 0.5085178875638842
+      },
+      "worstHoldingPeriod": {
+        "holdingPeriod": "4h",
+        "winRate": 0.4948936170212766
+      },
+      "sampleSizeLabel": "Large",
+      "confidenceLabel": "Medium",
+      "stableAcrossWindows": null
+    },
     "liquidations": {
       "metricId": "liquidations",
       "label": "Liquidations",
@@ -383,30 +427,30 @@
   "agreementBuckets": [
     {
       "bucketLabel": "0-25%",
-      "n": 513,
-      "winRate": 0.5477582846003899,
-      "meanReturnPct": 0.01623260162240103,
-      "significant": true
+      "n": 598,
+      "winRate": 0.5234113712374582,
+      "meanReturnPct": -0.14970348155999122,
+      "significant": false
     },
     {
       "bucketLabel": "25-50%",
-      "n": 791,
-      "winRate": 0.48166877370417194,
-      "meanReturnPct": 0.22540514372845524,
+      "n": 840,
+      "winRate": 0.4773809523809524,
+      "meanReturnPct": 0.22263846965339726,
       "significant": false
     },
     {
       "bucketLabel": "50-75%",
-      "n": 928,
-      "winRate": 0.5247844827586207,
-      "meanReturnPct": -0.032500515259245515,
-      "significant": false
+      "n": 819,
+      "winRate": 0.5396825396825397,
+      "meanReturnPct": -0.01997663155681029,
+      "significant": true
     },
     {
       "bucketLabel": "75-100%",
-      "n": 225,
-      "winRate": 0.5466666666666666,
-      "meanReturnPct": -0.09912070344258499,
+      "n": 186,
+      "winRate": 0.553763440860215,
+      "meanReturnPct": -0.0588831255240451,
       "significant": false
     }
   ]

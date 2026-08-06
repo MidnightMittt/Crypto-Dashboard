@@ -307,6 +307,32 @@ async function fetchStablecoinHistory() {
 }
 
 /**
+ * FRED macro liquidity series — the same 5 series providers/macroLiquidity.ts
+ * uses live (NFCI, T10Y2Y, RRPONTSYD, WTREGEN, EFFR). FRED has real
+ * multi-year history for all 5, confirmed live before building this.
+ * Market-wide, shared like fearGreed/stablecoins. Requires FRED_API_KEY
+ * in .env.local (free signup at fred.stlouisfed.org/docs/api/api_key.html).
+ */
+async function fetchFredSeriesHistory(seriesId) {
+  const apiKey = process.env.FRED_API_KEY;
+  if (!apiKey) {
+    log(`  FRED ${seriesId}: no FRED_API_KEY, skipping`);
+    return [];
+  }
+  const res = await fetch(
+    `https://api.stlouisfed.org/fred/series/observations?series_id=${seriesId}&api_key=${apiKey}&file_type=json&sort_order=asc&limit=100000`
+  );
+  if (!res.ok) throw new Error(`FRED HTTP ${res.status} for ${seriesId}`);
+  const json = await res.json();
+  const rows = (json.observations ?? [])
+    .map((row) => ({ t: Date.parse(`${row.date}T00:00:00Z`), value: Number(row.value) }))
+    .filter((row) => Number.isFinite(row.t) && Number.isFinite(row.value))
+    .sort((a, b) => a.t - b.t);
+  log(`  FRED ${seriesId}: ${rows.length} pts, ${rows.length ? new Date(rows[0].t).toISOString().slice(0, 10) : "—"} to ${rows.length ? new Date(rows[rows.length - 1].t).toISOString().slice(0, 10) : "—"}`);
+  return rows;
+}
+
+/**
  * US spot ETF net flows — SoSoValue, the same keyless endpoint
  * providers/etfFlows.ts already uses live. 300 daily points back to
  * 2025-05-21, BTC and ETH only (no US spot ETF complex exists for the
@@ -427,7 +453,12 @@ async function main() {
   if (!fs.existsSync(marketPath) || REFRESH) {
     const fearGreed = await fetchFearGreedHistory();
     const stablecoins = await fetchStablecoinHistory();
-    fs.writeFileSync(marketPath, JSON.stringify({ fearGreed, stablecoins }));
+    const nfci = await fetchFredSeriesHistory("NFCI");
+    const t10y2y = await fetchFredSeriesHistory("T10Y2Y");
+    const rrp = await fetchFredSeriesHistory("RRPONTSYD");
+    const tga = await fetchFredSeriesHistory("WTREGEN");
+    const effr = await fetchFredSeriesHistory("EFFR");
+    fs.writeFileSync(marketPath, JSON.stringify({ fearGreed, stablecoins, nfci, t10y2y, rrp, tga, effr }));
     log(`wrote ${marketPath}`);
   } else {
     log("MARKET.json already cached — skipping (pass --refresh to re-fetch)");

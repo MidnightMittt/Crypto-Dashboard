@@ -228,6 +228,14 @@ export const SIGNAL_HYPOTHESES: SignalHypothesis[] = [
     hasHistoricalSource: false, // CoinGecko's historical category data is paid-tier gated — confirmed via a live request, see sectorBreadth.ts
   }),
   hypothesis({
+    id: "macroLiquidity",
+    label: "Macro Liquidity",
+    bullishCondition: "Fed liquidity sinks (reverse repo + Treasury cash) are draining by $50B+ over ~2 weeks AND financial conditions read loose with a non-inverted yield curve.",
+    bearishCondition: "Fed liquidity sinks are filling by $50B+ over ~2 weeks, OR financial conditions read tight, OR the 10y-2y curve is inverted (any one alone is enough).",
+    neutralCondition: "Neither the bullish nor bearish conditions are met — mixed or inconclusive macro backdrop.",
+    hasHistoricalSource: true, // FRED has real multi-year history for all 5 underlying series — genuinely backtestable, unlike sectorBreadth
+  }),
+  hypothesis({
     id: "liquidations",
     label: "Liquidations",
     bullishCondition: "Never fires. Liquidations describe positions already forced out, not a lean on what happens next — evaluateLiquidations always returns neutral by design (see its own doc comment in evaluators.ts), and marketThesis.ts gives it weight 0 for the same reason.",

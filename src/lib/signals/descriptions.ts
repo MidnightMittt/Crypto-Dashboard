@@ -24,6 +24,7 @@ export const METRIC_DESCRIPTIONS: Record<string, string> = {
   etfFlows: "Net daily inflow or outflow across US spot ETFs for this asset.",
   spotPerpVolume: "Spot trading turnover compared to perpetual futures turnover on the same venue.",
   sectorBreadth: "Share of a tracked basket of crypto sectors (Layer 1, DeFi, AI, Meme, and others) with positive 24h market-cap change.",
+  macroLiquidity: "Fed/Treasury liquidity flow (reverse repo + Treasury cash) combined with financial-conditions and yield-curve stress, from FRED.",
 };
 
 export const CATEGORY_DESCRIPTIONS: Record<Category, string> = {

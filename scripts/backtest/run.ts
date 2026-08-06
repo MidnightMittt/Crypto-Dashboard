@@ -12,6 +12,7 @@ import { classifyRegime, regimeTagsToStrings } from "../../src/lib/technicals/re
 import { buildMarketBias } from "../../src/lib/signals/marketBias";
 import { LocalHistoryPoint, AggregateMarketData, ExchangeSnapshot, FearGreed, EtfFlowSummary } from "../../src/types/market";
 import type { StablecoinSummary } from "../../src/lib/providers/stablecoins";
+import { classifyLiquidityRegime, classifyRiskRegime, MacroLiquiditySnapshot } from "../../src/lib/providers/macroLiquidity";
 
 /**
  * Replay harness. Calls the REAL production scoring functions
@@ -67,6 +68,11 @@ export interface RawAssetData {
 export interface MarketWideData {
   fearGreed: Array<{ t: number; value: number }>;
   stablecoins: Array<{ t: number; totalUsd: number }>;
+  nfci: Array<{ t: number; value: number }>;
+  t10y2y: Array<{ t: number; value: number }>;
+  rrp: Array<{ t: number; value: number }>; // billions of USD
+  tga: Array<{ t: number; value: number }>; // millions of USD (WTREGEN units)
+  effr: Array<{ t: number; value: number }>;
 }
 
 /** Nearest series entry at or before `t`, or null if the series doesn't reach back that far. */
@@ -210,6 +216,40 @@ function fearGreedAt(series: MarketWideData["fearGreed"], t: number): FearGreed 
   const classification =
     point.value <= 25 ? "Extreme Fear" : point.value <= 45 ? "Fear" : point.value <= 55 ? "Neutral" : point.value <= 75 ? "Greed" : "Extreme Greed";
   return { value: point.value, classification, updatedAt: point.t };
+}
+
+/**
+ * Reconstructs a MacroLiquiditySnapshot as of `t` from each FRED series'
+ * most recently published value at or before `t`, then calls the REAL
+ * production classifier functions (classifyLiquidityRegime,
+ * classifyRiskRegime) — not reimplemented here, matching this file's own
+ * rule of calling the real scoring logic rather than duplicating it.
+ */
+function macroLiquidityAt(marketWide: MarketWideData, t: number): MacroLiquiditySnapshot | null {
+  const nfci = atOrBefore(marketWide.nfci, t);
+  const t10y2y = atOrBefore(marketWide.t10y2y, t);
+  const effr = atOrBefore(marketWide.effr, t);
+  const rrpNow = atOrBefore(marketWide.rrp, t);
+  const rrpPrior = atOrBefore(marketWide.rrp, t - 14 * DAY_MS);
+  const tgaNow = atOrBefore(marketWide.tga, t);
+  const tgaPrior = atOrBefore(marketWide.tga, t - 14 * DAY_MS);
+
+  const rrpChangeBn = rrpNow && rrpPrior ? rrpNow.value - rrpPrior.value : null;
+  const tgaChangeBn = tgaNow && tgaPrior ? (tgaNow.value - tgaPrior.value) / 1000 : null;
+  const combinedSinkChangeBn = rrpChangeBn === null && tgaChangeBn === null ? null : (rrpChangeBn ?? 0) + (tgaChangeBn ?? 0);
+
+  if (!nfci && !t10y2y && rrpChangeBn === null && tgaChangeBn === null) return null;
+
+  return {
+    nfci: nfci ? { date: new Date(nfci.t).toISOString().slice(0, 10), value: nfci.value } : null,
+    t10y2y: t10y2y ? { date: new Date(t10y2y.t).toISOString().slice(0, 10), value: t10y2y.value } : null,
+    effr: effr ? { date: new Date(effr.t).toISOString().slice(0, 10), value: effr.value } : null,
+    rrpChangeBn,
+    tgaChangeBn,
+    liquidityRegime: classifyLiquidityRegime(combinedSinkChangeBn),
+    riskRegime: classifyRiskRegime(nfci?.value ?? null, t10y2y?.value ?? null),
+    updatedAt: t,
+  };
 }
 
 /** Reconstructs `netChange7dPct` exactly as providers/stablecoins.ts defines it: (now - 7d ago) / 7d ago. */
@@ -461,6 +501,7 @@ export function replayAsset(
       stablecoins: stablecoinsAt(marketWide.stablecoins, t),
       fearGreed: fearGreedAt(marketWide.fearGreed, t),
       sectorBreadth: null, // live-only metric, no historical source — see sectorBreadth.ts
+      macroLiquidity: macroLiquidityAt(marketWide, t),
       priceChange24hPct,
       now: t,
     };

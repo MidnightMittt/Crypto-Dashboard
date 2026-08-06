@@ -38,6 +38,7 @@ export const METRIC_WEIGHTS: Record<string, number> = {
   coinbasePremium: 0.03,
   fearGreed: 0.03,
   sectorBreadth: 0.03, // same weight class as fearGreed: context/fragility signal, no backtest source (CoinGecko historical category data is paid-tier gated)
+  macroLiquidity: 0.04, // market-wide macro backdrop signal, same weight class as stablecoins — genuinely backtestable (FRED has real history), unlike fearGreed/sectorBreadth
   liquidations: 0, // backward-looking; shown for context, never scored
 };
 
