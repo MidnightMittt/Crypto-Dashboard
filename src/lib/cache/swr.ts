@@ -30,6 +30,16 @@ import { kvConfigured, kvGet, kvSet } from "../store/kv";
 interface Entry<T> {
   value: T;
   fetchedAt: number;
+  /**
+   * False when this value failed the caller's `shouldShare` check (a
+   * degraded/partial fetch). An untrusted entry is still returned to the
+   * request that produced it and kept in L1 — but it must not satisfy the
+   * freshMs fast path below. Otherwise a degraded result would get pinned
+   * in this instance's own memory for up to freshMs even though a plain
+   * retry might now succeed (see `shouldShare` doc below for the L2 half
+   * of this reasoning).
+   */
+  trusted: boolean;
   /** Set while a refresh is running, so concurrent callers share it. */
   inflight?: Promise<T>;
 }
@@ -54,7 +64,9 @@ export interface SwrOptions<T = unknown> {
    * miss their deadline while connections warm up. Publishing that to Redis
    * would hand every other instance the worse answer. This lets the caller
    * say "that one looks wrong, keep what we had", and the value is still
-   * returned to the current request and kept in L1.
+   * returned to the current request and kept in L1 — but marked untrusted,
+   * so it can't pin the degraded value in this instance's own memory for
+   * the full freshMs window either.
    */
   shouldShare?: (next: T, previous: T | null) => boolean;
 }
@@ -67,8 +79,10 @@ export async function swr<T>(
   const now = Date.now();
   const local = store.get(key) as Entry<T> | undefined;
 
-  // L1 — fresh enough to answer with no network at all.
-  if (local && now - local.fetchedAt < freshMs) return local.value;
+  // L1 — fresh enough to answer with no network at all. An untrusted
+  // (degraded) entry never qualifies, even within freshMs: it needs the
+  // chance to be replaced by a real retry, not to sit pinned for freshMs.
+  if (local && local.trusted && now - local.fetchedAt < freshMs) return local.value;
 
   // L2 — what the other instances have. Consulted before recomputing so a
   // cold instance inherits a good answer rather than building its own.
@@ -78,7 +92,7 @@ export async function swr<T>(
     if (shared && Number.isFinite(shared.fetchedAt)) {
       const sharedAge = now - shared.fetchedAt;
       if (sharedAge < freshMs) {
-        store.set(key, { value: shared.value, fetchedAt: shared.fetchedAt });
+        store.set(key, { value: shared.value, fetchedAt: shared.fetchedAt, trusted: true });
         return shared.value;
       }
     } else {
@@ -91,8 +105,8 @@ export async function swr<T>(
     local && shared
       ? local.fetchedAt >= shared.fetchedAt
         ? local
-        : { value: shared.value, fetchedAt: shared.fetchedAt }
-      : local ?? (shared ? { value: shared.value, fetchedAt: shared.fetchedAt } : null);
+        : { value: shared.value, fetchedAt: shared.fetchedAt, trusted: true }
+      : local ?? (shared ? { value: shared.value, fetchedAt: shared.fetchedAt, trusted: true } : null);
 
   const refresh = (): Promise<T> => {
     // Share a single in-flight refresh across concurrent callers.
@@ -101,9 +115,13 @@ export async function swr<T>(
     const p = fetcher()
       .then(async (value) => {
         const fetchedAt = Date.now();
-        store.set(key, { value, fetchedAt });
+        const trusted = !shouldShare || shouldShare(value, best?.value ?? null);
+        // Untrusted still goes into L1 (this request, and any concurrent
+        // one, gets a real answer) but marked so it can't satisfy the
+        // freshMs fast path above — see the `trusted` field doc.
+        store.set(key, { value, fetchedAt, trusted });
 
-        if (kvConfigured() && (!shouldShare || shouldShare(value, best?.value ?? null))) {
+        if (kvConfigured() && trusted) {
           // TTL matches maxAge so stale entries expire rather than linger.
           await kvSet(`swr:${key}`, { value, fetchedAt }, Math.ceil(maxAgeMs / 1000));
         }
@@ -112,7 +130,7 @@ export async function swr<T>(
       .catch((err) => {
         // Keep serving the old value rather than emptying the dashboard.
         if (best) {
-          store.set(key, { value: best.value, fetchedAt: best.fetchedAt });
+          store.set(key, { value: best.value, fetchedAt: best.fetchedAt, trusted: best.trusted });
           console.warn(`[swr] refresh failed for "${key}", serving stale:`, err);
           return best.value;
         }
@@ -123,6 +141,7 @@ export async function swr<T>(
     store.set(key, {
       value: best?.value as T,
       fetchedAt: best?.fetchedAt ?? 0,
+      trusted: best?.trusted ?? true,
       inflight: p,
     });
     return p;

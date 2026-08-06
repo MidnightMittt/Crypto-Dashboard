@@ -3,6 +3,7 @@
 import { AlertTriangle } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { AiMarketSummary } from "@/components/dashboard/AiMarketSummary";
+import { AssetCompositeSection } from "@/components/dashboard/AssetCompositeSection";
 import { EntryQualityCard } from "@/components/dashboard/EntryQualityCard";
 import { CategoryCard } from "@/components/dashboard/CategoryCard";
 import { LiquidityMapCard } from "@/components/dashboard/LiquidityMapCard";
@@ -34,6 +35,7 @@ import { DashboardSkeleton, LowerSkeleton, Skeleton } from "@/components/ui/Skel
 import { Collapsible } from "@/components/ui/Collapsible";
 import { Button } from "@/components/ui/Button";
 import { useMarketData } from "@/lib/hooks/useMarketData";
+import { useAssetComposites } from "@/lib/hooks/useAssetComposites";
 import { useDashboardStore } from "@/lib/store/dashboardStore";
 import { getExchange } from "@/lib/exchanges/registry";
 import { regimeTagsToStrings } from "@/lib/technicals/regimes";
@@ -41,6 +43,7 @@ import { regimeTagsToStrings } from "@/lib/technicals/regimes";
 export default function DashboardPage() {
   const asset = useDashboardStore((s) => s.asset);
   const { data, isLoading, isError, refetch } = useMarketData(asset);
+  const { data: assetComposites } = useAssetComposites();
 
   const aggregate = data?.aggregate;
 
@@ -133,6 +136,15 @@ export default function DashboardPage() {
               thesis={aggregate.marketThesis}
               technicals={aggregate.technicals}
             />
+
+            {/*
+              BTC / ETH / Altcoin composite scores — the same bias.score
+              every other view reads, just for 3 assets at once. Refreshes
+              far slower than the rest of this page (see
+              useAssetComposites.ts) — a deliberate tradeoff to avoid 10x-ing
+              background exchange-API load for a summary view.
+            */}
+            <AssetCompositeSection data={assetComposites} />
 
             <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
               <FundingGauge data={aggregate} />
