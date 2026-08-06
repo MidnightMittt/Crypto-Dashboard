@@ -146,12 +146,5 @@ export interface MarketBias {
   categories: CategoryScore[];
   /** Null when no technical read is available (e.g. MARKET, or a fetch failure). */
   trendStrength: TrendStrength | null;
-  /**
-   * 0-100, DIRECTION-AGNOSTIC: how trustworthy and calm the picture is,
-   * regardless of which way it leans. Deliberately distinct from `score`,
-   * which IS directional — a health score that just repeated the bias
-   * score under a new name would be redundant. See categories.ts.
-   */
-  healthScore: number;
   updatedAt: number;
 }

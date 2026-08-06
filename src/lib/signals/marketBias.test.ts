@@ -451,11 +451,4 @@ describe("category rollup fields", () => {
     const bias = build([metric("funding", "bullish")])!;
     expect(bias.trendStrength).toBeNull();
   });
-
-  it("computes a health score independent of the directional bias score", () => {
-    const bullish = build([metric("funding", "bullish", 90)])!;
-    const bearish = build([metric("funding", "bearish", 90)])!;
-    // Same confidence/agreement/risk shape either direction -> same health.
-    expect(bullish.healthScore).toBe(bearish.healthScore);
-  });
 });

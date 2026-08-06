@@ -36,7 +36,6 @@ function baseBias(overrides: Partial<MarketBias> = {}): MarketBias {
     metrics: [],
     categories: [],
     trendStrength: null,
-    healthScore: 70,
     updatedAt: 0,
     ...overrides,
   };

@@ -10,15 +10,11 @@ import { buildTradeRecommendation, TradeRecommendation } from "@/lib/signals/tra
 import { MarketThesis, TechnicalRead } from "@/types/market";
 import { intensityLabel } from "@/lib/signals/scoring";
 import { technicalAgreement, TechnicalAgreement } from "@/lib/sentiment/technicals";
-import { lookupBiasVerdictStat, lookupAgreementBucket, BacktestMetricStats } from "@/lib/sentiment/backtestStats";
+import { lookupBiasVerdictStat } from "@/lib/sentiment/backtestStats";
 import { RegimeTags } from "@/lib/technicals/regimes";
 import { BiasHistoryEntry } from "@/lib/history/biasHistory";
 import { TimelineList } from "./MarketThesisTimeline";
 import backtestStats from "@/data/backtestStats.json";
-import backtestMetricStatsJson from "@/data/backtestMetricStats.json";
-
-/** Same widening-cast reasoning as HistoricalPerformancePanel.tsx — JSON imports lose string-literal unions. */
-const backtestMetricStats = backtestMetricStatsJson as BacktestMetricStats;
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -84,30 +80,15 @@ export function AiMarketSummary({
 
         <TechnicalConfirmation technicals={technicals} thesis={thesis} />
 
-        <div className="grid grid-cols-1 gap-6 border-t border-hairline pt-5 lg:grid-cols-2">
-          <Highlight
-            label="Biggest opportunity"
-            metric={bias.opportunity}
-            empty="No single signal stands out — the read is balanced."
-            tone="bull"
-          />
-          <Highlight
-            label="Biggest risk"
-            metric={bias.counterRisk}
-            empty="Nothing material is arguing the other way right now."
-            tone="bear"
-            extra={bias.riskRationale}
-          />
-        </div>
+        <ContradictingEvidence metric={bias.counterRisk} rationale={bias.riskRationale} />
 
         <InvalidationLevel watchNext={bias.watchNext} invalidationLines={invalidationLines} />
-
-        <SinceLastUpdate bias={bias} />
 
         {timeline && (
           <div className="border-t border-hairline pt-5">
             <Collapsible title="Today's trajectory" summary={`${timeline.length} shift${timeline.length === 1 ? "" : "s"}`}>
-              <div className="pt-2">
+              <div className="flex flex-col gap-4 pt-2">
+                <SinceLastUpdate bias={bias} />
                 <TimelineList timeline={timeline} bias={bias} />
               </div>
             </Collapsible>
@@ -186,7 +167,6 @@ function Header({ bias, thesis }: { bias: MarketBias; thesis: MarketThesis | nul
             <Stat label="Trend Strength" value={bias.trendStrength.label} hint="How strongly price action itself is trending, from the technical read." />
           )}
           <Stat label="Risk" value={bias.riskLevel.toUpperCase()} hint={bias.riskRationale} />
-          <Stat label="Market Health" value={`${bias.healthScore}%`} hint="Direction-agnostic: how trustworthy and calm the picture is, regardless of which way it leans." />
           {thesis?.regimeTags && (
             <Stat
               label="Market Regime"
@@ -199,15 +179,16 @@ function Header({ bias, thesis }: { bias: MarketBias; thesis: MarketThesis | nul
 
       <ScoreBar score={bias.score} />
 
-      {/* Trade bias — the headline is the plainest statement of direction + conviction this app makes. */}
-      <p className="max-w-4xl text-[15px] leading-relaxed text-ink">{bias.headline}</p>
-
-      {thesis && (
-        <p className="max-w-4xl text-[13px] leading-relaxed text-ink-muted">{thesis.regimeDescription}</p>
-      )}
-
+      {/*
+        Dashboard V2 product review: the `headline`/`regimeDescription`
+        paragraphs that used to live here are gone — the Suggested Action
+        banner above now states the same conclusion once, cleanly, first
+        (buildTradeRecommendation's `reason` is literally bias.headline
+        verbatim). Repeating it here was the card arguing with itself in
+        five different renderings of the same fact. Only the backtest
+        reliability line (real, distinct evidence) stays.
+      */}
       <BiasBacktestStatLine verdict={bias.verdict} />
-      <AgreementBacktestStatLine agreement={bias.agreement} />
     </div>
   );
 }
@@ -228,27 +209,6 @@ function BiasBacktestStatLine({ verdict }: { verdict: MarketBias["verdict"] }) {
       {backtestStats.coverageEnd}, N={stat.n} days the overall read was {verdict}): price moved a
       mean {stat.mean1dPct >= 0 ? "+" : ""}
       {stat.mean1dPct.toFixed(1)}% over the next 24h. One narrow window, not a guarantee.
-    </p>
-  );
-}
-
-/**
- * Does the "Agreement" figure above actually mean anything historically —
- * tests whether higher agreement correlates with a better hit rate, or is
- * cosmetic. Same MIN_SAMPLE_N-gated null-if-thin convention as every other
- * stat line in this file.
- */
-function AgreementBacktestStatLine({ agreement }: { agreement: number }) {
-  const stat = lookupAgreementBucket(backtestMetricStats, agreement);
-  if (!stat || stat.winRate === null) return null;
-
-  return (
-    <p className="max-w-4xl text-[13px] leading-relaxed text-ink-faint">
-      Historically, in the backtested window ({backtestMetricStats.coverageStart} to{" "}
-      {backtestMetricStats.coverageEnd}, N={stat.n} days with agreement in this range): the overall
-      read matched the next day&apos;s move {(stat.winRate * 100).toFixed(0)}% of the time. Not
-      necessarily higher or lower than other agreement levels — check the full breakdown before
-      treating agreement itself as a signal.
     </p>
   );
 }
@@ -356,39 +316,40 @@ function TechnicalConfirmation({
   );
 }
 
-/* ── Biggest opportunity / biggest risk ───────────────────────────────── */
+/* ── Contradicting evidence ────────────────────────────────────────────
+ *
+ * Product review: this used to be a two-column "Biggest opportunity /
+ * Biggest risk" split. Opportunity was cut — `bias.opportunity` is
+ * definitionally the #1-ranked metric on the aligned side, and "Top 5
+ * reasons" above already surfaces it, usually at #1. Showing the same
+ * metric twice (once as a one-line reason, once as a full paragraph) was
+ * pure duplication. Risk survives because it's genuinely new information
+ * — the strongest evidence AGAINST the read — and the user explicitly
+ * wants contradicting evidence preserved. Restyled to match CategoryCard's
+ * own "Contradicting evidence" box for visual consistency across the page.
+ */
 
-function Highlight({
-  label,
-  metric,
-  empty,
-  tone,
-  extra,
-}: {
-  label: string;
-  metric: MetricVerdict | null;
-  empty: string;
-  tone: "bull" | "bear";
-  extra?: string;
-}) {
+function ContradictingEvidence({ metric, rationale }: { metric: MetricVerdict | null; rationale?: string }) {
+  if (!metric && !rationale) return null;
+
   return (
-    <div>
-      <SectionLabel>{label}</SectionLabel>
-      {!metric ? (
-        <p className="mt-3 text-xs leading-relaxed text-ink-faint">{empty}</p>
-      ) : (
-        <div className="mt-3 flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1.5 rounded-md border border-amber/20 bg-amber/[0.04] px-3 py-2.5">
+      <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-amber">
+        Contradicting evidence
+      </span>
+      {metric ? (
+        <div className="flex flex-col gap-1">
           <div className="flex items-baseline gap-2">
-            <span className={`text-sm font-medium ${tone === "bull" ? "text-success" : "text-danger"}`}>
-              {metric.label}
-            </span>
+            <span className="text-sm font-medium text-danger">{metric.label}</span>
             <ConfidenceLabel confidence={metric.confidence} basis={metric.confidenceBasis} />
           </div>
           <p className="text-xs leading-relaxed text-ink-faint">{metric.explanation}</p>
           <p className="text-xs leading-relaxed text-ink-faint/75">{metric.whyItMatters}</p>
         </div>
+      ) : (
+        <p className="text-xs leading-relaxed text-ink-faint">Nothing material is arguing the other way right now.</p>
       )}
-      {extra && <p className="mt-2.5 text-xs leading-relaxed text-ink-faint/75">{extra}</p>}
+      {rationale && <p className="text-xs leading-relaxed text-ink-faint/80">{rationale}</p>}
     </div>
   );
 }
@@ -444,32 +405,43 @@ function InvalidationLevel({
   );
 }
 
-/* ── Since last update (what changed — lower priority, not in the user's explicit field list but real, kept) ── */
-
+/*
+ * ── Since last update ──────────────────────────────────────────────────
+ * Product review: demoted from its own always-visible top-level section
+ * to a leading line inside "Today's trajectory" — it answers "what changed
+ * since the last poll," which is about this tool's own polling cadence,
+ * not the market, so it doesn't earn a place in the 30-second read. It
+ * already had a natural home: this same Collapsible already covers
+ * change-over-time.
+ */
 function SinceLastUpdate({ bias }: { bias: MarketBias }) {
+  if (bias.isFirstReading) {
+    return (
+      <p className="text-xs leading-relaxed text-ink-faint">
+        First reading for this asset — there is no earlier snapshot to compare against yet.
+      </p>
+    );
+  }
+  if (bias.changes.length === 0) {
+    return (
+      <p className="text-xs leading-relaxed text-ink-faint">
+        No metric has flipped direction since the last reading.
+      </p>
+    );
+  }
   return (
-    <div className="border-t border-hairline pt-5">
-      <SectionLabel>Since last update</SectionLabel>
-      {bias.isFirstReading ? (
-        <p className="mt-3 text-xs leading-relaxed text-ink-faint">
-          First reading for this asset — there is no earlier snapshot to compare against yet.
-        </p>
-      ) : bias.changes.length === 0 ? (
-        <p className="mt-3 text-xs leading-relaxed text-ink-faint">
-          No metric has flipped direction since the last reading.
-        </p>
-      ) : (
-        <ul className="mt-3 flex flex-col gap-2">
-          {bias.changes.map((c) => (
-            <li key={c.label} className="flex items-baseline gap-2 text-xs leading-relaxed">
-              <span className="text-ink">{c.label}</span>
-              <span className="font-mono text-ink-faint">
-                {c.from} → {c.to}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
+    <div>
+      <span className="text-[11px] uppercase tracking-[0.16em] text-ink-muted">Since last update</span>
+      <ul className="mt-2 flex flex-col gap-2">
+        {bias.changes.map((c) => (
+          <li key={c.label} className="flex items-baseline gap-2 text-xs leading-relaxed">
+            <span className="text-ink">{c.label}</span>
+            <span className="font-mono text-ink-faint">
+              {c.from} → {c.to}
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

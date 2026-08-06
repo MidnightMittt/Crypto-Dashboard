@@ -2,7 +2,6 @@ import {
   Category,
   CategoryScore,
   MetricVerdict,
-  RiskLevel,
   TrendStrength,
   TrendStrengthLabel,
   Verdict,
@@ -257,18 +256,3 @@ export function buildTrendStrength(technicals: TechnicalRead | null): TrendStren
   return { label: bucket?.label ?? "Very Strong", value: technicals.strength };
 }
 
-/** Points subtracted from a perfect 100 by each risk tier. */
-const RISK_PENALTY: Record<RiskLevel, number> = { low: 0, medium: 25, high: 55 };
-
-/**
- * Direction-agnostic "how much can this read be trusted right now" —
- * confidence, agreement, and the inverse of risk, averaged. Kept separate
- * from the directional bias score on purpose: a market can be confidently,
- * calmly bearish (high health, low score) or be a coin-flip in a volatile,
- * contradictory market (low health, score near 50) — those are different
- * situations a single number would blur together.
- */
-export function buildMarketHealth(confidence: number, agreement: number, riskLevel: RiskLevel): number {
-  const riskScore = 100 - RISK_PENALTY[riskLevel];
-  return Math.round((confidence + agreement + riskScore) / 3);
-}

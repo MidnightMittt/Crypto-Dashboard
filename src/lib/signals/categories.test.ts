@@ -4,7 +4,6 @@ import {
   buildAllCategories,
   combineCategoryScores,
   buildTrendStrength,
-  buildMarketHealth,
   aggregateConflicts,
   CATEGORY_WEIGHTS,
 } from "./categories";
@@ -186,32 +185,6 @@ describe("buildTrendStrength", () => {
 
   it("carries the raw strength value through alongside the label", () => {
     expect(buildTrendStrength(tech(73))).toEqual({ label: "Strong", value: 73 });
-  });
-});
-
-describe("buildMarketHealth", () => {
-  it("is high when confidence and agreement are high and risk is low", () => {
-    expect(buildMarketHealth(90, 90, "low")).toBeGreaterThan(85);
-  });
-
-  it("drops as risk rises, holding confidence and agreement constant", () => {
-    const low = buildMarketHealth(80, 80, "low");
-    const medium = buildMarketHealth(80, 80, "medium");
-    const high = buildMarketHealth(80, 80, "high");
-    expect(low).toBeGreaterThan(medium);
-    expect(medium).toBeGreaterThan(high);
-  });
-
-  it("is direction-agnostic — does not take a verdict as input at all", () => {
-    // Same confidence/agreement/risk must produce the same health regardless
-    // of whether the underlying read is bullish or bearish; the function
-    // signature itself enforces this (no verdict parameter exists).
-    expect(buildMarketHealth(70, 60, "medium")).toBe(buildMarketHealth(70, 60, "medium"));
-  });
-
-  it("stays within 0-100", () => {
-    expect(buildMarketHealth(0, 0, "high")).toBeGreaterThanOrEqual(0);
-    expect(buildMarketHealth(100, 100, "low")).toBeLessThanOrEqual(100);
   });
 });
 

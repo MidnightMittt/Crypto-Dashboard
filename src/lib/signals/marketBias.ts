@@ -1,7 +1,7 @@
 import { BiasChange, MarketBias, MetricVerdict, RiskLevel, Verdict } from "./types";
 import { agreementOf } from "./confidence";
 import { computeWeightedScore, metricWeight, rankMetric } from "./scoring";
-import { buildAllCategories, buildMarketHealth, buildTrendStrength, combineCategoryScores } from "./categories";
+import { buildAllCategories, buildTrendStrength, combineCategoryScores } from "./categories";
 import { TechnicalRead } from "@/types/market";
 import { RegimeTags } from "@/lib/technicals/regimes";
 
@@ -230,7 +230,6 @@ export function buildMarketBias(inputs: MarketBiasInputs): MarketBias | null {
     metrics,
     categories,
     trendStrength: buildTrendStrength(technicals),
-    healthScore: buildMarketHealth(confidence, agreement, risk.level),
     updatedAt: now,
   };
 }
