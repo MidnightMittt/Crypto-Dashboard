@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildMarketBias, snapshotVerdicts, topReasons } from "./marketBias";
+import { buildMarketBias, buildHeadline, snapshotVerdicts, topReasons } from "./marketBias";
 import { MetricVerdict, Verdict } from "./types";
 
 const metric = (id: string, verdict: Verdict, confidence = 80): MetricVerdict => ({
@@ -243,13 +243,49 @@ describe("headline", () => {
     expect(build([metric("funding", "bullish", 100)])!.headline).toContain("bullish");
   });
 
-  it("says so plainly when evidence is balanced", () => {
-    expect(build([metric("funding", "bullish"), metric("funding", "bearish")])!.headline).toContain("balanced");
+  it("says so plainly when evidence is exactly tied — the one case honestly worded as even, not a vague dodge", () => {
+    expect(build([metric("funding", "bullish"), metric("funding", "bearish")])!.headline).toContain("evenly weighted");
   });
 
   it("caveats a direction built on thin evidence", () => {
     const bias = build([metric("funding", "bullish", 20)])!;
     expect(bias.headline).toContain("thin");
+  });
+});
+
+describe("buildHeadline — never says 'mixed'/'conflicting'/'uncertain', always names the real lean", () => {
+  const bull = metric("etfFlows", "bullish", 70);
+  const bear = metric("fearGreed", "bearish", 60);
+
+  it("neutral verdict with a real (non-tied) lean names the direction and the leading metric", () => {
+    // score=53: inside the neutral band (DIRECTIONAL_THRESHOLD=6) but NOT
+    // an exact tie — this is exactly the case that used to fall through to
+    // "signals are mixed"/"no directional edge."
+    const headline = buildHeadline("neutral", 53, 55, false, bull, bear);
+    expect(headline.toLowerCase()).not.toContain("mixed");
+    expect(headline.toLowerCase()).not.toContain("conflicting");
+    expect(headline.toLowerCase()).not.toContain("uncertain");
+    expect(headline.toLowerCase()).not.toContain("cannot determine");
+    expect(headline).toContain("bullish");
+    expect(headline).toContain(bull.label);
+  });
+
+  it("neutral verdict leaning bearish (score < 50) names bearish, not the bullish default", () => {
+    const headline = buildHeadline("neutral", 47, 55, false, bull, bear);
+    expect(headline).toContain("bearish");
+    expect(headline).toContain(bear.label);
+  });
+
+  it("exact tie (score === 50) is the one case honestly worded as even, not a vague dodge", () => {
+    const headline = buildHeadline("neutral", 50, 50, false, bull, bear);
+    expect(headline).toContain("evenly weighted");
+    expect(headline.toLowerCase()).not.toContain("mixed");
+  });
+
+  it("directional verdict still names the leading metric", () => {
+    const headline = buildHeadline("bullish", 68, 70, false, bull, bear);
+    expect(headline).toContain("bullish");
+    expect(headline).toContain(bull.label);
   });
 });
 

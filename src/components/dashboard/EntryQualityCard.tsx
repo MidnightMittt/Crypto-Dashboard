@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { VerdictBadge } from "@/components/ui/VerdictBadge";
 import { AggregateMarketData } from "@/types/market";
 import { buildEntryQuality, StarRating } from "@/lib/signals/entryQuality";
+import { buildTradeRecommendation } from "@/lib/signals/tradeRecommendation";
 import { lookupBiasVerdictStat } from "@/lib/sentiment/backtestStats";
 import { formatUsd } from "@/lib/utils/format";
 import backtestStats from "@/data/backtestStats.json";
@@ -16,6 +17,12 @@ import backtestStats from "@/data/backtestStats.json";
  * biasVerdict win rate) — see lib/signals/entryQuality.ts's own doc comment
  * for exactly what feeds it and why nothing here is a fabricated
  * probability or a trade recommendation.
+ *
+ * Gated on `buildTradeRecommendation()`, not bare `bias.verdict` — a
+ * directional bias alone isn't enough to show a setup; technical
+ * confirmation must ALSO agree (see tradeRecommendation.ts's two-layer
+ * gate), otherwise this card would show a full long/short plan with stars
+ * even while price action is actively fighting the thesis.
  */
 export function EntryQualityCard({ aggregate }: { aggregate: AggregateMarketData }) {
   const bias = aggregate.marketBias;
@@ -26,11 +33,13 @@ export function EntryQualityCard({ aggregate }: { aggregate: AggregateMarketData
     );
   }
 
-  if (bias.verdict === "neutral") {
+  const recommendation = buildTradeRecommendation(bias, aggregate.marketThesis, aggregate.technicals);
+
+  if (recommendation.action === "wait") {
     return (
       <EmptyState
-        headline="No qualifying entry right now"
-        message="The overall read is neutral — there's no directional bias strong enough to size a long or short setup against. This is itself useful information: sometimes the highest expected-value action is to wait."
+        headline={recommendation.label}
+        message={`${recommendation.reason}${recommendation.nextTrigger ? ` Next trigger: ${recommendation.nextTrigger}` : ""}`}
       />
     );
   }

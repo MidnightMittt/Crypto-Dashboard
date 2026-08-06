@@ -277,7 +277,7 @@ const REGIME_MIXED_CONVICTION = 2;
 const REGIME_QUIET_HEAT = 30;
 const REGIME_QUIET_PRICE_PCT = 2;
 
-function classifyRegime(ctx: {
+export function classifyRegime(ctx: {
   conviction: number;
   dominant: ThesisDirection;
   squeezeRisk: SqueezeRisk | null;
@@ -318,23 +318,28 @@ function classifyRegime(ctx: {
     };
   }
 
-  if (ctx.conviction <= REGIME_MIXED_CONVICTION) {
-    return {
-      label: "Mixed / Low Conviction",
-      description: "Evidence is split or mostly neutral — no dominant read right now.",
-    };
-  }
-
+  /*
+   * "Mixed / Low Conviction" is reserved STRICTLY for the genuine tie
+   * (dominant === "neutral", i.e. bullWeight === bearWeight exactly) —
+   * never used as a catch-all for "conviction happens to be low," which
+   * usually just means most evidence is neutral/inactive, with a real but
+   * thin lean in whatever's left. Low conviction and no lean are different
+   * facts; conflating them into one vague label is exactly the dead-end
+   * "signals are mixed" phrasing this app no longer allows.
+   */
   if (ctx.dominant === "neutral") {
     return {
       label: "Mixed / Low Conviction",
-      description: "Bullish and bearish evidence are roughly balanced.",
+      description: "Neither side currently has more supporting evidence than the other — a genuinely flat read, not a close call.",
     };
   }
 
   return {
     label: ctx.dominant === "bullish" ? "Leaning Bullish" : "Leaning Bearish",
-    description: "More weighted evidence on one side than the other, but not by an overwhelming margin.",
+    description:
+      ctx.conviction <= REGIME_MIXED_CONVICTION
+        ? `More evidence leans ${ctx.dominant}, but most signals are neutral or inactive right now, so conviction is thin.`
+        : "More weighted evidence on one side than the other, but not by an overwhelming margin.",
   };
 }
 

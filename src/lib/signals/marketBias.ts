@@ -71,26 +71,53 @@ function assessRisk(
   return { level, rationale };
 }
 
-function buildHeadline(verdict: Verdict, score: number, confidence: number, conflicted: boolean): string {
+/**
+ * Never say "signals are mixed" or "conflicting" — that's a non-answer.
+ * `score` is a continuous weighted pull; an EXACT tie (score === 50) is the
+ * one case honestly described as "balanced" (both sides carry precisely
+ * equal weight). Every other reading, including every other
+ * "neutral"-VERDICT score (within DIRECTIONAL_THRESHOLD of 50, still not
+ * an exact tie), has a real, nonzero lean — always name it and cite the
+ * real metric driving it, never hedge it away.
+ */
+export function buildHeadline(
+  verdict: Verdict,
+  score: number,
+  confidence: number,
+  conflicted: boolean,
+  topBullish: MetricVerdict | null,
+  topBearish: MetricVerdict | null
+): string {
   const strength = Math.abs(score - 50);
 
-  if (verdict === "neutral") {
-    return conflicted
-      ? "Signals are actively conflicting — there is no coherent directional read right now."
-      : "Evidence is balanced between bullish and bearish — no directional edge right now.";
+  if (score === 50) {
+    return "Bullish and bearish evidence are evenly weighted right now — a genuinely flat read, not a close call.";
   }
 
-  const direction = verdict === "bullish" ? "bullish" : "bearish";
-  const qualifier =
-    strength >= 20 ? "clearly" : strength >= 12 ? "moderately" : "modestly";
+  const direction = score > 50 ? "bullish" : "bearish";
+  const leadMetric = direction === "bullish" ? topBullish : topBearish;
+  const opposeMetric = direction === "bullish" ? topBearish : topBullish;
+  const led = leadMetric ? ` (led by ${leadMetric.label})` : "";
+
+  if (verdict === "neutral") {
+    // Score leans a real direction but hasn't crossed the directional
+    // threshold yet — still name the lean, never fall back to vague
+    // "mixed"/"conflicting"/"uncertain" language.
+    const against = opposeMetric
+      ? ` — ${opposeMetric.label} is the strongest evidence still holding the other side back`
+      : "";
+    return `Leaning narrowly ${direction}${led}, not strong enough yet to act on${against}.`;
+  }
+
+  const qualifier = strength >= 20 ? "clearly" : strength >= 12 ? "moderately" : "modestly";
   const caveat =
     confidence < 40
       ? " — but the evidence behind it is thin, so treat it as a tilt rather than a setup"
       : conflicted
-        ? " — though several metrics disagree, so conviction is limited"
+        ? ` — though ${opposeMetric ? `${opposeMetric.label} and other evidence disagree` : "some evidence disagrees"}, so conviction is limited`
         : "";
 
-  return `Market is leaning ${qualifier} ${direction}${caveat}.`;
+  return `Market is leaning ${qualifier} ${direction}${led}${caveat}.`;
 }
 
 export interface MarketBiasInputs {
@@ -190,7 +217,7 @@ export function buildMarketBias(inputs: MarketBiasInputs): MarketBias | null {
     verdict,
     confidence,
     agreement,
-    headline: buildHeadline(verdict, score, confidence, conflicted),
+    headline: buildHeadline(verdict, score, confidence, conflicted, topBullish[0] ?? null, topBearish[0] ?? null),
     topBullish,
     topBearish,
     opportunity,

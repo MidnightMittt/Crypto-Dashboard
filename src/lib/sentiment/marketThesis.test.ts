@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildMarketThesis, MarketThesisInputs } from "./marketThesis";
+import { buildMarketThesis, classifyRegime, MarketThesisInputs } from "./marketThesis";
 import {
   OrderFlowSummary,
   SqueezeRisk,
@@ -336,6 +336,47 @@ describe("buildMarketThesis - regime classification", () => {
   it("classifies zero-conviction evidence as Mixed / Low Conviction", () => {
     const result = buildMarketThesis(baseInputs({ weightedFundingRatePct: 0 }), NOW)!;
     expect(result.regime).toBe("Mixed / Low Conviction");
+  });
+});
+
+describe("classifyRegime — never says 'Mixed'/'balanced' when there's a real (non-tied) lean", () => {
+  const regimeCtx = (overrides: Partial<Parameters<typeof classifyRegime>[0]> = {}) => ({
+    conviction: 0,
+    dominant: "neutral" as const,
+    squeezeRisk: null,
+    leverageHeatScore: 80, // keep the "quiet market" Consolidation branch from firing
+    priceChange24hPct: 5,
+    ...overrides,
+  });
+
+  it("low conviction (<=2) with a real bullish lean reads Leaning Bullish, not Mixed", () => {
+    // This is the exact bug: low CONVICTION used to fall through to "Mixed
+    // / Low Conviction" regardless of whether `dominant` still cleanly
+    // leaned a direction. Low conviction (mostly neutral/inactive
+    // evidence) and no lean (a genuine tie) are different facts.
+    const result = classifyRegime(regimeCtx({ conviction: 1, dominant: "bullish" }));
+    expect(result.label).toBe("Leaning Bullish");
+    expect(result.description.toLowerCase()).not.toContain("mixed");
+    expect(result.description).toContain("thin");
+  });
+
+  it("low conviction (<=2) with a real bearish lean reads Leaning Bearish, not Mixed", () => {
+    const result = classifyRegime(regimeCtx({ conviction: 2, dominant: "bearish" }));
+    expect(result.label).toBe("Leaning Bearish");
+    expect(result.description.toLowerCase()).not.toContain("mixed");
+  });
+
+  it("genuine tie (dominant === neutral) still reads Mixed / Low Conviction, worded without banned words", () => {
+    const result = classifyRegime(regimeCtx({ conviction: 0, dominant: "neutral" }));
+    expect(result.label).toBe("Mixed / Low Conviction");
+    expect(result.description.toLowerCase()).not.toContain("mixed");
+    expect(result.description.toLowerCase()).not.toContain("uncertain");
+  });
+
+  it("higher conviction with a real lean uses the non-thin phrasing", () => {
+    const result = classifyRegime(regimeCtx({ conviction: 5, dominant: "bullish" }));
+    expect(result.label).toBe("Leaning Bullish");
+    expect(result.description).not.toContain("thin");
   });
 });
 

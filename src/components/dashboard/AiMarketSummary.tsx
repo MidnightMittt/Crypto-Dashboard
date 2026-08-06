@@ -1,10 +1,12 @@
 "use client";
 
+import { ArrowUpRight, ArrowDownRight, Pause } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/Card";
 import { VerdictBadge, ConfidenceLabel } from "@/components/ui/VerdictBadge";
 import { Collapsible } from "@/components/ui/Collapsible";
 import { MarketBias, MetricVerdict } from "@/lib/signals/types";
 import { topReasons, RankedReason } from "@/lib/signals/marketBias";
+import { buildTradeRecommendation, TradeRecommendation } from "@/lib/signals/tradeRecommendation";
 import { MarketThesis, TechnicalRead } from "@/types/market";
 import { intensityLabel } from "@/lib/signals/scoring";
 import { technicalAgreement, TechnicalAgreement } from "@/lib/sentiment/technicals";
@@ -69,10 +71,13 @@ export function AiMarketSummary({
 
   const reasons = topReasons(bias, 5);
   const invalidationLines = thesis?.invalidation ?? [];
+  const recommendation = buildTradeRecommendation(bias, thesis, technicals);
 
   return (
     <Card>
       <CardContent className="flex flex-col gap-7 py-6">
+        <SuggestedActionBanner recommendation={recommendation} />
+
         <Header bias={bias} thesis={thesis} />
 
         <TopReasons reasons={reasons} />
@@ -116,6 +121,42 @@ export function AiMarketSummary({
         </p>
       </CardContent>
     </Card>
+  );
+}
+
+/* ── Suggested Action — the recommendation, appearing before any evidence ── */
+
+const ACTION_STYLE: Record<TradeRecommendation["action"], { border: string; bg: string; text: string; Icon: typeof ArrowUpRight }> = {
+  "enter-long": { border: "border-success/30", bg: "bg-success/[0.06]", text: "text-success", Icon: ArrowUpRight },
+  "enter-short": { border: "border-danger/30", bg: "bg-danger/[0.06]", text: "text-danger", Icon: ArrowDownRight },
+  wait: { border: "border-amber/30", bg: "bg-amber/[0.06]", text: "text-amber", Icon: Pause },
+};
+
+/**
+ * The recommendation, first — per the charter's explicit rule, this
+ * appears BEFORE the score/reasons/evidence below it, not after. Gated on
+ * both layers agreeing (see tradeRecommendation.ts): only ENTER LONG/SHORT
+ * when the market thesis AND technical confirmation both agree; otherwise
+ * WAIT, with the real reason and next trigger cited, never a fabricated
+ * setup.
+ */
+function SuggestedActionBanner({ recommendation }: { recommendation: TradeRecommendation }) {
+  const style = ACTION_STYLE[recommendation.action];
+  const { Icon } = style;
+
+  return (
+    <div className={`flex flex-col gap-2 rounded-lg border ${style.border} ${style.bg} px-4 py-3.5`}>
+      <div className="flex items-center gap-2">
+        <Icon className={`h-4 w-4 ${style.text}`} />
+        <span className={`text-sm font-bold uppercase tracking-[0.1em] ${style.text}`}>{recommendation.label}</span>
+      </div>
+      <p className="text-[13px] leading-relaxed text-ink-muted">{recommendation.reason}</p>
+      {recommendation.nextTrigger && (
+        <p className="text-[12px] leading-relaxed text-ink-faint">
+          <span className="text-ink-muted">Next trigger:</span> {recommendation.nextTrigger}
+        </p>
+      )}
+    </div>
   );
 }
 
