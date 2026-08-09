@@ -1,7 +1,7 @@
 /**
  * "Is this actually a high-quality entry?" — the charter's third homepage
  * question, and the one genuinely missing module against its explicit
- * 7-module spec (star rating, suggested entry/stop/target, risk/reward,
+ * 7-module spec (star rating, suggested entry/stop/TP1/TP2, risk/reward,
  * win probability, reasoning). Everything here is derived from data that
  * already exists elsewhere on the dashboard — current price, ATR, the
  * liquidity map's support/resistance levels, marketBias's confidence and
@@ -34,6 +34,16 @@ export interface EntryQuality {
   riskRewardRatio: number;
   stopBasis: string;
   targetBasis: string;
+  /**
+   * A second, farther-out reference target (TP1 stays the primary,
+   * higher-probability level the star rating is built on) — for the
+   * position size a trader might leave running past TP1. Same honesty rule
+   * as TP1: a real structural level when one qualifies, an explicit flat
+   * multiple when none does, never silently identical to TP1.
+   */
+  target2Price: number;
+  target2Basis: string;
+  riskRewardRatio2: number;
   historicalWinRatePct: number | null;
   historicalWinRateN: number | null;
 }
@@ -58,6 +68,10 @@ export interface EntryQualityInputs {
 const MIN_RR = 1.5;
 /** Flat reward:risk used for the target when no structural level clears MIN_RR. */
 const FALLBACK_RR = 2;
+/** Minimum reward:risk TP2 must clear — higher than TP1's bar, since TP2 is explicitly the farther, lower-probability "let it run" level. */
+const MIN_RR_TP2 = 3;
+/** Flat reward:risk used for TP2 when no structural level beyond TP1 clears MIN_RR_TP2. */
+const FALLBACK_RR_TP2 = 4;
 /** ATR multiple used for the stop when no structural support/resistance level qualifies. */
 const ATR_STOP_MULTIPLIER = 1.5;
 /** A structural level closer than this many ATRs is too close to be a meaningful stop (noise would trigger it); farther than this, it's not really "the" stop, just a distant level. */
@@ -131,6 +145,37 @@ function placeTarget(
   };
 }
 
+/**
+ * Places TP2 using the nearest resistance (long) / support (short) level
+ * BEYOND target1Price that clears MIN_RR_TP2, falling back to a flat
+ * FALLBACK_RR_TP2 target when nothing qualifies — always farther from price
+ * than TP1, whichever way TP1 itself was placed (structural or fallback).
+ */
+function placeSecondTarget(
+  isLong: boolean,
+  price: number,
+  riskDistance: number,
+  target1Price: number,
+  levels: SupportResistanceLevel[]
+): { target2Price: number; target2Basis: string } {
+  const candidates = levels
+    .filter((lvl) => (isLong ? lvl.kind === "resistance" && lvl.price > target1Price : lvl.kind === "support" && lvl.price < target1Price))
+    .filter((lvl) => Math.abs(lvl.price - price) / riskDistance >= MIN_RR_TP2)
+    .sort((a, b) => Math.abs(price - a.price) - Math.abs(price - b.price));
+
+  if (candidates.length > 0) {
+    const lvl = candidates[0];
+    return {
+      target2Price: lvl.price,
+      target2Basis: `Next ${lvl.kind} level beyond TP1, clearing a ${MIN_RR_TP2}:1 reward/risk (${lvl.source})`,
+    };
+  }
+  return {
+    target2Price: isLong ? price + FALLBACK_RR_TP2 * riskDistance : price - FALLBACK_RR_TP2 * riskDistance,
+    target2Basis: `${FALLBACK_RR_TP2}:1 reward/risk — no further resistance/support level beyond TP1 clears ${MIN_RR_TP2}:1`,
+  };
+}
+
 function buildStarRationale(
   stars: StarRating,
   rr: number,
@@ -168,6 +213,9 @@ export function buildEntryQuality(inputs: EntryQualityInputs): EntryQuality | nu
   const rewardDistance = Math.abs(target.targetPrice - price);
   const riskRewardRatio = rewardDistance / riskDistance;
 
+  const target2 = placeSecondTarget(isLong, price, riskDistance, target.targetPrice, supportResistance);
+  const riskRewardRatio2 = Math.abs(target2.target2Price - price) / riskDistance;
+
   const confidenceComponent = clamp01(confidence / 100);
   const agreementComponent = clamp01(agreement / 100);
   const rrComponent = clamp01(riskRewardRatio / 3);
@@ -186,6 +234,9 @@ export function buildEntryQuality(inputs: EntryQualityInputs): EntryQuality | nu
     riskRewardRatio,
     stopBasis: stop.stopBasis,
     targetBasis: target.targetBasis,
+    target2Price: target2.target2Price,
+    target2Basis: target2.target2Basis,
+    riskRewardRatio2,
     historicalWinRatePct,
     historicalWinRateN,
   };

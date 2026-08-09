@@ -39,6 +39,10 @@ describe("buildEntryQuality — ATR fallback (no qualifying structural levels)",
     expect(result!.riskRewardRatio).toBeCloseTo(2, 10);
     expect(result!.stopBasis).toContain("ATR");
     expect(result!.targetBasis).toContain("2:1");
+    // TP2: flat 4:1 fallback — target2 = 100 + 4*3 = 112.
+    expect(result!.target2Price).toBeCloseTo(112, 10);
+    expect(result!.riskRewardRatio2).toBeCloseTo(4, 10);
+    expect(result!.target2Basis).toContain("4:1");
   });
 
   it("bearish: mirrors the bullish case above with stop/target on the opposite sides", () => {
@@ -48,6 +52,9 @@ describe("buildEntryQuality — ATR fallback (no qualifying structural levels)",
     expect(result!.stopPrice).toBeCloseTo(103, 10);
     expect(result!.targetPrice).toBeCloseTo(94, 10);
     expect(result!.riskRewardRatio).toBeCloseTo(2, 10);
+    // TP2 = 100 - 4*3 = 88.
+    expect(result!.target2Price).toBeCloseTo(88, 10);
+    expect(result!.riskRewardRatio2).toBeCloseTo(4, 10);
   });
 });
 
@@ -73,6 +80,31 @@ describe("buildEntryQuality — structural support/resistance", () => {
     expect(result!.targetPrice).toBe(105);
     expect(result!.targetBasis).toContain("volume-poc");
     expect(result!.riskRewardRatio).toBeCloseTo(5 / 3, 10);
+    // TP2: the only remaining resistance beyond TP1 (105) is 110 — distance
+    // 10, rr = 10/3 = 3.33 >= MIN_RR_TP2 (3), so it qualifies structurally.
+    expect(result!.target2Price).toBe(110);
+    expect(result!.target2Basis).toContain("fib-level");
+    expect(result!.riskRewardRatio2).toBeCloseTo(10 / 3, 10);
+  });
+
+  it("TP2 falls back to a flat 4:1 target when nothing beyond TP1 clears the higher bar", () => {
+    const result = buildEntryQuality(
+      inputs({
+        verdict: "bullish",
+        price: 100,
+        atrPct: 2, // riskDistance = 3
+        supportResistance: [
+          { price: 97, kind: "support", source: "swing-low" },
+          { price: 105, kind: "resistance", source: "volume-poc" }, // TP1: rr = 5/3 = 1.667 >= 1.5
+          // No resistance beyond 105 clears MIN_RR_TP2 (3) -> TP2 falls back.
+        ],
+      })
+    );
+    expect(result!.targetPrice).toBe(105);
+    // TP2 = 100 + 4*3 = 112, strictly farther than TP1's 105.
+    expect(result!.target2Price).toBeCloseTo(112, 10);
+    expect(result!.target2Price).toBeGreaterThan(result!.targetPrice);
+    expect(result!.target2Basis).toContain("4:1");
   });
 
   it("ignores support/resistance levels on the wrong side of price for the given direction", () => {

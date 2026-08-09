@@ -85,16 +85,18 @@ export function EntryQualityCard({ aggregate }: { aggregate: AggregateMarketData
           <StarDisplay stars={eq.stars} />
         </div>
 
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
           <PriceStat label="Entry" value={eq.entryPrice} tone="neutral" />
           <PriceStat label="Stop" value={eq.stopPrice} tone="bear" caption={eq.stopBasis} />
-          <PriceStat label="Target" value={eq.targetPrice} tone="bull" caption={eq.targetBasis} />
+          <PriceStat label="TP1" value={eq.targetPrice} tone="bull" caption={eq.targetBasis} />
+          <PriceStat label="TP2" value={eq.target2Price} tone="bull" caption={eq.target2Basis} />
           <div>
             <dt className="text-[9px] uppercase tracking-[0.14em] text-ink-faint">Reward / Risk</dt>
             <dd className="mt-0.5 flex items-center gap-1.5 font-mono text-lg text-ink">
               <TargetIcon className="h-3.5 w-3.5 text-ink-faint" />
               {eq.riskRewardRatio.toFixed(1)}:1
             </dd>
+            <dd className="mt-0.5 text-[10px] leading-snug text-ink-faint">at TP2: {eq.riskRewardRatio2.toFixed(1)}:1</dd>
           </div>
         </div>
 
