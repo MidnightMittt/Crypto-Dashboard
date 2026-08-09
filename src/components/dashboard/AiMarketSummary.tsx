@@ -267,9 +267,10 @@ function TopReasons({ reasons }: { reasons: RankedReason[] }) {
 /* ── Technical confirmation: does price action back the other metrics? ── */
 
 const AGREEMENT_CONFIG: Record<TechnicalAgreement, { label: string; dot: string; text: string }> = {
-  agrees: { label: "CONFIRMS", dot: "🟢", text: "text-success" },
-  conflicts: { label: "CONFLICTS", dot: "🔴", text: "text-danger" },
-  neutral: { label: "NO CLEAR READ", dot: "🟡", text: "text-amber" },
+  confirms: { label: "CONFIRMS", dot: "🟢", text: "text-success" },
+  weakens: { label: "WEAKENS", dot: "🟠", text: "text-amber" },
+  contradicts: { label: "CONTRADICTS", dot: "🔴", text: "text-danger" },
+  "not-yet-confirmed": { label: "NOT YET CONFIRMED", dot: "🟡", text: "text-amber" },
 };
 
 /**
@@ -281,8 +282,12 @@ const AGREEMENT_CONFIG: Record<TechnicalAgreement, { label: string; dot: string;
  *
  * `agreement` reuses risk's precedent (VerdictBadge.tsx's own doc comment)
  * of a second, non-directional color axis layered on the same 3-color
- * vocabulary — CONFIRMS/CONFLICTS/NO CLEAR READ describe agreement, not
- * bullish/bearish/neutral direction, so it deliberately isn't a VerdictBadge.
+ * vocabulary — CONFIRMS/WEAKENS/CONTRADICTS/NOT YET CONFIRMED describe
+ * agreement, not bullish/bearish/neutral direction, so it deliberately isn't
+ * a VerdictBadge. WEAKENS reuses the same amber token as NOT YET CONFIRMED
+ * (a distinct dot color is enough to tell them apart at a glance) rather
+ * than inventing a new UI color for a state that's still "proceed with
+ * caution," not "stop."
  */
 function TechnicalConfirmation({
   technicals,

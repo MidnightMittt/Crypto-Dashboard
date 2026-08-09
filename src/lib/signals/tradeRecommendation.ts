@@ -50,9 +50,9 @@ export function buildTradeRecommendation(
   thesis: MarketThesis | null,
   technicals: TechnicalRead | null
 ): TradeRecommendation {
-  const agreement = thesis && technicals ? technicalAgreement(technicals, thesis.dominant) : "neutral";
+  const agreement = thesis && technicals ? technicalAgreement(technicals, thesis.dominant) : "not-yet-confirmed";
 
-  if (bias.verdict !== "neutral" && agreement === "agrees") {
+  if (bias.verdict !== "neutral" && agreement === "confirms") {
     const action: SuggestedAction = bias.verdict === "bullish" ? "enter-long" : "enter-short";
     return {
       action,
@@ -76,7 +76,27 @@ export function buildTradeRecommendation(
     };
   }
 
-  // Layer 1 has a real directional read, but technicals either conflict or
+  // Layer 1 agrees directionally, but a REGULAR (reversal-warning)
+  // divergence undercuts it — technicals nominally back the move, but
+  // momentum itself isn't. Cited directly from the real divergence result,
+  // never routed through thesis.technicalConfirmation[0] (which isn't
+  // guaranteed to be about divergence that day).
+  if (agreement === "weakens" && technicals) {
+    const direction = bias.verdict === "bullish" ? "bullish" : "bearish";
+    const opposingKind = direction === "bullish" ? "regular-bearish" : "regular-bullish";
+    const source =
+      technicals.rsiDivergence?.kind === opposingKind ? "RSI" : technicals.macdDivergence?.kind === opposingKind ? "MACD" : "Momentum";
+    const divergenceLabel = direction === "bullish" ? "bearish" : "bullish";
+    return {
+      action: "wait",
+      label: ACTION_LABEL.wait,
+      reason: `${bias.headline} Price action agrees directionally, but ${source} shows a regular ${divergenceLabel} divergence against this move — momentum isn't backing the trend yet.`,
+      blockingLayer: "technicals",
+      nextTrigger: `Technical confirmation needed: the ${source} divergence resolving — either price rolling over to match it, or momentum reconfirming the ${direction} move without the divergence.`,
+    };
+  }
+
+  // Layer 1 has a real directional read, but technicals either contradict or
   // haven't been evaluated yet — technicals are the blocker.
   const direction = bias.verdict === "bullish" ? "bullish" : "bearish";
   const confirmationLine = thesis?.technicalConfirmation[0] ?? null;

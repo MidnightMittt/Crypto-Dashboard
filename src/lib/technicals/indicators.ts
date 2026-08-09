@@ -77,9 +77,14 @@ function wilderSmooth(values: number[], period: number): number[] {
   return out;
 }
 
-/** Wilder's RSI. 0-100; above 70 conventionally overbought, below 30 oversold. */
-export function rsi(closes: number[], period = 14): number | null {
-  if (closes.length < period + 1) return null;
+/**
+ * Full Wilder's RSI series, oldest-first. Shared by `rsi()` (last value) and
+ * `rsiSeries()` (the whole series — divergence detection needs the history,
+ * not just today's reading). Identical computation either way; only how much
+ * of the result is kept differs.
+ */
+function rsiFull(closes: number[], period: number): number[] {
+  if (closes.length < period + 1) return [];
 
   const gains: number[] = [];
   const losses: number[] = [];
@@ -91,16 +96,29 @@ export function rsi(closes: number[], period = 14): number | null {
 
   const avgGain = wilderSmooth(gains, period);
   const avgLoss = wilderSmooth(losses, period);
-  if (avgGain.length === 0 || avgLoss.length === 0) return null;
+  if (avgGain.length === 0 || avgLoss.length === 0) return [];
 
-  const g = avgGain[avgGain.length - 1];
-  const l = avgLoss[avgLoss.length - 1];
+  const n = Math.min(avgGain.length, avgLoss.length);
+  const out: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const g = avgGain[i];
+    const l = avgLoss[i];
+    // No down-moves in the window: RSI is 100 by definition, and guarding
+    // here avoids a divide-by-zero producing NaN.
+    out.push(l === 0 ? (g === 0 ? 50 : 100) : 100 - 100 / (1 + g / l));
+  }
+  return out;
+}
 
-  // No down-moves in the window: RSI is 100 by definition, and guarding here
-  // avoids a divide-by-zero producing NaN.
-  if (l === 0) return g === 0 ? 50 : 100;
-  const rs = g / l;
-  return 100 - 100 / (1 + rs);
+/** Wilder's RSI. 0-100; above 70 conventionally overbought, below 30 oversold. */
+export function rsi(closes: number[], period = 14): number | null {
+  const series = rsiFull(closes, period);
+  return series.length ? series[series.length - 1] : null;
+}
+
+/** Full RSI series, oldest-first — for divergence detection against price swings. */
+export function rsiSeries(closes: number[], period = 14): number[] {
+  return rsiFull(closes, period);
 }
 
 export interface MacdResult {
@@ -109,20 +127,27 @@ export interface MacdResult {
   histogram: number;
 }
 
-/** MACD(12, 26, 9). Histogram > 0 means the fast line is above its signal. */
-export function macd(closes: number[], fast = 12, slow = 26, signalPeriod = 9): MacdResult | null {
+/**
+ * Full MACD line/signal/histogram series, oldest-first, all three arrays
+ * tail-aligned to the same length. Shared by `macd()` (last value) and
+ * `macdHistogramSeries()` (the whole histogram — divergence detection needs
+ * the history). Same right-alignment convention as the macdLine/signalSeries
+ * merge below: EMA series of different periods start at different bars, so
+ * they're always sliced from the RIGHT before combining, never zipped from
+ * index 0.
+ */
+function macdFull(
+  closes: number[],
+  fast: number,
+  slow: number,
+  signalPeriod: number
+): { macdLine: number[]; signalSeries: number[]; histogramSeries: number[] } | null {
   if (closes.length < slow + signalPeriod) return null;
 
   const fastSeries = emaSeries(closes, fast);
   const slowSeries = emaSeries(closes, slow);
   if (fastSeries.length === 0 || slowSeries.length === 0) return null;
 
-  /*
-   * The two EMA series start at different bars (fast begins earlier), so they
-   * must be aligned from the RIGHT before subtracting. Zipping them from
-   * index 0 would silently subtract values from different dates — a bug that
-   * still produces a plausible-looking curve.
-   */
   const n = Math.min(fastSeries.length, slowSeries.length);
   const fastTail = fastSeries.slice(fastSeries.length - n);
   const slowTail = slowSeries.slice(slowSeries.length - n);
@@ -131,9 +156,30 @@ export function macd(closes: number[], fast = 12, slow = 26, signalPeriod = 9): 
   const signalSeries = emaSeries(macdLine, signalPeriod);
   if (signalSeries.length === 0) return null;
 
-  const macdValue = macdLine[macdLine.length - 1];
-  const signalValue = signalSeries[signalSeries.length - 1];
-  return { macd: macdValue, signal: signalValue, histogram: macdValue - signalValue };
+  const m = Math.min(macdLine.length, signalSeries.length);
+  const macdTail = macdLine.slice(macdLine.length - m);
+  const signalTail = signalSeries.slice(signalSeries.length - m);
+  const histogramSeries = macdTail.map((v, i) => v - signalTail[i]);
+
+  return { macdLine: macdTail, signalSeries: signalTail, histogramSeries };
+}
+
+/** MACD(12, 26, 9). Histogram > 0 means the fast line is above its signal. */
+export function macd(closes: number[], fast = 12, slow = 26, signalPeriod = 9): MacdResult | null {
+  const full = macdFull(closes, fast, slow, signalPeriod);
+  if (!full) return null;
+  const { macdLine, signalSeries, histogramSeries } = full;
+  return {
+    macd: macdLine[macdLine.length - 1],
+    signal: signalSeries[signalSeries.length - 1],
+    histogram: histogramSeries[histogramSeries.length - 1],
+  };
+}
+
+/** Full MACD histogram series, oldest-first — for divergence detection against price swings. */
+export function macdHistogramSeries(closes: number[], fast = 12, slow = 26, signalPeriod = 9): number[] {
+  const full = macdFull(closes, fast, slow, signalPeriod);
+  return full ? full.histogramSeries : [];
 }
 
 /** True range for bar `i` (requires i >= 1 for the previous close). */

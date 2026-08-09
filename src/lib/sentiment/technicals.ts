@@ -8,8 +8,10 @@ import {
   ema,
   lastClose,
   macd,
+  macdHistogramSeries,
   rollingVwap,
   rsi,
+  rsiSeries,
   trendStructure,
   volumeRatio,
   bollingerBands,
@@ -20,6 +22,7 @@ import {
   ichimoku,
   fibonacciRetracement,
 } from "../technicals/indicators";
+import { classifyDivergence, DivergenceKind } from "../technicals/divergence";
 
 /**
  * Turns raw indicator numbers into a directional read and plain-English
@@ -128,6 +131,9 @@ export function buildTechnicalRead(candles: Candle[]): TechnicalRead | null {
   const sar = parabolicSar(candles);
   const cloud = ichimoku(candles);
   const fib = fibonacciRetracement(candles);
+
+  const rsiDivergence = classifyDivergence(cl, rsiSeries(cl));
+  const macdDivergence = classifyDivergence(cl, macdHistogramSeries(cl));
 
   const ema20 = ema(cl, 20);
   const ema50 = ema(cl, 50);
@@ -263,6 +269,8 @@ export function buildTechnicalRead(candles: Candle[]): TechnicalRead | null {
     parabolicSarDirection: sar ? sar.direction : null,
     ichimokuPosition: cloud ? cloud.priceVsCloud : null,
     fibonacciNearestLevel: fib ? fib.nearestLevel : null,
+    rsiDivergence,
+    macdDivergence,
   };
 }
 
@@ -331,7 +339,7 @@ export function technicalConfirmation(read: TechnicalRead, dominant: ThesisDirec
     lines.push(`Price action confirms the ${dominant} thesis — technicals and positioning point the same way.`);
   } else if (conflicts) {
     lines.push(
-      `Price action weakens the ${dominant} thesis — technicals lean ${read.direction}, against how traders are positioned.`
+      `Price action argues against the ${dominant} thesis — technicals lean ${read.direction}, against how traders are positioned.`
     );
   } else {
     lines.push(`Price action is neutral, neither confirming nor contradicting the ${dominant} thesis.`);
@@ -346,10 +354,13 @@ export function technicalConfirmation(read: TechnicalRead, dominant: ThesisDirec
     lines.push("Price is caught between its moving averages — no clean trend structure to lean on.");
   }
 
-  // 3. Momentum, with the divergence case called out explicitly since it's
-  //    the most actionable thing technicals can tell a positioning read.
+  // 3. Momentum — extremes first (exhaustion/washout warnings carry more
+  //    weight than a divergence), then any genuine RSI/MACD divergence
+  //    against price (only surfaced when the algorithm actually finds one —
+  //    see technicals/divergence.ts), then a plain read.
   if (read.macdHistogram !== null && read.rsi !== null) {
     const momentumUp = read.macdHistogram > 0;
+    const divergence = read.rsiDivergence ?? read.macdDivergence;
     if (read.rsi >= RSI_OVERBOUGHT) {
       lines.push(
         `Momentum is stretched (RSI ${read.rsi.toFixed(0)}) — historically closer to exhaustion than to a fresh leg up.`
@@ -358,10 +369,22 @@ export function technicalConfirmation(read: TechnicalRead, dominant: ThesisDirec
       lines.push(
         `Momentum is washed out (RSI ${read.rsi.toFixed(0)}) — the kind of level that has more often preceded relief than further downside.`
       );
-    } else if (momentumUp && read.trendStructure === "lower-lows") {
-      lines.push("Momentum is turning up even as price still cuts lower lows — an early divergence, not yet a trend change.");
-    } else if (!momentumUp && read.trendStructure === "higher-highs") {
-      lines.push("Momentum is fading despite price still making higher highs — the move is losing its engine.");
+    } else if (divergence?.kind === "regular-bullish") {
+      lines.push(
+        "Price is making a lower low but momentum is making a higher low — a bullish divergence warning that downside may be losing force, not yet a trend change."
+      );
+    } else if (divergence?.kind === "regular-bearish") {
+      lines.push(
+        "Price is making a higher high but momentum is making a lower high — a bearish divergence warning that upside may be losing force, not yet a trend change."
+      );
+    } else if (divergence?.kind === "hidden-bullish") {
+      lines.push(
+        "Momentum dipped on this pullback but price held a higher low — hidden bullish divergence, consistent with the uptrend continuing."
+      );
+    } else if (divergence?.kind === "hidden-bearish") {
+      lines.push(
+        "Momentum pushed higher on this bounce but price held a lower high — hidden bearish divergence, consistent with the downtrend continuing."
+      );
     } else {
       lines.push(`Momentum is ${momentumUp ? "improving" : "deteriorating"}, consistent with the current price structure.`);
     }
@@ -392,17 +415,33 @@ export function technicalConfirmation(read: TechnicalRead, dominant: ThesisDirec
   return lines.slice(0, 5);
 }
 
-/** Whether price action backs the dominant positioning-based thesis or argues against it. */
-export type TechnicalAgreement = "agrees" | "conflicts" | "neutral";
+/**
+ * Whether price action backs the dominant positioning-based thesis, and how
+ * much to trust that backing:
+ *   - "confirms": direction agrees, and no live divergence undercuts it.
+ *   - "weakens": direction agrees, but a REGULAR (reversal-warning)
+ *     divergence opposes it — momentum isn't actually confirming the move.
+ *   - "contradicts": direction actively opposes the thesis.
+ *   - "not-yet-confirmed": technicals have no view, or there's no thesis to
+ *     confirm in the first place.
+ */
+export type TechnicalAgreement = "confirms" | "weakens" | "contradicts" | "not-yet-confirmed";
 
 /**
  * The structured judgment `technicalConfirmation`'s prose headline is built
  * from, exposed separately so a UI can color-code "does price action back
- * the rest of the metrics or fight them" without parsing sentences. Same
- * agrees/conflicts rule as that function's first bullet: "neutral" covers
- * both "technicals have no view" and "there's no thesis to confirm."
+ * the rest of the metrics or fight them" without parsing sentences.
+ *
+ * Hidden divergence never downgrades an agreeing read — it's a
+ * trend-CONTINUATION signal, not a warning (see technicals/divergence.ts's
+ * header). Only a REGULAR divergence pointed against the dominant direction
+ * moves an otherwise-agreeing read from "confirms" to "weakens."
  */
 export function technicalAgreement(read: TechnicalRead, dominant: ThesisDirection): TechnicalAgreement {
-  if (read.direction === "neutral" || dominant === "neutral") return "neutral";
-  return read.direction === dominant ? "agrees" : "conflicts";
+  if (read.direction === "neutral" || dominant === "neutral") return "not-yet-confirmed";
+  if (read.direction !== dominant) return "contradicts";
+
+  const opposingKind: DivergenceKind = dominant === "bullish" ? "regular-bearish" : "regular-bullish";
+  const opposed = read.rsiDivergence?.kind === opposingKind || read.macdDivergence?.kind === opposingKind;
+  return opposed ? "weakens" : "confirms";
 }

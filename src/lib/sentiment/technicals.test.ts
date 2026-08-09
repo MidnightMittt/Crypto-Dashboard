@@ -189,10 +189,10 @@ describe("technicalConfirmation", () => {
     expect(lines[0]).toContain("bullish");
   });
 
-  it("says price action weakens the thesis when technicals disagree", () => {
+  it("says price action argues against the thesis when technicals disagree", () => {
     const read = buildTechnicalRead(uptrend)!;
     const lines = technicalConfirmation(read, "bearish");
-    expect(lines[0]).toContain("weakens");
+    expect(lines[0]).toContain("argues against");
   });
 
   it("handles a neutral thesis without claiming confirmation either way", () => {
@@ -221,57 +221,123 @@ describe("technicalConfirmation", () => {
     }
   });
 
-  it("calls out fading momentum against higher highs as a divergence", () => {
-    // Rise, then stall at the top so MACD rolls over while structure still
-    // shows higher highs than the older half of the window.
-    const stalling = [
-      ...Array.from({ length: 220 }, (_, i) => bar(101 + i, 99 + i, 100 + i, i)),
-      ...Array.from({ length: 40 }, (_, i) => bar(321, 316, 318 - i * 0.05, 220 + i)),
-    ];
-    const read = buildTechnicalRead(stalling)!;
-    const lines = technicalConfirmation(read, "bullish");
-    if (read.macdHistogram !== null && read.macdHistogram < 0 && read.trendStructure === "higher-highs") {
-      expect(lines.some((l) => l.includes("losing its engine"))).toBe(true);
-    }
+  it("surfaces a regular divergence as a reversal warning in the momentum bullet", () => {
+    const base = buildTechnicalRead(uptrend)!;
+    const withDivergence = {
+      ...base,
+      rsi: 50, // clear of the overbought/oversold branches so divergence is reached
+      rsiDivergence: {
+        kind: "regular-bearish" as const,
+        priorIndex: 0,
+        recentIndex: 1,
+        pricePrior: 0,
+        priceRecent: 0,
+        indicatorPrior: 0,
+        indicatorRecent: 0,
+      },
+      macdDivergence: null,
+    };
+    const lines = technicalConfirmation(withDivergence, "bullish");
+    expect(lines.some((l) => l.includes("bearish divergence warning"))).toBe(true);
+  });
+
+  it("surfaces a hidden divergence as trend-continuation language, not a warning", () => {
+    const base = buildTechnicalRead(uptrend)!;
+    const withHidden = {
+      ...base,
+      rsi: 50,
+      rsiDivergence: {
+        kind: "hidden-bullish" as const,
+        priorIndex: 0,
+        recentIndex: 1,
+        pricePrior: 0,
+        priceRecent: 0,
+        indicatorPrior: 0,
+        indicatorRecent: 0,
+      },
+      macdDivergence: null,
+    };
+    const lines = technicalConfirmation(withHidden, "bullish");
+    expect(lines.some((l) => l.includes("hidden bullish divergence"))).toBe(true);
+    expect(lines.some((l) => l.includes("warning"))).toBe(false);
   });
 });
 
 describe("technicalAgreement", () => {
-  it("agrees when technicals and the dominant thesis point the same way", () => {
+  it("confirms when technicals and the dominant thesis point the same way with no opposing divergence", () => {
     const read = buildTechnicalRead(uptrend)!;
     expect(read.direction).toBe("bullish");
-    expect(technicalAgreement(read, "bullish")).toBe("agrees");
+    expect(read.rsiDivergence).toBeNull();
+    expect(read.macdDivergence).toBeNull();
+    expect(technicalAgreement(read, "bullish")).toBe("confirms");
   });
 
-  it("conflicts when technicals point the opposite way from the thesis", () => {
+  it("contradicts when technicals point the opposite way from the thesis", () => {
     const read = buildTechnicalRead(uptrend)!;
     expect(read.direction).toBe("bullish");
-    expect(technicalAgreement(read, "bearish")).toBe("conflicts");
+    expect(technicalAgreement(read, "bearish")).toBe("contradicts");
   });
 
-  it("is neutral when the thesis itself has no dominant direction", () => {
+  it("is not-yet-confirmed when the thesis itself has no dominant direction", () => {
     const read = buildTechnicalRead(uptrend)!;
-    expect(technicalAgreement(read, "neutral")).toBe("neutral");
+    expect(technicalAgreement(read, "neutral")).toBe("not-yet-confirmed");
   });
 
-  it("is neutral when technicals have no view, even if the thesis does", () => {
+  it("is not-yet-confirmed when technicals have no view, even if the thesis does", () => {
     // buildTechnicalRead rarely lands on the literal "neutral" direction
     // even for a flat/choppy series (a slight net drift usually tips it one
     // way at low strength) — constructed directly to isolate this branch.
     const read = { ...buildTechnicalRead(uptrend)!, direction: "neutral" as const };
-    expect(technicalAgreement(read, "bullish")).toBe("neutral");
+    expect(technicalAgreement(read, "bullish")).toBe("not-yet-confirmed");
+  });
+
+  it("weakens an agreeing read when a regular divergence opposes the dominant direction", () => {
+    const base = buildTechnicalRead(uptrend)!;
+    expect(base.direction).toBe("bullish");
+    const withDivergence = {
+      ...base,
+      rsiDivergence: {
+        kind: "regular-bearish" as const,
+        priorIndex: 0,
+        recentIndex: 1,
+        pricePrior: 0,
+        priceRecent: 0,
+        indicatorPrior: 0,
+        indicatorRecent: 0,
+      },
+      macdDivergence: null,
+    };
+    expect(technicalAgreement(withDivergence, "bullish")).toBe("weakens");
+  });
+
+  it("does not weaken an agreeing read for a hidden (continuation) divergence", () => {
+    const base = buildTechnicalRead(uptrend)!;
+    const withHidden = {
+      ...base,
+      rsiDivergence: {
+        kind: "hidden-bearish" as const,
+        priorIndex: 0,
+        recentIndex: 1,
+        pricePrior: 0,
+        priceRecent: 0,
+        indicatorPrior: 0,
+        indicatorRecent: 0,
+      },
+      macdDivergence: null,
+    };
+    expect(technicalAgreement(withHidden, "bullish")).toBe("confirms");
   });
 
   it("matches technicalConfirmation's own headline for every case", () => {
     // Cross-check: the structured verdict and the prose it's meant to
-    // summarize should never disagree about agree/conflict/neither.
+    // summarize should never disagree about confirm/weaken/contradict/neither.
     for (const series of [uptrend, downtrend, flat]) {
       for (const dominant of ["bullish", "bearish", "neutral"] as const) {
         const read = buildTechnicalRead(series)!;
         const agreement = technicalAgreement(read, dominant);
         const headline = technicalConfirmation(read, dominant)[0];
-        if (agreement === "agrees") expect(headline).toContain("confirms");
-        if (agreement === "conflicts") expect(headline).toContain("weakens");
+        if (agreement === "confirms") expect(headline).toContain("confirms");
+        if (agreement === "contradicts") expect(headline).toContain("argues against");
       }
     }
   });

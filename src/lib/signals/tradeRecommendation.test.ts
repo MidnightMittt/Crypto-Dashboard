@@ -83,6 +83,8 @@ function baseTechnicals(direction: TechnicalRead["direction"] = "bullish"): Tech
     parabolicSarDirection: null,
     ichimokuPosition: null,
     fibonacciNearestLevel: null,
+    rsiDivergence: null,
+    macdDivergence: null,
   };
 }
 
@@ -153,7 +155,7 @@ describe("buildTradeRecommendation", () => {
     const rec = buildTradeRecommendation(
       baseBias({ verdict: "bullish", score: 70 }),
       baseThesis({ dominant: "bullish" }),
-      baseTechnicals("neutral") // "neutral" technicals -> technicalAgreement reads "neutral", not "agrees"
+      baseTechnicals("neutral") // "neutral" technicals -> technicalAgreement reads "not-yet-confirmed", not "confirms"
     );
     expect(rec.action).toBe("wait");
     expect(rec.nextTrigger).not.toMatch(/RSI\s*>|MACD\s*crossover|EMA\s*\d/i);
@@ -164,5 +166,52 @@ describe("buildTradeRecommendation", () => {
     expect(rec.reason.toLowerCase()).not.toContain("mixed");
     expect(rec.reason.toLowerCase()).not.toContain("conflicting signals");
     expect(rec.reason.toLowerCase()).not.toContain("cannot determine");
+  });
+
+  it("WAITs, blocked by technicals, when the thesis agrees directionally but a regular divergence undercuts it", () => {
+    const bullishTechnicals = baseTechnicals("bullish");
+    const rec = buildTradeRecommendation(
+      baseBias({ verdict: "bullish", score: 70 }),
+      baseThesis({ dominant: "bullish" }),
+      {
+        ...bullishTechnicals,
+        rsiDivergence: {
+          kind: "regular-bearish",
+          priorIndex: 0,
+          recentIndex: 1,
+          pricePrior: 0,
+          priceRecent: 0,
+          indicatorPrior: 0,
+          indicatorRecent: 0,
+        },
+      }
+    );
+    expect(rec.action).toBe("wait");
+    expect(rec.blockingLayer).toBe("technicals");
+    // Cites the real divergence source and kind, not a generic message.
+    expect(rec.reason).toContain("RSI");
+    expect(rec.reason).toContain("bearish divergence");
+  });
+
+  it("does not block on a hidden (continuation) divergence — still enters", () => {
+    const bullishTechnicals = baseTechnicals("bullish");
+    const rec = buildTradeRecommendation(
+      baseBias({ verdict: "bullish", score: 70 }),
+      baseThesis({ dominant: "bullish" }),
+      {
+        ...bullishTechnicals,
+        rsiDivergence: {
+          kind: "hidden-bullish",
+          priorIndex: 0,
+          recentIndex: 1,
+          pricePrior: 0,
+          priceRecent: 0,
+          indicatorPrior: 0,
+          indicatorRecent: 0,
+        },
+      }
+    );
+    expect(rec.action).toBe("enter-long");
+    expect(rec.blockingLayer).toBeNull();
   });
 });

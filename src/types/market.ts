@@ -2,6 +2,7 @@ import type { MarketBias } from "@/lib/signals/types";
 import type { BiasHistoryEntry } from "@/lib/history/biasHistory";
 import type { VolumeProfileResult, SupportResistanceLevel } from "@/lib/technicals/marketStructure";
 import type { RegimeTags } from "@/lib/technicals/regimes";
+import type { DivergenceResult } from "@/lib/technicals/divergence";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Core domain types. Every exchange adapter resolves to this shape.
@@ -556,6 +557,10 @@ export interface TechnicalRead {
   ichimokuPosition: "above" | "below" | "inside" | null;
   /** The Fibonacci ratio price currently sits closest to, if within the proximity band. */
   fibonacciNearestLevel: number | null;
+  /** Most recent RSI-vs-price divergence, if any — see lib/technicals/divergence.ts. */
+  rsiDivergence: DivergenceResult | null;
+  /** Most recent MACD-histogram-vs-price divergence, if any. */
+  macdDivergence: DivergenceResult | null;
 }
 
 /**

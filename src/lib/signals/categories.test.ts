@@ -162,6 +162,8 @@ describe("buildTrendStrength", () => {
     parabolicSarDirection: null,
     ichimokuPosition: null,
     fibonacciNearestLevel: null,
+    rsiDivergence: null,
+    macdDivergence: null,
   });
 
   it("returns null without a technical read", () => {
