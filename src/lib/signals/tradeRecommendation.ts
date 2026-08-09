@@ -29,7 +29,24 @@ import { technicalAgreement } from "@/lib/sentiment/technicals";
  * compute.
  */
 
-export type SuggestedAction = "enter-long" | "enter-short" | "wait";
+/**
+ * Five states, not three — the two "wait" cases used to collapse into one
+ * undifferentiated label, hiding a real distinction. "no-trade" (Layer 1
+ * blocked) means there's no real directional lean yet — nothing to wait
+ * FOR. "wait-long/short-confirmation" (Layer 2 blocked) means a real
+ * directional thesis already exists and technicals just haven't caught up
+ * — a meaningfully different, more actionable state to be in.
+ *
+ * Deliberately NOT including Hold/Reduce Risk/Take Profit/Exit — this app
+ * doesn't track a user's actual open positions (entry price/side/size), so
+ * recommending a position-management action would fabricate context it
+ * doesn't have. Also deliberately NOT including a DATA INVALID state here:
+ * a null `bias` is handled entirely by this function's caller (see
+ * EntryQualityCard's own early-return empty state) before this function is
+ * ever called — `bias` is required, not optional, so there's no code path
+ * inside this function that could honestly return that state.
+ */
+export type SuggestedAction = "enter-long" | "enter-short" | "wait-long-confirmation" | "wait-short-confirmation" | "no-trade";
 
 export interface TradeRecommendation {
   action: SuggestedAction;
@@ -42,39 +59,59 @@ export interface TradeRecommendation {
 const ACTION_LABEL: Record<SuggestedAction, string> = {
   "enter-long": "ENTER LONG",
   "enter-short": "ENTER SHORT",
-  wait: "WAIT FOR CONFIRMATION",
+  "wait-long-confirmation": "WAIT FOR LONG CONFIRMATION",
+  "wait-short-confirmation": "WAIT FOR SHORT CONFIRMATION",
+  "no-trade": "NO TRADE",
 };
 
 export function buildTradeRecommendation(
   bias: MarketBias,
   thesis: MarketThesis | null,
-  technicals: TechnicalRead | null
+  technicals: TechnicalRead | null,
+  /**
+   * The same technical read, computed against 4-hour candles — live-only
+   * (see okxCandles.ts), always null in the backtest replay, always
+   * optional. Deliberately NOT a third gate: the spec this implements
+   * against is explicit that "a lower-timeframe entry should not
+   * automatically override a major higher-timeframe structural conflict"
+   * — HTF disagreement rides along as a caveat on an otherwise-clearing
+   * ENTER recommendation, never blocks one outright the way Layer 1/2 do.
+   */
+  technicals4h: TechnicalRead | null = null
 ): TradeRecommendation {
   const agreement = thesis && technicals ? technicalAgreement(technicals, thesis.dominant) : "not-yet-confirmed";
+  const htfAgreement = thesis && technicals4h ? technicalAgreement(technicals4h, thesis.dominant) : null;
 
   if (bias.verdict !== "neutral" && agreement === "confirms") {
     const action: SuggestedAction = bias.verdict === "bullish" ? "enter-long" : "enter-short";
+    const htfCaveat =
+      htfAgreement === "weakens" || htfAgreement === "contradicts"
+        ? " Note: the 4-hour higher-timeframe read currently disagrees with this direction — a lower-conviction entry, size accordingly."
+        : "";
     return {
       action,
       label: ACTION_LABEL[action],
-      reason: `${bias.headline} Technicals confirm — price action backs the same direction.`,
+      reason: `${bias.headline} Technicals confirm — price action backs the same direction.${htfCaveat}`,
       blockingLayer: null,
       nextTrigger: null,
     };
   }
 
   // Layer 1 hasn't crossed the directional threshold yet — the thesis
-  // itself is the blocker, regardless of what technicals show.
+  // itself is the blocker, regardless of what technicals show. No real
+  // lean exists to wait FOR yet, so this is NO TRADE, not a wait state.
   if (bias.verdict === "neutral") {
     const watch = bias.watchNext[0] ?? null;
     return {
-      action: "wait",
-      label: ACTION_LABEL.wait,
+      action: "no-trade",
+      label: ACTION_LABEL["no-trade"],
       reason: bias.headline,
       blockingLayer: "thesis",
       nextTrigger: watch ? `${watch.label} — ${watch.nextTrigger}` : "No metric is currently close enough to a threshold to name a specific level to watch.",
     };
   }
+
+  const waitAction: SuggestedAction = bias.verdict === "bullish" ? "wait-long-confirmation" : "wait-short-confirmation";
 
   // Layer 1 agrees directionally, but a REGULAR (reversal-warning)
   // divergence undercuts it — technicals nominally back the move, but
@@ -88,8 +125,8 @@ export function buildTradeRecommendation(
       technicals.rsiDivergence?.kind === opposingKind ? "RSI" : technicals.macdDivergence?.kind === opposingKind ? "MACD" : "Momentum";
     const divergenceLabel = direction === "bullish" ? "bearish" : "bullish";
     return {
-      action: "wait",
-      label: ACTION_LABEL.wait,
+      action: waitAction,
+      label: ACTION_LABEL[waitAction],
       reason: `${bias.headline} Price action agrees directionally, but ${source} shows a regular ${divergenceLabel} divergence against this move — momentum isn't backing the trend yet.`,
       blockingLayer: "technicals",
       nextTrigger: `Technical confirmation needed: the ${source} divergence resolving — either price rolling over to match it, or momentum reconfirming the ${direction} move without the divergence.`,
@@ -105,8 +142,8 @@ export function buildTradeRecommendation(
     : `${bias.headline} No technical read is available yet to confirm this thesis.`;
 
   return {
-    action: "wait",
-    label: ACTION_LABEL.wait,
+    action: waitAction,
+    label: ACTION_LABEL[waitAction],
     reason,
     blockingLayer: "technicals",
     nextTrigger: confirmationLine

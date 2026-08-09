@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpRight, ArrowDownRight, Pause } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Pause, Minus } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/Card";
 import { VerdictBadge, ConfidenceLabel } from "@/components/ui/VerdictBadge";
 import { Collapsible } from "@/components/ui/Collapsible";
@@ -44,11 +44,14 @@ export function AiMarketSummary({
   bias,
   thesis,
   technicals,
+  technicals4h,
   timeline,
 }: {
   bias: MarketBias | null;
   thesis: MarketThesis | null;
   technicals: TechnicalRead | null;
+  /** Live-only higher-timeframe (4H) read — see okxCandles.ts. Null whenever unavailable; every consumer already treats that as "nothing to show," same as `technicals` itself. */
+  technicals4h?: TechnicalRead | null;
   /** Optional — when provided, renders an expandable "today's trajectory" panel absorbing what used to be the standalone MarketThesisTimeline card. */
   timeline?: BiasHistoryEntry[];
 }) {
@@ -67,7 +70,7 @@ export function AiMarketSummary({
 
   const reasons = topReasons(bias, 5);
   const invalidationLines = thesis?.invalidation ?? [];
-  const recommendation = buildTradeRecommendation(bias, thesis, technicals);
+  const recommendation = buildTradeRecommendation(bias, thesis, technicals, technicals4h ?? null);
 
   return (
     <Card>
@@ -78,7 +81,7 @@ export function AiMarketSummary({
 
         <TopReasons reasons={reasons} />
 
-        <TechnicalConfirmation technicals={technicals} thesis={thesis} />
+        <TechnicalConfirmation technicals={technicals} technicals4h={technicals4h ?? null} thesis={thesis} />
 
         <ContradictingEvidence metric={bias.counterRisk} rationale={bias.riskRationale} />
 
@@ -110,7 +113,13 @@ export function AiMarketSummary({
 const ACTION_STYLE: Record<TradeRecommendation["action"], { border: string; bg: string; text: string; Icon: typeof ArrowUpRight }> = {
   "enter-long": { border: "border-success/30", bg: "bg-success/[0.06]", text: "text-success", Icon: ArrowUpRight },
   "enter-short": { border: "border-danger/30", bg: "bg-danger/[0.06]", text: "text-danger", Icon: ArrowDownRight },
-  wait: { border: "border-amber/30", bg: "bg-amber/[0.06]", text: "text-amber", Icon: Pause },
+  // A real directional thesis exists and technicals just haven't caught up
+  // — amber, "watching for confirmation."
+  "wait-long-confirmation": { border: "border-amber/30", bg: "bg-amber/[0.06]", text: "text-amber", Icon: Pause },
+  "wait-short-confirmation": { border: "border-amber/30", bg: "bg-amber/[0.06]", text: "text-amber", Icon: Pause },
+  // No real directional lean yet — a distinct, quieter neutral/gray
+  // treatment, not "close, just watching."
+  "no-trade": { border: "border-hairline", bg: "bg-surface-2", text: "text-ink-muted", Icon: Minus },
 };
 
 /**
@@ -291,24 +300,38 @@ const AGREEMENT_CONFIG: Record<TechnicalAgreement, { label: string; dot: string;
  */
 function TechnicalConfirmation({
   technicals,
+  technicals4h,
   thesis,
 }: {
   technicals: TechnicalRead | null;
+  /** Live-only, optional — see okxCandles.ts. Rendered as a secondary qualifier line, never a competing verdict; per the multi-timeframe spec, HTF disagreement is context the trader weighs, not an override of the daily read. */
+  technicals4h: TechnicalRead | null;
   thesis: MarketThesis | null;
 }) {
   if (!technicals || !thesis || thesis.technicalConfirmation.length === 0) return null;
 
   const agreement = technicalAgreement(technicals, thesis.dominant);
   const config = AGREEMENT_CONFIG[agreement];
+  const htfAgreement = technicals4h ? technicalAgreement(technicals4h, thesis.dominant) : null;
+  const htfConfig = htfAgreement ? AGREEMENT_CONFIG[htfAgreement] : null;
 
   return (
     <div className="border-t border-hairline pt-5">
-      <div className="flex items-center gap-2">
-        <SectionLabel>Technical confirmation</SectionLabel>
-        <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold tracking-wider ${config.text}`}>
-          <span aria-hidden>{config.dot}</span>
-          {config.label}
-        </span>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <div className="flex items-center gap-2">
+          <SectionLabel>Technical confirmation</SectionLabel>
+          <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold tracking-wider ${config.text}`}>
+            <span aria-hidden>{config.dot}</span>
+            {config.label}
+          </span>
+        </div>
+        {htfConfig && (
+          <span className={`inline-flex items-center gap-1 text-[10px] tracking-wide ${htfConfig.text}`}>
+            <span className="text-ink-faint">4H:</span>
+            <span aria-hidden>{htfConfig.dot}</span>
+            {htfConfig.label}
+          </span>
+        )}
       </div>
       <ul className="mt-3 flex flex-col gap-2">
         {thesis.technicalConfirmation.map((line, i) => (
@@ -370,7 +393,11 @@ function InvalidationLevel({
 }) {
   return (
     <div className="border-t border-hairline pt-5">
-      <SectionLabel>Invalidation level</SectionLabel>
+      <SectionLabel>Thesis invalidation</SectionLabel>
+      <p className="mt-1 text-[10px] leading-relaxed text-ink-faint">
+        What would flip this broader market read — distinct from the trade-level stop, which
+        can hit while the thesis itself still holds. See Entry Quality for that level.
+      </p>
 
       {watchNext.length === 0 && invalidationLines.length === 0 ? (
         <p className="mt-3 text-xs leading-relaxed text-ink-faint">

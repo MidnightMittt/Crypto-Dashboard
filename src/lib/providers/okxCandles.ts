@@ -5,13 +5,19 @@ import { swr } from "../cache/swr";
 import { Candle } from "../technicals/indicators";
 
 /**
- * Daily OHLCV candles from OKX's public market endpoint — no key, and not
+ * OHLCV candles from OKX's public market endpoint — no key, and not
  * geo-blocked from this app's deployment region (unlike Binance's live API,
  * which this codebase already routes around elsewhere).
  *
- * OKX caps this endpoint at 300 candles per request with no pagination.
- * That's ~10 months of daily bars, comfortably more than the 200 needed for
- * the longest moving average this app computes, so no paging is attempted.
+ * OKX caps this endpoint at 300 candles per request with no pagination,
+ * REGARDLESS of bar size — that's ~10 months for daily bars (comfortably
+ * more than the 200 needed for the longest moving average this app
+ * computes) but only ~50 days for 4H bars. The 4H series is thin enough
+ * that its EMA200 barely warms up (only ~100 "settled" bars past the
+ * point EMA200 first has a value, versus daily's much deeper history) —
+ * a real quality caveat, not a blocker: `buildTechnicalRead`'s
+ * `MIN_CANDLES` gate still clears easily, and every field is honestly
+ * null when there isn't enough series to compute it, same as always.
  *
  * Single-venue by design, same caveat as okxOrderFlow.ts: OKX was chosen
  * because it already has a mapped, working REST surface here, not because
@@ -29,11 +35,16 @@ const CANDLE_LIMIT = 300;
 const FRESH_MS = 15 * 60 * 1000;
 const MAX_AGE_MS = 6 * 60 * 60 * 1000;
 
-async function fetchFromApi(asset: AssetSymbol): Promise<Candle[]> {
+// 4H bars close 6x/day — polled less aggressively than daily's 15-minute
+// cadence, since a value can't meaningfully change more than once an hour.
+const FRESH_MS_4H = 60 * 60 * 1000;
+const MAX_AGE_MS_4H = 6 * 60 * 60 * 1000;
+
+async function fetchFromApi(asset: AssetSymbol, bar: "1D" | "4H"): Promise<Candle[]> {
   const instId = `${asset}-USDT-SWAP`;
   try {
     const res = await fetchJson<{ data: Array<string[]> }>(
-      `${BASE}/api/v5/market/candles?instId=${instId}&bar=1D&limit=${CANDLE_LIMIT}`,
+      `${BASE}/api/v5/market/candles?instId=${instId}&bar=${bar}&limit=${CANDLE_LIMIT}`,
       { signal: timeoutSignal() }
     );
 
@@ -76,11 +87,30 @@ async function fetchFromApi(asset: AssetSymbol): Promise<Candle[]> {
 
 export async function fetchOkxDailyCandles(asset: AssetSymbol): Promise<Candle[]> {
   try {
-    return await swr(`okx-candles:${asset}`, () => fetchFromApi(asset), {
+    return await swr(`okx-candles:${asset}`, () => fetchFromApi(asset, "1D"), {
       freshMs: FRESH_MS,
       maxAgeMs: MAX_AGE_MS,
       // Never let an empty result overwrite a good cached series — a single
       // failed poll shouldn't blank out every technical read downstream.
+      shouldShare: (next, previous) => next.length > 0 || !previous,
+    });
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * 4-hour candles — the higher-timeframe series for multi-timeframe
+ * confirmation (see sentiment/technicals.ts's `technicalAgreement`, reused
+ * unchanged against this series). Live-only: ~50 days of history is nowhere
+ * near enough for the backtest's multi-year replay window, and OKX's
+ * 300-bar cap can't be paged around — see this file's header.
+ */
+export async function fetchOkx4hCandles(asset: AssetSymbol): Promise<Candle[]> {
+  try {
+    return await swr(`okx-candles-4h:${asset}`, () => fetchFromApi(asset, "4H"), {
+      freshMs: FRESH_MS_4H,
+      maxAgeMs: MAX_AGE_MS_4H,
       shouldShare: (next, previous) => next.length > 0 || !previous,
     });
   } catch {

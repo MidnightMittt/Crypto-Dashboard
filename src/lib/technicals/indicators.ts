@@ -327,6 +327,14 @@ export function closes(candles: Candle[]): number[] {
   return candles.map((c) => c.close);
 }
 
+export function highs(candles: Candle[]): number[] {
+  return candles.map((c) => c.high);
+}
+
+export function lows(candles: Candle[]): number[] {
+  return candles.map((c) => c.low);
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // Seven additional indicators. Same conventions as above: pure, oldest-
 // first, null on insufficient data. Each is verified in indicators.test.ts

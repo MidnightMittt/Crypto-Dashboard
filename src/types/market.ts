@@ -1,6 +1,6 @@
 import type { MarketBias } from "@/lib/signals/types";
 import type { BiasHistoryEntry } from "@/lib/history/biasHistory";
-import type { VolumeProfileResult, SupportResistanceLevel } from "@/lib/technicals/marketStructure";
+import type { VolumeProfileResult, SupportResistanceZone } from "@/lib/technicals/marketStructure";
 import type { RegimeTags } from "@/lib/technicals/regimes";
 import type { DivergenceResult } from "@/lib/technicals/divergence";
 
@@ -190,6 +190,15 @@ export interface AggregateMarketData {
    * series) and whenever candle data is unavailable.
    */
   technicals: TechnicalRead | null;
+  /**
+   * The SAME technical read, computed against 4-hour candles instead of
+   * daily — higher-timeframe context for `technicalAgreement()` to judge
+   * against the daily-driven thesis. Live-only (see providers/okxCandles.ts
+   * for why): always null in the backtest replay. Null whenever OKX's 4H
+   * series is unavailable or too short, same honest-absence convention as
+   * `technicals` above.
+   */
+  technicals4h: TechnicalRead | null;
   /** US spot ETF flows. BTC/ETH only, null everywhere else. */
   etfFlows: EtfFlowSummary | null;
   /** Spot vs perpetual turnover. Null when either leg is unavailable. */
@@ -571,7 +580,7 @@ export interface TechnicalRead {
  */
 export interface LiquidityMapRead {
   volumeProfile: VolumeProfileResult | null;
-  supportResistance: SupportResistanceLevel[];
+  supportResistance: SupportResistanceZone[];
 }
 
 /**

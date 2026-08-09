@@ -90,10 +90,9 @@ import {
   recordHistory,
 } from "../history/store";
 import { recordDailyPoint } from "../history/dailyStore";
-import { fetchOkxDailyCandles } from "../providers/okxCandles";
+import { fetchOkxDailyCandles, fetchOkx4hCandles } from "../providers/okxCandles";
 import { buildTechnicalRead } from "../sentiment/technicals";
-import { fibonacciRetracement } from "../technicals/indicators";
-import { buildVolumeProfile, buildSupportResistance } from "../technicals/marketStructure";
+import { buildVolumeProfile, buildSupportResistanceZones } from "../technicals/marketStructure";
 import { classifyRegime } from "../technicals/regimes";
 import { fetchEtfFlows } from "../providers/etfFlows";
 import { fetchSpotVolumeUsd } from "../providers/spotVolume";
@@ -510,6 +509,7 @@ async function withRecordedHistory(
     exchangeFlow,
     deribitOptions,
     technicals,
+    technicals4h,
     liquidityMap,
     regimeTags,
     etfFlows,
@@ -527,6 +527,7 @@ async function withRecordedHistory(
     buildExchangeFlow(asset, point.price, point.t),
     buildDeribitOptions(asset, point.t),
     buildTechnicals(asset),
+    buildTechnicals4h(asset),
     buildLiquidityMap(asset),
     buildMarketRegimeTags(asset),
     buildEtfFlows(asset),
@@ -699,6 +700,7 @@ async function withRecordedHistory(
     exchangeFlowConfigured,
     deribitOptions,
     technicals,
+    technicals4h,
     liquidityMap,
     etfFlows,
     spotPerpVolume,
@@ -809,6 +811,7 @@ function buildAggregate(
       exchangeFlowConfigured: false,
       deribitOptions: null,
       technicals: null,
+      technicals4h: null,
       liquidityMap: null,
       etfFlows: null,
       spotPerpVolume: null,
@@ -939,6 +942,7 @@ function buildAggregate(
     exchangeFlowConfigured: false,
     deribitOptions: null,
     technicals: null,
+    technicals4h: null,
     liquidityMap: null,
     etfFlows: null,
     spotPerpVolume: null,
@@ -1130,14 +1134,24 @@ async function buildTechnicals(asset: AssetSymbol | "MARKET"): Promise<Technical
 }
 
 /**
+ * The same read as `buildTechnicals` above, against 4-hour candles instead
+ * of daily — see providers/okxCandles.ts for why this is a separate,
+ * shorter series (live-only, ~50 days of history) rather than a resample
+ * of the daily one.
+ */
+async function buildTechnicals4h(asset: AssetSymbol | "MARKET"): Promise<TechnicalRead | null> {
+  if (asset === "MARKET") return null;
+
+  const candles = await fetchOkx4hCandles(asset).catch(() => []);
+  return buildTechnicalRead(candles);
+}
+
+/**
  * Approximated market structure for the Liquidity Map dashboard section —
  * same candles `buildTechnicals` above uses, re-fetched rather than
  * threaded through: `fetchOkxDailyCandles` is already swr-cached (same
  * "second call costs nothing" precedent already used for stablecoins/
  * fearGreed below), so this costs one cache hit, not a second real fetch.
- * `fibonacciRetracement` is recomputed here too for the same reason — cheap
- * pure math over already-cached candles, not worth threading a second field
- * through `TechnicalRead` to avoid.
  */
 async function buildLiquidityMap(asset: AssetSymbol | "MARKET"): Promise<LiquidityMapRead | null> {
   if (asset === "MARKET") return null;
@@ -1145,9 +1159,8 @@ async function buildLiquidityMap(asset: AssetSymbol | "MARKET"): Promise<Liquidi
   const candles = await fetchOkxDailyCandles(asset).catch(() => []);
   if (candles.length === 0) return null;
 
-  const fib = fibonacciRetracement(candles);
   const volumeProfile = buildVolumeProfile(candles);
-  const supportResistance = buildSupportResistance(candles, fib, volumeProfile);
+  const supportResistance = buildSupportResistanceZones(candles, volumeProfile);
   return { volumeProfile, supportResistance };
 }
 

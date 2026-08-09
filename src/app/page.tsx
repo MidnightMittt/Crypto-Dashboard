@@ -144,6 +144,7 @@ export default function DashboardPage() {
               bias={aggregate.marketBias}
               thesis={aggregate.marketThesis}
               technicals={aggregate.technicals}
+              technicals4h={aggregate.technicals4h}
               timeline={aggregate.biasTimeline}
             />
 

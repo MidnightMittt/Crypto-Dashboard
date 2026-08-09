@@ -3,12 +3,20 @@
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { LiquidityMapRead, OrderFlowSummary } from "@/types/market";
 import { MetricVerdict } from "@/lib/signals/types";
+import { SupportResistanceZone, ZoneStatus } from "@/lib/technicals/marketStructure";
 import { formatCompactUsd } from "@/lib/utils/format";
 
-const SOURCE_LABELS: Record<string, string> = {
-  "swing-high": "swing high",
-  "swing-low": "swing low",
-  "fib-level": "Fibonacci level",
+const STATUS_LABELS: Record<ZoneStatus, string> = {
+  approaching: "approaching",
+  testing: "testing now",
+  rejecting: "rejected recently",
+  reclaiming: "reclaiming",
+  breaking: "breaking",
+  inactive: "inactive",
+};
+
+const CONFLUENCE_LABELS: Record<string, string> = {
+  "swing-cluster": "swing cluster",
   "volume-poc": "volume point of control",
   "value-area-edge": "value area edge",
 };
@@ -19,6 +27,11 @@ const SOURCE_LABELS: Record<string, string> = {
  * see marketStructure.ts. Dashboard V2: no longer its own top-level card;
  * embedded as expandable raw detail behind Positioning Intelligence's
  * CategoryCard (see page.tsx), so no outer Card wrapper here.
+ *
+ * The zone list already surfaces the volume profile's point of control and
+ * value-area edges (as their own zones, or as confluence tags on swing
+ * clusters that overlap them) — no separate "Point of control" block, which
+ * would just restate the same information a second way.
  */
 export function LiquidityMapCard({
   liquidityMap,
@@ -29,16 +42,15 @@ export function LiquidityMapCard({
   orderFlow: OrderFlowSummary | null;
   liquidationsMetric: MetricVerdict | null;
 }) {
-  const levels = liquidityMap?.supportResistance ?? [];
-  const supports = levels
-    .filter((l) => l.kind === "support")
-    .sort((a, b) => b.price - a.price)
+  const zones = liquidityMap?.supportResistance ?? [];
+  const supports = zones
+    .filter((z) => z.kind === "support")
+    .sort((a, b) => b.priceHigh - a.priceHigh)
     .slice(0, 3);
-  const resistances = levels
-    .filter((l) => l.kind === "resistance")
-    .sort((a, b) => a.price - b.price)
+  const resistances = zones
+    .filter((z) => z.kind === "resistance")
+    .sort((a, b) => a.priceLow - b.priceLow)
     .slice(0, 3);
-  const profile = liquidityMap?.volumeProfile ?? null;
   const imbalance = orderFlow?.bookImbalance ?? null;
 
   return (
@@ -48,68 +60,47 @@ export function LiquidityMapCard({
           Liquidity Map
         </span>
         <InfoTooltip
-          measures="Where price structure suggests the market is likely to move next — approximated volume profile, support/resistance, and resting order-book depth."
-          whyItMatters="Estimates where price is most likely to move next based on liquidity, not which direction is favored."
+          measures="Where price structure suggests the market is likely to move next — clustered swing highs/lows and the volume profile's point of control, not arbitrary lines."
+          whyItMatters="Estimates where price is most likely to move next based on structure, not which direction is favored."
         />
       </div>
 
       {!liquidityMap ? (
-          <p className="text-[11px] leading-relaxed text-ink-faint">
-            Not enough daily candle history yet to map structure for this asset.
+        <p className="text-[11px] leading-relaxed text-ink-faint">
+          Not enough daily candle history yet to map structure for this asset.
+        </p>
+      ) : (
+        <>
+          <ZoneColumn title="Resistance above" zones={resistances} tone="text-danger" />
+          <ZoneColumn title="Support below" zones={supports} tone="text-success" />
+        </>
+      )}
+
+      {imbalance && (
+        <div className="border-t border-hairline pt-2.5">
+          <span className="text-[11px] uppercase tracking-[0.16em] text-ink-muted">
+            Order book imbalance
+          </span>
+          <p className="mt-1 text-[11px] leading-relaxed text-ink-faint">
+            Bid depth {formatCompactUsd(imbalance.bid.usd)} vs. ask depth{" "}
+            {formatCompactUsd(imbalance.ask.usd)} (
+            {imbalance.imbalancePct >= 0 ? "+" : ""}
+            {imbalance.imbalancePct.toFixed(1)}% toward {imbalance.imbalancePct >= 0 ? "bids" : "asks"}
+            ) across {imbalance.depthLevels} price levels.
           </p>
-        ) : (
-          <>
-            <LevelColumn title="Resistance above" levels={resistances} tone="text-danger" />
-            <LevelColumn title="Support below" levels={supports} tone="text-success" />
+        </div>
+      )}
 
-            {profile && (
-              <div className="border-t border-hairline pt-2.5">
-                <span className="text-[11px] uppercase tracking-[0.16em] text-ink-muted">
-                  Point of control
-                </span>
-                <p className="mt-1 text-[11px] leading-relaxed text-ink-faint">
-                  Volume has concentrated between{" "}
-                  <span className="font-mono text-ink">
-                    {formatPrice(profile.pointOfControl.priceLow)}
-                  </span>{" "}
-                  and{" "}
-                  <span className="font-mono text-ink">
-                    {formatPrice(profile.pointOfControl.priceHigh)}
-                  </span>{" "}
-                  over the trailing 90 days — the &ldquo;fair value&rdquo; area. Value area:{" "}
-                  <span className="font-mono text-ink">{formatPrice(profile.valueAreaLow)}</span> to{" "}
-                  <span className="font-mono text-ink">{formatPrice(profile.valueAreaHigh)}</span>.
-                </p>
-              </div>
-            )}
-          </>
-        )}
-
-        {imbalance && (
-          <div className="border-t border-hairline pt-2.5">
-            <span className="text-[11px] uppercase tracking-[0.16em] text-ink-muted">
-              Order book imbalance
-            </span>
-            <p className="mt-1 text-[11px] leading-relaxed text-ink-faint">
-              Bid depth {formatCompactUsd(imbalance.bid.usd)} vs. ask depth{" "}
-              {formatCompactUsd(imbalance.ask.usd)} (
-              {imbalance.imbalancePct >= 0 ? "+" : ""}
-              {imbalance.imbalancePct.toFixed(1)}% toward {imbalance.imbalancePct >= 0 ? "bids" : "asks"}
-              ) across {imbalance.depthLevels} price levels.
-            </p>
-          </div>
-        )}
-
-        {liquidationsMetric && (
-          <div className="border-t border-hairline pt-2.5">
-            <span className="text-[11px] uppercase tracking-[0.16em] text-ink-muted">
-              Recent flushes
-            </span>
-            <p className="mt-1 text-[11px] leading-relaxed text-ink-faint">
-              {liquidationsMetric.explanation}
-            </p>
-          </div>
-        )}
+      {liquidationsMetric && (
+        <div className="border-t border-hairline pt-2.5">
+          <span className="text-[11px] uppercase tracking-[0.16em] text-ink-muted">
+            Recent flushes
+          </span>
+          <p className="mt-1 text-[11px] leading-relaxed text-ink-faint">
+            {liquidationsMetric.explanation}
+          </p>
+        </div>
+      )}
 
       <p className="border-t border-hairline pt-2.5 text-[10px] leading-relaxed text-ink-faint/75">
         Structure is estimated from trailing daily OHLCV and top-of-book depth, not a
@@ -120,26 +111,22 @@ export function LiquidityMapCard({
   );
 }
 
-function LevelColumn({
-  title,
-  levels,
-  tone,
-}: {
-  title: string;
-  levels: { price: number; source: string }[];
-  tone: string;
-}) {
+function ZoneColumn({ title, zones, tone }: { title: string; zones: SupportResistanceZone[]; tone: string }) {
   return (
     <div>
       <span className="text-[11px] uppercase tracking-[0.16em] text-ink-muted">{title}</span>
-      {levels.length === 0 ? (
+      {zones.length === 0 ? (
         <p className="mt-1 text-[11px] leading-relaxed text-ink-faint">None identified nearby.</p>
       ) : (
-        <ul className="mt-1 flex flex-col gap-1">
-          {levels.map((l, i) => (
-            <li key={i} className="flex items-baseline gap-2 text-[11px] leading-relaxed">
-              <span className={`font-mono ${tone}`}>{formatPrice(l.price)}</span>
-              <span className="text-ink-faint">{SOURCE_LABELS[l.source] ?? l.source}</span>
+        <ul className="mt-1 flex flex-col gap-1.5">
+          {zones.map((z, i) => (
+            <li key={i} className="text-[11px] leading-relaxed">
+              <span className={`font-mono ${tone}`}>{formatZoneRange(z)}</span>{" "}
+              <span className="text-ink-faint">
+                {z.reactionCount > 0 ? `${z.reactionCount} touch${z.reactionCount === 1 ? "" : "es"}` : "volume-based"}
+                {z.confluence.length > 0 && ` · ${z.confluence.map((c) => CONFLUENCE_LABELS[c] ?? c).join(", ")}`}
+                {z.status !== "inactive" && ` · ${STATUS_LABELS[z.status]}`}
+              </span>
             </li>
           ))}
         </ul>
@@ -155,4 +142,10 @@ function formatPrice(value: number): string {
     minimumFractionDigits: value >= 1000 ? 0 : 2,
     maximumFractionDigits: value >= 1000 ? 0 : 2,
   });
+}
+
+/** A zone with no real width (e.g. a degenerate single-bucket volume zone) collapses to one price rather than showing a redundant "$100–$100" range. */
+function formatZoneRange(zone: SupportResistanceZone): string {
+  if (zone.priceLow === zone.priceHigh) return formatPrice(zone.priceLow);
+  return `${formatPrice(zone.priceLow)}–${formatPrice(zone.priceHigh)}`;
 }

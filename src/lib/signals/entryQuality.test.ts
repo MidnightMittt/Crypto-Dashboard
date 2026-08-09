@@ -1,5 +1,22 @@
 import { describe, expect, it } from "vitest";
 import { buildEntryQuality, EntryQualityInputs, StarRating } from "./entryQuality";
+import { SupportResistanceZone } from "@/lib/technicals/marketStructure";
+
+/** A zero-width zone reproduces the old single-price-level behavior exactly (tradeRelevantEdge returns priceHigh for a long, which equals priceLow when the zone has no width) — used wherever a test only cares about placement/filtering, not zone width itself. */
+function zone(priceLow: number, priceHigh: number, kind: "support" | "resistance", overrides: Partial<SupportResistanceZone> = {}): SupportResistanceZone {
+  return {
+    priceLow,
+    priceHigh,
+    kind,
+    strength: 0,
+    reactionCount: 1,
+    confluence: [],
+    status: "inactive",
+    mostRecentTouchBarsAgo: null,
+    source: "swing-cluster",
+    ...overrides,
+  };
+}
 
 function inputs(overrides: Partial<EntryQualityInputs>): EntryQualityInputs {
   return {
@@ -58,7 +75,7 @@ describe("buildEntryQuality — ATR fallback (no qualifying structural levels)",
   });
 });
 
-describe("buildEntryQuality — structural support/resistance", () => {
+describe("buildEntryQuality — structural support/resistance zones", () => {
   it("uses the nearest qualifying support as the stop and the nearest qualifying resistance as the target", () => {
     const result = buildEntryQuality(
       inputs({
@@ -66,24 +83,25 @@ describe("buildEntryQuality — structural support/resistance", () => {
         price: 100,
         atrPct: 2, // atrAbs = 2, structural band = [1, 8]
         supportResistance: [
-          { price: 97, kind: "support", source: "swing-low" }, // distance 3, in-band -> used as stop
-          { price: 90, kind: "support", source: "swing-low" }, // distance 10, out of band -> ignored
-          { price: 102, kind: "resistance", source: "swing-high" }, // distance 2, rr = 2/3 = 0.667 < 1.5 -> doesn't qualify
-          { price: 105, kind: "resistance", source: "volume-poc" }, // distance 5, rr = 5/3 = 1.667 >= 1.5 -> qualifies, nearest
-          { price: 110, kind: "resistance", source: "fib-level" }, // distance 10, rr = 10/3 -> qualifies but farther
+          zone(97, 97, "support"), // distance 3, in-band -> used as stop
+          zone(90, 90, "support"), // distance 10, out of band -> ignored
+          zone(102, 102, "resistance"), // distance 2, rr = 2/3 = 0.667 < 1.5 -> doesn't qualify
+          zone(105, 105, "resistance", { reactionCount: 3, confluence: ["volume-poc"] }), // distance 5, rr = 5/3 = 1.667 >= 1.5 -> qualifies, nearest
+          zone(110, 110, "resistance"), // distance 10, rr = 10/3 -> qualifies but farther
         ],
       })
     );
     expect(result).not.toBeNull();
     expect(result!.stopPrice).toBe(97);
-    expect(result!.stopBasis).toContain("swing-low");
+    expect(result!.stopBasis).toContain("support zone");
     expect(result!.targetPrice).toBe(105);
-    expect(result!.targetBasis).toContain("volume-poc");
+    expect(result!.targetBasis).toContain("resistance zone");
+    expect(result!.targetBasis).toContain("3 touches");
+    expect(result!.targetBasis).toContain("confluence: volume-poc");
     expect(result!.riskRewardRatio).toBeCloseTo(5 / 3, 10);
     // TP2: the only remaining resistance beyond TP1 (105) is 110 — distance
     // 10, rr = 10/3 = 3.33 >= MIN_RR_TP2 (3), so it qualifies structurally.
     expect(result!.target2Price).toBe(110);
-    expect(result!.target2Basis).toContain("fib-level");
     expect(result!.riskRewardRatio2).toBeCloseTo(10 / 3, 10);
   });
 
@@ -94,8 +112,8 @@ describe("buildEntryQuality — structural support/resistance", () => {
         price: 100,
         atrPct: 2, // riskDistance = 3
         supportResistance: [
-          { price: 97, kind: "support", source: "swing-low" },
-          { price: 105, kind: "resistance", source: "volume-poc" }, // TP1: rr = 5/3 = 1.667 >= 1.5
+          zone(97, 97, "support"),
+          zone(105, 105, "resistance"), // TP1: rr = 5/3 = 1.667 >= 1.5
           // No resistance beyond 105 clears MIN_RR_TP2 (3) -> TP2 falls back.
         ],
       })
@@ -107,21 +125,73 @@ describe("buildEntryQuality — structural support/resistance", () => {
     expect(result!.target2Basis).toContain("4:1");
   });
 
-  it("ignores support/resistance levels on the wrong side of price for the given direction", () => {
+  it("ignores support/resistance zones on the wrong side of price for the given direction", () => {
     const result = buildEntryQuality(
       inputs({
         verdict: "bullish",
         price: 100,
         atrPct: 2,
         supportResistance: [
-          { price: 103, kind: "support", source: "swing-low" }, // support ABOVE price -> not a valid long stop
-          { price: 95, kind: "resistance", source: "swing-high" }, // resistance BELOW price -> not a valid long target
+          zone(103, 103, "support"), // support ABOVE price -> not a valid long stop
+          zone(95, 95, "resistance"), // resistance BELOW price -> not a valid long target
         ],
       })
     );
-    // Neither level qualifies for a long -> falls back to ATR stop / flat 2:1 target, same as the pure fallback case.
+    // Neither zone qualifies for a long -> falls back to ATR stop / flat 2:1 target, same as the pure fallback case.
     expect(result!.stopPrice).toBeCloseTo(97, 10);
     expect(result!.targetPrice).toBeCloseTo(106, 10);
+  });
+
+  it("uses the zone's far edge for the target, not its midpoint or near edge — 'fully cleared', not just 'touched'", () => {
+    const result = buildEntryQuality(
+      inputs({
+        verdict: "bullish",
+        price: 100,
+        atrPct: 2, // riskDistance from a 97 stop = 3
+        supportResistance: [
+          zone(97, 97, "support"),
+          // A WIDE resistance zone: near edge 104 (rr = 4/3 = 1.33, doesn't
+          // clear MIN_RR 1.5), far edge 112 (rr = 12/3 = 4, clears it). If
+          // the target used the near edge or midpoint it would either not
+          // qualify at all, or land at 108 — neither is 112.
+          zone(104, 112, "resistance"),
+        ],
+      })
+    );
+    expect(result!.targetPrice).toBe(112);
+  });
+
+  it("uses the zone's near edge for the stop — tighter, more conservative than the midpoint or far edge", () => {
+    const result = buildEntryQuality(
+      inputs({
+        verdict: "bullish",
+        price: 100,
+        atrPct: 2, // structural band = [1, 8]
+        supportResistance: [
+          // A WIDE support zone: near edge (top) 98, far edge (bottom) 92.
+          // The near edge is closer to price -> tighter stop.
+          zone(92, 98, "support"),
+        ],
+      })
+    );
+    expect(result!.stopPrice).toBe(98);
+  });
+
+  it("exposes the nearest support/resistance zone regardless of whether it was used as the stop/target", () => {
+    const result = buildEntryQuality(
+      inputs({
+        verdict: "bullish",
+        price: 100,
+        atrPct: 2,
+        supportResistance: [
+          zone(97, 97, "support"), // nearest support, also used as the stop
+          zone(102, 102, "resistance"), // nearest resistance, does NOT qualify as target (rr too low)
+          zone(105, 105, "resistance"),
+        ],
+      })
+    );
+    expect(result!.nearestSupport?.priceHigh).toBe(97);
+    expect(result!.nearestResistance?.priceLow).toBe(102); // the nearest one, even though 105 was the actual target
   });
 });
 

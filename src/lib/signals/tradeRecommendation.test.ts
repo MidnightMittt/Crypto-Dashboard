@@ -111,32 +111,70 @@ describe("buildTradeRecommendation", () => {
     expect(rec.label).toBe("ENTER SHORT");
   });
 
-  it("WAITs, blocked by thesis, when the overall verdict is neutral — regardless of technicals", () => {
+  it("still recommends ENTER LONG when the 4H higher-timeframe read is absent — HTF is optional, never required", () => {
+    const rec = buildTradeRecommendation(
+      baseBias({ verdict: "bullish", score: 70 }),
+      baseThesis({ dominant: "bullish" }),
+      baseTechnicals("bullish")
+      // technicals4h omitted entirely (defaults to null)
+    );
+    expect(rec.action).toBe("enter-long");
+    expect(rec.reason).not.toContain("4-hour");
+  });
+
+  it("appends a caveat, but does NOT block, when the 4H higher-timeframe read contradicts an otherwise-clearing ENTER", () => {
+    const rec = buildTradeRecommendation(
+      baseBias({ verdict: "bullish", score: 70 }),
+      baseThesis({ dominant: "bullish" }),
+      baseTechnicals("bullish"),
+      baseTechnicals("bearish") // 4H disagrees with the bullish daily thesis
+    );
+    // Still a real ENTER — HTF disagreement never overrides a lower-timeframe entry per spec.
+    expect(rec.action).toBe("enter-long");
+    expect(rec.blockingLayer).toBeNull();
+    expect(rec.nextTrigger).toBeNull();
+    expect(rec.reason).toContain("4-hour");
+  });
+
+  it("adds no caveat when the 4H higher-timeframe read agrees", () => {
+    const rec = buildTradeRecommendation(
+      baseBias({ verdict: "bullish", score: 70 }),
+      baseThesis({ dominant: "bullish" }),
+      baseTechnicals("bullish"),
+      baseTechnicals("bullish") // 4H agrees
+    );
+    expect(rec.action).toBe("enter-long");
+    expect(rec.reason).not.toContain("4-hour");
+  });
+
+  it("is NO TRADE, blocked by thesis, when the overall verdict is neutral — regardless of technicals", () => {
     const rec = buildTradeRecommendation(
       baseBias({ verdict: "neutral", score: 53 }),
       baseThesis({ dominant: "bullish" }),
       baseTechnicals("bullish")
     );
-    expect(rec.action).toBe("wait");
+    expect(rec.action).toBe("no-trade");
+    expect(rec.label).toBe("NO TRADE");
     expect(rec.blockingLayer).toBe("thesis");
     // Next trigger cites the real watchNext data, not a fabricated level.
     expect(rec.nextTrigger).toContain("Funding Rate");
     expect(rec.nextTrigger).toContain("turns Bullish above 0.04%/8h");
   });
 
-  it("WAITs, blocked by technicals, when the thesis is directional but technicals conflict", () => {
+  it("waits for long confirmation, blocked by technicals, when the thesis is directional but technicals conflict", () => {
     const rec = buildTradeRecommendation(
       baseBias({ verdict: "bullish", score: 70 }),
       baseThesis({ dominant: "bullish" }),
       baseTechnicals("bearish") // conflicts with the bullish thesis
     );
-    expect(rec.action).toBe("wait");
+    expect(rec.action).toBe("wait-long-confirmation");
+    expect(rec.label).toBe("WAIT FOR LONG CONFIRMATION");
     expect(rec.blockingLayer).toBe("technicals");
     // Reason cites the real technicalConfirmation line, not an invented one.
     expect(rec.reason).toContain("trend strength is weak");
   });
 
-  it("WAITs, blocked by technicals, when technicals are simply absent", () => {
+  it("waits for long confirmation, blocked by technicals, when technicals are simply absent", () => {
     // Matches MarketThesis's own contract: technicalConfirmation is empty
     // when candle data is unavailable — that's what "no technical read"
     // looks like in real data, not a thesis with confirmation lines but no
@@ -146,9 +184,20 @@ describe("buildTradeRecommendation", () => {
       baseThesis({ dominant: "bullish", technicalConfirmation: [] }),
       null
     );
-    expect(rec.action).toBe("wait");
+    expect(rec.action).toBe("wait-long-confirmation");
     expect(rec.blockingLayer).toBe("technicals");
     expect(rec.reason).toContain("No technical read is available");
+  });
+
+  it("waits for SHORT confirmation, not long, when the blocked thesis is bearish", () => {
+    const rec = buildTradeRecommendation(
+      baseBias({ verdict: "bearish", score: 30 }),
+      baseThesis({ dominant: "bearish", technicalConfirmation: [] }),
+      null
+    );
+    expect(rec.action).toBe("wait-short-confirmation");
+    expect(rec.label).toBe("WAIT FOR SHORT CONFIRMATION");
+    expect(rec.blockingLayer).toBe("technicals");
   });
 
   it("never fabricates a specific numeric technical trigger level it can't back with real data", () => {
@@ -157,7 +206,7 @@ describe("buildTradeRecommendation", () => {
       baseThesis({ dominant: "bullish" }),
       baseTechnicals("neutral") // "neutral" technicals -> technicalAgreement reads "not-yet-confirmed", not "confirms"
     );
-    expect(rec.action).toBe("wait");
+    expect(rec.action).toBe("wait-long-confirmation");
     expect(rec.nextTrigger).not.toMatch(/RSI\s*>|MACD\s*crossover|EMA\s*\d/i);
   });
 
@@ -168,7 +217,7 @@ describe("buildTradeRecommendation", () => {
     expect(rec.reason.toLowerCase()).not.toContain("cannot determine");
   });
 
-  it("WAITs, blocked by technicals, when the thesis agrees directionally but a regular divergence undercuts it", () => {
+  it("waits for long confirmation, blocked by technicals, when the thesis agrees directionally but a regular divergence undercuts it", () => {
     const bullishTechnicals = baseTechnicals("bullish");
     const rec = buildTradeRecommendation(
       baseBias({ verdict: "bullish", score: 70 }),
@@ -186,7 +235,7 @@ describe("buildTradeRecommendation", () => {
         },
       }
     );
-    expect(rec.action).toBe("wait");
+    expect(rec.action).toBe("wait-long-confirmation");
     expect(rec.blockingLayer).toBe("technicals");
     // Cites the real divergence source and kind, not a generic message.
     expect(rec.reason).toContain("RSI");

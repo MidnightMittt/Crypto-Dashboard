@@ -485,6 +485,7 @@ export function replayAsset(
       deribitOptions: null,
       marketThesis: thesis,
       technicals,
+      technicals4h: null, // MTF confirmation is live-only for this pass — OKX's 4H candles cap at 300 bars (50 days), far short of the backtest's multi-year window; backtesting this would need a new historical 4H data source, out of scope here (see okxCandles.ts)
       liquidityMap: null, // Liquidity Map's card reads live-only market structure, not backtested — see marketStructure.ts
       etfFlows: etfSummary,
       spotPerpVolume,

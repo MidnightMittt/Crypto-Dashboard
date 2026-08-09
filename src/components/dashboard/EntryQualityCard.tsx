@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { VerdictBadge } from "@/components/ui/VerdictBadge";
 import { AggregateMarketData } from "@/types/market";
 import { buildEntryQuality, StarRating } from "@/lib/signals/entryQuality";
+import { SupportResistanceZone } from "@/lib/technicals/marketStructure";
 import { buildTradeRecommendation } from "@/lib/signals/tradeRecommendation";
 import { lookupBiasVerdictStat } from "@/lib/sentiment/backtestStats";
 import { formatUsd } from "@/lib/utils/format";
@@ -33,9 +34,9 @@ export function EntryQualityCard({ aggregate }: { aggregate: AggregateMarketData
     );
   }
 
-  const recommendation = buildTradeRecommendation(bias, aggregate.marketThesis, aggregate.technicals);
+  const recommendation = buildTradeRecommendation(bias, aggregate.marketThesis, aggregate.technicals, aggregate.technicals4h);
 
-  if (recommendation.action === "wait") {
+  if (recommendation.action !== "enter-long" && recommendation.action !== "enter-short") {
     return (
       <EmptyState
         headline={recommendation.label}
@@ -100,11 +101,26 @@ export function EntryQualityCard({ aggregate }: { aggregate: AggregateMarketData
           </div>
         </div>
 
+        {/*
+          Support/resistance shown explicitly, right alongside the
+          entry/stop/target numbers derived from it — not just implied by
+          the basis captions above. Real zones (a range, not a point), with
+          the same strength/reaction-count/status context the Liquidity
+          Map card shows, so the trader can see WHY these specific levels
+          matter without leaving this card.
+        */}
+        <div className="grid grid-cols-2 gap-4 border-t border-hairline pt-4">
+          <ZoneStat label="Support" zone={eq.nearestSupport} tone="bull" />
+          <ZoneStat label="Resistance" zone={eq.nearestResistance} tone="bear" />
+        </div>
+
         <p className="text-sm leading-relaxed text-ink-muted">{eq.starRationale}</p>
 
         <p className="border-t border-hairline pt-3 text-[11px] leading-relaxed text-ink-faint">
           Reference levels derived from {isLong ? "support/resistance below" : "support/resistance above"}{" "}
           the current price and recent volatility (ATR) — not a trade recommendation. The
+          stop above is the TRADE invalidation, not the broader market thesis — see the
+          Invalidation level section above for what would change the thesis itself. The
           historical win rate describes how often this verdict&apos;s direction has been right over
           the next day across the backtested window, not the odds of this specific setup.
         </p>
@@ -146,6 +162,32 @@ function StarDisplay({ stars }: { stars: StarRating }) {
           className={`h-4 w-4 ${i <= stars ? "fill-amber text-amber" : "text-ink-faint"}`}
         />
       ))}
+    </div>
+  );
+}
+
+function ZoneStat({ label, zone, tone }: { label: string; zone: SupportResistanceZone | null; tone: "bull" | "bear" }) {
+  const toneClass = tone === "bull" ? "text-success" : "text-danger";
+  if (!zone) {
+    return (
+      <div>
+        <dt className="text-[9px] uppercase tracking-[0.14em] text-ink-faint">{label}</dt>
+        <dd className="mt-0.5 text-sm text-ink-faint">None identified nearby</dd>
+      </div>
+    );
+  }
+  const range = zone.priceLow === zone.priceHigh ? formatUsd(zone.priceLow) : `${formatUsd(zone.priceLow)}–${formatUsd(zone.priceHigh)}`;
+  const detail = [
+    zone.reactionCount > 0 ? `${zone.reactionCount} touch${zone.reactionCount === 1 ? "" : "es"}` : "volume-based",
+    zone.status !== "inactive" ? zone.status : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  return (
+    <div>
+      <dt className="text-[9px] uppercase tracking-[0.14em] text-ink-faint">{label}</dt>
+      <dd className={`mt-0.5 font-mono text-sm ${toneClass}`}>{range}</dd>
+      <dd className="mt-0.5 text-[10px] leading-snug text-ink-faint">{detail}</dd>
     </div>
   );
 }
