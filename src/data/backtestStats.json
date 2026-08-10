@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1785980361656,
+  "generatedAt": 1786342458578,
   "coverageStart": "2022-08-13",
   "coverageEnd": "2026-07-30",
   "squeeze": {
@@ -62,18 +62,18 @@
   },
   "thesis": {
     "Leaning Bearish": {
-      "n": 1013,
-      "mean1dPct": 0.2642972264013802,
-      "mean3dPct": 0.24036587282601096,
-      "mean7dPct": 0.40599608138193377,
+      "n": 1114,
+      "mean1dPct": 0.2686018105948569,
+      "mean3dPct": 0.29904136167474954,
+      "mean7dPct": 0.6004288960379067,
       "fadeHitRatePct": null,
       "winRatePct": null
     },
-    "Mixed / Low Conviction": {
-      "n": 306,
-      "mean1dPct": 0.5758351390823518,
-      "mean3dPct": 0.7817975610983882,
-      "mean7dPct": 1.164138259927983,
+    "Leaning Bullish": {
+      "n": 333,
+      "mean1dPct": 0.4689305667398589,
+      "mean3dPct": 0.7567451936497546,
+      "mean7dPct": 0.9830863581849514,
       "fadeHitRatePct": null,
       "winRatePct": null
     },
@@ -93,19 +93,19 @@
       "fadeHitRatePct": null,
       "winRatePct": null
     },
+    "Mixed / Low Conviction": {
+      "n": 13,
+      "mean1dPct": 1.0017322948215126,
+      "mean3dPct": 0.4650849126717993,
+      "mean7dPct": 0.14826674750126742,
+      "fadeHitRatePct": null,
+      "winRatePct": null
+    },
     "Squeeze Setup — Shorts Exposed": {
       "n": 27,
       "mean1dPct": 0.4021555894300446,
       "mean3dPct": 0.7729575187796144,
       "mean7dPct": 2.9902563947398053,
-      "fadeHitRatePct": null,
-      "winRatePct": null
-    },
-    "Leaning Bullish": {
-      "n": 141,
-      "mean1dPct": 0.17347640181506976,
-      "mean3dPct": 0.7691748041625353,
-      "mean7dPct": 1.6332185217883604,
       "fadeHitRatePct": null,
       "winRatePct": null
     }

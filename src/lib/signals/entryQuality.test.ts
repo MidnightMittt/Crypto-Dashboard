@@ -125,6 +125,48 @@ describe("buildEntryQuality — structural support/resistance zones", () => {
     expect(result!.target2Basis).toContain("4:1");
   });
 
+  it("keeps TP2 beyond TP1 even when TP1 alone already clears the flat 4:1 fallback", () => {
+    // Regression: the flat fallback used to be a FIXED 4:1, so a structural
+    // TP1 farther out than that produced a TP2 nearer to price than TP1 —
+    // an inverted pair reporting a worse reward/risk for the farther
+    // target. Found by the execution backtest in 37 of 1350 real setups.
+    const result = buildEntryQuality(
+      inputs({
+        verdict: "bullish",
+        price: 100,
+        atrPct: 2, // riskDistance = 3
+        supportResistance: [
+          zone(97, 97, "support"), // stop
+          zone(120, 120, "resistance"), // TP1: rr = 20/3 = 6.67, already past 4:1
+          // Nothing beyond 120 -> TP2 must fall back, but not to a flat 112.
+        ],
+      })
+    );
+    expect(result!.targetPrice).toBe(120);
+    // fallback rr = max(4, 6.667 + 2) = 8.667 -> 100 + 8.667*3 = 126
+    expect(result!.target2Price).toBeCloseTo(126, 10);
+    expect(result!.target2Price).toBeGreaterThan(result!.targetPrice);
+    expect(result!.riskRewardRatio2).toBeGreaterThan(result!.riskRewardRatio);
+  });
+
+  it("keeps the same TP2 invariant for a short", () => {
+    const result = buildEntryQuality(
+      inputs({
+        verdict: "bearish",
+        price: 100,
+        atrPct: 2, // riskDistance = 3
+        supportResistance: [
+          zone(103, 103, "resistance"), // stop
+          zone(80, 80, "support"), // TP1: rr = 20/3 = 6.67
+        ],
+      })
+    );
+    expect(result!.targetPrice).toBe(80);
+    expect(result!.target2Price).toBeCloseTo(74, 10); // 100 - 8.667*3
+    expect(result!.target2Price).toBeLessThan(result!.targetPrice);
+    expect(result!.riskRewardRatio2).toBeGreaterThan(result!.riskRewardRatio);
+  });
+
   it("ignores support/resistance zones on the wrong side of price for the given direction", () => {
     const result = buildEntryQuality(
       inputs({

@@ -203,9 +203,28 @@ function placeSecondTarget(
       target2Basis: `Next ${describeZone(zone)} beyond TP1, clearing a ${MIN_RR_TP2}:1 reward/risk`,
     };
   }
+
+  /*
+   * FALLBACK_RR_TP2 is a FLOOR, not a fixed level.
+   *
+   * When TP1 itself landed on a structural level already beyond 4:1, a flat
+   * 4:1 TP2 sits CLOSER to price than TP1 — inverting the two and quietly
+   * reporting a WORSE reward/risk for the supposedly farther-out target.
+   * Measured on real history by the execution backtest: this hit 37 of 1350
+   * generated setups (2.7%), with TP1 reaching as far as 17:1.
+   *
+   * Stepping a further FALLBACK_RR beyond TP1 restores the invariant this
+   * function's own doc comment above already promises, and reuses the flat
+   * increment TP1's fallback is built on rather than inventing a constant.
+   */
+  const target1Rr = Math.abs(target1Price - price) / riskDistance;
+  const fallbackRr = Math.max(FALLBACK_RR_TP2, target1Rr + FALLBACK_RR);
   return {
-    target2Price: isLong ? price + FALLBACK_RR_TP2 * riskDistance : price - FALLBACK_RR_TP2 * riskDistance,
-    target2Basis: `${FALLBACK_RR_TP2}:1 reward/risk — no further resistance/support zone beyond TP1 clears ${MIN_RR_TP2}:1`,
+    target2Price: isLong ? price + fallbackRr * riskDistance : price - fallbackRr * riskDistance,
+    target2Basis:
+      fallbackRr > FALLBACK_RR_TP2
+        ? `${fallbackRr.toFixed(1)}:1 reward/risk — no zone beyond TP1 qualifies, and TP1 itself already clears ${FALLBACK_RR_TP2}:1`
+        : `${FALLBACK_RR_TP2}:1 reward/risk — no further resistance/support zone beyond TP1 clears ${MIN_RR_TP2}:1`,
   };
 }
 

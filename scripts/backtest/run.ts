@@ -10,6 +10,12 @@ import { Candle } from "../../src/lib/technicals/indicators";
 import { evaluateAll, SignalContext } from "../../src/lib/signals/evaluators";
 import { classifyRegime, regimeTagsToStrings } from "../../src/lib/technicals/regimes";
 import { buildMarketBias } from "../../src/lib/signals/marketBias";
+import { buildVolumeProfile, buildSupportResistanceZones } from "../../src/lib/technicals/marketStructure";
+import { buildTradeRecommendation } from "../../src/lib/signals/tradeRecommendation";
+import { buildEntryQuality } from "../../src/lib/signals/entryQuality";
+import { technicalAgreement } from "../../src/lib/sentiment/technicals";
+import { resolveTrade, HourBar } from "./execution";
+import { applyCosts, DEFAULT_COST_CONFIG } from "./costs";
 import { LocalHistoryPoint, AggregateMarketData, ExchangeSnapshot, FearGreed, EtfFlowSummary } from "../../src/types/market";
 import type { StablecoinSummary } from "../../src/lib/providers/stablecoins";
 import { classifyLiquidityRegime, classifyRiskRegime, MacroLiquiditySnapshot } from "../../src/lib/providers/macroLiquidity";
@@ -39,6 +45,32 @@ const DATA_DIR = path.join(__dirname, "data");
 const DAY_MS = 86_400_000;
 const OI_BURN_IN_DAYS = 48; // oiPercentileFromHistory's own minimum
 const FORWARD_BUFFER_DAYS = 7; // longest labeled horizon
+
+/**
+ * How many candles the LIVE dashboard actually sees — okxCandles.ts's
+ * `CANDLE_LIMIT`, which OKX hard-caps with no pagination.
+ *
+ * This matters far more than it looks. Handing the replay every candle
+ * since 2021 while the live site only ever sees the last 300 doesn't make
+ * the backtest "more informed" — it makes it a backtest of a DIFFERENT
+ * engine. Measured directly before this constant was introduced: at one
+ * sampled day, unbounded history produced 25 support/resistance zones
+ * where the live 300-bar window produced 12, so a backtested stop could be
+ * placed against a four-year-old swing level today's dashboard physically
+ * cannot see.
+ *
+ * Applied to the two series whose output genuinely changes with window
+ * length (S/R zones and the 4H read). Deliberately NOT applied to the
+ * existing daily `buildTechnicalRead` call below: the same measurement
+ * showed its differences are pure EMA warm-up convergence — RSI agreeing
+ * to ten significant figures, identical divergence classifications — so
+ * capping it would rewrite every already-published statistic in exchange
+ * for no behavioural difference at all.
+ */
+const LIVE_CANDLE_LIMIT = 300;
+
+/** Longest a replayed trade is held before being closed at market — matches the forward buffer above, so every ENTER day has the bars needed to resolve it. */
+const MAX_HOLD_MS = FORWARD_BUFFER_DAYS * DAY_MS;
 
 interface HourlyBar {
   t: number;
@@ -141,6 +173,44 @@ export interface DayRecord {
   metrics: Array<{ id: string; verdict: string }>;
   /** Independent trend/volatility/range-bound tags for this day — see regimes.ts. */
   regimeTags: string[];
+  /**
+   * The Phase 1 execution layer, replayed rather than re-derived:
+   * `buildTradeRecommendation`'s own 5-state action and, when it cleared to
+   * an ENTER, `buildEntryQuality`'s own levels. Until this existed, the
+   * dashboard's actual instructions ("ENTER LONG, stop here, target there")
+   * had never been measured against history at all — only the directional
+   * verdict underneath them had.
+   */
+  action: string | null;
+  /** How the 4H read lined up with the thesis — the MTF caveat's own input, kept for regime/failure-mode segmentation. */
+  agreement4h: string | null;
+  entryStars: number | null;
+  entryPrice: number | null;
+  stopPrice: number | null;
+  targetPrice: number | null;
+  target2Price: number | null;
+  riskRewardRatio: number | null;
+  /**
+   * What actually became of that plan, resolved against real forward hourly
+   * bars (see execution.ts). Null when the day produced no ENTER, when no
+   * honest plan could be placed, or when the forward window had no bars —
+   * never a fabricated flat outcome.
+   */
+  trade: {
+    side: "long" | "short";
+    outcome: string;
+    grossReturnPct: number;
+    netReturnPct: number;
+    feeAndSlippagePct: number;
+    fundingCostPct: number;
+    mfePct: number;
+    maePct: number;
+    hoursToTarget: number | null;
+    hoursToStop: number | null;
+    hoursHeld: number;
+    tp2ReachedBeforeStop: boolean;
+    ambiguousBar: boolean;
+  } | null;
   forwardReturn1h: number | null;
   forwardReturn4h: number | null;
   forwardReturn1d: number | null;
@@ -193,6 +263,44 @@ function rollUpToDaily(hourly: HourlyBar[]): Candle[] {
     bars.sort((a, b) => a.t - b.t);
     out.push({
       t: Date.parse(`${key}T00:00:00Z`),
+      open: bars[0].open,
+      high: Math.max(...bars.map((b) => b.high)),
+      low: Math.min(...bars.map((b) => b.low)),
+      close: bars[bars.length - 1].close,
+      volumeUsd: bars.reduce((s, b) => s + b.volumeUsd, 0),
+    });
+  }
+  return out;
+}
+
+/**
+ * Rolls hourly bars up into 4-hour candles, so the replay can run the same
+ * `buildTechnicalRead` against a higher timeframe that the live site runs
+ * against OKX's native 4H series — closing the multi-timeframe gap that
+ * previously forced `technicals4h: null` here.
+ *
+ * Buckets are aligned to UTC 00:00 and only complete 4-bar groups are kept,
+ * the same "no partial candles" rule `rollUpToDaily` already applies and
+ * for the same reason. Disclosed methodology difference: these are
+ * Binance-derived where the live 4H read is OKX-native, exactly the venue
+ * difference the daily series above already carries.
+ */
+function rollUpTo4h(hourly: HourlyBar[]): Candle[] {
+  const FOUR_HOURS_MS = 4 * 3_600_000;
+  const byBucket = new Map<number, HourlyBar[]>();
+  for (const bar of hourly) {
+    const key = Math.floor(bar.t / FOUR_HOURS_MS) * FOUR_HOURS_MS;
+    const existing = byBucket.get(key);
+    if (existing) existing.push(bar);
+    else byBucket.set(key, [bar]);
+  }
+
+  const out: Candle[] = [];
+  for (const [key, bars] of Array.from(byBucket.entries()).sort((a, b) => a[0] - b[0])) {
+    if (bars.length < 4) continue; // incomplete bucket
+    bars.sort((a, b) => a.t - b.t);
+    out.push({
+      t: key,
       open: bars[0].open,
       high: Math.max(...bars.map((b) => b.high)),
       low: Math.min(...bars.map((b) => b.low)),
@@ -346,6 +454,7 @@ export function replayAsset(
   const records: DayRecord[] = [];
 
   const dailyCandles = rollUpToDaily(futuresKlines);
+  const fourHourCandles = rollUpTo4h(futuresKlines);
   // Date-string -> index, so each evaluated day can look up its OWN candle
   // (not a prior one) for regime classification — describing conditions AS
   // OF t is not lookahead; only forward returns (computed from data AFTER
@@ -402,6 +511,21 @@ export function replayAsset(
     const candleIdx = dailyCandleIndex.get(new Date(t).toISOString().slice(0, 10));
     const regime = candleIdx !== undefined ? classifyRegime(dailyCandles, candleIdx) : null;
 
+    /*
+     * Every candle series the decision engine reads, cut off strictly
+     * before this evaluation day. Hoisted so the technical read, the 4H
+     * read and the support/resistance zones all provably share ONE cutoff
+     * — three separate inline filters would be three separate chances to
+     * get the boundary wrong.
+     */
+    const priorDaily = dailyCandles.filter((c) => c.t < t);
+    const liveWindowDaily = priorDaily.slice(-LIVE_CANDLE_LIMIT);
+    const prior4h = fourHourCandles.filter((c) => c.t < t).slice(-LIVE_CANDLE_LIMIT);
+
+    const technicals4h = prior4h.length > 0 ? buildTechnicalRead(prior4h) : null;
+    const volumeProfile = buildVolumeProfile(liveWindowDaily);
+    const supportResistance = buildSupportResistanceZones(liveWindowDaily, volumeProfile);
+
     const thesisInputs: MarketThesisInputs = {
       asset: asset as "BTC" | "ETH",
       weightedFundingRatePct: currentFunding.fundingRatePct,
@@ -416,7 +540,7 @@ export function replayAsset(
        * Only bars that CLOSED strictly before this evaluation day, so the
        * technical read can't see the day it is being used to score.
        */
-      technicals: buildTechnicalRead(dailyCandles.filter((c) => c.t < t)),
+      technicals: buildTechnicalRead(priorDaily),
       liquidations: null,
       priceChange24hPct,
       leverageHeatScore,
@@ -485,8 +609,21 @@ export function replayAsset(
       deribitOptions: null,
       marketThesis: thesis,
       technicals,
-      technicals4h: null, // MTF confirmation is live-only for this pass — OKX's 4H candles cap at 300 bars (50 days), far short of the backtest's multi-year window; backtesting this would need a new historical 4H data source, out of scope here (see okxCandles.ts)
-      liquidityMap: null, // Liquidity Map's card reads live-only market structure, not backtested — see marketStructure.ts
+      /*
+       * Both of these were `null` until Phase 3, on the belief that neither
+       * had a historical source. Both beliefs were wrong:
+       *
+       *  - 4H candles don't need OKX's 300-bar live endpoint at all; they
+       *    roll up from the hourly klines already on disk (rollUpTo4h).
+       *  - Support/resistance is a pure function of daily candles
+       *    (buildSupportResistanceZones), which this replay already builds.
+       *
+       * Filling them in is what makes an execution backtest possible: the
+       * action gate reads technicals4h for its MTF caveat, and every
+       * entry/stop/target level is derived from these zones.
+       */
+      technicals4h,
+      liquidityMap: { volumeProfile, supportResistance },
       etfFlows: etfSummary,
       spotPerpVolume,
       marketBias: null,
@@ -524,6 +661,57 @@ export function replayAsset(
 
     const regimeTags = regime ? regimeTagsToStrings(regime) : [];
 
+    /*
+     * The Phase 1 execution layer, replayed through the REAL production
+     * functions — same rule this file has always followed for the scoring
+     * layer. This is the part of the dashboard a trader actually acts on,
+     * and until now it was the only part never measured.
+     */
+    const recommendation = bias ? buildTradeRecommendation(bias, thesis, technicals, technicals4h) : null;
+    const isEnter = recommendation?.action === "enter-long" || recommendation?.action === "enter-short";
+
+    /*
+     * `historicalWinRatePct` is deliberately null rather than read from the
+     * shipped backtestStats.json. Those stats are computed ACROSS THE WHOLE
+     * WINDOW, so feeding them to a 2023 replay day would leak that day's
+     * own future into its star rating — textbook look-ahead. The win rate
+     * only feeds the star score, never the levels, so entry/stop/targets
+     * here are identical to live; only the stars differ, and they differ in
+     * the honest direction (a neutral 0.5 component instead of a
+     * future-informed one).
+     */
+    const entryQuality =
+      bias && isEnter
+        ? buildEntryQuality({
+            verdict: bias.verdict,
+            confidence: bias.confidence,
+            agreement: bias.agreement,
+            price: currentPrice,
+            atrPct: technicals?.atrPct ?? null,
+            supportResistance,
+            historicalWinRatePct: null,
+            historicalWinRateN: null,
+          })
+        : null;
+
+    const side = recommendation?.action === "enter-long" ? "long" : "short";
+    const resolution =
+      entryQuality &&
+      resolveTrade(
+        {
+          side,
+          entryPrice: entryQuality.entryPrice,
+          stopPrice: entryQuality.stopPrice,
+          targetPrice: entryQuality.targetPrice,
+          target2Price: entryQuality.target2Price,
+          entryT: t,
+        },
+        futuresKlines as HourBar[],
+        MAX_HOLD_MS
+      );
+
+    const costed = resolution ? applyCosts(resolution.grossReturnPct, side, t, resolution.exitT, fundingRate, DEFAULT_COST_CONFIG) : null;
+
     records.push({
       asset,
       date: new Date(t).toISOString().slice(0, 10),
@@ -546,6 +734,32 @@ export function replayAsset(
       categories: (bias?.categories ?? []).map((c) => ({ category: c.category, score: c.score, verdict: c.verdict })),
       metrics: metricVerdicts.map((m) => ({ id: m.id, verdict: m.verdict })),
       regimeTags,
+      action: recommendation?.action ?? null,
+      agreement4h: thesis && technicals4h ? technicalAgreement(technicals4h, thesis.dominant) : null,
+      entryStars: entryQuality?.stars ?? null,
+      entryPrice: entryQuality?.entryPrice ?? null,
+      stopPrice: entryQuality?.stopPrice ?? null,
+      targetPrice: entryQuality?.targetPrice ?? null,
+      target2Price: entryQuality?.target2Price ?? null,
+      riskRewardRatio: entryQuality?.riskRewardRatio ?? null,
+      trade:
+        resolution && costed
+          ? {
+              side,
+              outcome: resolution.outcome,
+              grossReturnPct: costed.grossReturnPct,
+              netReturnPct: costed.netReturnPct,
+              feeAndSlippagePct: costed.feeAndSlippagePct,
+              fundingCostPct: costed.fundingCostPct,
+              mfePct: resolution.mfePct,
+              maePct: resolution.maePct,
+              hoursToTarget: resolution.hoursToTarget,
+              hoursToStop: resolution.hoursToStop,
+              hoursHeld: resolution.hoursHeld,
+              tp2ReachedBeforeStop: resolution.tp2ReachedBeforeStop,
+              ambiguousBar: resolution.ambiguousBar,
+            }
+          : null,
       forwardReturn1h: forwardReturn(futuresKlines, t, 1 * 3_600_000, 30 * 60_000),
       forwardReturn4h: forwardReturn(futuresKlines, t, 4 * 3_600_000, 30 * 60_000),
       forwardReturn1d: forwardReturn(futuresKlines, t, 1 * DAY_MS, 3 * 3_600_000),
