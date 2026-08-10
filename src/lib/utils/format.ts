@@ -16,6 +16,19 @@ export function formatUsd(value: number, decimals = 2): string {
   });
 }
 
+/**
+ * A crypto price at trader-relevant precision, not accounting precision.
+ * `formatUsd`'s flat 2-decimal default implies false precision on a
+ * 5-figure BTC price ($58,031.50) — this drops to 0 decimals once the
+ * price clears $1,000, matching how a trader actually reads a level.
+ * Every price shown on the dashboard (entry/stop/targets, S/R zones)
+ * should go through this, not a locally re-derived version of the same
+ * rule.
+ */
+export function formatPrice(value: number): string {
+  return formatUsd(value, value >= 1000 ? 0 : 2);
+}
+
 export function formatPct(value: number, decimals = 2, forceSign = true): string {
   const sign = forceSign && value > 0 ? "+" : "";
   return `${sign}${value.toFixed(decimals)}%`;

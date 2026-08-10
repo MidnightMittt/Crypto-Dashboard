@@ -4,7 +4,7 @@ import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { LiquidityMapRead, OrderFlowSummary } from "@/types/market";
 import { MetricVerdict } from "@/lib/signals/types";
 import { SupportResistanceZone, ZoneStatus } from "@/lib/technicals/marketStructure";
-import { formatCompactUsd } from "@/lib/utils/format";
+import { formatCompactUsd, formatPrice } from "@/lib/utils/format";
 
 const STATUS_LABELS: Record<ZoneStatus, string> = {
   approaching: "approaching",
@@ -133,15 +133,6 @@ function ZoneColumn({ title, zones, tone }: { title: string; zones: SupportResis
       )}
     </div>
   );
-}
-
-function formatPrice(value: number): string {
-  return value.toLocaleString("en-US", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: value >= 1000 ? 0 : 2,
-    maximumFractionDigits: value >= 1000 ? 0 : 2,
-  });
 }
 
 /** A zone with no real width (e.g. a degenerate single-bucket volume zone) collapses to one price rather than showing a redundant "$100–$100" range. */

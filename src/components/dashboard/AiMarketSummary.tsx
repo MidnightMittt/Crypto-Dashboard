@@ -175,10 +175,22 @@ function Header({ bias, thesis }: { bias: MarketBias; thesis: MarketThesis | nul
           {bias.trendStrength && (
             <Stat label="Trend Strength" value={bias.trendStrength.label} hint="How strongly price action itself is trending, from the technical read." />
           )}
-          <Stat label="Risk" value={bias.riskLevel.toUpperCase()} hint={bias.riskRationale} />
+          <Stat
+            label="Risk"
+            value={bias.riskLevel.toUpperCase()}
+            hint={bias.riskRationale}
+            tone={bias.riskLevel === "high" ? "danger" : bias.riskLevel === "medium" ? "amber" : "success"}
+          />
           {thesis?.regimeTags && (
             <Stat
-              label="Market Regime"
+              // Deliberately NOT "Market Regime" — that word already
+              // labels the qualitative regime name next to the score above
+              // (e.g. "LEANING BEARISH"), a different concept (directional
+              // lean vs. today's trend/volatility classification). Reusing
+              // "regime" for both risked reading as two verdicts
+              // disagreeing when they're actually answering different
+              // questions.
+              label="Trend / Vol"
               value={regimeBadgeText(thesis.regimeTags)}
               hint="Today's trend/volatility classification — the same one every metric's backtested Best/Worst Environment below is measured against."
             />
@@ -222,11 +234,23 @@ function BiasBacktestStatLine({ verdict }: { verdict: MarketBias["verdict"] }) {
   );
 }
 
-function Stat({ label, value, hint }: { label: string; value: string; hint: string }) {
+function Stat({
+  label,
+  value,
+  hint,
+  tone,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+  /** Only Risk gets a tone — it's the one stat here that's inherently good/bad, not just informational (Confidence/Agreement/Trend Strength/Trend-Vol regime are neutral facts, not alarms). */
+  tone?: "success" | "amber" | "danger";
+}) {
+  const toneClass = tone === "success" ? "text-success" : tone === "amber" ? "text-amber" : tone === "danger" ? "text-danger" : "text-ink";
   return (
     <div className="flex flex-col gap-1" title={hint}>
       <span className="text-[11px] uppercase tracking-[0.16em] text-ink-muted">{label}</span>
-      <span className="font-mono text-lg leading-none text-ink">{value}</span>
+      <span className={`font-mono text-lg leading-none ${toneClass}`}>{value}</span>
     </div>
   );
 }
@@ -325,13 +349,28 @@ function TechnicalConfirmation({
             {config.label}
           </span>
         </div>
-        {htfConfig && (
-          <span className={`inline-flex items-center gap-1 text-[10px] tracking-wide ${htfConfig.text}`}>
-            <span className="text-ink-faint">4H:</span>
-            <span aria-hidden>{htfConfig.dot}</span>
-            {htfConfig.label}
-          </span>
-        )}
+        {/*
+          Escalated to the SAME size/weight as the primary daily badge
+          specifically when the two timeframes disagree — a real daily/4H
+          conflict is exactly the case the multi-timeframe spec wants
+          unmissable, not a footnote. When 4H simply confirms (the
+          unsurprising case), it stays a quiet secondary line so it doesn't
+          compete with the daily verdict for attention.
+        */}
+        {htfConfig &&
+          (htfAgreement === "weakens" || htfAgreement === "contradicts" ? (
+            <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold tracking-wider ${htfConfig.text}`}>
+              <span className="text-ink-faint">4H:</span>
+              <span aria-hidden>{htfConfig.dot}</span>
+              {htfConfig.label}
+            </span>
+          ) : (
+            <span className={`inline-flex items-center gap-1 text-[10px] tracking-wide ${htfConfig.text}`}>
+              <span className="text-ink-faint">4H:</span>
+              <span aria-hidden>{htfConfig.dot}</span>
+              {htfConfig.label}
+            </span>
+          ))}
       </div>
       <ul className="mt-3 flex flex-col gap-2">
         {thesis.technicalConfirmation.map((line, i) => (

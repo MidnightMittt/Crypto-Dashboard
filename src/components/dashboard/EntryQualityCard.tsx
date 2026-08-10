@@ -8,7 +8,7 @@ import { buildEntryQuality, StarRating } from "@/lib/signals/entryQuality";
 import { SupportResistanceZone } from "@/lib/technicals/marketStructure";
 import { buildTradeRecommendation } from "@/lib/signals/tradeRecommendation";
 import { lookupBiasVerdictStat } from "@/lib/sentiment/backtestStats";
-import { formatUsd } from "@/lib/utils/format";
+import { formatPrice } from "@/lib/utils/format";
 import backtestStats from "@/data/backtestStats.json";
 
 /**
@@ -37,12 +37,12 @@ export function EntryQualityCard({ aggregate }: { aggregate: AggregateMarketData
   const recommendation = buildTradeRecommendation(bias, aggregate.marketThesis, aggregate.technicals, aggregate.technicals4h);
 
   if (recommendation.action !== "enter-long" && recommendation.action !== "enter-short") {
-    return (
-      <EmptyState
-        headline={recommendation.label}
-        message={`${recommendation.reason}${recommendation.nextTrigger ? ` Next trigger: ${recommendation.nextTrigger}` : ""}`}
-      />
-    );
+    // Deliberately NOT repeating recommendation.reason/nextTrigger here —
+    // that full sentence is already the first thing on the page, in the
+    // Suggested Action banner. Restating it verbatim a second time here is
+    // pure duplication; this card's own job when there's no qualifying
+    // entry is just to say so plainly and point back up, not re-explain why.
+    return <EmptyState headline={recommendation.label} message="No qualifying entry — see the action above for the current read." />;
   }
 
   const winStat = lookupBiasVerdictStat(backtestStats, bias.verdict);
@@ -116,11 +116,28 @@ export function EntryQualityCard({ aggregate }: { aggregate: AggregateMarketData
 
         <p className="text-sm leading-relaxed text-ink-muted">{eq.starRationale}</p>
 
+        {/*
+          Given its own labeled block, not a clause buried in the
+          disclaimer paragraph below — paired visually and lexically with
+          the Executive Summary card's "Thesis invalidation" section, so
+          both concepts are equally discoverable, per the charter's
+          explicit "keep trade invalidation and thesis invalidation
+          visually and conceptually distinct" requirement.
+        */}
+        <div className="flex flex-col gap-1 rounded-md border border-danger/20 bg-danger/[0.04] px-3 py-2.5">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-danger">
+            Trade invalidation
+          </span>
+          <p className="text-xs leading-relaxed text-ink-muted">
+            <span className="font-mono text-ink">{formatPrice(eq.stopPrice)}</span> — {eq.stopBasis}. This
+            stops the TRADE; the broader market thesis can still hold even if this level breaks — see
+            Thesis invalidation above for what would change the thesis itself.
+          </p>
+        </div>
+
         <p className="border-t border-hairline pt-3 text-[11px] leading-relaxed text-ink-faint">
           Reference levels derived from {isLong ? "support/resistance below" : "support/resistance above"}{" "}
           the current price and recent volatility (ATR) — not a trade recommendation. The
-          stop above is the TRADE invalidation, not the broader market thesis — see the
-          Invalidation level section above for what would change the thesis itself. The
           historical win rate describes how often this verdict&apos;s direction has been right over
           the next day across the backtested window, not the odds of this specific setup.
         </p>
@@ -176,7 +193,7 @@ function ZoneStat({ label, zone, tone }: { label: string; zone: SupportResistanc
       </div>
     );
   }
-  const range = zone.priceLow === zone.priceHigh ? formatUsd(zone.priceLow) : `${formatUsd(zone.priceLow)}–${formatUsd(zone.priceHigh)}`;
+  const range = zone.priceLow === zone.priceHigh ? formatPrice(zone.priceLow) : `${formatPrice(zone.priceLow)}–${formatPrice(zone.priceHigh)}`;
   const detail = [
     zone.reactionCount > 0 ? `${zone.reactionCount} touch${zone.reactionCount === 1 ? "" : "es"}` : "volume-based",
     zone.status !== "inactive" ? zone.status : null,
@@ -207,7 +224,7 @@ function PriceStat({
   return (
     <div>
       <dt className="text-[9px] uppercase tracking-[0.14em] text-ink-faint">{label}</dt>
-      <dd className={`mt-0.5 font-mono text-lg ${toneClass}`}>{formatUsd(value)}</dd>
+      <dd className={`mt-0.5 font-mono text-lg ${toneClass}`}>{formatPrice(value)}</dd>
       {caption && <dd className="mt-0.5 text-[10px] leading-snug text-ink-faint">{caption}</dd>}
     </div>
   );

@@ -9,6 +9,16 @@ import { useDashboardStore } from "@/lib/store/dashboardStore";
 import { AssetSymbol } from "@/types/market";
 import { timeAgo } from "@/lib/utils/format";
 
+/**
+ * 6x the 15-second poll interval — generous enough that a single missed
+ * poll (a slow venue, a transient network blip) doesn't false-alarm, but
+ * short enough to actually mean something if it fires. Past this, the
+ * trader should be told the data might not be live, not left to assume it
+ * still is — the charter's own "never make stale data look fully
+ * trustworthy" rule.
+ */
+const STALE_THRESHOLD_MS = 90_000;
+
 export function Header({ venueCount, updatedAt }: { venueCount?: number; updatedAt?: number }) {
   const { asset, setAsset } = useDashboardStore();
 
@@ -35,7 +45,9 @@ export function Header({ venueCount, updatedAt }: { venueCount?: number; updated
             Options →
           </Link>
           {updatedAt && (
-            <span className="hidden text-[11px] text-ink-faint sm:inline">
+            <span
+              className={`text-[11px] ${Date.now() - updatedAt > STALE_THRESHOLD_MS ? "text-amber" : "text-ink-faint"}`}
+            >
               Updated {timeAgo(updatedAt)}
             </span>
           )}
