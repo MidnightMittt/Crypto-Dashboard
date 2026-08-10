@@ -44,7 +44,7 @@ import { MarketDataProvider } from "../providers/types";
 import { defillamaProvider } from "../providers/defillama";
 import { coinalyzeProvider, fetchCoinalyzeLiquidations } from "../providers/coinalyze";
 import { coingeckoProvider } from "../providers/coingecko";
-import { fetchOkxBookDepth, fetchOkxTakerVolume } from "../providers/okxOrderFlow";
+import { fetchOkxBookDepth, fetchOkxTakerVolume, RawBookDepth } from "../providers/okxOrderFlow";
 import { fetchOkxSpotTakerVolume } from "../providers/okxSpotFlow";
 import { summarizeLiquidations } from "../sentiment/liquidations";
 import { summarizeOrderFlow } from "../sentiment/orderFlow";
@@ -92,7 +92,14 @@ import {
 import { recordDailyPoint } from "../history/dailyStore";
 import { fetchOkxDailyCandles, fetchOkx4hCandles } from "../providers/okxCandles";
 import { buildTechnicalRead } from "../sentiment/technicals";
-import { buildVolumeProfile, buildSupportResistanceZones } from "../technicals/marketStructure";
+import { buildVolumeProfile, buildSupportResistanceZones, SupportResistanceZone } from "../technicals/marketStructure";
+import {
+  detectWalls,
+  classifyWallVsZones,
+  bookPriceRangeOf,
+  LiquidityWall,
+} from "../technicals/liquidityWalls";
+import { recordAndGetPriorSnapshots, classifyPersistence } from "../store/bookSnapshotStore";
 import { classifyRegime } from "../technicals/regimes";
 import { fetchEtfFlows } from "../providers/etfFlows";
 import { fetchSpotVolumeUsd } from "../providers/spotVolume";
@@ -100,7 +107,7 @@ import { evaluateAll } from "../signals/evaluators";
 import { buildMarketBias, snapshotVerdicts } from "../signals/marketBias";
 import { readBiasSnapshot, writeBiasSnapshot } from "../history/biasStore";
 import { recordBiasHistory, BiasHistoryEntry } from "../history/biasHistory";
-import type { TechnicalRead, EtfFlowSummary, SpotPerpVolume, LiquidityMapRead } from "@/types/market";
+import type { TechnicalRead, EtfFlowSummary, SpotPerpVolume, LiquidityMapRead, LiquidityWallRead, LiquidityWallWithPersistence } from "@/types/market";
 
 const ADAPTER_MAP: Record<string, LiveAdapter> = {
   binance: fetchBinance,
@@ -499,6 +506,18 @@ async function withRecordedHistory(
   const oiPercentile = derivedOiPercentile;
   const leverageHeatScore = derivedLeverageHeat;
 
+  /*
+   * Started here, once, rather than inside buildOrderFlowSummary and
+   * buildLiquidityMap separately — both need OKX's book depth (the latter
+   * for Phase 5's wall detection), and unlike fetchOkxDailyCandles this
+   * endpoint has no swr wrapper, so calling it from two places would be a
+   * genuine second live request per poll, not a cache hit. Both consumers
+   * below await this SAME promise; JS starts the fetch immediately on
+   * creation, so sharing it costs nothing versus the old single-caller
+   * shape and halves this feature's OKX request volume.
+   */
+  const bookDepthPromise = asset === "MARKET" ? Promise.resolve(null) : fetchOkxBookDepth(asset).catch(() => null);
+
   // Independent network calls, run concurrently rather than sequentially —
   // none depends on another's result.
   const [
@@ -522,13 +541,13 @@ async function withRecordedHistory(
   ] = await Promise.all([
     buildPoolExposure(asset, agg.exchanges),
     buildLiquidationSummary(asset),
-    buildOrderFlowSummary(asset),
+    buildOrderFlowSummary(asset, bookDepthPromise),
     buildSpotCvdSummary(asset),
     buildExchangeFlow(asset, point.price, point.t),
     buildDeribitOptions(asset, point.t),
     buildTechnicals(asset),
     buildTechnicals4h(asset),
-    buildLiquidityMap(asset),
+    buildLiquidityMap(asset, bookDepthPromise),
     buildMarketRegimeTags(asset),
     buildEtfFlows(asset),
     buildSpotPerpVolume(asset, agg.exchanges),
@@ -1041,19 +1060,22 @@ async function buildLiquidationSummary(
  * whole-market instrument to query, so this is skipped for MARKET mode the
  * same way poolExposure and liquidations are.
  *
+ * `bookDepth` is the shared promise started once above — this function no
+ * longer fetches it itself, since buildLiquidityMap needs the identical
+ * data for Phase 5's wall detection and a second live call would waste
+ * request budget on data already in flight.
+ *
  * No shared rate-budget concern here unlike Coinalyze: OKX's public REST
  * allows 5 requests per 2 seconds (150/min) per its docs, far more than the
- * 2 calls this makes per asset per poll.
+ * calls this makes per asset per poll.
  */
 async function buildOrderFlowSummary(
-  asset: AssetSymbol | "MARKET"
+  asset: AssetSymbol | "MARKET",
+  bookDepth: Promise<RawBookDepth | null>
 ): Promise<OrderFlowSummary | null> {
   if (asset === "MARKET") return null;
-  const [bookDepth, takerVolume] = await Promise.all([
-    fetchOkxBookDepth(asset).catch(() => null),
-    fetchOkxTakerVolume(asset).catch(() => []),
-  ]);
-  return summarizeOrderFlow(bookDepth, takerVolume);
+  const [depth, takerVolume] = await Promise.all([bookDepth, fetchOkxTakerVolume(asset).catch(() => [])]);
+  return summarizeOrderFlow(depth, takerVolume);
 }
 
 /**
@@ -1152,8 +1174,14 @@ async function buildTechnicals4h(asset: AssetSymbol | "MARKET"): Promise<Technic
  * threaded through: `fetchOkxDailyCandles` is already swr-cached (same
  * "second call costs nothing" precedent already used for stablecoins/
  * fearGreed below), so this costs one cache hit, not a second real fetch.
+ *
+ * `bookDepth` is the shared promise started once above — see its own
+ * comment for why it's passed in rather than fetched here.
  */
-async function buildLiquidityMap(asset: AssetSymbol | "MARKET"): Promise<LiquidityMapRead | null> {
+async function buildLiquidityMap(
+  asset: AssetSymbol | "MARKET",
+  bookDepth: Promise<RawBookDepth | null>
+): Promise<LiquidityMapRead | null> {
   if (asset === "MARKET") return null;
 
   const candles = await fetchOkxDailyCandles(asset).catch(() => []);
@@ -1161,7 +1189,48 @@ async function buildLiquidityMap(asset: AssetSymbol | "MARKET"): Promise<Liquidi
 
   const volumeProfile = buildVolumeProfile(candles);
   const supportResistance = buildSupportResistanceZones(candles, volumeProfile);
-  return { volumeProfile, supportResistance };
+  const walls = await buildLiquidityWallRead(asset, bookDepth, supportResistance);
+  return { volumeProfile, supportResistance, walls };
+}
+
+/**
+ * Phase 5's wall-detection pipeline, isolated from buildLiquidityMap's
+ * candle-based structure above so a failure here (KV timeout, degenerate
+ * book) can never take down the S/R read it sits beside — `walls: null`
+ * on any problem, exactly like every other optional field in this
+ * aggregator.
+ */
+async function buildLiquidityWallRead(
+  asset: AssetSymbol,
+  bookDepth: Promise<RawBookDepth | null>,
+  supportResistance: SupportResistanceZone[]
+): Promise<LiquidityWallRead | null> {
+  const depth = await bookDepth;
+  if (!depth) return null;
+
+  const bidResult = detectWalls(depth.bids, "bid");
+  const askResult = detectWalls(depth.asks, "ask");
+  if (!bidResult.reliable && !askResult.reliable) return null;
+
+  const bookPriceRange = bookPriceRangeOf(depth.bids, depth.asks);
+  const zoneRelationships = classifyWallVsZones(bidResult.walls, askResult.walls, supportResistance, bookPriceRange);
+
+  // Best-effort: a KV outage degrades persistence to "unavailable" per
+  // classifyPersistence's own contract, never blocks the walls themselves.
+  const priorSnapshots = await recordAndGetPriorSnapshots(asset, Date.now(), [
+    ...bidResult.walls,
+    ...askResult.walls,
+  ]).catch(() => []);
+
+  const withPersistence = (walls: LiquidityWall[]): LiquidityWallWithPersistence[] =>
+    walls.map((w) => ({ ...w, persistence: classifyPersistence(w, priorSnapshots) }));
+
+  return {
+    bidWalls: withPersistence(bidResult.walls),
+    askWalls: withPersistence(askResult.walls),
+    zoneRelationships,
+    bookPriceRange,
+  };
 }
 
 /**

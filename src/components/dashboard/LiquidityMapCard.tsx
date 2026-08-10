@@ -1,9 +1,11 @@
 "use client";
 
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
-import { LiquidityMapRead, OrderFlowSummary } from "@/types/market";
+import { LiquidityMapRead, LiquidityWallRead, LiquidityWallWithPersistence } from "@/types/market";
 import { MetricVerdict } from "@/lib/signals/types";
 import { SupportResistanceZone, ZoneStatus } from "@/lib/technicals/marketStructure";
+import { WallZoneRelationship } from "@/lib/technicals/liquidityWalls";
+import { PersistenceLabel } from "@/lib/store/bookSnapshotStore";
 import { formatCompactUsd, formatPrice } from "@/lib/utils/format";
 
 const STATUS_LABELS: Record<ZoneStatus, string> = {
@@ -35,11 +37,9 @@ const CONFLUENCE_LABELS: Record<string, string> = {
  */
 export function LiquidityMapCard({
   liquidityMap,
-  orderFlow,
   liquidationsMetric,
 }: {
   liquidityMap: LiquidityMapRead | null;
-  orderFlow: OrderFlowSummary | null;
   liquidationsMetric: MetricVerdict | null;
 }) {
   const zones = liquidityMap?.supportResistance ?? [];
@@ -51,7 +51,7 @@ export function LiquidityMapCard({
     .filter((z) => z.kind === "resistance")
     .sort((a, b) => a.priceLow - b.priceLow)
     .slice(0, 3);
-  const imbalance = orderFlow?.bookImbalance ?? null;
+  const walls = liquidityMap?.walls ?? null;
 
   return (
     <div className="flex flex-col gap-3">
@@ -71,25 +71,12 @@ export function LiquidityMapCard({
         </p>
       ) : (
         <>
-          <ZoneColumn title="Resistance above" zones={resistances} tone="text-danger" />
-          <ZoneColumn title="Support below" zones={supports} tone="text-success" />
+          <ZoneColumn title="Resistance above" zones={resistances} tone="text-danger" walls={walls} />
+          <ZoneColumn title="Support below" zones={supports} tone="text-success" walls={walls} />
         </>
       )}
 
-      {imbalance && (
-        <div className="border-t border-hairline pt-2.5">
-          <span className="text-[11px] uppercase tracking-[0.16em] text-ink-muted">
-            Order book imbalance
-          </span>
-          <p className="mt-1 text-[11px] leading-relaxed text-ink-faint">
-            Bid depth {formatCompactUsd(imbalance.bid.usd)} vs. ask depth{" "}
-            {formatCompactUsd(imbalance.ask.usd)} (
-            {imbalance.imbalancePct >= 0 ? "+" : ""}
-            {imbalance.imbalancePct.toFixed(1)}% toward {imbalance.imbalancePct >= 0 ? "bids" : "asks"}
-            ) across {imbalance.depthLevels} price levels.
-          </p>
-        </div>
-      )}
+      <NotableLiquidity walls={walls} />
 
       {liquidationsMetric && (
         <div className="border-t border-hairline pt-2.5">
@@ -111,7 +98,17 @@ export function LiquidityMapCard({
   );
 }
 
-function ZoneColumn({ title, zones, tone }: { title: string; zones: SupportResistanceZone[]; tone: string }) {
+function ZoneColumn({
+  title,
+  zones,
+  tone,
+  walls,
+}: {
+  title: string;
+  zones: SupportResistanceZone[];
+  tone: string;
+  walls: LiquidityWallRead | null;
+}) {
   return (
     <div>
       <span className="text-[11px] uppercase tracking-[0.16em] text-ink-muted">{title}</span>
@@ -119,20 +116,129 @@ function ZoneColumn({ title, zones, tone }: { title: string; zones: SupportResis
         <p className="mt-1 text-[11px] leading-relaxed text-ink-faint">None identified nearby.</p>
       ) : (
         <ul className="mt-1 flex flex-col gap-1.5">
-          {zones.map((z, i) => (
-            <li key={i} className="text-[11px] leading-relaxed">
-              <span className={`font-mono ${tone}`}>{formatZoneRange(z)}</span>{" "}
-              <span className="text-ink-faint">
-                {z.reactionCount > 0 ? `${z.reactionCount} touch${z.reactionCount === 1 ? "" : "es"}` : "volume-based"}
-                {z.confluence.length > 0 && ` · ${z.confluence.map((c) => CONFLUENCE_LABELS[c] ?? c).join(", ")}`}
-                {z.status !== "inactive" && ` · ${STATUS_LABELS[z.status]}`}
-              </span>
-            </li>
-          ))}
+          {zones.map((z, i) => {
+            const relationship = findZoneRelationship(z, walls);
+            return (
+              <li key={i} className="text-[11px] leading-relaxed">
+                <span className={`font-mono ${tone}`}>{formatZoneRange(z)}</span>{" "}
+                <span className="text-ink-faint">
+                  {z.reactionCount > 0 ? `${z.reactionCount} touch${z.reactionCount === 1 ? "" : "es"}` : "volume-based"}
+                  {z.confluence.length > 0 && ` · ${z.confluence.map((c) => CONFLUENCE_LABELS[c] ?? c).join(", ")}`}
+                  {z.status !== "inactive" && ` · ${STATUS_LABELS[z.status]}`}
+                </span>
+                {relationship && (
+                  <p className="mt-0.5 text-[10px] leading-snug text-ink-faint/80">
+                    {describeZoneRelationship(relationship, z.kind)}
+                  </p>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>
   );
+}
+
+/**
+ * Matched by price range + kind rather than object identity — `walls`
+ * arrives over a JSON API response, so the zone instances inside
+ * `zoneRelationships` are structurally equal to but never the same
+ * reference as the ones in `supportResistance` above.
+ */
+function findZoneRelationship(zone: SupportResistanceZone, walls: LiquidityWallRead | null): WallZoneRelationship | null {
+  if (!walls) return null;
+  return (
+    walls.zoneRelationships.find(
+      (r) => r.zone.priceLow === zone.priceLow && r.zone.priceHigh === zone.priceHigh && r.zone.kind === zone.kind
+    ) ?? null
+  );
+}
+
+/**
+ * The one sentence this feature exists to produce: does real resting
+ * liquidity back this structural level right now? Only rendered for zones
+ * the visible order book actually reaches — see classifyWallVsZones' own
+ * doc comment for why most zones never get a relationship at all.
+ */
+function describeZoneRelationship(relationship: WallZoneRelationship, kind: "support" | "resistance"): string {
+  const side = kind === "support" ? "bid" : "ask";
+  if (relationship.relationship === "backs" && relationship.wall) {
+    return `Backed by a significant ${side} wall (${formatCompactUsd(relationship.wall.usd)} at ${formatPrice(relationship.wall.price)}).`;
+  }
+  if (relationship.relationship === "beyond" && relationship.wall) {
+    const direction = kind === "support" ? "below" : "above";
+    return `No wall right at this level, but a larger ${side} wall sits just ${direction} it (${formatCompactUsd(relationship.wall.usd)}).`;
+  }
+  return `No notable ${side} liquidity currently backing this level.`;
+}
+
+/**
+ * Up to 2 walls per side, from the real per-level OKX book — see
+ * liquidityWalls.ts's header for the methodology and its own measured
+ * finding that this can only ever speak to the area right around current
+ * price, not to targets further away.
+ */
+function NotableLiquidity({ walls }: { walls: LiquidityWallRead | null }) {
+  if (!walls) return null;
+  const bids = [...walls.bidWalls].sort((a, b) => b.zScore - a.zScore).slice(0, 2);
+  const asks = [...walls.askWalls].sort((a, b) => b.zScore - a.zScore).slice(0, 2);
+
+  return (
+    <div className="border-t border-hairline pt-2.5">
+      <div className="flex items-center gap-1.5">
+        <span className="text-[11px] uppercase tracking-[0.16em] text-ink-muted">Notable liquidity</span>
+        <InfoTooltip
+          measures="Individual order-book price levels holding an unusually large resting order versus the rest of the visible book, right now — a real snapshot, not a prediction."
+          whyItMatters="A large resting order can act as a magnet or an obstacle right at the current price. It says nothing about levels further away — the visible book only reaches a tiny fraction of a percent from price."
+        />
+      </div>
+      {bids.length === 0 && asks.length === 0 ? (
+        <p className="mt-1 text-[11px] leading-relaxed text-ink-faint">
+          No standout liquidity concentrations in the visible book right now.
+        </p>
+      ) : (
+        <div className="mt-1 grid grid-cols-2 gap-3">
+          <WallList label="Bid" walls={bids} tone="text-success" />
+          <WallList label="Ask" walls={asks} tone="text-danger" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function WallList({ label, walls, tone }: { label: string; walls: LiquidityWallWithPersistence[]; tone: string }) {
+  if (walls.length === 0) {
+    return (
+      <div>
+        <span className="text-[10px] uppercase tracking-[0.14em] text-ink-faint">{label}</span>
+        <p className="mt-0.5 text-[11px] text-ink-faint">None standout.</p>
+      </div>
+    );
+  }
+  return (
+    <div>
+      <span className="text-[10px] uppercase tracking-[0.14em] text-ink-faint">{label}</span>
+      <ul className="mt-0.5 flex flex-col gap-1">
+        {walls.map((w, i) => (
+          <li key={i} className="text-[11px] leading-relaxed">
+            <span className={`font-mono ${tone}`}>{formatPrice(w.price)}</span>{" "}
+            <span className="text-ink-faint">
+              {formatCompactUsd(w.usd)}
+              {formatPersistence(w.persistence)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Conservative terminology only — never implies intent behind a wall appearing or clearing, per this feature's own persistence methodology (see bookSnapshotStore.ts). */
+function formatPersistence(p: PersistenceLabel): string {
+  if (p.kind === "unavailable") return "";
+  if (p.kind === "new") return " · first seen this poll";
+  return ` · seen in ${p.snapshotsSeenIn}/${p.snapshotsChecked} recent polls`;
 }
 
 /** A zone with no real width (e.g. a degenerate single-bucket volume zone) collapses to one price rather than showing a redundant "$100–$100" range. */

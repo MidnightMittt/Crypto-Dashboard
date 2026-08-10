@@ -6,9 +6,10 @@ import { VerdictBadge } from "@/components/ui/VerdictBadge";
 import { AggregateMarketData } from "@/types/market";
 import { buildEntryQuality, StarRating } from "@/lib/signals/entryQuality";
 import { SupportResistanceZone } from "@/lib/technicals/marketStructure";
+import { executionDistanceContext, ExecutionWallContext } from "@/lib/technicals/liquidityWalls";
 import { buildTradeRecommendation } from "@/lib/signals/tradeRecommendation";
 import { lookupTradeStatsBySide, ExecutionStatsSnapshot } from "@/lib/sentiment/backtestStats";
-import { formatPrice } from "@/lib/utils/format";
+import { formatPrice, formatCompactUsd } from "@/lib/utils/format";
 import executionStatsJson from "@/data/executionStats.json";
 
 const executionStats = executionStatsJson as unknown as ExecutionStatsSnapshot;
@@ -85,6 +86,29 @@ export function EntryQualityCard({ aggregate }: { aggregate: AggregateMarketData
 
   const isLong = eq.verdict === "bullish";
 
+  /*
+   * Real order-book wall context for this specific plan — computed here,
+   * not in the aggregator, because entry/stop/TP1/TP2 only exist once
+   * buildEntryQuality() above has run. See liquidityWalls.ts's own header:
+   * the visible book spans ~0.01% of price while these levels sit 0.5-4
+   * ATR away, so `withinVisibleDepth` will be true for ENTRY alone in the
+   * large majority of real setups — that is the expected, honest result.
+   */
+  const walls = aggregate.liquidityMap?.walls ?? null;
+  const wallContext = walls
+    ? executionDistanceContext(
+        [
+          { point: "entry", price: eq.entryPrice },
+          { point: "stop", price: eq.stopPrice },
+          { point: "tp1", price: eq.targetPrice },
+          { point: "tp2", price: eq.target2Price },
+        ],
+        walls.bidWalls,
+        walls.askWalls,
+        walls.bookPriceRange
+      )
+    : [];
+
   return (
     <Card>
       <CardContent className="flex flex-col gap-5 py-6">
@@ -110,6 +134,8 @@ export function EntryQualityCard({ aggregate }: { aggregate: AggregateMarketData
             <dd className="mt-0.5 text-[10px] leading-snug text-ink-faint">at TP2: {eq.riskRewardRatio2.toFixed(1)}:1</dd>
           </div>
         </div>
+
+        <LiquidityContextLine context={wallContext} />
 
         {/*
           Support/resistance shown explicitly, right alongside the
@@ -200,6 +226,37 @@ function EmptyState({ headline, message }: { headline?: string; message: string 
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-faint">{message}</p>
       </CardContent>
     </Card>
+  );
+}
+
+const POINT_LABEL: Record<ExecutionWallContext["point"], string> = {
+  entry: "Entry",
+  stop: "Stop",
+  tp1: "TP1",
+  tp2: "TP2",
+};
+
+/**
+ * Renders nothing when the book found no wall at any of the four prices —
+ * the expected, common outcome for stop/TP1/TP2 (see liquidityWalls.ts's
+ * header). Silence here is the honest behavior, not a fallback state to
+ * explain away.
+ */
+function LiquidityContextLine({ context }: { context: ExecutionWallContext[] }) {
+  const hits = context.filter((c) => c.wall !== null);
+  if (hits.length === 0) return null;
+
+  return (
+    <p className="text-[11px] leading-relaxed text-ink-faint">
+      <span className="text-ink-muted">Order book:</span>{" "}
+      {hits
+        .map((h) => {
+          const w = h.wall!;
+          return `a significant ${w.side} wall (${formatCompactUsd(w.usd)}) sits right at ${POINT_LABEL[h.point].toLowerCase()} (${formatPrice(w.price)})`;
+        })
+        .join("; ")}
+      .
+    </p>
   );
 }
 

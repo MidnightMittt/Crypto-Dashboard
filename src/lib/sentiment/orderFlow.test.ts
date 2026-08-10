@@ -10,7 +10,7 @@ describe("summarizeOrderFlow", () => {
   });
 
   it("returns a summary from book depth alone, with an empty CVD history", () => {
-    const book: RawBookDepth = { bidUsd: 100, askUsd: 100, depthLevels: 20 };
+    const book: RawBookDepth = { bidUsd: 100, askUsd: 100, depthLevels: 20, bids: [], asks: [] };
     const result = summarizeOrderFlow(book, []);
     expect(result).not.toBeNull();
     expect(result!.bookImbalance).not.toBeNull();
@@ -26,28 +26,28 @@ describe("summarizeOrderFlow", () => {
 
   describe("book imbalance", () => {
     it("computes a zero imbalance when bid and ask depth are equal", () => {
-      const result = summarizeOrderFlow({ bidUsd: 500, askUsd: 500, depthLevels: 20 }, []);
+      const result = summarizeOrderFlow({ bidUsd: 500, askUsd: 500, depthLevels: 20, bids: [], asks: [] }, []);
       expect(result!.bookImbalance!.imbalancePct).toBeCloseTo(0, 6);
     });
 
     it("computes a positive imbalance when bid depth exceeds ask depth", () => {
-      const result = summarizeOrderFlow({ bidUsd: 750, askUsd: 250, depthLevels: 20 }, []);
+      const result = summarizeOrderFlow({ bidUsd: 750, askUsd: 250, depthLevels: 20, bids: [], asks: [] }, []);
       // (750-250)/(750+250)*100 = 50
       expect(result!.bookImbalance!.imbalancePct).toBeCloseTo(50, 6);
     });
 
     it("computes a negative imbalance when ask depth exceeds bid depth", () => {
-      const result = summarizeOrderFlow({ bidUsd: 250, askUsd: 750, depthLevels: 20 }, []);
+      const result = summarizeOrderFlow({ bidUsd: 250, askUsd: 750, depthLevels: 20, bids: [], asks: [] }, []);
       expect(result!.bookImbalance!.imbalancePct).toBeCloseTo(-50, 6);
     });
 
     it("does not divide by zero when both sides of the book are empty", () => {
-      const result = summarizeOrderFlow({ bidUsd: 0, askUsd: 0, depthLevels: 20 }, []);
+      const result = summarizeOrderFlow({ bidUsd: 0, askUsd: 0, depthLevels: 20, bids: [], asks: [] }, []);
       expect(result!.bookImbalance!.imbalancePct).toBe(0);
     });
 
     it("preserves the raw bid/ask USD figures alongside the derived percentage", () => {
-      const result = summarizeOrderFlow({ bidUsd: 123, askUsd: 456, depthLevels: 20 }, []);
+      const result = summarizeOrderFlow({ bidUsd: 123, askUsd: 456, depthLevels: 20, bids: [], asks: [] }, []);
       expect(result!.bookImbalance!.bid.usd).toBe(123);
       expect(result!.bookImbalance!.ask.usd).toBe(456);
       expect(result!.bookImbalance!.depthLevels).toBe(20);
@@ -103,7 +103,7 @@ describe("summarizeOrderFlow", () => {
     });
 
     it("reports 'balanced' when total volume is zero, rather than an artifact of 0/0", () => {
-      const result = summarizeOrderFlow({ bidUsd: 1, askUsd: 1, depthLevels: 20 }, [
+      const result = summarizeOrderFlow({ bidUsd: 1, askUsd: 1, depthLevels: 20, bids: [], asks: [] }, [
         { t: 0, buyUsd: 0, sellUsd: 0 },
       ]);
       expect(result!.dominantFlow).toBe("balanced");
@@ -136,7 +136,7 @@ describe("summarizeOrderFlow", () => {
   });
 
   it("always identifies the venue as OKX, the only source this feature has", () => {
-    const result = summarizeOrderFlow({ bidUsd: 1, askUsd: 1, depthLevels: 20 }, []);
+    const result = summarizeOrderFlow({ bidUsd: 1, askUsd: 1, depthLevels: 20, bids: [], asks: [] }, []);
     expect(result!.venue).toBe("OKX");
   });
 });

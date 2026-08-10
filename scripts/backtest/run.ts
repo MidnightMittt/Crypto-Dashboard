@@ -652,7 +652,10 @@ export function replayAsset(
        * entry/stop/target level is derived from these zones.
        */
       technicals4h,
-      liquidityMap: { volumeProfile, supportResistance },
+      // walls: null — Phase 5's order-book wall detection has no historical
+      // source (same reason orderFlow above is null): OKX's live book depth
+      // isn't archived anywhere, so there is nothing to replay honestly.
+      liquidityMap: { volumeProfile, supportResistance, walls: null },
       etfFlows: etfSummary,
       spotPerpVolume,
       marketBias: null,

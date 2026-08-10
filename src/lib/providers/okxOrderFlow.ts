@@ -37,10 +37,25 @@ export interface RawCvdPoint {
   sellUsd: number;
 }
 
+/** One resting price level, already converted to USD size via contractValue() — the same conversion the bid/ask totals below use. */
+export interface RawBookLevel {
+  price: number;
+  usd: number;
+}
+
 export interface RawBookDepth {
   bidUsd: number;
   askUsd: number;
   depthLevels: number;
+  /**
+   * The individual levels behind bidUsd/askUsd, sorted best-price-first —
+   * i.e. bids descending, asks ascending. OKX's response already contains
+   * this per-level detail (see BookLevel below); previously it was summed
+   * and discarded. Kept here so wall detection (liquidityWalls.ts) can run
+   * on real per-level sizes without a second request to the same endpoint.
+   */
+  bids: RawBookLevel[];
+  asks: RawBookLevel[];
 }
 
 /**
@@ -101,17 +116,22 @@ export async function fetchOkxBookDepth(asset: AssetSymbol): Promise<RawBookDept
     const row = book.data?.[0];
     if (!row) return null;
 
-    const sumUsd = (levels: BookLevel[]) =>
-      levels.reduce((sum, [price, sizeContracts]) => {
-        const p = safeNumber(price);
-        const contracts = safeNumber(sizeContracts);
-        return sum + contracts * ctVal * p;
-      }, 0);
+    const toLevels = (levels: BookLevel[]): RawBookLevel[] =>
+      levels.map(([price, sizeContracts]) => ({
+        price: safeNumber(price),
+        usd: safeNumber(sizeContracts) * ctVal * safeNumber(price),
+      }));
+
+    const bids = toLevels(row.bids ?? []);
+    const asks = toLevels(row.asks ?? []);
+    const sumUsd = (levels: RawBookLevel[]) => levels.reduce((sum, l) => sum + l.usd, 0);
 
     return {
-      bidUsd: sumUsd(row.bids ?? []),
-      askUsd: sumUsd(row.asks ?? []),
+      bidUsd: sumUsd(bids),
+      askUsd: sumUsd(asks),
       depthLevels: BOOK_DEPTH_LEVELS,
+      bids,
+      asks,
     };
   } catch (err) {
     console.warn(`[okx-orderflow] book depth fetch failed for ${asset}:`, err);

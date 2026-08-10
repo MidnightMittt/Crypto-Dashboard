@@ -3,6 +3,8 @@ import type { BiasHistoryEntry } from "@/lib/history/biasHistory";
 import type { VolumeProfileResult, SupportResistanceZone } from "@/lib/technicals/marketStructure";
 import type { RegimeTags } from "@/lib/technicals/regimes";
 import type { DivergenceResult } from "@/lib/technicals/divergence";
+import type { LiquidityWall, WallZoneRelationship } from "@/lib/technicals/liquidityWalls";
+import type { PersistenceLabel } from "@/lib/store/bookSnapshotStore";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Core domain types. Every exchange adapter resolves to this shape.
@@ -581,6 +583,38 @@ export interface TechnicalRead {
 export interface LiquidityMapRead {
   volumeProfile: VolumeProfileResult | null;
   supportResistance: SupportResistanceZone[];
+  /**
+   * Real per-level OKX order-book wall detection — see
+   * lib/technicals/liquidityWalls.ts's own header for the measured finding
+   * that shapes this whole feature: the visible 20-level book spans only
+   * ~0.01% of price, so it can meaningfully speak to ENTRY and to S/R
+   * zones currently overlapping price, but essentially never to stop/TP1/
+   * TP2 (0.5-4 ATR away). Null when the book fetch itself failed or
+   * returned too few levels to detect outliers honestly — genuinely
+   * unavailable, not "no walls found."
+   */
+  walls: LiquidityWallRead | null;
+}
+
+/** A detected wall plus its persistence read — attached at the aggregator layer so the pure detection module (liquidityWalls.ts) stays free of any storage-shaped type. */
+export interface LiquidityWallWithPersistence extends LiquidityWall {
+  persistence: PersistenceLabel;
+}
+
+export interface LiquidityWallRead {
+  bidWalls: LiquidityWallWithPersistence[];
+  askWalls: LiquidityWallWithPersistence[];
+  /** One entry per S/R zone the visible book could actually reach — see classifyWallVsZones' own doc comment for why most zones are excluded rather than defaulted to "weak". */
+  zoneRelationships: WallZoneRelationship[];
+  /**
+   * The visible book's own price span. NOT an execution-plan comparison —
+   * the aggregator has no entry/stop/TP1/TP2 of its own (those are derived
+   * client-side by buildEntryQuality(), from this same liquidityMap plus
+   * the live bias/technicals read). Callers that DO have those prices call
+   * liquidityWalls.ts's `executionDistanceContext()` themselves, passing
+   * this range straight through — see EntryQualityCard.tsx.
+   */
+  bookPriceRange: { min: number; max: number } | null;
 }
 
 /**

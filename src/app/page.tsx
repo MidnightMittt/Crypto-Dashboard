@@ -271,7 +271,6 @@ function rawDetailFor(
           <LiquidationIntelligence data={aggregate} />
           <LiquidityMapCard
             liquidityMap={aggregate.liquidityMap}
-            orderFlow={aggregate.orderFlow}
             liquidationsMetric={aggregate.marketBias?.metrics.find((m) => m.id === "liquidations") ?? null}
           />
           <PoolExposure data={aggregate} />
