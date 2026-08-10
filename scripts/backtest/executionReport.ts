@@ -22,6 +22,18 @@ import { computeTradeStats, TradeRecord, TradeStats } from "./tradeStats";
 import { buildCalibration, CalibrationInput, CalibrationReport } from "./calibration";
 import { buyAndHold, smaCrossover, randomEntry, BenchmarkResult, DailyBar } from "./benchmarks";
 import { buildProvenance, BacktestProvenance } from "./version";
+import {
+  buildWalkForward,
+  buildQuantileCalibration,
+  marginalRegimeCells,
+  summarizeDistribution,
+  classifySample,
+  WalkForwardReport,
+  QuantileCalibration,
+  RegimeCell,
+  DistributionSummary,
+  WalkForwardTrade,
+} from "./walkForward";
 import { MIN_SAMPLE_N } from "../../src/lib/sentiment/backtestStats";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -77,6 +89,11 @@ export interface ExecutionStats {
   calibration24h: CalibrationReport;
   calibration7d: CalibrationReport;
   benchmarks: BenchmarkResult[];
+  walkForward: WalkForwardReport;
+  quantileCalibration: QuantileCalibration;
+  confidenceDistribution: DistributionSummary | null;
+  confidenceByAction: Array<{ label: string; distribution: DistributionSummary }>;
+  marginalRegimes: RegimeCell[];
   /** Segments whose net expectancy is materially worse than the overall base rate. */
   failureModes: Array<{ label: string; n: number; expectancyNetPct: number; stopHitRatePct: number; deltaVsBasePct: number }>;
 }
@@ -182,6 +199,33 @@ function main() {
     }
   }
 
+  const wfTrades: WalkForwardTrade[] = traded.map((d) => ({
+    ...toTradeRecord(d),
+    side: d.trade!.side,
+    exitT: d.t + d.trade!.hoursHeld * 3_600_000,
+  }));
+  const walkForward = buildWalkForward(wfTrades, 5, 7);
+
+  const quantileCalibration = buildQuantileCalibration(calInputs("forwardReturn1d"), 4);
+  const confidenceDistribution = summarizeDistribution(
+    records.filter((r) => r.biasConfidence !== null).map((r) => r.biasConfidence!)
+  );
+  const confidenceByAction = Array.from(
+    new Set(records.map((r) => r.action).filter((a): a is string => a !== null))
+  )
+    .map((action) => ({
+      label: action,
+      distribution: summarizeDistribution(
+        records.filter((r) => r.action === action && r.biasConfidence !== null).map((r) => r.biasConfidence!)
+      )!,
+    }))
+    .filter((x) => x.distribution)
+    .sort((a, b) => b.distribution.n - a.distribution.n);
+
+  const marginalRegimes = marginalRegimeCells(
+    traded.map((d) => ({ ...toTradeRecord(d), regimeTags: d.regimeTags }))
+  );
+
   const base = overall?.expectancyNetPct ?? 0;
   const failureModes = [...byRegime, ...byConfidenceBucket, ...byMtfAgreement, ...groupBy(traded, (d) => d.trade!.side)]
     .map((s) => ({
@@ -213,6 +257,11 @@ function main() {
     calibration24h: buildCalibration(calInputs("forwardReturn1d"), "24h"),
     calibration7d: buildCalibration(calInputs("forwardReturn7d"), "7d"),
     benchmarks,
+    walkForward,
+    quantileCalibration,
+    confidenceDistribution,
+    confidenceByAction,
+    marginalRegimes,
     failureModes,
   };
 
@@ -309,6 +358,89 @@ function renderMarkdown(s: ExecutionStats): string {
   lines.push("");
   lines.push(
     `**Read the last column, not the first.** Buy-and-hold and the SMA crossover are single compounding positions; their total return is not comparable to a per-trade expectancy, and the engine is flat most days besides. The only like-for-like comparison on this table is the engine's net expectancy of ${pct(s.overall.expectancyNetPct, 3)} against random entry's per-trade figure, which is matched to the engine's own trade count, long/short mix and hold length and measured on the identical constant-size basis.`
+  );
+  lines.push("");
+
+  lines.push(`## Walk-forward validation (execution layer)`);
+  lines.push("");
+  lines.push(`> ${s.walkForward.methodology}`);
+  lines.push("");
+  lines.push(`${s.walkForward.foldCount} sequential validation windows, ${s.walkForward.embargoDays}-day purge/embargo.`);
+  lines.push("");
+  lines.push(`| Fold | Discovery ends | Discovery N | Validation window | N | Win | Expectancy (net) | Profit factor | Median MAE | Median MFE | Max DD | Side ranking held |`);
+  lines.push(`|---|---|---|---|---|---|---|---|---|---|---|---|`);
+  for (const f of s.walkForward.folds) {
+    const st = f.stats;
+    lines.push(
+      `| ${f.index} | ${f.discoveryEnd} | ${f.discoveryN} | ${f.validationStart} → ${f.validationEnd} | ${f.validationN} | ${st ? st.winRatePct.toFixed(0) + "%" : "—"} | ${st ? pct(st.expectancyNetPct, 3) : "—"} | ${st ? num(st.profitFactor) : "—"} | ${st ? pct(st.mae?.median ?? null, 1) : "—"} | ${st ? pct(st.mfe?.median ?? null, 1) : "—"} | ${st ? pct(st.maxDrawdownPct, 1) : "—"} | ${f.sideRankingHeld === null ? "not testable" : f.sideRankingHeld ? "yes" : "NO"} |`
+    );
+  }
+  lines.push("");
+  lines.push(
+    `Pooled (in-sample) net expectancy ${pct(s.walkForward.inSample?.expectancyNetPct ?? null, 3)} vs mean out-of-sample ${pct(s.walkForward.meanOutOfSampleExpectancyPct, 3)} (worst fold ${pct(s.walkForward.worstFoldExpectancyPct, 3)}, best ${pct(s.walkForward.bestFoldExpectancyPct, 3)}).`
+  );
+  lines.push("");
+  lines.push(`**${s.walkForward.interpretation}**`);
+  lines.push("");
+
+  lines.push(`## Confidence distribution — why the high bands are empty`);
+  lines.push("");
+  if (s.confidenceDistribution) {
+    const d = s.confidenceDistribution;
+    lines.push(`| N | Min | p10 | p25 | Median | p75 | p90 | Max | Mean |`);
+    lines.push(`|---|---|---|---|---|---|---|---|---|`);
+    lines.push(`| ${d.n} | ${d.min.toFixed(0)} | ${d.p10.toFixed(0)} | ${d.p25.toFixed(0)} | ${d.median.toFixed(0)} | ${d.p75.toFixed(0)} | ${d.p90.toFixed(0)} | ${d.max.toFixed(0)} | ${d.mean.toFixed(1)} |`);
+    lines.push("");
+    lines.push(
+      `The score never leaves [${d.min.toFixed(0)}, ${d.max.toFixed(0)}]. This is a STRUCTURAL property of the scoring system, not a data artefact and not a bug: \`bias.confidence\` is a weight-weighted arithmetic MEAN of ~15 per-metric confidences (scoring.ts), and a mean over many bounded partially-independent components concentrates around its centre by construction. Reaching 80 would require nearly every metric to report >=80 simultaneously, which never occurs because several metrics are structurally mid-confidence. Cause: (A) an intentional property of the scoring system.`
+    );
+    lines.push("");
+    lines.push(
+      `Consequence for measurement: three of the five fixed 0-20/.../80-100 bands are PERMANENTLY unpopulated, so fixed-band calibration cannot test ordering within the range the score actually occupies. Calibration above ${d.max.toFixed(0)} confidence cannot currently be established due to insufficient historical observations — there are none. The quantile analysis below measures ordering inside the real range instead.`
+    );
+    lines.push("");
+  }
+  if (s.confidenceByAction.length > 0) {
+    lines.push(`| Action state | N | Min | Median | Max |`);
+    lines.push(`|---|---|---|---|---|`);
+    for (const a of s.confidenceByAction) {
+      lines.push(`| ${a.label} | ${a.distribution.n} | ${a.distribution.min.toFixed(0)} | ${a.distribution.median.toFixed(0)} | ${a.distribution.max.toFixed(0)} |`);
+    }
+    lines.push("");
+  }
+
+  lines.push(`## Confidence ordering — empirical quantiles`);
+  lines.push("");
+  if (s.quantileCalibration.buckets.length === 0) {
+    lines.push(`_${s.quantileCalibration.interpretation}_`);
+  } else {
+    lines.push(`| Confidence quartile | N | Observed favourable (24h) | 95% CI |`);
+    lines.push(`|---|---|---|---|`);
+    for (const b of s.quantileCalibration.buckets) {
+      lines.push(`| ${b.label} | ${b.n} | ${b.observedRatePct.toFixed(1)}% | ${(b.interval.lower * 100).toFixed(0)}-${(b.interval.upper * 100).toFixed(0)}% |`);
+    }
+    lines.push("");
+    lines.push(`**${s.quantileCalibration.interpretation}**`);
+    lines.push("");
+    lines.push(`These are equal-population quantiles of the OBSERVED distribution, not probability bands. A quantile has no implied success rate, so nothing here can be read as "confidence N means N%".`);
+  }
+  lines.push("");
+
+  lines.push(`## Regime analysis — marginal, with sample adequacy`);
+  lines.push("");
+  lines.push(`Thresholds: **adequate** N>=100, **thin** N>=30, **insufficient** N<30 (stats withheld entirely).`);
+  lines.push("");
+  lines.push(`| Regime tag | Dimension | N | Adequacy | Win | Expectancy (net) | Median outcome | Median MAE | Median MFE |`);
+  lines.push(`|---|---|---|---|---|---|---|---|---|`);
+  for (const c of s.marginalRegimes) {
+    const st = c.stats;
+    lines.push(
+      `| ${c.label} | ${c.dimension} | ${c.n} | ${c.adequacy} | ${st ? st.winRatePct.toFixed(0) + "%" : "—"} | ${st ? pct(st.expectancyNetPct, 3) : "insufficient sample"} | ${st ? pct(st.medianNetPct, 2) : "—"} | ${st ? pct(st.mae?.median ?? null, 1) : "—"} | ${st ? pct(st.mfe?.median ?? null, 1) : "—"} |`
+    );
+  }
+  lines.push("");
+  lines.push(
+    `Reported alongside the full cross-product above, not instead of it. The cross-product is where the sample problem lives — three dimensions multiply into 16 cells, several holding a dozen trades, and a -2.5% expectancy from twelve trades is noise wearing a conclusion's clothing. The marginal view answers the same practical questions at 5-10x the sample size. Cross-product cells below 30 trades should be read as descriptive only.`
   );
   lines.push("");
 

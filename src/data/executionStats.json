@@ -2,7 +2,7 @@
   "provenance": {
     "engineVersion": "3.1.0",
     "featureVersion": "2.0.0",
-    "generatedAt": 1786342981768,
+    "generatedAt": 1786344561634,
     "assets": [
       "BTC",
       "ETH"
@@ -1119,6 +1119,672 @@
       "maxDrawdownPct": -1145.168650948193,
       "exposurePct": 100,
       "meanReturnPerTradePct": -0.9809850799621799
+    }
+  ],
+  "walkForward": {
+    "methodology": "The execution engine has no fitted parameters: every threshold is a source-code constant and every percentile is ranked against prior history only. There is therefore nothing to train, and a conventional train/test split would be theatre — refitting nothing would reproduce identical decisions. These folds instead measure (a) whether the edge PERSISTS across sequential unseen periods, and (b) a genuine out-of-sample test: rank the two sides on discovery data alone, then check whether that ranking held in the following window. Discovery sets exclude any trade still open at the boundary (purge + embargo), so no validation-period price action can reach back into a discovery statistic.",
+    "foldCount": 5,
+    "embargoDays": 7,
+    "folds": [
+      {
+        "index": 1,
+        "discoveryEnd": "2023-04-08",
+        "discoveryN": 224,
+        "validationStart": "2023-04-15",
+        "validationEnd": "2023-12-11",
+        "validationN": 219,
+        "stats": {
+          "n": 219,
+          "winRatePct": 39.726027397260275,
+          "targetHitRatePct": 11.415525114155251,
+          "stopHitRatePct": 45.20547945205479,
+          "timeoutRatePct": 43.37899543378995,
+          "tp2BeforeStopRatePct": 4.5662100456621,
+          "ambiguousRatePct": 0,
+          "expectancyGrossPct": -0.48345539825227835,
+          "expectancyNetPct": -0.5840910603527346,
+          "avgWinPct": 4.0279841910519725,
+          "avgLossPct": -3.6238679305967465,
+          "medianNetPct": -1.7186154135110492,
+          "profitFactor": 0.7325895460674485,
+          "maxDrawdownPct": -226.20047416328558,
+          "sharpePerTrade": -0.12197407365112797,
+          "sortinoPerTrade": -0.3074428621074949,
+          "calmar": -0.8858661490413237,
+          "mfe": {
+            "p25": 1.0378018835128375,
+            "median": 2.776567703064902,
+            "p75": 4.592758600840191
+          },
+          "mae": {
+            "p25": -5.311353488270387,
+            "median": -3.049976813041772,
+            "p75": -1.5493935495510338
+          },
+          "medianHoursToTarget": 85,
+          "medianHoursToStop": 80,
+          "medianHoursHeld": 138
+        },
+        "discoveryBetterSide": "long",
+        "validationBetterSide": "long",
+        "sideRankingHeld": true
+      },
+      {
+        "index": 2,
+        "discoveryEnd": "2023-12-04",
+        "discoveryN": 442,
+        "validationStart": "2023-12-11",
+        "validationEnd": "2024-08-07",
+        "validationN": 258,
+        "stats": {
+          "n": 258,
+          "winRatePct": 46.12403100775194,
+          "targetHitRatePct": 8.914728682170542,
+          "stopHitRatePct": 25.581395348837212,
+          "timeoutRatePct": 65.50387596899225,
+          "tp2BeforeStopRatePct": 1.1627906976744187,
+          "ambiguousRatePct": 0,
+          "expectancyGrossPct": 0.09211831014535553,
+          "expectancyNetPct": 0.08344433727713838,
+          "avgWinPct": 5.778543184653589,
+          "avgLossPct": -4.792215827023566,
+          "medianNetPct": -0.721531017416502,
+          "profitFactor": 1.0323195575242143,
+          "maxDrawdownPct": -126.4215636217105,
+          "sharpePerTrade": 0.013299554862646824,
+          "sortinoPerTrade": 0.026208856325229086,
+          "calmar": 0.26007007430726264,
+          "mfe": {
+            "p25": 1.9160216502350547,
+            "median": 5.13130477137801,
+            "p75": 9.030589484482835
+          },
+          "mae": {
+            "p25": -6.670767855485435,
+            "median": -4.253915632068706,
+            "p75": -2.0841729960317066
+          },
+          "medianHoursToTarget": 74,
+          "medianHoursToStop": 84.5,
+          "medianHoursHeld": 168
+        },
+        "discoveryBetterSide": "long",
+        "validationBetterSide": "long",
+        "sideRankingHeld": true
+      },
+      {
+        "index": 3,
+        "discoveryEnd": "2024-08-01",
+        "discoveryN": 694,
+        "validationStart": "2024-08-08",
+        "validationEnd": "2025-04-05",
+        "validationN": 221,
+        "stats": {
+          "n": 221,
+          "winRatePct": 40.723981900452486,
+          "targetHitRatePct": 6.334841628959276,
+          "stopHitRatePct": 31.221719457013574,
+          "timeoutRatePct": 62.44343891402715,
+          "tp2BeforeStopRatePct": 0.904977375565611,
+          "ambiguousRatePct": 0,
+          "expectancyGrossPct": -0.26234069188452164,
+          "expectancyNetPct": -0.4012672258211731,
+          "avgWinPct": 5.6687033404197145,
+          "avgLossPct": -4.571476011788198,
+          "medianNetPct": -1.346680349932394,
+          "profitFactor": 0.8519193806244417,
+          "maxDrawdownPct": -229.59908616611892,
+          "sharpePerTrade": -0.06055508503827146,
+          "sortinoPerTrade": -0.1400568822061562,
+          "calmar": -0.5923408924645159,
+          "mfe": {
+            "p25": 1.8934236190336042,
+            "median": 4.256251249399232,
+            "p75": 7.33010974779889
+          },
+          "mae": {
+            "p25": -6.852038107773019,
+            "median": -4.635044638775205,
+            "p75": -2.650476467405515
+          },
+          "medianHoursToTarget": 57,
+          "medianHoursToStop": 65,
+          "medianHoursHeld": 168
+        },
+        "discoveryBetterSide": "long",
+        "validationBetterSide": "short",
+        "sideRankingHeld": false
+      },
+      {
+        "index": 4,
+        "discoveryEnd": "2025-03-29",
+        "discoveryN": 924,
+        "validationStart": "2025-04-05",
+        "validationEnd": "2025-12-01",
+        "validationN": 207,
+        "stats": {
+          "n": 207,
+          "winRatePct": 47.34299516908212,
+          "targetHitRatePct": 13.043478260869565,
+          "stopHitRatePct": 24.154589371980677,
+          "timeoutRatePct": 62.80193236714976,
+          "tp2BeforeStopRatePct": 2.4154589371980677,
+          "ambiguousRatePct": 0,
+          "expectancyGrossPct": 0.5830279905428289,
+          "expectancyNetPct": 0.4655677586587712,
+          "avgWinPct": 5.87076560314487,
+          "avgLossPct": -4.394151404273683,
+          "medianNetPct": -0.418018252076908,
+          "profitFactor": 1.2012110038374335,
+          "maxDrawdownPct": -183.2835922820096,
+          "sharpePerTrade": 0.07194467169251646,
+          "sortinoPerTrade": 0.1468484421867381,
+          "calmar": 0.8063907950702865,
+          "mfe": {
+            "p25": 1.5333694429912743,
+            "median": 3.5633520673960515,
+            "p75": 7.77093577187439
+          },
+          "mae": {
+            "p25": -5.307909176611622,
+            "median": -3.0665114752990505,
+            "p75": -1.4580799048374267
+          },
+          "medianHoursToTarget": 93,
+          "medianHoursToStop": 66.5,
+          "medianHoursHeld": 168
+        },
+        "discoveryBetterSide": "long",
+        "validationBetterSide": "long",
+        "sideRankingHeld": true
+      },
+      {
+        "index": 5,
+        "discoveryEnd": "2025-11-24",
+        "discoveryN": 1127,
+        "validationStart": "2025-12-01",
+        "validationEnd": "2026-07-30",
+        "validationN": 214,
+        "stats": {
+          "n": 214,
+          "winRatePct": 53.271028037383175,
+          "targetHitRatePct": 14.018691588785046,
+          "stopHitRatePct": 18.22429906542056,
+          "timeoutRatePct": 67.7570093457944,
+          "tp2BeforeStopRatePct": 3.7383177570093453,
+          "ambiguousRatePct": 0,
+          "expectancyGrossPct": 1.6737724933996683,
+          "expectancyNetPct": 1.5768818859230325,
+          "avgWinPct": 6.518277112592737,
+          "avgLossPct": -4.056308672480429,
+          "medianNetPct": 0.6371879906440434,
+          "profitFactor": 1.831920721115085,
+          "maxDrawdownPct": -97.64569592137012,
+          "sharpePerTrade": 0.23163015893326835,
+          "sortinoPerTrade": 0.5611843315741889,
+          "calmar": 5.277822694089898,
+          "mfe": {
+            "p25": 2.199351277287396,
+            "median": 4.932232351649248,
+            "p75": 8.328001919678497
+          },
+          "mae": {
+            "p25": -5.111698900961731,
+            "median": -3.086002628401727,
+            "p75": -1.3442566645801606
+          },
+          "medianHoursToTarget": 91.5,
+          "medianHoursToStop": 84,
+          "medianHoursHeld": 168
+        },
+        "discoveryBetterSide": "long",
+        "validationBetterSide": "short",
+        "sideRankingHeld": false
+      }
+    ],
+    "inSample": {
+      "n": 1350,
+      "winRatePct": 44.81481481481481,
+      "targetHitRatePct": 9.62962962962963,
+      "stopHitRatePct": 29.85185185185185,
+      "timeoutRatePct": 60.51851851851852,
+      "tp2BeforeStopRatePct": 2.148148148148148,
+      "ambiguousRatePct": 0,
+      "expectancyGrossPct": 0.09000400035247358,
+      "expectancyNetPct": -0.004304498166044665,
+      "avgWinPct": 5.418190577004611,
+      "avgLossPct": -4.407807210217381,
+      "medianNetPct": -0.7898411130822939,
+      "profitFactor": 0.9982303905375479,
+      "maxDrawdownPct": -676.9337427708576,
+      "sharpePerTrade": -0.0006961362607285592,
+      "sortinoPerTrade": -0.0014644306592132555,
+      "calmar": -0.0021728899788181267,
+      "mfe": {
+        "p25": 1.7105944055729922,
+        "median": 3.799948550628649,
+        "p75": 7.563249538720453
+      },
+      "mae": {
+        "p25": -6.0378068302623635,
+        "median": -3.707236557585268,
+        "p75": -1.7897056569981153
+      },
+      "medianHoursToTarget": 82,
+      "medianHoursToStop": 72,
+      "medianHoursHeld": 168
+    },
+    "meanOutOfSampleExpectancyPct": 0.22810713913700686,
+    "worstFoldExpectancyPct": -0.5840910603527346,
+    "bestFoldExpectancyPct": 1.5768818859230325,
+    "sideRankingHeldCount": 3,
+    "sideRankingTestedCount": 5,
+    "interpretation": "Per-fold net expectancy ranged -0.584% to 1.577%, positive in 3 of 5 folds, averaging 0.228% against the pooled -0.004%. Sequential periods differ from the pooled figure by 0.232 points on average. The discovery-period side ranking held in 3 of 5 validation windows."
+  },
+  "quantileCalibration": {
+    "buckets": [
+      {
+        "label": "33-43",
+        "lowerBound": 33,
+        "upperBound": 43,
+        "n": 464,
+        "observedRatePct": 55.172413793103445,
+        "interval": {
+          "point": 0.5517241379310345,
+          "lower": 0.5062323144529783,
+          "upper": 0.5963665138684022
+        }
+      },
+      {
+        "label": "43-46",
+        "lowerBound": 43,
+        "upperBound": 46,
+        "n": 500,
+        "observedRatePct": 54.6,
+        "interval": {
+          "point": 0.546,
+          "lower": 0.5021734817218154,
+          "upper": 0.5891250533733416
+        }
+      },
+      {
+        "label": "46-50",
+        "lowerBound": 46,
+        "upperBound": 50,
+        "n": 611,
+        "observedRatePct": 51.06382978723404,
+        "interval": {
+          "point": 0.5106382978723404,
+          "lower": 0.47105821533428754,
+          "upper": 0.5500854418287932
+        }
+      },
+      {
+        "label": "50-58",
+        "lowerBound": 50,
+        "upperBound": 58,
+        "n": 534,
+        "observedRatePct": 48.50187265917603,
+        "interval": {
+          "point": 0.4850187265917603,
+          "lower": 0.44288754778798206,
+          "upper": 0.5273639165836843
+        }
+      }
+    ],
+    "monotonic": false,
+    "spreadPct": -6.670541133927415,
+    "interpretation": "Observed rates do NOT rise monotonically across quantiles, spanning -6.7 points from the lowest to the highest confidence quartile. The confidence intervals of the lowest and highest buckets overlap, so even the observed spread is not statistically distinguishable from no effect."
+  },
+  "confidenceDistribution": {
+    "n": 2896,
+    "min": 33,
+    "max": 58,
+    "mean": 46.36567679558011,
+    "p10": 41,
+    "p25": 43,
+    "median": 46,
+    "p75": 50,
+    "p90": 52
+  },
+  "confidenceByAction": [
+    {
+      "label": "enter-short",
+      "distribution": {
+        "n": 1059,
+        "min": 34,
+        "max": 58,
+        "mean": 46.70349386213409,
+        "p10": 41,
+        "p25": 44,
+        "median": 47,
+        "p75": 50,
+        "p90": 53
+      }
+    },
+    {
+      "label": "no-trade",
+      "distribution": {
+        "n": 787,
+        "min": 34,
+        "max": 58,
+        "mean": 46.83735705209657,
+        "p10": 41,
+        "p25": 44,
+        "median": 47,
+        "p75": 50,
+        "p90": 53
+      }
+    },
+    {
+      "label": "wait-short-confirmation",
+      "distribution": {
+        "n": 506,
+        "min": 33,
+        "max": 57,
+        "mean": 45.03557312252964,
+        "p10": 40,
+        "p25": 42,
+        "median": 44,
+        "p75": 48,
+        "p90": 52
+      }
+    },
+    {
+      "label": "enter-long",
+      "distribution": {
+        "n": 291,
+        "min": 37,
+        "max": 58,
+        "mean": 46.15120274914089,
+        "p10": 42,
+        "p25": 44,
+        "median": 46,
+        "p75": 49,
+        "p90": 51
+      }
+    },
+    {
+      "label": "wait-long-confirmation",
+      "distribution": {
+        "n": 253,
+        "min": 35,
+        "max": 57,
+        "mean": 46.391304347826086,
+        "p10": 40,
+        "p25": 44,
+        "median": 47,
+        "p75": 49,
+        "p90": 51
+      }
+    }
+  ],
+  "marginalRegimes": [
+    {
+      "label": "neutral",
+      "dimension": "trend",
+      "n": 661,
+      "adequacy": "adequate",
+      "stats": {
+        "n": 661,
+        "winRatePct": 41.14977307110439,
+        "targetHitRatePct": 7.715582450832073,
+        "stopHitRatePct": 34.493192133131615,
+        "timeoutRatePct": 57.791225416036305,
+        "tp2BeforeStopRatePct": 1.9667170953101363,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": -0.2544179866100005,
+        "expectancyNetPct": -0.3244513360804996,
+        "avgWinPct": 4.871278615999766,
+        "avgLossPct": -3.957455312856421,
+        "medianNetPct": -1.3938494056929909,
+        "profitFactor": 0.8606890013371932,
+        "maxDrawdownPct": -394.03125220050333,
+        "sharpePerTrade": -0.05860945711255154,
+        "sortinoPerTrade": -0.12099983450280861,
+        "calmar": -0.13776787561940168,
+        "mfe": {
+          "p25": 1.2857683723896036,
+          "median": 3.256510680793289,
+          "p75": 6.392915915680593
+        },
+        "mae": {
+          "p25": -5.561003787291606,
+          "median": -3.2486041912535035,
+          "p75": -1.7198946365385432
+        },
+        "medianHoursToTarget": 90,
+        "medianHoursToStop": 70.5,
+        "medianHoursHeld": 168
+      }
+    },
+    {
+      "label": "low-vol",
+      "dimension": "volatility",
+      "n": 554,
+      "adequacy": "adequate",
+      "stats": {
+        "n": 554,
+        "winRatePct": 44.765342960288805,
+        "targetHitRatePct": 11.191335740072201,
+        "stopHitRatePct": 30.685920577617328,
+        "timeoutRatePct": 58.12274368231047,
+        "tp2BeforeStopRatePct": 2.888086642599278,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": 0.10324073430345677,
+        "expectancyNetPct": 0.008760506866633776,
+        "avgWinPct": 4.725767588055043,
+        "avgLossPct": -3.8141733367109,
+        "medianNetPct": -0.6556473782730314,
+        "profitFactor": 1.0041583127203448,
+        "maxDrawdownPct": -283.93851885549185,
+        "sharpePerTrade": 0.001616787850822372,
+        "sortinoPerTrade": 0.0034888004017665443,
+        "calmar": 0.0043265556147472186,
+        "mfe": {
+          "p25": 1.553434850251915,
+          "median": 3.1613676123418806,
+          "p75": 6.07688999712788
+        },
+        "mae": {
+          "p25": -4.834811591762128,
+          "median": -2.83836563242456,
+          "p75": -1.4569191035482691
+        },
+        "medianHoursToTarget": 86.5,
+        "medianHoursToStop": 74,
+        "medianHoursHeld": 168
+      }
+    },
+    {
+      "label": "range-bound",
+      "dimension": "structure",
+      "n": 477,
+      "adequacy": "adequate",
+      "stats": {
+        "n": 477,
+        "winRatePct": 41.299790356394126,
+        "targetHitRatePct": 10.90146750524109,
+        "stopHitRatePct": 35.84905660377358,
+        "timeoutRatePct": 53.24947589098532,
+        "tp2BeforeStopRatePct": 2.515723270440252,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": -0.09796509672329495,
+        "expectancyNetPct": -0.18171946569604214,
+        "avgWinPct": 5.252453118627885,
+        "avgLossPct": -4.005048033952519,
+        "medianNetPct": -1.4270184661690497,
+        "profitFactor": 0.9227045251016551,
+        "maxDrawdownPct": -335.2261462099245,
+        "sharpePerTrade": -0.031354811234823705,
+        "sortinoPerTrade": -0.06966541216737548,
+        "calmar": -0.06544998478365385,
+        "mfe": {
+          "p25": 1.2497419353821957,
+          "median": 3.164697267921083,
+          "p75": 6.295084110316876
+        },
+        "mae": {
+          "p25": -5.232455500717674,
+          "median": -3.2401609644508964,
+          "p75": -1.673186365907459
+        },
+        "medianHoursToTarget": 92,
+        "medianHoursToStop": 74,
+        "medianHoursHeld": 168
+      }
+    },
+    {
+      "label": "bear",
+      "dimension": "trend",
+      "n": 443,
+      "adequacy": "adequate",
+      "stats": {
+        "n": 443,
+        "winRatePct": 47.17832957110609,
+        "targetHitRatePct": 10.15801354401806,
+        "stopHitRatePct": 23.702031602708804,
+        "timeoutRatePct": 66.13995485327314,
+        "tp2BeforeStopRatePct": 2.0316027088036117,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": 0.1982608877674808,
+        "expectancyNetPct": 0.11522857399772983,
+        "avgWinPct": 6.0742007105734,
+        "avgLossPct": -5.207101240294214,
+        "medianNetPct": -0.4124955033643986,
+        "profitFactor": 1.041894019886179,
+        "maxDrawdownPct": -499.6552225977271,
+        "sharpePerTrade": 0.016283761108067864,
+        "sortinoPerTrade": 0.03396892646026547,
+        "calmar": 0.026540556360414032,
+        "mfe": {
+          "p25": 2.533972873838958,
+          "median": 5.0321311072164265,
+          "p75": 9.06505090434188
+        },
+        "mae": {
+          "p25": -7.094574485460495,
+          "median": -4.586678105276067,
+          "p75": -1.8616665225896354
+        },
+        "medianHoursToTarget": 74,
+        "medianHoursToStop": 76,
+        "medianHoursHeld": 168
+      }
+    },
+    {
+      "label": "normal-vol",
+      "dimension": "volatility",
+      "n": 402,
+      "adequacy": "adequate",
+      "stats": {
+        "n": 402,
+        "winRatePct": 44.776119402985074,
+        "targetHitRatePct": 8.45771144278607,
+        "stopHitRatePct": 32.58706467661692,
+        "timeoutRatePct": 58.95522388059702,
+        "tp2BeforeStopRatePct": 1.9900497512437811,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": 0.3022982732429186,
+        "expectancyNetPct": 0.2031930443871969,
+        "avgWinPct": 5.954250299270792,
+        "avgLossPct": -4.459826351464364,
+        "medianNetPct": -1.1801169793330835,
+        "profitFactor": 1.082501903092502,
+        "maxDrawdownPct": -217.64495701955158,
+        "sharpePerTrade": 0.030990755039454893,
+        "sortinoPerTrade": 0.07107187200279975,
+        "calmar": 0.09687901993281124,
+        "mfe": {
+          "p25": 1.8333542510345007,
+          "median": 4.454832349181595,
+          "p75": 8.518137707322133
+        },
+        "mae": {
+          "p25": -6.229376895684218,
+          "median": -4.088876849000064,
+          "p75": -1.8973875745552378
+        },
+        "medianHoursToTarget": 84.5,
+        "medianHoursToStop": 67,
+        "medianHoursHeld": 168
+      }
+    },
+    {
+      "label": "high-vol",
+      "dimension": "volatility",
+      "n": 394,
+      "adequacy": "adequate",
+      "stats": {
+        "n": 394,
+        "winRatePct": 44.923857868020306,
+        "targetHitRatePct": 8.629441624365482,
+        "stopHitRatePct": 25.888324873096447,
+        "timeoutRatePct": 65.48223350253807,
+        "tp2BeforeStopRatePct": 1.2690355329949239,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": -0.14521287353281262,
+        "expectancyNetPct": -0.2343857796241831,
+        "avgWinPct": 5.843219680120876,
+        "avgLossPct": -5.19169530208905,
+        "medianNetPct": -0.7438800235678599,
+        "profitFactor": 0.9180293175000714,
+        "maxDrawdownPct": -384.50789354589966,
+        "sharpePerTrade": -0.034569926361291164,
+        "sortinoPerTrade": -0.0694985997282414,
+        "calmar": -0.06293090381840598,
+        "mfe": {
+          "p25": 2.0601986820140703,
+          "median": 4.740900433874966,
+          "p75": 8.352258662136345
+        },
+        "mae": {
+          "p25": -7.21407455460097,
+          "median": -4.993315214527369,
+          "p75": -2.398307970650226
+        },
+        "medianHoursToTarget": 45,
+        "medianHoursToStop": 74,
+        "medianHoursHeld": 168
+      }
+    },
+    {
+      "label": "bull",
+      "dimension": "trend",
+      "n": 246,
+      "adequacy": "adequate",
+      "stats": {
+        "n": 246,
+        "winRatePct": 50.40650406504065,
+        "targetHitRatePct": 13.821138211382115,
+        "stopHitRatePct": 28.455284552845526,
+        "timeoutRatePct": 57.72357723577236,
+        "tp2BeforeStopRatePct": 2.8455284552845526,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": 0.820512668065267,
+        "expectancyNetPct": 0.6406707412359988,
+        "avgWinPct": 5.512173927629109,
+        "avgLossPct": -4.310693153130769,
+        "medianNetPct": 0.11867657320623576,
+        "profitFactor": 1.2996836554163946,
+        "maxDrawdownPct": -93.74178296763387,
+        "sharpePerTrade": 0.10545056381530797,
+        "sortinoPerTrade": 0.2612466525111427,
+        "calmar": 0.4367705307026567,
+        "mfe": {
+          "p25": 1.871077380697867,
+          "median": 3.7188887705148943,
+          "p75": 7.090761832322221
+        },
+        "mae": {
+          "p25": -5.750575637220939,
+          "median": -3.555524759584433,
+          "p75": -1.7963388936432274
+        },
+        "medianHoursToTarget": 70.5,
+        "medianHoursToStop": 71,
+        "medianHoursHeld": 168
+      }
     }
   ],
   "failureModes": [
