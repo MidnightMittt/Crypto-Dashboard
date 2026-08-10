@@ -16,8 +16,9 @@
     "check-robinhood": "node scripts/check-robinhood.mjs",
     "check-tradier": "node scripts/check-tradier.mjs",
     "backtest:fetch": "node scripts/backtest/fetchHistory.mjs",
-    "backtest": "tsx scripts/backtest/run.ts && tsx scripts/backtest/report.ts",
-    "backtest:rolling": "tsx scripts/backtest/rolling.ts"
+    "backtest": "tsx scripts/backtest/run.ts && tsx scripts/backtest/report.ts && tsx scripts/backtest/executionReport.ts",
+    "backtest:rolling": "tsx scripts/backtest/rolling.ts",
+    "backtest:execution": "tsx scripts/backtest/executionReport.ts"
   },
   "dependencies": {
     "@drift-labs/sdk": "^2.155.0",

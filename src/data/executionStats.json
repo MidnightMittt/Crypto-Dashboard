@@ -1,0 +1,1182 @@
+{
+  "provenance": {
+    "engineVersion": "3.1.0",
+    "featureVersion": "2.0.0",
+    "generatedAt": 1786342981768,
+    "assets": [
+      "BTC",
+      "ETH"
+    ],
+    "coverageStart": "2022-08-13",
+    "coverageEnd": "2026-07-30",
+    "evaluatedDays": 2896,
+    "maxHoldHours": 168,
+    "costConfig": {
+      "takerFeeBpsPerLeg": 5,
+      "slippageBpsPerLeg": 2
+    },
+    "costNotes": "Funding is the real historical Binance 8-hourly settlement series. Fees and slippage are declared assumptions, not measurements — there is no historical order-book depth in this dataset to derive slippage from.",
+    "dataSources": [
+      "Binance Vision archive — hourly futures/spot klines, 8-hourly funding",
+      "Coinalyze — open interest, long/short ratio (rolling retention window)",
+      "SoSoValue — spot ETF net flows (BTC/ETH only, from 2025-05-21)",
+      "alternative.me — Fear & Greed",
+      "DefiLlama — total stablecoin supply",
+      "FRED — NFCI, T10Y2Y, RRP, TGA, EFFR"
+    ],
+    "unavailableInputs": [
+      "orderFlow (OKX rubik retains ~4 days)",
+      "deribitOptions (no public historical archive)",
+      "spotCvd (taker-buy volume not archived)",
+      "exchangeFlow (on-chain balances not archived)",
+      "liquidations (not fetched historically)",
+      "coinbasePremium (no historical source)",
+      "sectorBreadth (live-only)",
+      "hyperliquidConfirm (point-in-time order book)"
+    ]
+  },
+  "overall": {
+    "n": 1350,
+    "winRatePct": 44.81481481481481,
+    "targetHitRatePct": 9.62962962962963,
+    "stopHitRatePct": 29.85185185185185,
+    "timeoutRatePct": 60.51851851851852,
+    "tp2BeforeStopRatePct": 2.148148148148148,
+    "ambiguousRatePct": 0,
+    "expectancyGrossPct": 0.09000400035247358,
+    "expectancyNetPct": -0.004304498166044665,
+    "avgWinPct": 5.418190577004611,
+    "avgLossPct": -4.407807210217381,
+    "medianNetPct": -0.7898411130822939,
+    "profitFactor": 0.9982303905375479,
+    "maxDrawdownPct": -676.9337427708576,
+    "sharpePerTrade": -0.0006961362607285592,
+    "sortinoPerTrade": -0.0014644306592132555,
+    "calmar": -0.0021728899788181267,
+    "mfe": {
+      "p25": 1.7105944055729922,
+      "median": 3.799948550628649,
+      "p75": 7.563249538720453
+    },
+    "mae": {
+      "p25": -6.0378068302623635,
+      "median": -3.707236557585268,
+      "p75": -1.7897056569981153
+    },
+    "medianHoursToTarget": 82,
+    "medianHoursToStop": 72,
+    "medianHoursHeld": 168
+  },
+  "byAsset": [
+    {
+      "label": "BTC",
+      "stats": {
+        "n": 732,
+        "winRatePct": 45.76502732240437,
+        "targetHitRatePct": 10.792349726775956,
+        "stopHitRatePct": 30.46448087431694,
+        "timeoutRatePct": 58.7431693989071,
+        "tp2BeforeStopRatePct": 3.0054644808743167,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": 0.10379179551692469,
+        "expectancyNetPct": -0.0020733656852612724,
+        "avgWinPct": 4.68151957455714,
+        "avgLossPct": -3.95422357974371,
+        "medianNetPct": -0.6221075471154482,
+        "profitFactor": 0.9990332030774586,
+        "maxDrawdownPct": -363.48284022850294,
+        "sharpePerTrade": -0.00039056857815170017,
+        "sortinoPerTrade": -0.0008153092616802115,
+        "calmar": -0.0010568921659329482,
+        "mfe": {
+          "p25": 1.4538422039422794,
+          "median": 3.3937198288099273,
+          "p75": 6.860895234891333
+        },
+        "mae": {
+          "p25": -5.081431150864839,
+          "median": -3.082495659999064,
+          "p75": -1.6102178304769956
+        },
+        "medianHoursToTarget": 85,
+        "medianHoursToStop": 73,
+        "medianHoursHeld": 168
+      }
+    },
+    {
+      "label": "ETH",
+      "stats": {
+        "n": 618,
+        "winRatePct": 43.689320388349515,
+        "targetHitRatePct": 8.25242718446602,
+        "stopHitRatePct": 29.126213592233007,
+        "timeoutRatePct": 62.62135922330098,
+        "tp2BeforeStopRatePct": 1.132686084142395,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": 0.07367282549749414,
+        "expectancyNetPct": -0.006947198774350259,
+        "avgWinPct": 6.3322083022634965,
+        "avgLossPct": -4.925257501303719,
+        "medianNetPct": -0.983623941227684,
+        "profitFactor": 0.9974951021777703,
+        "maxDrawdownPct": -373.99769641170377,
+        "sharpePerTrade": -0.0009804485314161167,
+        "sortinoPerTrade": -0.0021297505144803426,
+        "calmar": -0.0029404058162031954,
+        "mfe": {
+          "p25": 2.0117948472163105,
+          "median": 4.369882374964745,
+          "p75": 8.72220049722361
+        },
+        "mae": {
+          "p25": -7.113907427953273,
+          "median": -4.658319136988497,
+          "p75": -2.216641203668641
+        },
+        "medianHoursToTarget": 77,
+        "medianHoursToStop": 71.5,
+        "medianHoursHeld": 168
+      }
+    }
+  ],
+  "bySide": [
+    {
+      "label": "short",
+      "stats": {
+        "n": 1059,
+        "winRatePct": 43.153918791312556,
+        "targetHitRatePct": 7.743153918791313,
+        "stopHitRatePct": 30.878186968838527,
+        "timeoutRatePct": 61.37865911237016,
+        "tp2BeforeStopRatePct": 1.5108593012275733,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": -0.15377982814745583,
+        "expectancyNetPct": -0.21065769405869356,
+        "avgWinPct": 5.414644302184109,
+        "avgLossPct": -4.48102814635597,
+        "medianNetPct": -1.0357863470692534,
+        "profitFactor": 0.9173012161532628,
+        "maxDrawdownPct": -906.8941809966179,
+        "sharpePerTrade": -0.033807247607693644,
+        "sortinoPerTrade": -0.06953012014384355,
+        "calmar": -0.06226504048336382,
+        "mfe": {
+          "p25": 1.6534754847608752,
+          "median": 3.738640910980482,
+          "p75": 7.598952573860647
+        },
+        "mae": {
+          "p25": -6.245876970224907,
+          "median": -3.8948091760693067,
+          "p75": -1.879460265606263
+        },
+        "medianHoursToTarget": 82,
+        "medianHoursToStop": 72,
+        "medianHoursHeld": 168
+      }
+    },
+    {
+      "label": "long",
+      "stats": {
+        "n": 291,
+        "winRatePct": 50.85910652920962,
+        "targetHitRatePct": 16.49484536082474,
+        "stopHitRatePct": 26.11683848797251,
+        "timeoutRatePct": 57.388316151202744,
+        "tp2BeforeStopRatePct": 4.4673539518900345,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": 0.9771760772645914,
+        "expectancyNetPct": 0.7466509466803992,
+        "avgWinPct": 5.429140898578726,
+        "avgLossPct": -4.099562430109476,
+        "medianNetPct": 0.12813948233511455,
+        "profitFactor": 1.3706270109850682,
+        "maxDrawdownPct": -104.78530848781365,
+        "sharpePerTrade": 0.12534435192138427,
+        "sortinoPerTrade": 0.29748887064200763,
+        "calmar": 0.5386749164661632,
+        "mfe": {
+          "p25": 2.0311834358444476,
+          "median": 4.444047900753739,
+          "p75": 7.442505371910748
+        },
+        "mae": {
+          "p25": -5.047413850763619,
+          "median": -3.1645325904247743,
+          "p75": -1.3822648557329655
+        },
+        "medianHoursToTarget": 82,
+        "medianHoursToStop": 72.5,
+        "medianHoursHeld": 168
+      }
+    }
+  ],
+  "byRegime": [
+    {
+      "label": "neutral + low-vol + range-bound",
+      "stats": {
+        "n": 265,
+        "winRatePct": 36.9811320754717,
+        "targetHitRatePct": 9.056603773584905,
+        "stopHitRatePct": 36.60377358490566,
+        "timeoutRatePct": 54.339622641509436,
+        "tp2BeforeStopRatePct": 2.6415094339622645,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": -0.42296112703714,
+        "expectancyNetPct": -0.489917202508838,
+        "avgWinPct": 4.307480341778604,
+        "avgLossPct": -3.3051564799948827,
+        "medianNetPct": -1.5603275501351483,
+        "profitFactor": 0.7647876796016693,
+        "maxDrawdownPct": -170.8849018456498,
+        "sharpePerTrade": -0.10054128503169787,
+        "sortinoPerTrade": -0.2363387715538187,
+        "calmar": -0.19230584028378317,
+        "mfe": {
+          "p25": 0.7941883546736407,
+          "median": 2.508623600527014,
+          "p75": 4.226442131102699
+        },
+        "mae": {
+          "p25": -4.56370953749274,
+          "median": -2.748163618278706,
+          "p75": -1.697922980532765
+        },
+        "medianHoursToTarget": 88.5,
+        "medianHoursToStop": 87,
+        "medianHoursHeld": 168
+      }
+    },
+    {
+      "label": "bear + high-vol",
+      "stats": {
+        "n": 183,
+        "winRatePct": 46.994535519125684,
+        "targetHitRatePct": 9.836065573770492,
+        "stopHitRatePct": 16.939890710382514,
+        "timeoutRatePct": 73.224043715847,
+        "tp2BeforeStopRatePct": 2.185792349726776,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": 0.33398899538839427,
+        "expectancyNetPct": 0.23112695713702763,
+        "avgWinPct": 6.443470950969177,
+        "avgLossPct": -5.276724418837869,
+        "medianNetPct": -0.23773148800295313,
+        "profitFactor": 1.0826352877606447,
+        "maxDrawdownPct": -228.28438920386256,
+        "sharpePerTrade": 0.03195664927694757,
+        "sortinoPerTrade": 0.06312414165523118,
+        "calmar": 0.048863238997435186,
+        "mfe": {
+          "p25": 2.815146845946796,
+          "median": 5.851324828263008,
+          "p75": 9.319012267014662
+        },
+        "mae": {
+          "p25": -8.065451237947507,
+          "median": -5.073444020469887,
+          "p75": -2.052259726810424
+        },
+        "medianHoursToTarget": 39.5,
+        "medianHoursToStop": 65,
+        "medianHoursHeld": 168
+      }
+    },
+    {
+      "label": "neutral + normal-vol",
+      "stats": {
+        "n": 144,
+        "winRatePct": 45.83333333333333,
+        "targetHitRatePct": 8.333333333333332,
+        "stopHitRatePct": 31.944444444444443,
+        "timeoutRatePct": 59.72222222222222,
+        "tp2BeforeStopRatePct": 3.4722222222222223,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": 0.9913298822398787,
+        "expectancyNetPct": 0.9101488475176571,
+        "avgWinPct": 6.497323727333151,
+        "avgLossPct": -3.817460666172374,
+        "medianNetPct": -1.0119787419589281,
+        "profitFactor": 1.4401551037071887,
+        "maxDrawdownPct": -67.7181049522221,
+        "sharpePerTrade": 0.14603630718858998,
+        "sortinoPerTrade": 0.3916447439357984,
+        "calmar": 0.5006520169678921,
+        "mfe": {
+          "p25": 1.718532349228587,
+          "median": 4.796762976007983,
+          "p75": 8.636014593936261
+        },
+        "mae": {
+          "p25": -5.91179814561635,
+          "median": -3.536622178907529,
+          "p75": -1.7191861343031796
+        },
+        "medianHoursToTarget": 91.5,
+        "medianHoursToStop": 65.5,
+        "medianHoursHeld": 168
+      }
+    },
+    {
+      "label": "neutral + high-vol",
+      "stats": {
+        "n": 122,
+        "winRatePct": 45.08196721311475,
+        "targetHitRatePct": 6.557377049180328,
+        "stopHitRatePct": 29.508196721311474,
+        "timeoutRatePct": 63.934426229508205,
+        "tp2BeforeStopRatePct": 0,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": -0.3623859845368207,
+        "expectancyNetPct": -0.400939140274526,
+        "avgWinPct": 5.204423858569961,
+        "avgLossPct": -5.002356527385673,
+        "medianNetPct": -0.7895569090320804,
+        "profitFactor": 0.8540551275625389,
+        "maxDrawdownPct": -102.88942935590485,
+        "sharpePerTrade": -0.06399632878040275,
+        "sortinoPerTrade": -0.11146951196368038,
+        "calmar": -0.13327521970701398,
+        "mfe": {
+          "p25": 1.8565969276471046,
+          "median": 4.808810424648984,
+          "p75": 7.5930164844842585
+        },
+        "mae": {
+          "p25": -6.648536130078231,
+          "median": -4.648960875754868,
+          "p75": -2.303065031279579
+        },
+        "medianHoursToTarget": 78,
+        "medianHoursToStop": 53,
+        "medianHoursHeld": 168
+      }
+    },
+    {
+      "label": "bear + normal-vol",
+      "stats": {
+        "n": 121,
+        "winRatePct": 41.32231404958678,
+        "targetHitRatePct": 4.958677685950414,
+        "stopHitRatePct": 28.09917355371901,
+        "timeoutRatePct": 66.94214876033058,
+        "tp2BeforeStopRatePct": 0,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": -0.6283269200999398,
+        "expectancyNetPct": -0.7017069448933286,
+        "avgWinPct": 5.028290862868136,
+        "avgLossPct": -4.736916668669009,
+        "medianNetPct": -1.319921535757183,
+        "profitFactor": 0.7475432124127357,
+        "maxDrawdownPct": -232.9762572257621,
+        "sharpePerTrade": -0.10658426591110796,
+        "sortinoPerTrade": -0.22428735263699365,
+        "calmar": -0.09508338428223725,
+        "mfe": {
+          "p25": 1.9891342446547535,
+          "median": 4.376373227094363,
+          "p75": 7.969152808339183
+        },
+        "mae": {
+          "p25": -6.300009487966096,
+          "median": -4.79088778587317,
+          "p75": -2.964727549345405
+        },
+        "medianHoursToTarget": 45.5,
+        "medianHoursToStop": 80,
+        "medianHoursHeld": 168
+      }
+    },
+    {
+      "label": "bull + high-vol",
+      "stats": {
+        "n": 70,
+        "winRatePct": 44.285714285714285,
+        "targetHitRatePct": 8.571428571428571,
+        "stopHitRatePct": 34.285714285714285,
+        "timeoutRatePct": 57.14285714285714,
+        "tp2BeforeStopRatePct": 1.4285714285714286,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": -0.7126814556227227,
+        "expectancyNetPct": -0.8545088556227227,
+        "avgWinPct": 4.688462670690209,
+        "avgLossPct": -5.260460581666335,
+        "medianNetPct": -1.6770782859049698,
+        "profitFactor": 0.7084411489041964,
+        "maxDrawdownPct": -86.58237971026486,
+        "sharpePerTrade": -0.14536832462629434,
+        "sortinoPerTrade": -0.35422210891088873,
+        "calmar": -0.23049453465901593,
+        "mfe": {
+          "p25": 1.6495947049274613,
+          "median": 4.151989311911432,
+          "p75": 6.599136190655144
+        },
+        "mae": {
+          "p25": -7.085412275956466,
+          "median": -5.317645185592275,
+          "p75": -3.2571859910206213
+        },
+        "medianHoursToTarget": 34.5,
+        "medianHoursToStop": 80.5,
+        "medianHoursHeld": 168
+      }
+    },
+    {
+      "label": "neutral + low-vol",
+      "stats": {
+        "n": 67,
+        "winRatePct": 44.776119402985074,
+        "targetHitRatePct": 4.477611940298507,
+        "stopHitRatePct": 25.37313432835821,
+        "timeoutRatePct": 70.1492537313433,
+        "tp2BeforeStopRatePct": 1.4925373134328357,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": -1.1808383810168368,
+        "expectancyNetPct": -1.2612766645989262,
+        "avgWinPct": 2.1580222154118247,
+        "avgLossPct": -4.0336811619049415,
+        "medianNetPct": -0.6829267380734703,
+        "profitFactor": 0.4337843453644388,
+        "maxDrawdownPct": -93.14889749760854,
+        "sharpePerTrade": -0.32527835797096644,
+        "sortinoPerTrade": -0.5255718766778288,
+        "calmar": -0.2568901140529675,
+        "mfe": {
+          "p25": 1.8371344868017343,
+          "median": 3.1502096842077094,
+          "p75": 4.391841134945057
+        },
+        "mae": {
+          "p25": -5.273660922832039,
+          "median": -2.980217521623698,
+          "p75": -1.382844400558875
+        },
+        "medianHoursToTarget": 74,
+        "medianHoursToStop": 70,
+        "medianHoursHeld": 168
+      }
+    },
+    {
+      "label": "bear + low-vol + range-bound",
+      "stats": {
+        "n": 64,
+        "winRatePct": 43.75,
+        "targetHitRatePct": 15.625,
+        "stopHitRatePct": 35.9375,
+        "timeoutRatePct": 48.4375,
+        "tp2BeforeStopRatePct": 6.25,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": 0.5033616239668767,
+        "expectancyNetPct": 0.4529691864668769,
+        "avgWinPct": 7.414492285727313,
+        "avgLossPct": -4.961548779624573,
+        "medianNetPct": -1.434710436236779,
+        "profitFactor": 1.1623038670960775,
+        "maxDrawdownPct": -122.57540008984647,
+        "sharpePerTrade": 0.06377984111429166,
+        "sortinoPerTrade": 0.17718445744887107,
+        "calmar": 0.06310330146350103,
+        "mfe": {
+          "p25": 2.330730170379661,
+          "median": 4.585928940455588,
+          "p75": 8.694301388545805
+        },
+        "mae": {
+          "p25": -6.4170293272817815,
+          "median": -4.206959664922147,
+          "p75": -1.4035560862085512
+        },
+        "medianHoursToTarget": 92,
+        "medianHoursToStop": 72,
+        "medianHoursHeld": 166.5
+      }
+    },
+    {
+      "label": "bull + normal-vol",
+      "stats": {
+        "n": 57,
+        "winRatePct": 50.877192982456144,
+        "targetHitRatePct": 17.543859649122805,
+        "stopHitRatePct": 31.57894736842105,
+        "timeoutRatePct": 50.877192982456144,
+        "tp2BeforeStopRatePct": 5.263157894736842,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": 1.6032912086485829,
+        "expectancyNetPct": 1.4202882963678816,
+        "avgWinPct": 6.486517490493187,
+        "avgLossPct": -3.8268776546904735,
+        "medianNetPct": 0.10921366407735697,
+        "profitFactor": 1.7555248522787577,
+        "maxDrawdownPct": -31.097692703540453,
+        "sharpePerTrade": 0.2071146115027917,
+        "sortinoPerTrade": 0.7504376034823149,
+        "calmar": 0.7931571484159801,
+        "mfe": {
+          "p25": 1.412964212757673,
+          "median": 3.1353181517625894,
+          "p75": 7.238576397361005
+        },
+        "mae": {
+          "p25": -4.637812555605464,
+          "median": -3.5675793781684533,
+          "p75": -1.5457638915741851
+        },
+        "medianHoursToTarget": 65,
+        "medianHoursToStop": 57.5,
+        "medianHoursHeld": 168
+      }
+    },
+    {
+      "label": "bull + low-vol",
+      "stats": {
+        "n": 57,
+        "winRatePct": 45.614035087719294,
+        "targetHitRatePct": 12.280701754385964,
+        "stopHitRatePct": 33.33333333333333,
+        "timeoutRatePct": 54.385964912280706,
+        "tp2BeforeStopRatePct": 3.508771929824561,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": 0.5554488366069482,
+        "expectancyNetPct": 0.3092773102911588,
+        "avgWinPct": 5.374588538800901,
+        "avgLossPct": -3.939048236200882,
+        "medianNetPct": -0.5537158172844147,
+        "profitFactor": 1.1443676617646734,
+        "maxDrawdownPct": -44.39357297196312,
+        "sharpePerTrade": 0.05658534130746962,
+        "sortinoPerTrade": 0.11261172989916854,
+        "calmar": 0.10323538265785961,
+        "mfe": {
+          "p25": 1.4052090336776564,
+          "median": 2.6696757325412297,
+          "p75": 6.58806955103252
+        },
+        "mae": {
+          "p25": -4.18501640306871,
+          "median": -2.887455812228231,
+          "p75": -2.0379811815385946
+        },
+        "medianHoursToTarget": 87,
+        "medianHoursToStop": 69,
+        "medianHoursHeld": 168
+      }
+    },
+    {
+      "label": "bear + low-vol",
+      "stats": {
+        "n": 52,
+        "winRatePct": 67.3076923076923,
+        "targetHitRatePct": 15.384615384615385,
+        "stopHitRatePct": 13.461538461538462,
+        "timeoutRatePct": 71.15384615384616,
+        "tp2BeforeStopRatePct": 1.9230769230769231,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": 1.7414923211917557,
+        "expectancyNetPct": 1.6743938019609865,
+        "avgWinPct": 5.277742659403581,
+        "avgLossPct": -5.744265610420825,
+        "medianNetPct": 1.9061215434976764,
+        "profitFactor": 1.8916153093004822,
+        "maxDrawdownPct": -48.6780029595455,
+        "sharpePerTrade": 0.2529795709353271,
+        "sortinoPerTrade": 0.40096828606138873,
+        "calmar": 0.47070043750632906,
+        "mfe": {
+          "p25": 3.6237987945473904,
+          "median": 6.390639495118492,
+          "p75": 9.902258896159207
+        },
+        "mae": {
+          "p25": -4.7605490268192145,
+          "median": -2.229232898884214,
+          "p75": -1.0047597012992786
+        },
+        "medianHoursToTarget": 63.5,
+        "medianHoursToStop": 117,
+        "medianHoursHeld": 168
+      }
+    },
+    {
+      "label": "neutral + normal-vol + range-bound",
+      "stats": {
+        "n": 51,
+        "winRatePct": 39.21568627450981,
+        "targetHitRatePct": 5.88235294117647,
+        "stopHitRatePct": 49.01960784313725,
+        "timeoutRatePct": 45.09803921568628,
+        "tp2BeforeStopRatePct": 0,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": -0.9040150424866067,
+        "expectancyNetPct": -1.015131532682685,
+        "avgWinPct": 5.525075565462394,
+        "avgLossPct": -5.234619983098866,
+        "medianNetPct": -2.131967135385543,
+        "profitFactor": 0.6809596288656045,
+        "maxDrawdownPct": -65.57969516526366,
+        "sharpePerTrade": -0.1591071829108593,
+        "sortinoPerTrade": -0.2896783490887592,
+        "calmar": -0.20835013450787687,
+        "mfe": {
+          "p25": 0.7369432352888143,
+          "median": 3.8248301312089885,
+          "p75": 8.23224874590495
+        },
+        "mae": {
+          "p25": -7.197136115081327,
+          "median": -4.084521017970644,
+          "p75": -1.68212373510138
+        },
+        "medianHoursToTarget": 101,
+        "medianHoursToStop": 55,
+        "medianHoursHeld": 116
+      }
+    },
+    {
+      "label": "bull + low-vol + range-bound",
+      "stats": {
+        "n": 49,
+        "winRatePct": 63.26530612244898,
+        "targetHitRatePct": 20.408163265306122,
+        "stopHitRatePct": 14.285714285714285,
+        "timeoutRatePct": 65.3061224489796,
+        "tp2BeforeStopRatePct": 2.0408163265306123,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": 1.917610381115054,
+        "expectancyNetPct": 1.744889870910973,
+        "avgWinPct": 4.937114283634804,
+        "avgLossPct": -3.7528299510022927,
+        "medianNetPct": 2.225185518707386,
+        "profitFactor": 2.265705625871939,
+        "maxDrawdownPct": -20.37494918925637,
+        "sharpePerTrade": 0.32232202189740433,
+        "sortinoPerTrade": 0.679468523412248,
+        "calmar": 1.0901445989364495,
+        "mfe": {
+          "p25": 2.980671018200572,
+          "median": 4.444047900753739,
+          "p75": 7.112064539184796
+        },
+        "mae": {
+          "p25": -4.577252891298276,
+          "median": -2.385826923447648,
+          "p75": -1.4081977604056624
+        },
+        "medianHoursToTarget": 77,
+        "medianHoursToStop": 64,
+        "medianHoursHeld": 168
+      }
+    },
+    {
+      "label": "bear + normal-vol + range-bound",
+      "stats": {
+        "n": 17,
+        "winRatePct": 52.94117647058824,
+        "targetHitRatePct": 11.76470588235294,
+        "stopHitRatePct": 35.294117647058826,
+        "timeoutRatePct": 52.94117647058824,
+        "tp2BeforeStopRatePct": 0,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": -0.8803535451579652,
+        "expectancyNetPct": -0.98343807456973,
+        "avgWinPct": 5.102400031966215,
+        "avgLossPct": -7.830005944422666,
+        "medianNetPct": 0.8544576291390681,
+        "profitFactor": 0.7331028963076013,
+        "maxDrawdownPct": -28.46001645713192,
+        "sharpePerTrade": -0.13518340160909673,
+        "sortinoPerTrade": -0.3321046239335708,
+        "calmar": -0.15458850464334462,
+        "mfe": {
+          "p25": 3.291383057641496,
+          "median": 6.115978434015449,
+          "p75": 8.609567726247626
+        },
+        "mae": {
+          "p25": -10.021730132450333,
+          "median": -7.347662913681343,
+          "p75": -3.0730945930027094
+        },
+        "medianHoursToTarget": 102,
+        "medianHoursToStop": 60.5,
+        "medianHoursHeld": 168
+      }
+    },
+    {
+      "label": "bull + normal-vol + range-bound",
+      "stats": {
+        "n": 12,
+        "winRatePct": 50,
+        "targetHitRatePct": 8.333333333333332,
+        "stopHitRatePct": 16.666666666666664,
+        "timeoutRatePct": 75,
+        "tp2BeforeStopRatePct": 0,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": 2.040261556228034,
+        "expectancyNetPct": 1.921869389561367,
+        "avgWinPct": 7.832504316683558,
+        "avgLossPct": -3.988765537560823,
+        "medianNetPct": 0.3871317043837659,
+        "profitFactor": 1.963641192476113,
+        "maxDrawdownPct": -13.246109071452995,
+        "sharpePerTrade": 0.26543202134369337,
+        "sortinoPerTrade": 0.9803105688181596,
+        "calmar": 0.5385520036948993,
+        "mfe": {
+          "p25": 3.9695207075247385,
+          "median": 6.257003988496755,
+          "p75": 10.667349112003494
+        },
+        "mae": {
+          "p25": -6.4224378555150885,
+          "median": -4.819791058728092,
+          "p75": -3.704040655265053
+        },
+        "medianHoursToTarget": 161,
+        "medianHoursToStop": 118,
+        "medianHoursHeld": 168
+      }
+    },
+    {
+      "label": "neutral + high-vol + range-bound",
+      "stats": {
+        "n": 12,
+        "winRatePct": 25,
+        "targetHitRatePct": 8.333333333333332,
+        "stopHitRatePct": 58.333333333333336,
+        "timeoutRatePct": 33.33333333333333,
+        "tp2BeforeStopRatePct": 0,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": -2.450422059872798,
+        "expectancyNetPct": -2.541990726539464,
+        "avgWinPct": 4.18195135356531,
+        "avgLossPct": -4.7833047532410555,
+        "medianNetPct": -3.990156089506187,
+        "profitFactor": 0.29142692268922216,
+        "maxDrawdownPct": -33.36150869219605,
+        "sharpePerTrade": -0.5264887363946191,
+        "sortinoPerTrade": -1.3515275314519855,
+        "calmar": -0.4094913962615172,
+        "mfe": {
+          "p25": 1.2043771447627523,
+          "median": 2.8729037137905022,
+          "p75": 4.560765173375049
+        },
+        "mae": {
+          "p25": -6.504034007236894,
+          "median": -4.519928237595927,
+          "p75": -3.855816404074102
+        },
+        "medianHoursToTarget": 126,
+        "medianHoursToStop": 89,
+        "medianHoursHeld": 123.5
+      }
+    }
+  ],
+  "byConfidenceBucket": [
+    {
+      "label": "40-60",
+      "stats": {
+        "n": 1264,
+        "winRatePct": 45.094936708860764,
+        "targetHitRatePct": 9.889240506329115,
+        "stopHitRatePct": 29.509493670886076,
+        "timeoutRatePct": 60.60126582278481,
+        "tp2BeforeStopRatePct": 2.1360759493670884,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": 0.12815514376004106,
+        "expectancyNetPct": 0.034193929361307475,
+        "avgWinPct": 5.471778072090693,
+        "avgLossPct": -4.431833392476945,
+        "medianNetPct": -0.806816524281146,
+        "profitFactor": 1.0140524868718126,
+        "maxDrawdownPct": -647.7009211875616,
+        "sharpePerTrade": 0.005491908137024291,
+        "sortinoPerTrade": 0.011945005849244189,
+        "calmar": 0.01691421870255762,
+        "mfe": {
+          "p25": 1.7762108589643015,
+          "median": 3.8041547610064486,
+          "p75": 7.645889774073799
+        },
+        "mae": {
+          "p25": -6.081031419123803,
+          "median": -3.776057366041244,
+          "p75": -1.835254953430873
+        },
+        "medianHoursToTarget": 84,
+        "medianHoursToStop": 73,
+        "medianHoursHeld": 168
+      }
+    },
+    {
+      "label": "20-40",
+      "stats": {
+        "n": 86,
+        "winRatePct": 40.69767441860465,
+        "targetHitRatePct": 5.813953488372093,
+        "stopHitRatePct": 34.883720930232556,
+        "timeoutRatePct": 59.30232558139535,
+        "tp2BeforeStopRatePct": 2.3255813953488373,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": -0.4707290841494467,
+        "expectancyNetPct": -0.5701418515913068,
+        "avgWinPct": 4.545479942745599,
+        "avgLossPct": -4.0808626908421255,
+        "medianNetPct": -0.7081216309648882,
+        "profitFactor": 0.7644087184142835,
+        "maxDrawdownPct": -112.19075429875565,
+        "sharpePerTrade": -0.10333510071279177,
+        "sortinoPerTrade": -0.1478631239027562,
+        "calmar": -0.11124180273447488,
+        "mfe": {
+          "p25": 0.9714231318710296,
+          "median": 3.272335680832545,
+          "p75": 6.561967565256655
+        },
+        "mae": {
+          "p25": -5.476830776355003,
+          "median": -2.3282994986727044,
+          "p75": -1.5113603139796714
+        },
+        "medianHoursToTarget": 68,
+        "medianHoursToStop": 66.5,
+        "medianHoursHeld": 168
+      }
+    }
+  ],
+  "byMtfAgreement": [
+    {
+      "label": "confirms",
+      "stats": {
+        "n": 775,
+        "winRatePct": 44.12903225806451,
+        "targetHitRatePct": 10.451612903225808,
+        "stopHitRatePct": 30.32258064516129,
+        "timeoutRatePct": 59.225806451612904,
+        "tp2BeforeStopRatePct": 2.064516129032258,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": 0.1343891284481851,
+        "expectancyNetPct": 0.03894391425463764,
+        "avgWinPct": 5.717613048879222,
+        "avgLossPct": -4.446286672446535,
+        "medianNetPct": -0.8442499423172733,
+        "profitFactor": 1.0156767468829317,
+        "maxDrawdownPct": -465.6046179070221,
+        "sharpePerTrade": 0.006203440490907488,
+        "sortinoPerTrade": 0.01311484628345222,
+        "calmar": 0.01640784814154181,
+        "mfe": {
+          "p25": 1.808575315580438,
+          "median": 4.049286031586021,
+          "p75": 7.974483912415074
+        },
+        "mae": {
+          "p25": -6.080007343318847,
+          "median": -3.7528056464479835,
+          "p75": -1.8294150196652696
+        },
+        "medianHoursToTarget": 89,
+        "medianHoursToStop": 72,
+        "medianHoursHeld": 168
+      }
+    },
+    {
+      "label": "contradicts",
+      "stats": {
+        "n": 381,
+        "winRatePct": 49.08136482939632,
+        "targetHitRatePct": 7.874015748031496,
+        "stopHitRatePct": 30.183727034120732,
+        "timeoutRatePct": 61.942257217847775,
+        "tp2BeforeStopRatePct": 1.574803149606299,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": 0.0329978876370675,
+        "expectancyNetPct": -0.045273668793378824,
+        "avgWinPct": 4.644375761708099,
+        "avgLossPct": -4.565708944586043,
+        "medianNetPct": -0.3275331283790972,
+        "profitFactor": 0.9805257512735668,
+        "maxDrawdownPct": -252.9394420231915,
+        "sharpePerTrade": -0.007526877530219228,
+        "sortinoPerTrade": -0.01612904553500604,
+        "calmar": -0.017665908643241177,
+        "mfe": {
+          "p25": 1.5947488715586835,
+          "median": 3.639943034263219,
+          "p75": 6.654057035494187
+        },
+        "mae": {
+          "p25": -5.906308971551779,
+          "median": -3.7572578404176977,
+          "p75": -1.7401284158937977
+        },
+        "medianHoursToTarget": 79.5,
+        "medianHoursToStop": 73,
+        "medianHoursHeld": 168
+      }
+    },
+    {
+      "label": "weakens",
+      "stats": {
+        "n": 150,
+        "winRatePct": 36.666666666666664,
+        "targetHitRatePct": 10,
+        "stopHitRatePct": 27.333333333333332,
+        "timeoutRatePct": 62.66666666666667,
+        "tp2BeforeStopRatePct": 3.3333333333333335,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": -0.11533090891142568,
+        "expectancyNetPct": -0.24824923557809234,
+        "avgWinPct": 6.381327383525122,
+        "avgLossPct": -4.0864251729536365,
+        "medianNetPct": -1.2999404596586128,
+        "profitFactor": 0.9040793699532613,
+        "maxDrawdownPct": -113.53287628605358,
+        "sharpePerTrade": -0.03905927595057029,
+        "sortinoPerTrade": -0.07896719354063253,
+        "calmar": -0.0833093286411342,
+        "mfe": {
+          "p25": 1.4252131274040596,
+          "median": 3.9280015356499014,
+          "p75": 6.847129868093361
+        },
+        "mae": {
+          "p25": -6.3010057756297435,
+          "median": -3.6426336034423286,
+          "p75": -2.1444255038336673
+        },
+        "medianHoursToTarget": 47,
+        "medianHoursToStop": 65,
+        "medianHoursHeld": 168
+      }
+    },
+    {
+      "label": "not-yet-confirmed",
+      "stats": {
+        "n": 44,
+        "winRatePct": 47.72727272727273,
+        "targetHitRatePct": 9.090909090909092,
+        "stopHitRatePct": 27.27272727272727,
+        "timeoutRatePct": 63.63636363636363,
+        "tp2BeforeStopRatePct": 4.545454545454546,
+        "ambiguousRatePct": 0,
+        "expectancyGrossPct": 0.5018469789883436,
+        "expectancyNetPct": 0.4203192517156164,
+        "avgWinPct": 4.910017277990352,
+        "avgLossPct": -3.67897025053523,
+        "medianNetPct": -0.47601365480612085,
+        "profitFactor": 1.2185636057168623,
+        "maxDrawdownPct": -24.49254512939343,
+        "sharpePerTrade": 0.07678046837440153,
+        "sortinoPerTrade": 0.16562394913234726,
+        "calmar": 0.20146741258533882,
+        "mfe": {
+          "p25": 1.878462170299607,
+          "median": 3.1526231602164465,
+          "p75": 7.493769039341288
+        },
+        "mae": {
+          "p25": -5.898331782768075,
+          "median": -3.4044492484974125,
+          "p75": -0.9461750387278286
+        },
+        "medianHoursToTarget": 137.5,
+        "medianHoursToStop": 87.5,
+        "medianHoursHeld": 168
+      }
+    }
+  ],
+  "calibration24h": {
+    "horizon": "24h",
+    "buckets": [
+      {
+        "label": "20-40",
+        "lowerBound": 20,
+        "upperBound": 40,
+        "n": 159,
+        "observedRatePct": 53.459119496855344,
+        "interval": {
+          "point": 0.5345911949685535,
+          "lower": 0.45715796249914503,
+          "upper": 0.6103923440564283
+        },
+        "impliedRatePct": 30,
+        "calibrationErrorPct": 23.459119496855344
+      },
+      {
+        "label": "40-60",
+        "lowerBound": 40,
+        "upperBound": 60,
+        "n": 1950,
+        "observedRatePct": 52.05128205128206,
+        "interval": {
+          "point": 0.5205128205128206,
+          "lower": 0.4983203158697942,
+          "upper": 0.5426246614507829
+        },
+        "impliedRatePct": 50,
+        "calibrationErrorPct": 2.051282051282058
+      }
+    ],
+    "meanAbsoluteCalibrationErrorPct": 12.755200774068701,
+    "monotonic": false,
+    "interpretation": "Higher confidence did NOT reliably correspond to better outcomes — the observed rate falls somewhere as confidence rises, so the score does not cleanly rank setups. Observed rates differ from the score's implied probability by 12.8 points on average, so this is NOT a probability and must not be presented as one. The spread between the least and most confident bands is under 5 points, which is small enough that confidence adds little discriminating power in practice."
+  },
+  "calibration7d": {
+    "horizon": "7d",
+    "buckets": [
+      {
+        "label": "20-40",
+        "lowerBound": 20,
+        "upperBound": 40,
+        "n": 158,
+        "observedRatePct": 54.43037974683544,
+        "interval": {
+          "point": 0.5443037974683544,
+          "lower": 0.4665142231256855,
+          "upper": 0.6199901119772794
+        },
+        "impliedRatePct": 30,
+        "calibrationErrorPct": 24.430379746835442
+      },
+      {
+        "label": "40-60",
+        "lowerBound": 40,
+        "upperBound": 60,
+        "n": 1949,
+        "observedRatePct": 52.74499743458184,
+        "interval": {
+          "point": 0.5274499743458184,
+          "lower": 0.5052528769269307,
+          "upper": 0.5495390734288996
+        },
+        "impliedRatePct": 50,
+        "calibrationErrorPct": 2.7449974345818404
+      }
+    ],
+    "meanAbsoluteCalibrationErrorPct": 13.587688590708641,
+    "monotonic": false,
+    "interpretation": "Higher confidence did NOT reliably correspond to better outcomes — the observed rate falls somewhere as confidence rises, so the score does not cleanly rank setups. Observed rates differ from the score's implied probability by 13.6 points on average, so this is NOT a probability and must not be presented as one. The spread between the least and most confident bands is under 5 points, which is small enough that confidence adds little discriminating power in practice."
+  },
+  "benchmarks": [
+    {
+      "name": "BTC — Buy and hold",
+      "description": "Long from the first day to the last, one round trip of cost.",
+      "n": 1,
+      "totalReturnPct": 171.2281464134589,
+      "annualizedPct": 28.73184152212658,
+      "maxDrawdownPct": -52.73417286195085,
+      "exposurePct": 100,
+      "meanReturnPerTradePct": null
+    },
+    {
+      "name": "BTC — SMA 50/200 crossover",
+      "description": "Long while the 50-day average is above the 200-day, flat otherwise. Signal taken from the prior close.",
+      "n": 1,
+      "totalReturnPct": 224.01131384627223,
+      "annualizedPct": 34.658363268320436,
+      "maxDrawdownPct": -30.765912928842955,
+      "exposurePct": 57.103825136612016,
+      "meanReturnPerTradePct": null
+    },
+    {
+      "name": "BTC — Random entry",
+      "description": "732 randomly-timed entries matched to the engine's trade count, 22% long mix and 7-day median hold. Constant size, additive — same convention as the engine's own figures.",
+      "n": 732,
+      "totalReturnPct": -579.7289670735237,
+      "annualizedPct": -146.74138209558677,
+      "maxDrawdownPct": -942.8756411119127,
+      "exposurePct": 100,
+      "meanReturnPerTradePct": -0.7919794632151963
+    },
+    {
+      "name": "ETH — Buy and hold",
+      "description": "Long from the first day to the last, one round trip of cost.",
+      "n": 1,
+      "totalReturnPct": 15.628759843125684,
+      "annualizedPct": 3.7895701938256865,
+      "maxDrawdownPct": -64.98235762965352,
+      "exposurePct": 100,
+      "meanReturnPerTradePct": null
+    },
+    {
+      "name": "ETH — SMA 50/200 crossover",
+      "description": "Long while the 50-day average is above the 200-day, flat otherwise. Signal taken from the prior close.",
+      "n": 3,
+      "totalReturnPct": -37.224737729605465,
+      "annualizedPct": -11.242413448588994,
+      "maxDrawdownPct": -75.96311487959186,
+      "exposurePct": 40.45307443365696,
+      "meanReturnPerTradePct": null
+    },
+    {
+      "name": "ETH — Random entry",
+      "description": "618 randomly-timed entries matched to the engine's trade count, 22% long mix and 7-day median hold. Constant size, additive — same convention as the engine's own figures.",
+      "n": 618,
+      "totalReturnPct": -606.2487794166271,
+      "annualizedPct": -155.28477507864486,
+      "maxDrawdownPct": -1145.168650948193,
+      "exposurePct": 100,
+      "meanReturnPerTradePct": -0.9809850799621799
+    }
+  ],
+  "failureModes": [
+    {
+      "label": "neutral + high-vol + range-bound",
+      "n": 12,
+      "expectancyNetPct": -2.541990726539464,
+      "stopHitRatePct": 58.333333333333336,
+      "deltaVsBasePct": -2.537686228373419
+    },
+    {
+      "label": "neutral + low-vol",
+      "n": 67,
+      "expectancyNetPct": -1.2612766645989262,
+      "stopHitRatePct": 25.37313432835821,
+      "deltaVsBasePct": -1.2569721664328815
+    },
+    {
+      "label": "neutral + normal-vol + range-bound",
+      "n": 51,
+      "expectancyNetPct": -1.015131532682685,
+      "stopHitRatePct": 49.01960784313725,
+      "deltaVsBasePct": -1.0108270345166404
+    },
+    {
+      "label": "bear + normal-vol + range-bound",
+      "n": 17,
+      "expectancyNetPct": -0.98343807456973,
+      "stopHitRatePct": 35.294117647058826,
+      "deltaVsBasePct": -0.9791335764036854
+    },
+    {
+      "label": "bull + high-vol",
+      "n": 70,
+      "expectancyNetPct": -0.8545088556227227,
+      "stopHitRatePct": 34.285714285714285,
+      "deltaVsBasePct": -0.8502043574566781
+    },
+    {
+      "label": "bear + normal-vol",
+      "n": 121,
+      "expectancyNetPct": -0.7017069448933286,
+      "stopHitRatePct": 28.09917355371901,
+      "deltaVsBasePct": -0.697402446727284
+    },
+    {
+      "label": "20-40",
+      "n": 86,
+      "expectancyNetPct": -0.5701418515913068,
+      "stopHitRatePct": 34.883720930232556,
+      "deltaVsBasePct": -0.5658373534252622
+    },
+    {
+      "label": "neutral + low-vol + range-bound",
+      "n": 265,
+      "expectancyNetPct": -0.489917202508838,
+      "stopHitRatePct": 36.60377358490566,
+      "deltaVsBasePct": -0.48561270434279336
+    }
+  ]
+}

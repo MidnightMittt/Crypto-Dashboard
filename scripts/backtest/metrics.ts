@@ -247,3 +247,40 @@ export function summarizeOccurrences(occurrences: Occurrence[], minSampleN: numb
     significance: testSignificance(occurrences, minSampleN),
   };
 }
+
+// ── Interval estimation ─────────────────────────────────────────────────
+
+export interface ProportionInterval {
+  /** Observed proportion, 0-1. */
+  point: number;
+  lower: number;
+  upper: number;
+}
+
+/**
+ * Wilson score interval for a binomial proportion, at ~95% (z = 1.96).
+ *
+ * Chosen over the textbook normal-approximation interval deliberately.
+ * The normal interval misbehaves badly exactly where this codebase needs
+ * honesty most — small samples and proportions near 0 or 1, where it
+ * happily reports bounds below 0% or above 100%. Wilson stays inside
+ * [0,1] and keeps sensible coverage down to the sample sizes these
+ * buckets actually have.
+ *
+ * The point of reporting this at all: "54% (N=41)" invites a confidence
+ * the data doesn't support, while "54%, 95% CI 39-68%" makes the width of
+ * the uncertainty impossible to miss.
+ */
+export function wilsonInterval(successes: number, n: number, z = 1.96): ProportionInterval | null {
+  if (n <= 0 || successes < 0 || successes > n) return null;
+  const p = successes / n;
+  const z2 = z * z;
+  const denominator = 1 + z2 / n;
+  const center = p + z2 / (2 * n);
+  const spread = z * Math.sqrt(p * (1 - p) / n + z2 / (4 * n * n));
+  return {
+    point: p,
+    lower: Math.max(0, (center - spread) / denominator),
+    upper: Math.min(1, (center + spread) / denominator),
+  };
+}
