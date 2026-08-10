@@ -4,7 +4,6 @@ import { AlertTriangle } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { AiMarketSummary } from "@/components/dashboard/AiMarketSummary";
 import { AssetCompositeSection } from "@/components/dashboard/AssetCompositeSection";
-import { EntryQualityCard } from "@/components/dashboard/EntryQualityCard";
 import { CategoryCard } from "@/components/dashboard/CategoryCard";
 import { LiquidityMapCard } from "@/components/dashboard/LiquidityMapCard";
 import { SignalBreakdown } from "@/components/dashboard/SignalBreakdown";
@@ -141,6 +140,7 @@ export default function DashboardPage() {
               trajectory. Everything below either feeds this or audits it.
             */}
             <AiMarketSummary
+              aggregate={aggregate}
               bias={aggregate.marketBias}
               thesis={aggregate.marketThesis}
               technicals={aggregate.technicals}
@@ -148,12 +148,13 @@ export default function DashboardPage() {
               timeline={aggregate.biasTimeline}
             />
 
-            <section className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-              <div className="lg:col-span-2">
-                <EntryQualityCard aggregate={aggregate} />
-              </div>
-              <AssetCompositeSection data={assetComposites} />
-            </section>
+            {/*
+              Entry Quality and the whole execution plan now live INSIDE the
+              decision surface above, directly under the action — they used
+              to be a separate card here, which split one trade across two
+              places. Only the cross-asset composites remain at this level.
+            */}
+            <AssetCompositeSection data={assetComposites} />
 
             {/*
               ── LEADING DRIVERS / MARKET STRUCTURE / POSITIONING / RISK ────
