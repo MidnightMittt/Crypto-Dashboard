@@ -294,6 +294,8 @@ describe("buildEntryQuality — starRationale", () => {
 
   it("states plainly when historical win-rate data isn't available, rather than omitting it silently", () => {
     const result = buildEntryQuality(inputs({ historicalWinRatePct: null, historicalWinRateN: null }));
-    expect(result!.starRationale).toContain("isn't available");
+    // Wording tracks the trade-level upgrade: the input is now a measured
+    // trade win rate, so the absent-data phrasing names trades, not days.
+    expect(result!.starRationale).toContain("aren't enough comparable historical trades");
   });
 });

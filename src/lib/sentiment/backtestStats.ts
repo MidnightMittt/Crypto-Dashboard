@@ -424,3 +424,79 @@ export function lookupMetricRegimeStat(
   const stat = research.metricRegimeCrosstab[`${metricId}:${tag}:${holdingPeriod}`];
   return stat && stat.n >= MIN_SAMPLE_N ? stat : null;
 }
+
+// ── Execution-layer stats (src/data/executionStats.json) ────────────────
+
+/**
+ * The trade-level counterpart to the signal-level stats above. Kept as a
+ * separate snapshot because it answers a different question — "would this
+ * TRADE have made money" rather than "did price drift the right way" — and
+ * because the two have genuinely different sample sizes (2,896 signal-days
+ * vs 1,350 resolved trades).
+ */
+export interface TradeStatsSnapshot {
+  n: number;
+  winRatePct: number;
+  targetHitRatePct: number;
+  stopHitRatePct: number;
+  timeoutRatePct: number;
+  expectancyNetPct: number;
+  mae: { p25: number; median: number; p75: number } | null;
+  mfe: { p25: number; median: number; p75: number } | null;
+}
+
+export interface CalibrationBucketSnapshot {
+  label: string;
+  lowerBound: number;
+  upperBound: number;
+  n: number;
+  observedRatePct: number;
+  interval: { point: number; lower: number; upper: number };
+  impliedRatePct: number;
+  calibrationErrorPct: number;
+}
+
+export interface ExecutionStatsSnapshot {
+  provenance: { engineVersion: string; featureVersion: string; coverageStart: string | null; coverageEnd: string | null };
+  overall: TradeStatsSnapshot | null;
+  bySide: Array<{ label: string; stats: TradeStatsSnapshot }>;
+  calibration24h: {
+    buckets: CalibrationBucketSnapshot[];
+    monotonic: boolean | null;
+    meanAbsoluteCalibrationErrorPct: number | null;
+    interpretation: string;
+  };
+}
+
+/**
+ * Trade statistics for one direction. Direction matters enormously here —
+ * measured over the backtest window longs and shorts differ by nearly a
+ * full percentage point of expectancy per trade — so showing a blended
+ * number next to a specific long or short setup would be actively
+ * misleading.
+ */
+export function lookupTradeStatsBySide(
+  stats: ExecutionStatsSnapshot,
+  side: "long" | "short"
+): TradeStatsSnapshot | null {
+  const segment = stats.bySide.find((s) => s.label === side);
+  if (!segment || segment.stats.n < MIN_SAMPLE_N) return null;
+  return segment.stats;
+}
+
+/**
+ * The calibration bucket a live confidence score falls into, so the UI can
+ * report what that band has ACTUALLY produced rather than implying the
+ * score is a probability. Returns null when the band was too thin to
+ * measure — in which case the UI must say nothing rather than guess.
+ */
+export function lookupCalibrationBucket(
+  stats: ExecutionStatsSnapshot,
+  confidence: number
+): CalibrationBucketSnapshot | null {
+  return (
+    stats.calibration24h.buckets.find(
+      (b) => confidence >= b.lowerBound && (b.upperBound === 100 ? confidence <= 100 : confidence < b.upperBound)
+    ) ?? null
+  );
+}

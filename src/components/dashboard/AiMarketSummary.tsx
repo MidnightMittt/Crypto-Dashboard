@@ -10,11 +10,14 @@ import { buildTradeRecommendation, TradeRecommendation } from "@/lib/signals/tra
 import { MarketThesis, TechnicalRead } from "@/types/market";
 import { intensityLabel } from "@/lib/signals/scoring";
 import { technicalAgreement, TechnicalAgreement } from "@/lib/sentiment/technicals";
-import { lookupBiasVerdictStat } from "@/lib/sentiment/backtestStats";
+import { lookupBiasVerdictStat, lookupCalibrationBucket, ExecutionStatsSnapshot } from "@/lib/sentiment/backtestStats";
 import { RegimeTags } from "@/lib/technicals/regimes";
 import { BiasHistoryEntry } from "@/lib/history/biasHistory";
 import { TimelineList } from "./MarketThesisTimeline";
 import backtestStats from "@/data/backtestStats.json";
+import executionStatsJson from "@/data/executionStats.json";
+
+const executionStats = executionStatsJson as unknown as ExecutionStatsSnapshot;
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -210,6 +213,7 @@ function Header({ bias, thesis }: { bias: MarketBias; thesis: MarketThesis | nul
         reliability line (real, distinct evidence) stays.
       */}
       <BiasBacktestStatLine verdict={bias.verdict} />
+      <ConfidenceCalibrationLine confidence={bias.confidence} />
     </div>
   );
 }
@@ -220,6 +224,39 @@ function Header({ bias, thesis }: { bias: MarketBias; thesis: MarketThesis | nul
  * clears MIN_SAMPLE_N, so a thin bucket says nothing rather than stating a
  * number with false confidence.
  */
+/**
+ * What the confidence score has ACTUALLY been worth, rather than what a
+ * 0-100 number sitting beside a market call implies.
+ *
+ * marketBias.ts is careful to define confidence as evidence quality, not
+ * probability — but a reader sees "64" next to a direction and reads "64%
+ * likely." Phase 3 measured it: over the backtested window the score is
+ * neither calibrated (observed rates miss the implied probability by ~13
+ * points) nor cleanly monotonic. Rather than quietly leaving the wrong
+ * reading available, this states the measured rate for the band the live
+ * score falls in, and says plainly when the score should not be read as a
+ * probability.
+ *
+ * Renders nothing when the band was too thin to measure — silence is the
+ * honest output there, not a hedged guess.
+ */
+function ConfidenceCalibrationLine({ confidence }: { confidence: number }) {
+  const bucket = lookupCalibrationBucket(executionStats, confidence);
+  if (!bucket) return null;
+  const notProbability = executionStats.calibration24h.meanAbsoluteCalibrationErrorPct !== null &&
+    executionStats.calibration24h.meanAbsoluteCalibrationErrorPct > 5;
+  return (
+    <p className="max-w-4xl text-[13px] leading-relaxed text-ink-faint">
+      Days scoring {bucket.label} on confidence went on to move in the read&apos;s direction{" "}
+      {bucket.observedRatePct.toFixed(0)}% of the time over the next 24h (N={bucket.n}, 95% CI{" "}
+      {(bucket.interval.lower * 100).toFixed(0)}-{(bucket.interval.upper * 100).toFixed(0)}%).
+      {notProbability
+        ? " Confidence measures how good the evidence is, not the odds of a move — historically it has not tracked outcome rates closely enough to read as a probability."
+        : ""}
+    </p>
+  );
+}
+
 function BiasBacktestStatLine({ verdict }: { verdict: MarketBias["verdict"] }) {
   const stat = lookupBiasVerdictStat(backtestStats, verdict);
   if (!stat) return null;

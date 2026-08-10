@@ -7,9 +7,11 @@ import { AggregateMarketData } from "@/types/market";
 import { buildEntryQuality, StarRating } from "@/lib/signals/entryQuality";
 import { SupportResistanceZone } from "@/lib/technicals/marketStructure";
 import { buildTradeRecommendation } from "@/lib/signals/tradeRecommendation";
-import { lookupBiasVerdictStat } from "@/lib/sentiment/backtestStats";
+import { lookupTradeStatsBySide, ExecutionStatsSnapshot } from "@/lib/sentiment/backtestStats";
 import { formatPrice } from "@/lib/utils/format";
-import backtestStats from "@/data/backtestStats.json";
+import executionStatsJson from "@/data/executionStats.json";
+
+const executionStats = executionStatsJson as unknown as ExecutionStatsSnapshot;
 
 /**
  * "Is this actually a high-quality entry?" — homepage module #3 from the
@@ -45,7 +47,15 @@ export function EntryQualityCard({ aggregate }: { aggregate: AggregateMarketData
     return <EmptyState headline={recommendation.label} message="No qualifying entry — see the action above for the current read." />;
   }
 
-  const winStat = lookupBiasVerdictStat(backtestStats, bias.verdict);
+  /*
+   * Trade-level, not directional. The star rating implies "would this trade
+   * have worked," and only a measured trade outcome answers that — a
+   * directional win rate counts a signal as correct even when the position
+   * built on it stopped out first. Direction-specific because longs and
+   * shorts behaved very differently over the backtested window.
+   */
+  const isEnterLong = recommendation.action === "enter-long";
+  const tradeStats = lookupTradeStatsBySide(executionStats, isEnterLong ? "long" : "short");
   // Same "first exchange with a price" fallback aggregator.ts itself already
   // uses internally (buildAggregate's base price) when a single representative
   // price is needed and nothing more specific applies — this dashboard has no
@@ -60,8 +70,8 @@ export function EntryQualityCard({ aggregate }: { aggregate: AggregateMarketData
     price,
     atrPct: aggregate.technicals?.atrPct ?? null,
     supportResistance: aggregate.liquidityMap?.supportResistance ?? [],
-    historicalWinRatePct: winStat?.winRatePct ?? null,
-    historicalWinRateN: winStat?.n ?? null,
+    historicalWinRatePct: tradeStats?.winRatePct ?? null,
+    historicalWinRateN: tradeStats?.n ?? null,
   });
 
   if (!eq) {
@@ -134,6 +144,29 @@ export function EntryQualityCard({ aggregate }: { aggregate: AggregateMarketData
             Thesis invalidation above for what would change the thesis itself.
           </p>
         </div>
+
+        {tradeStats && (
+          /*
+            The "why should I trust this setup" line — measured trade
+            outcomes, not a directional drift statistic. Deliberately leads
+            with the sample size and reports the excursions, because the
+            headline rate alone hides how much heat a winning trade took.
+          */
+          <p className="text-[11px] leading-relaxed text-ink-faint">
+            <span className="text-ink-muted">Historically:</span> of {tradeStats.n} comparable{" "}
+            {isLong ? "long" : "short"} setups in the backtested window, {tradeStats.winRatePct.toFixed(0)}% finished
+            in profit after fees, slippage and funding. {tradeStats.targetHitRatePct.toFixed(0)}% reached TP1 before
+            the stop, {tradeStats.stopHitRatePct.toFixed(0)}% stopped out, and{" "}
+            {tradeStats.timeoutRatePct.toFixed(0)}% were still open at the 7-day limit.
+            {tradeStats.mae && tradeStats.mfe && (
+              <>
+                {" "}
+                The median trade drew down {Math.abs(tradeStats.mae.median).toFixed(1)}% against the position before
+                resolving, and ran {tradeStats.mfe.median.toFixed(1)}% in favour at best.
+              </>
+            )}
+          </p>
+        )}
 
         <p className="border-t border-hairline pt-3 text-[11px] leading-relaxed text-ink-faint">
           Reference levels derived from {isLong ? "support/resistance below" : "support/resistance above"}{" "}

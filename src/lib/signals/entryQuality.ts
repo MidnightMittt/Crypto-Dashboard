@@ -70,7 +70,18 @@ export interface EntryQualityInputs {
   /** TechnicalRead.atrPct — ATR as % of price. Null when technicals aren't available. */
   atrPct: number | null;
   supportResistance: SupportResistanceZone[];
-  /** backtestStats.ts's lookupBiasVerdictStat(stats, verdict)?.winRatePct ?? null. */
+  /**
+   * The measured rate at which comparable TRADES actually finished in
+   * profit — `lookupTradeStatsBySide(...).winRatePct`, net of fees,
+   * slippage and funding.
+   *
+   * This used to receive a DIRECTIONAL win rate ("did price drift the right
+   * way after this verdict"), which answers a different question than a
+   * star rating implies. A signal can be directionally right and still lose
+   * money, because a stop sits closer than a target and costs are charged
+   * either way. Measured over the backtest window the gap is real: the two
+   * numbers disagree, and they disagree differently for longs and shorts.
+   */
   historicalWinRatePct: number | null;
   historicalWinRateN: number | null;
 }
@@ -246,8 +257,8 @@ function buildStarRationale(
 ): string {
   const winRatePart =
     winRatePct === null
-      ? "the historical win rate isn't available yet (fewer than 10 recorded days for this verdict)"
-      : `this verdict has historically been right ${winRatePct.toFixed(0)}% of the time over the next day (n=${winRateN})`;
+      ? "there aren't enough comparable historical trades yet to quote a win rate"
+      : `comparable trades finished in profit ${winRatePct.toFixed(0)}% of the time after costs (n=${winRateN})`;
   return `${stars} star${stars === 1 ? "" : "s"} — reward/risk is ${rr.toFixed(1)}:1, evidence confidence is ${confidence.toFixed(0)}/100, metrics agree ${agreement.toFixed(0)}%, and ${winRatePart}.`;
 }
 
