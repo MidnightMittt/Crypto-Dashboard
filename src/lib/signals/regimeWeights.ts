@@ -30,19 +30,48 @@ import { RegimeTags } from "@/lib/technicals/regimes";
  * anything more than a first-pass hypothesis — see report.ts's regime
  * win-rate stats.
  */
-export const REGIME_WEIGHT_MULTIPLIERS: {
+export interface RegimeMultiplierTable {
   volatility: Record<RegimeTags["volatility"], Partial<Record<Category, number>>>;
   rangeBound: Partial<Record<Category, number>>;
-} = {
+}
+
+export const REGIME_WEIGHT_MULTIPLIERS: RegimeMultiplierTable = {
+  /*
+   * PHASE 4 RESULT: emptied. The hypothesis documented above was finally
+   * tested, and it did not earn its place.
+   *
+   * The comment this file has carried since Phase 1 asked for exactly one
+   * thing — "a real backtest comparison (regime-adjusted vs. fixed
+   * weights)". That ablation now exists (scripts/backtest/ablation.ts),
+   * replaying the full production engine with these multipliers on and off
+   * across the same five purged walk-forward folds:
+   *
+   *   fixed weights   +0.073%/trade, 4 of 5 folds positive, worst -0.573%
+   *   these weights   -0.004%/trade, 3 of 5 folds positive, worst -0.584%
+   *
+   * Worse on return, worse on robustness, better on nothing.
+   *
+   * The caveat matters for how that is read: the difference is NOT
+   * statistically established. On the 1,331 days both variants traded,
+   * outcomes were byte-identical; the whole gap comes from 51 trades only
+   * the fixed variant took (+1.374%, 95% CI [-0.603, +3.351]) and 19 only
+   * this variant took (-1.921%, 95% CI [-4.928, +1.086]). Both intervals
+   * straddle zero, and n=19 is below this codebase's own MIN_SAMPLE_N.
+   *
+   * So these are removed for PARSIMONY, not because they are proven
+   * harmful: an explicitly unvalidated hypothesis that has now been
+   * measured and shown no benefit does not belong in the live decision
+   * path. Empty multipliers make regimeAdjustedCategoryWeights an identity
+   * function, so the mechanism, its call site and its tests all survive —
+   * repopulating this table is the only step needed to re-enable regime
+   * weighting if a larger sample ever justifies it.
+   */
   volatility: {
-    high: { risk: 1.2 },
+    high: {},
     low: {},
     normal: {},
   },
-  rangeBound: {
-    marketStructure: 1.15,
-    positioning: 0.9,
-  },
+  rangeBound: {},
 };
 
 /**
@@ -51,10 +80,17 @@ export const REGIME_WEIGHT_MULTIPLIERS: {
  * compose multiplicatively, not additively. `regime: null` returns `base`
  * completely unchanged — the exact pre-Phase-1 behavior, so every existing
  * call site that hasn't been updated to pass a regime yet sees zero drift.
+ *
+ * `table` is injectable purely so the composition/renormalization mechanism
+ * stays under test after Phase 4 emptied the production multipliers. With
+ * the live table the function is currently an identity; tests supply their
+ * own table to prove the machinery still behaves correctly, which is what
+ * makes re-enabling regime weighting a data decision rather than a rewrite.
  */
 export function regimeAdjustedCategoryWeights(
   base: Record<Category, number>,
-  regime: RegimeTags | null
+  regime: RegimeTags | null,
+  table: RegimeMultiplierTable = REGIME_WEIGHT_MULTIPLIERS
 ): Record<Category, number> {
   if (regime === null) return base;
 
@@ -65,8 +101,8 @@ export function regimeAdjustedCategoryWeights(
     }
   };
 
-  applyMultipliers(REGIME_WEIGHT_MULTIPLIERS.volatility[regime.volatility]);
-  if (regime.rangeBound) applyMultipliers(REGIME_WEIGHT_MULTIPLIERS.rangeBound);
+  applyMultipliers(table.volatility[regime.volatility]);
+  if (regime.rangeBound) applyMultipliers(table.rangeBound);
 
   const categories = Object.keys(base) as Category[];
   const adjusted: Record<Category, number> = { ...base };

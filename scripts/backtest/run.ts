@@ -140,6 +140,34 @@ function oiPoint(t: number, oiUsd: number): LocalHistoryPoint {
   return { t, totalOpenInterestUsd: oiUsd, weightedFundingRatePct: 0, price: 0, longShortRatio: null, venueCount: 1 };
 }
 
+/**
+ * Switches for ABLATION ONLY. Defaults reproduce the shipped engine
+ * byte-for-byte, so `npm run backtest` is unaffected — every variant below
+ * exists so a component can be measured against its own absence, not so the
+ * production engine can be quietly reconfigured.
+ */
+export interface ReplayConfig {
+  /**
+   * false passes `regimeTags: null` into buildMarketBias, which is exactly
+   * how regimeAdjustedCategoryWeights disables itself (see regimeWeights.ts).
+   * Regime tags are still RECORDED on every DayRecord either way, so the
+   * two variants stay directly comparable segment-for-segment.
+   */
+  useRegimeWeights: boolean;
+  /**
+   * Downgrades an ENTER to its wait state when the 4H read WEAKENS the
+   * thesis. Phase 3 measured "weakens" as the worst multi-timeframe state
+   * (-0.248%/trade vs +0.039% for confirms); Phase 1 already treats it as a
+   * caveat. This tests whether it should be a gate instead.
+   */
+  requireMtfNotWeakening: boolean;
+}
+
+export const DEFAULT_REPLAY_CONFIG: ReplayConfig = {
+  useRegimeWeights: true,
+  requireMtfNotWeakening: false,
+};
+
 export interface DayRecord {
   asset: string;
   date: string;
@@ -448,7 +476,8 @@ export function replayAsset(
   data: RawAssetData,
   marketWide: MarketWideData,
   windowStart?: number,
-  windowEnd?: number
+  windowEnd?: number,
+  config: ReplayConfig = DEFAULT_REPLAY_CONFIG
 ): DayRecord[] {
   const { asset, futuresKlines, spotKlines, fundingRate, oiHistory, longShortHistory, etfFlows } = data;
   const records: DayRecord[] = [];
@@ -653,10 +682,9 @@ export function replayAsset(
       previous: null, // no sequential "what changed" concept in a batch replay
       now: t,
       // Same `regime` this loop already computes for DayRecord.regimeTags
-      // below — replaying with the ACTUAL regime-adjusted weights, not the
-      // old fixed ones, is the whole point of the Phase 1 backtest
-      // comparison this file's re-run feeds.
-      regimeTags: regime,
+      // below. Nulled under the fixed-weight ablation variant, which is
+      // precisely how regimeWeights.ts turns itself off.
+      regimeTags: config.useRegimeWeights ? regime : null,
     });
 
     const regimeTags = regime ? regimeTagsToStrings(regime) : [];
@@ -668,7 +696,18 @@ export function replayAsset(
      * and until now it was the only part never measured.
      */
     const recommendation = bias ? buildTradeRecommendation(bias, thesis, technicals, technicals4h) : null;
-    const isEnter = recommendation?.action === "enter-long" || recommendation?.action === "enter-short";
+    const agreement4h = thesis && technicals4h ? technicalAgreement(technicals4h, thesis.dominant) : null;
+
+    /*
+     * The selectivity ablation. `buildTradeRecommendation` ships this as a
+     * non-blocking caveat by explicit Phase 1 design; this variant asks
+     * what would have happened had it blocked. Applied AFTER the real
+     * function runs, so the production logic is never edited to serve a
+     * backtest.
+     */
+    const mtfBlocked = config.requireMtfNotWeakening && agreement4h === "weakens";
+    const isEnter =
+      !mtfBlocked && (recommendation?.action === "enter-long" || recommendation?.action === "enter-short");
 
     /*
      * `historicalWinRatePct` is deliberately null rather than read from the
@@ -734,8 +773,12 @@ export function replayAsset(
       categories: (bias?.categories ?? []).map((c) => ({ category: c.category, score: c.score, verdict: c.verdict })),
       metrics: metricVerdicts.map((m) => ({ id: m.id, verdict: m.verdict })),
       regimeTags,
-      action: recommendation?.action ?? null,
-      agreement4h: thesis && technicals4h ? technicalAgreement(technicals4h, thesis.dominant) : null,
+      action: mtfBlocked
+        ? recommendation?.action === "enter-long"
+          ? "wait-long-confirmation"
+          : "wait-short-confirmation"
+        : (recommendation?.action ?? null),
+      agreement4h,
       entryStars: entryQuality?.stars ?? null,
       entryPrice: entryQuality?.entryPrice ?? null,
       stopPrice: entryQuality?.stopPrice ?? null,

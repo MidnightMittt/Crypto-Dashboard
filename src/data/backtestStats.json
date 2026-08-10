@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1786342458578,
+  "generatedAt": 1786345614571,
   "coverageStart": "2022-08-13",
   "coverageEnd": "2026-07-30",
   "squeeze": {
@@ -210,26 +210,26 @@
   },
   "biasVerdict": {
     "bullish": {
-      "n": 544,
-      "mean1dPct": 0.28000103700389906,
-      "mean3dPct": 0.6967301149357008,
-      "mean7dPct": 1.0278714234758883,
+      "n": 531,
+      "mean1dPct": 0.37584787317356705,
+      "mean3dPct": 0.8990502812180228,
+      "mean7dPct": 1.3851008579129909,
       "fadeHitRatePct": null,
-      "winRatePct": 54.96323529411765
+      "winRatePct": 55.74387947269304
     },
     "bearish": {
-      "n": 1565,
-      "mean1dPct": -0.07561472064779841,
-      "mean3dPct": 0.008648050315026677,
-      "mean7dPct": 0.044061537461295666,
+      "n": 1608,
+      "mean1dPct": -0.03340252723875308,
+      "mean3dPct": 0.02286840117710584,
+      "mean7dPct": 0.09063929610530903,
       "fadeHitRatePct": null,
-      "winRatePct": 51.18210862619809
+      "winRatePct": 50.74626865671642
     },
     "neutral": {
-      "n": 787,
-      "mean1dPct": 0.23528926807780787,
-      "mean3dPct": 0.312307169774457,
-      "mean7dPct": 1.1351381037126203,
+      "n": 757,
+      "mean1dPct": 0.09681931761995016,
+      "mean3dPct": 0.1640330719431702,
+      "mean7dPct": 0.8458766974211291,
       "fadeHitRatePct": null,
       "winRatePct": null
     }

@@ -25,8 +25,13 @@ import { DEFAULT_COST_CONFIG, CostConfig } from "./costs";
  * Do NOT bump for presentation, comments, or report formatting: an
  * inflated version is as misleading as a stale one, just in the other
  * direction.
+ *
+ * 4.0.0: Phase 4 retired the regime weight multipliers after ablation
+ * showed they did not earn their place. This changes what the engine would
+ * have decided on 116 of 2,896 historical days, so it is a major bump even
+ * though the diff is a handful of emptied objects.
  */
-export const ENGINE_VERSION = "3.1.0";
+export const ENGINE_VERSION = "4.0.0";
 
 /**
  * Bump when the meaning or shape of the replayed FEATURES changes — a new
