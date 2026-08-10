@@ -10,6 +10,7 @@ import { buildTradeRecommendation, TradeRecommendation } from "@/lib/signals/tra
 import { MarketThesis, TechnicalRead } from "@/types/market";
 import { intensityLabel } from "@/lib/signals/scoring";
 import { technicalAgreement, TechnicalAgreement } from "@/lib/sentiment/technicals";
+import { technicalDimensions, DimensionStance } from "@/lib/sentiment/technicalDimensions";
 import { lookupBiasVerdictStat, lookupCalibrationBucket, ExecutionStatsSnapshot } from "@/lib/sentiment/backtestStats";
 import { RegimeTags } from "@/lib/technicals/regimes";
 import { BiasHistoryEntry } from "@/lib/history/biasHistory";
@@ -78,17 +79,37 @@ export function AiMarketSummary({
   return (
     <Card>
       <CardContent className="flex flex-col gap-7 py-6">
-        <SuggestedActionBanner recommendation={recommendation} />
-
-        <Header bias={bias} thesis={thesis} />
+        <Decision bias={bias} thesis={thesis} recommendation={recommendation} />
 
         <TopReasons reasons={reasons} />
 
         <TechnicalConfirmation technicals={technicals} technicals4h={technicals4h ?? null} thesis={thesis} />
 
-        <ContradictingEvidence metric={bias.counterRisk} rationale={bias.riskRationale} />
+        <ContradictingEvidence
+          metric={bias.counterRisk}
+          rationale={bias.riskRationale}
+          technicals={technicals}
+          technicals4h={technicals4h ?? null}
+          thesis={thesis}
+        />
 
         <InvalidationLevel watchNext={bias.watchNext} invalidationLines={invalidationLines} />
+
+        {/*
+          Everything below is Level 4/5 — supporting intelligence and raw
+          detail. It sits behind disclosure so a trader answering "what do I
+          do" never has to read past it. The two backtest/calibration
+          paragraphs used to render inline directly under the score, putting
+          ~90 words of statistics between the decision and the evidence.
+        */}
+        <div className="border-t border-hairline pt-5">
+          <Collapsible title="Historical context" summary="backtested reliability, confidence calibration">
+            <div className="flex flex-col gap-3 pt-2">
+              <BiasBacktestStatLine verdict={bias.verdict} />
+              <ConfidenceCalibrationLine confidence={bias.confidence} />
+            </div>
+          </Collapsible>
+        </div>
 
         {timeline && (
           <div className="border-t border-hairline pt-5">
@@ -126,94 +147,100 @@ const ACTION_STYLE: Record<TradeRecommendation["action"], { border: string; bg: 
 };
 
 /**
- * The recommendation, first — per the charter's explicit rule, this
- * appears BEFORE the score/reasons/evidence below it, not after. Gated on
- * both layers agreeing (see tradeRecommendation.ts): only ENTER LONG/SHORT
- * when the market thesis AND technical confirmation both agree; otherwise
- * WAIT, with the real reason and next trigger cited, never a fabricated
- * setup.
+ * LEVEL 1 — the decision, and the only thing on this card allowed to
+ * dominate visually.
+ *
+ * Previously the ACTION rendered at text-sm inside a banner while the
+ * composite score rendered at text-5xl directly beneath it, so the largest
+ * element on the page was a 0-100 number rather than "what should I do."
+ * A trader scanning for five seconds read "47" before "NO TRADE". The
+ * action now leads at display size and the score is demoted to a
+ * supporting qualifier beside the verdict, where it belongs: the score
+ * explains the action, it is not the answer.
+ *
+ * Merged from what used to be two separate stacked blocks (action banner +
+ * header) because they were answering one question between them, and the
+ * split forced the eye through a size inversion to assemble it.
+ *
+ * Gated on both layers agreeing (see tradeRecommendation.ts): ENTER
+ * LONG/SHORT only when the market thesis AND technical confirmation agree;
+ * otherwise a WAIT state with the real reason and next trigger cited.
  */
-function SuggestedActionBanner({ recommendation }: { recommendation: TradeRecommendation }) {
+function Decision({
+  bias,
+  thesis,
+  recommendation,
+}: {
+  bias: MarketBias;
+  thesis: MarketThesis | null;
+  recommendation: TradeRecommendation;
+}) {
   const style = ACTION_STYLE[recommendation.action];
   const { Icon } = style;
 
   return (
-    <div className={`flex flex-col gap-2 rounded-lg border ${style.border} ${style.bg} px-4 py-3.5`}>
-      <div className="flex items-center gap-2">
-        <Icon className={`h-4 w-4 ${style.text}`} />
-        <span className={`text-sm font-bold uppercase tracking-[0.1em] ${style.text}`}>{recommendation.label}</span>
-      </div>
-      <p className="text-[13px] leading-relaxed text-ink-muted">{recommendation.reason}</p>
-      {recommendation.nextTrigger && (
-        <p className="text-[12px] leading-relaxed text-ink-faint">
-          <span className="text-ink-muted">Next trigger:</span> {recommendation.nextTrigger}
-        </p>
-      )}
-    </div>
-  );
-}
-
-/* ── Score / Direction / Confidence + trade bias ─────────────────────── */
-
-function Header({ bias, thesis }: { bias: MarketBias; thesis: MarketThesis | null }) {
-  return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
-        <div className="flex flex-col gap-2">
-          <span className="text-[11px] uppercase tracking-[0.22em] text-ink-muted">
-            {bias.asset} · {thesis ? thesis.regime : "Market Read"}
-          </span>
-          <div className="flex items-baseline gap-4">
-            <span className="font-mono text-5xl font-semibold leading-none tracking-tight text-ink">
-              {bias.score}
+      <span className="text-[11px] uppercase tracking-[0.22em] text-ink-muted">
+        {bias.asset} · {thesis ? thesis.regime : "Market Read"}
+      </span>
+
+      <div className={`flex flex-col gap-3 rounded-lg border ${style.border} ${style.bg} px-4 py-4`}>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div className="flex items-center gap-2.5">
+            <Icon className={`h-6 w-6 shrink-0 ${style.text}`} aria-hidden />
+            <span className={`text-2xl font-bold uppercase leading-none tracking-[0.04em] sm:text-3xl ${style.text}`}>
+              {recommendation.label}
             </span>
-            <VerdictBadge verdict={bias.verdict} size="lg" />
-            <span className="text-xs text-ink-faint">{intensityLabel(bias.score)}</span>
+          </div>
+          {/*
+            The score rides ALONGSIDE the verdict rather than above it, at
+            a size that reads as a qualifier. Same numbers as before, an
+            order of magnitude less visual weight.
+          */}
+          <div className="flex items-baseline gap-2.5">
+            <VerdictBadge verdict={bias.verdict} size="sm" />
+            <span className="font-mono text-lg leading-none text-ink">{bias.score}</span>
+            <span className="text-[11px] text-ink-faint">{intensityLabel(bias.score)}</span>
+            <span className="text-[11px] text-ink-faint" title="How good the evidence behind this read is — not the odds of a move.">
+              · Confidence {bias.confidence}%
+            </span>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-start gap-6">
-          <Stat label="Confidence" value={`${bias.confidence}%`} hint="How good the evidence behind this read is — not the odds of a move." />
-          <Stat label="Agreement" value={`${bias.agreement}%`} hint="How much the metrics concur with each other." />
-          {bias.trendStrength && (
-            <Stat label="Trend Strength" value={bias.trendStrength.label} hint="How strongly price action itself is trending, from the technical read." />
-          )}
+        <p className="text-[13px] leading-relaxed text-ink-muted">{recommendation.reason}</p>
+        {recommendation.nextTrigger && (
+          <p className="text-[12px] leading-relaxed text-ink-faint">
+            <span className="text-ink-muted">Next trigger:</span> {recommendation.nextTrigger}
+          </p>
+        )}
+      </div>
+
+      {/* Secondary qualifiers — real information, but none of them is the decision. */}
+      <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
+        <Stat label="Agreement" value={`${bias.agreement}%`} hint="How much the metrics concur with each other." />
+        {bias.trendStrength && (
+          <Stat label="Trend Strength" value={bias.trendStrength.label} hint="How strongly price action itself is trending, from the technical read." />
+        )}
+        <Stat
+          label="Risk"
+          value={bias.riskLevel.toUpperCase()}
+          hint={bias.riskRationale}
+          tone={bias.riskLevel === "high" ? "danger" : bias.riskLevel === "medium" ? "amber" : "success"}
+        />
+        {thesis?.regimeTags && (
           <Stat
-            label="Risk"
-            value={bias.riskLevel.toUpperCase()}
-            hint={bias.riskRationale}
-            tone={bias.riskLevel === "high" ? "danger" : bias.riskLevel === "medium" ? "amber" : "success"}
+            // Deliberately NOT "Market Regime" — that word already labels
+            // the qualitative regime name above (e.g. "CONSOLIDATION"), a
+            // different concept (directional lean vs. today's trend/
+            // volatility classification).
+            label="Trend / Vol"
+            value={regimeBadgeText(thesis.regimeTags)}
+            hint="Today's trend/volatility classification — the same one every metric's backtested Best/Worst Environment is measured against."
           />
-          {thesis?.regimeTags && (
-            <Stat
-              // Deliberately NOT "Market Regime" — that word already
-              // labels the qualitative regime name next to the score above
-              // (e.g. "LEANING BEARISH"), a different concept (directional
-              // lean vs. today's trend/volatility classification). Reusing
-              // "regime" for both risked reading as two verdicts
-              // disagreeing when they're actually answering different
-              // questions.
-              label="Trend / Vol"
-              value={regimeBadgeText(thesis.regimeTags)}
-              hint="Today's trend/volatility classification — the same one every metric's backtested Best/Worst Environment below is measured against."
-            />
-          )}
-        </div>
+        )}
       </div>
 
       <ScoreBar score={bias.score} />
-
-      {/*
-        Dashboard V2 product review: the `headline`/`regimeDescription`
-        paragraphs that used to live here are gone — the Suggested Action
-        banner above now states the same conclusion once, cleanly, first
-        (buildTradeRecommendation's `reason` is literally bias.headline
-        verbatim). Repeating it here was the card arguing with itself in
-        five different renderings of the same fact. Only the backtest
-        reliability line (real, distinct evidence) stays.
-      */}
-      <BiasBacktestStatLine verdict={bias.verdict} />
-      <ConfidenceCalibrationLine confidence={bias.confidence} />
     </div>
   );
 }
@@ -409,6 +436,47 @@ function TechnicalConfirmation({
             </span>
           ))}
       </div>
+      {/*
+        The per-indicator grid, so "CONTRADICTS" above is never an
+        unexplained badge — a trader can see WHICH dimensions disagree
+        without reading prose. Every stance comes from
+        technicalDimensions(), which imports its thresholds from
+        technicals.ts so this grid cannot drift from the verdict it sits
+        under. Stance is carried by an explicit text label as well as
+        colour, never colour alone.
+      */}
+      <dl className="mt-3 grid grid-cols-1 gap-x-8 gap-y-1.5 sm:grid-cols-2">
+        {technicalDimensions(technicals, thesis.dominant).map((d) => {
+          const s = DIMENSION_STANCE[d.stance];
+          return (
+            <div key={d.label} className="flex items-baseline justify-between gap-3 border-b border-hairline/40 py-1">
+              <dt className="shrink-0 text-xs text-ink">{d.label}</dt>
+              <dd className="flex min-w-0 items-baseline gap-2 text-right">
+                <span className="truncate text-[11px] text-ink-faint">{d.detail}</span>
+                <span className={`shrink-0 text-[10px] font-semibold uppercase tracking-wider ${s.text}`}>
+                  <span aria-hidden>{s.dot}</span> {s.label}
+                </span>
+              </dd>
+            </div>
+          );
+        })}
+      </dl>
+
+      {/*
+        Non-negotiable caption. These six are the dimensions a trader
+        scans, but buildTechnicalRead's composite also weighs Supertrend,
+        Parabolic SAR, Ichimoku, Stochastic, OBV, Bollinger and VWAP. Left
+        unsaid, a reader seeing two rows marked AGAINST beneath a CONFIRMS
+        badge concludes the badge is broken — observed exactly that on the
+        live BTC read while building this. Saying which votes are shown
+        costs one line and keeps the two honest with each other.
+      */}
+      <p className="mt-2 text-[10px] leading-relaxed text-ink-faint/75">
+        The six readings traders scan most. The verdict above weighs these plus Supertrend,
+        Parabolic SAR, Ichimoku, Stochastic, OBV, Bollinger and VWAP, so it can differ from any
+        single row here.
+      </p>
+
       <ul className="mt-3 flex flex-col gap-2">
         {thesis.technicalConfirmation.map((line, i) => (
           <li key={i} className={`text-xs leading-relaxed ${i === 0 ? "text-ink" : "text-ink-faint"}`}>
@@ -419,6 +487,15 @@ function TechnicalConfirmation({
     </div>
   );
 }
+
+/** Compact per-dimension stance styling. Text label always accompanies the colour so the state never depends on colour perception alone. */
+const DIMENSION_STANCE: Record<DimensionStance, { dot: string; label: string; text: string }> = {
+  confirms: { dot: "🟢", label: "Confirms", text: "text-success" },
+  weakens: { dot: "🟠", label: "Weakens", text: "text-amber" },
+  contradicts: { dot: "🔴", label: "Against", text: "text-danger" },
+  neutral: { dot: "⚪", label: "Neutral", text: "text-ink-faint" },
+  unavailable: { dot: "—", label: "No data", text: "text-ink-faint" },
+};
 
 /* ── Contradicting evidence ────────────────────────────────────────────
  *
@@ -433,8 +510,51 @@ function TechnicalConfirmation({
  * own "Contradicting evidence" box for visual consistency across the page.
  */
 
-function ContradictingEvidence({ metric, rationale }: { metric: MetricVerdict | null; rationale?: string }) {
-  if (!metric && !rationale) return null;
+function ContradictingEvidence({
+  metric,
+  rationale,
+  technicals,
+  technicals4h,
+  thesis,
+}: {
+  metric: MetricVerdict | null;
+  rationale?: string;
+  technicals: TechnicalRead | null;
+  technicals4h: TechnicalRead | null;
+  thesis: MarketThesis | null;
+}) {
+  /*
+   * Price action counts as contradicting evidence.
+   *
+   * This section used to read only `bias.counterRisk` — a METRIC-level
+   * disagreement — so the card could simultaneously render "TECHNICAL
+   * CONFIRMATION: CONTRADICTS" and, three lines below, "Nothing material
+   * is arguing the other way right now." Observed live on BTC. Whatever
+   * else that is, it isn't true, and a trader who notices it stops
+   * trusting the rest of the card. Technical and multi-timeframe
+   * disagreement are now surfaced here as the first-class objections they
+   * are, reusing the same technicalAgreement() the badge above uses so the
+   * two can never disagree.
+   */
+  const objections: string[] = [];
+  if (technicals && thesis) {
+    const agreement = technicalAgreement(technicals, thesis.dominant);
+    if (agreement === "contradicts") {
+      objections.push("Price action argues against the thesis — the daily technical read points the other way.");
+    } else if (agreement === "weakens") {
+      objections.push("Momentum is diverging against the thesis, so price action isn't fully backing it.");
+    }
+    if (technicals4h) {
+      const htf = technicalAgreement(technicals4h, thesis.dominant);
+      if (htf === "contradicts") {
+        objections.push("The 4-hour higher-timeframe read disagrees with this direction.");
+      } else if (htf === "weakens") {
+        objections.push("The 4-hour read is weakening against this direction.");
+      }
+    }
+  }
+
+  if (!metric && !rationale && objections.length === 0) return null;
 
   return (
     <div className="flex flex-col gap-1.5 rounded-md border border-amber/20 bg-amber/[0.04] px-3 py-2.5">
@@ -451,8 +571,15 @@ function ContradictingEvidence({ metric, rationale }: { metric: MetricVerdict | 
           <p className="text-xs leading-relaxed text-ink-faint/75">{metric.whyItMatters}</p>
         </div>
       ) : (
-        <p className="text-xs leading-relaxed text-ink-faint">Nothing material is arguing the other way right now.</p>
+        objections.length === 0 && (
+          <p className="text-xs leading-relaxed text-ink-faint">Nothing material is arguing the other way right now.</p>
+        )
       )}
+      {objections.map((line) => (
+        <p key={line} className="text-xs leading-relaxed text-ink-faint">
+          {line}
+        </p>
+      ))}
       {rationale && <p className="text-xs leading-relaxed text-ink-faint/80">{rationale}</p>}
     </div>
   );
@@ -495,20 +622,19 @@ function InvalidationLevel({
         </ul>
       )}
 
-      {invalidationLines.length > 0 && (
-        <>
-          <p className="mt-4 text-[11px] uppercase tracking-[0.16em] text-ink-muted">
-            What would invalidate this
-          </p>
-          <ul className="mt-2 flex flex-col gap-1.5">
-            {invalidationLines.slice(0, 2).map((line, i) => (
-              <li key={i} className="text-xs leading-relaxed text-ink-faint">
-                {line}
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
+      {/*
+        Merged into the list above rather than kept as its own "What would
+        invalidate this" heading. Two consecutive headings both answering
+        "what breaks this read" read as two different concepts and made the
+        section twice as long as the idea inside it. These are the same
+        idea stated at thesis level, so they now continue the same list,
+        visually subordinate to the named metric triggers above them.
+      */}
+      {invalidationLines.slice(0, 2).map((line, i) => (
+        <p key={i} className="mt-2 text-xs leading-relaxed text-ink-faint">
+          {line}
+        </p>
+      ))}
     </div>
   );
 }

@@ -40,12 +40,29 @@ export function EntryQualityCard({ aggregate }: { aggregate: AggregateMarketData
   const recommendation = buildTradeRecommendation(bias, aggregate.marketThesis, aggregate.technicals, aggregate.technicals4h);
 
   if (recommendation.action !== "enter-long" && recommendation.action !== "enter-short") {
-    // Deliberately NOT repeating recommendation.reason/nextTrigger here —
-    // that full sentence is already the first thing on the page, in the
-    // Suggested Action banner. Restating it verbatim a second time here is
-    // pure duplication; this card's own job when there's no qualifying
-    // entry is just to say so plainly and point back up, not re-explain why.
-    return <EmptyState headline={recommendation.label} message="No qualifying entry — see the action above for the current read." />;
+    /*
+     * Deliberately NOT repeating recommendation.reason/nextTrigger here —
+     * that full sentence is already the first thing on the page, in the
+     * Decision block. Restating it verbatim would be pure duplication.
+     *
+     * But structure IS shown, even with no qualifying entry. Support and
+     * resistance don't depend on whether a trade cleared the gate, and a
+     * trader waiting for a trigger needs "where is price relative to
+     * structure" more than anyone — previously this branch rendered a
+     * single sentence and the levels vanished from the page entirely.
+     */
+    return (
+      <EmptyState
+        headline={recommendation.label}
+        message="No qualifying entry — see the action above for the current read."
+        structure={
+          <MarketStructureRow
+            price={aggregate.exchanges[0]?.price ?? 0}
+            zones={aggregate.liquidityMap?.supportResistance ?? []}
+          />
+        }
+      />
+    );
   }
 
   /*
@@ -210,7 +227,7 @@ function CardLabel() {
   return <span className="text-[11px] uppercase tracking-[0.22em] text-ink-muted">Entry Quality</span>;
 }
 
-function EmptyState({ headline, message }: { headline?: string; message: string }) {
+function EmptyState({ headline, message, structure }: { headline?: string; message: string; structure?: React.ReactNode }) {
   return (
     <Card>
       <CardContent className="py-8">
@@ -224,8 +241,34 @@ function EmptyState({ headline, message }: { headline?: string; message: string 
           </div>
         )}
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-faint">{message}</p>
+        {structure}
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * Where price sits relative to structure, shown even when no trade
+ * qualifies. The levels come from the same `supportResistance` zones
+ * buildEntryQuality() would use for a real setup — nothing is recomputed
+ * or invented, it's the identical canonical zone list the Liquidity Map
+ * renders. Renders nothing at all when there are no zones, rather than
+ * showing empty scaffolding.
+ */
+function MarketStructureRow({ price, zones }: { price: number; zones: SupportResistanceZone[] }) {
+  const support = zones.filter((z) => z.kind === "support" && z.priceHigh < price).sort((a, b) => b.priceHigh - a.priceHigh)[0] ?? null;
+  const resistance = zones.filter((z) => z.kind === "resistance" && z.priceLow > price).sort((a, b) => a.priceLow - b.priceLow)[0] ?? null;
+  if (!support && !resistance) return null;
+
+  return (
+    <div className="mt-5 grid grid-cols-3 gap-4 border-t border-hairline pt-4">
+      <ZoneStat label="Support" zone={support} tone="bull" />
+      <div>
+        <dt className="text-[9px] uppercase tracking-[0.14em] text-ink-faint">Price now</dt>
+        <dd className="mt-0.5 font-mono text-sm text-ink">{price > 0 ? formatPrice(price) : "—"}</dd>
+      </div>
+      <ZoneStat label="Resistance" zone={resistance} tone="bear" />
+    </div>
   );
 }
 

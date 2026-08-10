@@ -49,15 +49,23 @@ import { classifyDivergence, DivergenceKind } from "../technicals/divergence";
 const ADX_TRENDING = 25;
 /** Below this ADX, directional readings carry much less weight. */
 const ADX_RANGING = 20;
-const RSI_OVERBOUGHT = 70;
-const RSI_OVERSOLD = 30;
+/*
+ * Exported so technicalDimensions.ts can render each indicator's own
+ * confirm/contradict stance against the SAME cut-offs that produce the
+ * composite vote below. Re-declaring these numbers there would let the
+ * per-indicator grid quietly disagree with the headline verdict sitting
+ * directly above it — precisely the defect that display layer exists to
+ * prevent.
+ */
+export const RSI_OVERBOUGHT = 70;
+export const RSI_OVERSOLD = 30;
 /** RSI band treated as genuinely neutral rather than a mild lean. */
-const RSI_NEUTRAL_LOW = 45;
-const RSI_NEUTRAL_HIGH = 55;
+export const RSI_NEUTRAL_LOW = 45;
+export const RSI_NEUTRAL_HIGH = 55;
 /** Volume multiple above which a move counts as genuinely participated-in. */
-const VOLUME_CONFIRMING = 1.2;
+export const VOLUME_CONFIRMING = 1.2;
 /** Volume multiple below which a move looks unconvinced. */
-const VOLUME_WEAK = 0.7;
+export const VOLUME_WEAK = 0.7;
 
 /** Minimum bars before any technical read is attempted at all. */
 const MIN_CANDLES = 60;
