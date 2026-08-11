@@ -354,41 +354,63 @@ export function applyTick(store: SwingThesisStore, ev: TickEvidence): SwingThesi
   return { ...store, events, active: { ...state, status: next } };
 }
 
-interface Assessment {
+export interface Assessment {
   qualifies: boolean;
   /** When true, `note` is always populated. */
   weakening: boolean;
   note: string | null;
+  /**
+   * Machine-readable name of the FIRST gate that blocked activation, for
+   * offline gate-attribution research. Null when the assessment qualifies.
+   * Exists so `swingCalibration.ts` can rank suppressing conditions without
+   * keeping a second, drifting copy of the gate order.
+   */
+  gate: ActivationGate | null;
 }
+
+/** The gates, in the order `assess` evaluates them. */
+export type ActivationGate =
+  | "no-score"
+  | "bias-direction"
+  | "conviction-below-deactivation"
+  | "conviction-below-activation"
+  | "daily-not-confirming"
+  | "4h-contradicts"
+  | "4h-weakens";
 
 /**
  * The activation gate, also reused to judge whether a live thesis still
  * stands. Conditions are evaluated against the BIAS direction throughout.
+ *
+ * Exported for research only — `swingCalibration.ts` calls it to attribute
+ * every inactive day to the specific condition that blocked it. Nothing in
+ * the live path calls it directly, and exporting changes no behaviour.
  */
-function assess(direction: SwingDirection, ev: DailyCloseEvidence, config: SwingThesisConfig): Assessment {
+export function assess(direction: SwingDirection, ev: DailyCloseEvidence, config: SwingThesisConfig): Assessment {
   const wanted: Verdict = direction === "long" ? "bullish" : "bearish";
 
   if (ev.biasScore === null) {
-    return { qualifies: false, weakening: false, note: "Composite score unavailable" };
+    return { qualifies: false, weakening: false, note: "Composite score unavailable", gate: "no-score" };
   }
   if (ev.biasVerdict !== wanted) {
-    return { qualifies: false, weakening: true, note: `Composite bias is no longer ${wanted}` };
+    return { qualifies: false, weakening: true, note: `Composite bias is no longer ${wanted}`, gate: "bias-direction" };
   }
 
   const distance = Math.abs(ev.biasScore - 50);
   if (distance < config.deactivationBand) {
-    return { qualifies: false, weakening: true, note: "Composite conviction fell back toward neutral" };
+    return { qualifies: false, weakening: true, note: "Composite conviction fell back toward neutral", gate: "conviction-below-deactivation" };
   }
   if (distance < config.activationBand) {
     // Between the two bands: not strong enough to START a thesis, but not
     // weak enough to undermine one. This gap is the hysteresis.
-    return { qualifies: false, weakening: false, note: "Composite conviction below the activation band" };
+    return { qualifies: false, weakening: false, note: "Composite conviction below the activation band", gate: "conviction-below-activation" };
   }
 
   if (ev.dailyAgreement !== "confirms") {
     return {
       qualifies: false,
       weakening: true,
+      gate: "daily-not-confirming",
       note:
         ev.dailyAgreement === "contradicts"
           ? "Daily structure now contradicts this direction"
@@ -403,13 +425,13 @@ function assess(direction: SwingDirection, ev: DailyCloseEvidence, config: Swing
   // composite — that change would need out-of-sample proof first, and the
   // validated backtest statistics depend on the current weights.
   if (ev.fourHourAgreement === "contradicts") {
-    return { qualifies: false, weakening: true, note: "4H structure contradicts the daily thesis" };
+    return { qualifies: false, weakening: true, note: "4H structure contradicts the daily thesis", gate: "4h-contradicts" };
   }
   if (ev.fourHourAgreement === "weakens") {
-    return { qualifies: false, weakening: true, note: "4H momentum is deteriorating against the daily thesis" };
+    return { qualifies: false, weakening: true, note: "4H momentum is deteriorating against the daily thesis", gate: "4h-weakens" };
   }
 
-  return { qualifies: true, weakening: false, note: null };
+  return { qualifies: true, weakening: false, note: null, gate: null };
 }
 
 /**

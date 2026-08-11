@@ -271,11 +271,42 @@ export interface DayRecord {
   swingDirection: string | null;
   swingStatus: string | null;
   swingHealth: string | null;
+  /**
+   * The two gate inputs not otherwise recorded, kept so
+   * `swingCalibration.ts` can attribute every INACTIVE day to the specific
+   * condition that blocked it without re-deriving the technical read.
+   * Research-only: nothing in the replay or the reports consumes them.
+   */
+  dailyAgreement: string | null;
+  dailyDirection: string | null;
+  /**
+   * The FROZEN swing plan on the day a thesis activated, null otherwise.
+   *
+   * Research-only, and the reason it exists is worth recording: `trade`
+   * above is resolved from the STATELESS recommendation and an at-market
+   * entry, so it is completely invariant to the swing configuration. Until
+   * this field existed there was no way to measure what a swing-thesis trade
+   * actually did — a sweep over swing thresholds returned byte-identical
+   * trade statistics for every candidate, which is how the gap was found.
+   */
+  swingPlan: {
+    direction: "long" | "short";
+    entryLow: number;
+    entryHigh: number;
+    entryRef: number;
+    stopPrice: number;
+    target1Price: number;
+    target2Price: number;
+    riskRewardRatio: number;
+  } | null;
   forwardReturn1h: number | null;
   forwardReturn4h: number | null;
   forwardReturn1d: number | null;
   forwardReturn3d: number | null;
   forwardReturn7d: number | null;
+  /** Swing-relevant horizons, added for the activation-quality study. */
+  forwardReturn14d: number | null;
+  forwardReturn30d: number | null;
 }
 
 /**
@@ -915,11 +946,31 @@ export function replayAsset(
       swingDirection: swingStore.active?.direction ?? null,
       swingStatus: swingStore.active?.status ?? null,
       swingHealth: swingStore.active?.health ?? null,
+      dailyAgreement: technicals ? technicalAgreement(technicals, swingDirectionVerdict) : null,
+      dailyDirection: technicals?.direction ?? null,
+      // Emitted only on the ACTIVATION day (activatedAt === this close), so
+      // the calibration counts one plan per thesis rather than one per day
+      // the thesis happens to still be alive.
+      swingPlan:
+        swingStore.active && swingStore.active.activatedAt === t
+          ? {
+              direction: swingStore.active.direction,
+              entryLow: swingStore.active.plan.entryLow,
+              entryHigh: swingStore.active.plan.entryHigh,
+              entryRef: swingStore.active.plan.entryRef,
+              stopPrice: swingStore.active.plan.stopPrice,
+              target1Price: swingStore.active.plan.target1Price,
+              target2Price: swingStore.active.plan.target2Price,
+              riskRewardRatio: swingStore.active.plan.riskRewardRatio,
+            }
+          : null,
       forwardReturn1h: forwardReturn(futuresKlines, t, 1 * 3_600_000, 30 * 60_000),
       forwardReturn4h: forwardReturn(futuresKlines, t, 4 * 3_600_000, 30 * 60_000),
       forwardReturn1d: forwardReturn(futuresKlines, t, 1 * DAY_MS, 3 * 3_600_000),
       forwardReturn3d: forwardReturn(futuresKlines, t, 3 * DAY_MS, 3 * 3_600_000),
       forwardReturn7d: forwardReturn(futuresKlines, t, 7 * DAY_MS, 3 * 3_600_000),
+      forwardReturn14d: forwardReturn(futuresKlines, t, 14 * DAY_MS, 6 * 3_600_000),
+      forwardReturn30d: forwardReturn(futuresKlines, t, 30 * DAY_MS, 12 * 3_600_000),
     });
   }
 

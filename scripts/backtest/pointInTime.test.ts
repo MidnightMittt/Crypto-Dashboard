@@ -128,6 +128,8 @@ const FORWARD_LABEL_FIELDS = new Set<keyof DayRecord>([
   "forwardReturn1d",
   "forwardReturn3d",
   "forwardReturn7d",
+  "forwardReturn14d",
+  "forwardReturn30d",
   "trade",
 ]);
 
