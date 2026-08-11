@@ -87,7 +87,7 @@ export interface EntryQualityInputs {
 }
 
 /** Minimum reward:risk a structural resistance/support level must clear to be used as the target; below this, the level isn't a meaningfully better target than the flat fallback. */
-const MIN_RR = 1.5;
+export const MIN_RR = 1.5;
 /** Flat reward:risk used for the target when no structural level clears MIN_RR. */
 const FALLBACK_RR = 2;
 /** Minimum reward:risk TP2 must clear — higher than TP1's bar, since TP2 is explicitly the farther, lower-probability "let it run" level. */
@@ -97,7 +97,7 @@ const FALLBACK_RR_TP2 = 4;
 /** ATR multiple used for the stop when no structural support/resistance level qualifies. */
 const ATR_STOP_MULTIPLIER = 1.5;
 /** A structural level closer than this many ATRs is too close to be a meaningful stop (noise would trigger it); farther than this, it's not really "the" stop, just a distant level. */
-const STRUCTURAL_STOP_MIN_ATR = 0.5;
+export const STRUCTURAL_STOP_MIN_ATR = 0.5;
 const STRUCTURAL_STOP_MAX_ATR = 4;
 
 function clamp01(v: number): number {

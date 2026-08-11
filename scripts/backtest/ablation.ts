@@ -25,6 +25,7 @@ import { fileURLToPath } from "url";
 import { replayAsset, RawAssetData, MarketWideData, DayRecord, ReplayConfig } from "./run";
 import { computeTradeStats, TradeStats } from "./tradeStats";
 import { buildWalkForward, WalkForwardTrade } from "./walkForward";
+import { DEFAULT_SWING_CONFIG } from "../../src/lib/signals/swingThesis";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, "data");
@@ -48,25 +49,25 @@ const VARIANTS: Variant[] = [
     key: "fixed",
     label: "A. Fixed weights (control)",
     rationale: "CATEGORY_WEIGHTS applied unmodified. The true baseline — what the engine does with no regime adaptation at all.",
-    config: { useRegimeWeights: false, requireMtfNotWeakening: false },
+    config: { useRegimeWeights: false, requireMtfNotWeakening: false, swing: DEFAULT_SWING_CONFIG },
   },
   {
     key: "regime",
     label: "B. Regime weights (currently shipped)",
     rationale: "regimeAdjustedCategoryWeights active. This is production today, and has never been measured against A.",
-    config: { useRegimeWeights: true, requireMtfNotWeakening: false },
+    config: { useRegimeWeights: true, requireMtfNotWeakening: false, swing: DEFAULT_SWING_CONFIG },
   },
   {
     key: "fixed+mtf",
     label: "C. Fixed weights + MTF gate",
     rationale: "Selectivity alone: block ENTER when the 4H read weakens the thesis, no regime weighting.",
-    config: { useRegimeWeights: false, requireMtfNotWeakening: true },
+    config: { useRegimeWeights: false, requireMtfNotWeakening: true, swing: DEFAULT_SWING_CONFIG },
   },
   {
     key: "regime+mtf",
     label: "D. Regime weights + MTF gate",
     rationale: "Both components together — tests whether they compose or overlap.",
-    config: { useRegimeWeights: true, requireMtfNotWeakening: true },
+    config: { useRegimeWeights: true, requireMtfNotWeakening: true, swing: DEFAULT_SWING_CONFIG },
   },
 ];
 

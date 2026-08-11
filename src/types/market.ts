@@ -5,6 +5,17 @@ import type { RegimeTags } from "@/lib/technicals/regimes";
 import type { DivergenceResult } from "@/lib/technicals/divergence";
 import type { LiquidityWall, WallZoneRelationship } from "@/lib/technicals/liquidityWalls";
 import type { PersistenceLabel } from "@/lib/store/bookSnapshotStore";
+import type { SwingThesisStore } from "@/lib/signals/swingThesis";
+
+/**
+ * The swing layer as the API hands it to the UI. `available` is separate
+ * from the store's own emptiness on purpose — see the field's doc comment
+ * on AggregateMarketData.
+ */
+export interface SwingThesisSnapshot {
+  available: boolean;
+  store: SwingThesisStore;
+}
 
 // ─────────────────────────────────────────────────────────────────────────
 // Core domain types. Every exchange adapter resolves to this shape.
@@ -221,6 +232,15 @@ export interface AggregateMarketData {
    * does not claim.
    */
   marketBias: MarketBias | null;
+  /**
+   * The stateful swing layer's current read — the standing multi-day thesis
+   * and its frozen trade plan (see lib/signals/swingThesis.ts).
+   *
+   * Null when there is no bias to assess from. `available: false` means
+   * persistence could not be consulted, which is deliberately NOT the same
+   * as "no thesis exists" and must never be rendered as one.
+   */
+  swingThesis: SwingThesisSnapshot | null;
   /**
    * How the thesis moved over the last week — one entry per genuine shift,
    * not per poll. Empty on a fresh deployment and fills forward; there is

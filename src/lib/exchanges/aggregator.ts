@@ -91,7 +91,7 @@ import {
 } from "../history/store";
 import { recordDailyPoint } from "../history/dailyStore";
 import { fetchOkxDailyCandles, fetchOkx4hCandles } from "../providers/okxCandles";
-import { buildTechnicalRead } from "../sentiment/technicals";
+import { buildTechnicalRead, technicalAgreement } from "../sentiment/technicals";
 import { buildVolumeProfile, buildSupportResistanceZones, SupportResistanceZone } from "../technicals/marketStructure";
 import {
   detectWalls,
@@ -107,6 +107,12 @@ import { evaluateAll } from "../signals/evaluators";
 import { buildMarketBias, snapshotVerdicts } from "../signals/marketBias";
 import { readBiasSnapshot, writeBiasSnapshot } from "../history/biasStore";
 import { recordBiasHistory, BiasHistoryEntry } from "../history/biasHistory";
+import { readSwingThesis, writeSwingThesis } from "../history/swingThesisStore";
+import type { MarketBias, Verdict } from "../signals/types";
+import type { SwingThesisSnapshot } from "@/types/market";
+import { applyDailyClose, applyTick, swingReasons } from "../signals/swingThesis";
+import { lookupTradeStatsBySide, ExecutionStatsSnapshot } from "../sentiment/backtestStats";
+import executionStatsJson from "@/data/executionStats.json";
 import type { TechnicalRead, EtfFlowSummary, SpotPerpVolume, LiquidityMapRead, LiquidityWallRead, LiquidityWallWithPersistence } from "@/types/market";
 
 const ADAPTER_MAP: Record<string, LiveAdapter> = {
@@ -678,6 +684,21 @@ async function withRecordedHistory(
     regimeTags,
   });
 
+  /*
+   * Awaited rather than fire-and-forget: this IS the action rendered on the
+   * page, so a response that raced ahead of the state advance would show a
+   * stale thesis. The common poll does a read, one tick, and no write.
+   */
+  const swingThesis = await buildSwingThesis(
+    asset,
+    marketBias,
+    technicals,
+    technicals4h,
+    liquidityMap?.supportResistance ?? [],
+    point.price,
+    agg.updatedAt
+  ).catch(() => null);
+
   let biasTimeline: BiasHistoryEntry[] = [];
 
   if (marketBias) {
@@ -724,6 +745,7 @@ async function withRecordedHistory(
     etfFlows,
     spotPerpVolume,
     marketBias,
+    swingThesis,
     biasTimeline,
     marketThesis,
     oiChange24hPct,
@@ -835,6 +857,7 @@ function buildAggregate(
       etfFlows: null,
       spotPerpVolume: null,
       marketBias: null,
+      swingThesis: null,
       biasTimeline: [],
       marketThesis: null,
       spotPriceUsd: null,
@@ -966,6 +989,7 @@ function buildAggregate(
     etfFlows: null,
     spotPerpVolume: null,
     marketBias: null,
+    swingThesis: null,
     biasTimeline: [],
     marketThesis: null,
     history: [],
@@ -1148,6 +1172,94 @@ async function buildExchangeFlow(
  * the thesis for that view simply renormalizes without this evidence, the
  * same way it already handles any other absent source.
  */
+/**
+ * Advances the swing-thesis state machine (signals/swingThesis.ts).
+ *
+ * Runs after the bias because it consumes it, and does exactly two things:
+ * folds in the newest CLOSED daily bar if one has appeared since the last
+ * run, then applies the current price as a tick. The reducer is idempotent
+ * per close, so the overwhelmingly common case — a poll with no new daily
+ * bar — reduces to a cheap tick and, usually, no write at all.
+ *
+ * Returns `available: false` rather than an empty store when persistence
+ * can't be consulted. The action shown to the trader depends on this state,
+ * so "no thesis" and "couldn't check" must not render identically.
+ */
+async function buildSwingThesis(
+  asset: AssetSymbol | "MARKET",
+  bias: MarketBias | null,
+  technicals: TechnicalRead | null,
+  technicals4h: TechnicalRead | null,
+  supportResistance: SupportResistanceZone[],
+  price: number,
+  now: number
+): Promise<SwingThesisSnapshot | null> {
+  if (asset === "MARKET" || !bias || price <= 0) return null;
+
+  const { store, available } = await readSwingThesis(asset);
+  if (!available) return { available: false, store };
+
+  // Cache hit: buildTechnicals already pulled this series this poll.
+  const candles = await fetchOkxDailyCandles(asset).catch(() => []);
+  const lastClosed = candles[candles.length - 1];
+
+  let next = store;
+
+  if (lastClosed && lastClosed.t > store.lastCloseAt) {
+    /*
+     * `technicalAgreement` is evaluated against the BIAS verdict, not
+     * `marketThesis.dominant`. dominant has no deadband at all — it flips
+     * whenever bullWeight and bearWeight cross by any epsilon, which
+     * measured ~8 times a day in production and dragged the agreement label
+     * (and therefore the ENTER gate) along with it.
+     */
+    next = applyDailyClose(next, {
+      t: lastClosed.t,
+      closePrice: lastClosed.close,
+      biasScore: bias.score,
+      biasVerdict: bias.verdict,
+      dailyAgreement: technicals ? technicalAgreement(technicals, bias.verdict) : null,
+      dailyDirection: technicals?.direction ?? null,
+      fourHourAgreement: technicals4h ? technicalAgreement(technicals4h, bias.verdict) : null,
+      planInputs: {
+        verdict: bias.verdict,
+        confidence: bias.confidence,
+        agreement: bias.agreement,
+        price: lastClosed.close,
+        atrPct: technicals?.atrPct ?? null,
+        supportResistance,
+        ...swingWinRate(bias.verdict),
+      },
+      reasons: swingReasons(bias),
+    });
+  }
+
+  next = applyTick(next, { t: now, price });
+
+  if (next !== store) {
+    // Awaited: the very next poll reads this back, and a lost write would
+    // silently re-run the same close.
+    await writeSwingThesis(asset, next);
+  }
+  return { available: true, store: next };
+}
+
+/**
+ * The measured win rate for comparable TRADES, matching what
+ * `EntryQualityCard` already displays. Only feeds the star score, never the
+ * levels.
+ */
+function swingWinRate(verdict: Verdict): { historicalWinRatePct: number | null; historicalWinRateN: number | null } {
+  const stats = lookupTradeStatsBySide(
+    executionStatsJson as unknown as ExecutionStatsSnapshot,
+    verdict === "bullish" ? "long" : "short"
+  );
+  return {
+    historicalWinRatePct: stats?.winRatePct ?? null,
+    historicalWinRateN: stats?.n ?? null,
+  };
+}
+
 async function buildTechnicals(asset: AssetSymbol | "MARKET"): Promise<TechnicalRead | null> {
   if (asset === "MARKET") return null;
 

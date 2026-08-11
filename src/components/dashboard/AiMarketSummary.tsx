@@ -8,7 +8,8 @@ import { MarketBias, MetricVerdict } from "@/lib/signals/types";
 import { topReasons, RankedReason } from "@/lib/signals/marketBias";
 import { buildTradeRecommendation, TradeRecommendation } from "@/lib/signals/tradeRecommendation";
 import { MarketThesis, TechnicalRead, AggregateMarketData } from "@/types/market";
-import { TradePlan, buildEntryQualityView, starGrade, EntryQualityView } from "./EntryQualityCard";
+import { TradePlan, swingTradePlanView, starGrade, EntryQualityView } from "./EntryQualityCard";
+import { buildSwingView, shortTermCondition, SwingView, SwingTone } from "@/lib/signals/swingPresentation";
 import { intensityLabel } from "@/lib/signals/scoring";
 import { technicalAgreement, TechnicalAgreement } from "@/lib/sentiment/technicals";
 import { technicalDimensions, DimensionStance } from "@/lib/sentiment/technicalDimensions";
@@ -79,15 +80,29 @@ export function AiMarketSummary({
   const reasons = topReasons(bias, 5);
   const invalidationLines = thesis?.invalidation ?? [];
   const recommendation = buildTradeRecommendation(bias, thesis, technicals, technicals4h ?? null);
-  // Resolved once here, then shared: the star rating renders beside the
-  // ACTION while the levels render below it, without running
-  // buildEntryQuality() twice over identical inputs.
-  const entryView = buildEntryQualityView(aggregate, recommendation);
+
+  /*
+   * The SWING thesis is the decision now, not the stateless recommendation.
+   *
+   * `buildTradeRecommendation` above is still computed and still shown — as
+   * the TACTICAL read, one line, clearly subordinate. It changed ~7 times a
+   * day in production, which is useful context and a terrible headline for
+   * a trade meant to be held for days.
+   */
+  const swing = buildSwingView(aggregate.swingThesis, aggregate.updatedAt);
+
+  /*
+   * Levels come from the FROZEN plan whenever a swing thesis stands, so
+   * repeated polls cannot move entry, stop or targets. Only when no thesis
+   * exists does the live, tick-derived plan render — and then only as
+   * reference structure, never as a standing instruction.
+   */
+  const entryView = swing.state ? swingTradePlanView(swing.state) : null;
 
   return (
     <Card>
       <CardContent className="flex flex-col gap-7 py-6">
-        <Decision bias={bias} thesis={thesis} recommendation={recommendation} entryView={entryView} />
+        <Decision bias={bias} thesis={thesis} swing={swing} recommendation={recommendation} entryView={entryView} />
 
         <TradePlan aggregate={aggregate} view={entryView} />
 
@@ -157,6 +172,22 @@ const ACTION_STYLE: Record<TradeRecommendation["action"], { border: string; bg: 
 };
 
 /**
+ * Tone for the SWING headline. Deliberately a separate map from
+ * ACTION_STYLE above: that one is keyed by the stateless action, which now
+ * renders as a small tactical line, and collapsing the two would tie the
+ * loudest element on the page back to the fastest-moving input — the exact
+ * coupling this refactor removes.
+ */
+const SWING_STYLE: Record<SwingTone, { border: string; bg: string; text: string; Icon: typeof ArrowUpRight }> = {
+  long: { border: "border-success/30", bg: "bg-success/[0.06]", text: "text-success", Icon: ArrowUpRight },
+  short: { border: "border-danger/30", bg: "bg-danger/[0.06]", text: "text-danger", Icon: ArrowDownRight },
+  // Ran away without filling: a real warning, but not a loss — amber.
+  warn: { border: "border-amber/30", bg: "bg-amber/[0.06]", text: "text-amber", Icon: Pause },
+  danger: { border: "border-danger/40", bg: "bg-danger/[0.08]", text: "text-danger", Icon: Minus },
+  neutral: { border: "border-hairline", bg: "bg-surface-2", text: "text-ink-muted", Icon: Minus },
+};
+
+/**
  * LEVEL 1 — the decision, and the only thing on this card allowed to
  * dominate visually.
  *
@@ -179,16 +210,20 @@ const ACTION_STYLE: Record<TradeRecommendation["action"], { border: string; bg: 
 function Decision({
   bias,
   thesis,
+  swing,
   recommendation,
   entryView,
 }: {
   bias: MarketBias;
   thesis: MarketThesis | null;
+  /** The standing multi-day thesis — the headline. */
+  swing: SwingView;
+  /** The short-term read, rendered as subordinate tactical context (§19). */
   recommendation: TradeRecommendation;
-  /** Null whenever no trade qualifies — the star row simply doesn't render, rather than showing an empty rating. */
+  /** Null whenever no swing plan stands — the star row simply doesn't render, rather than showing an empty rating. */
   entryView: EntryQualityView | null;
 }) {
-  const style = ACTION_STYLE[recommendation.action];
+  const style = SWING_STYLE[swing.tone];
   const { Icon } = style;
 
   return (
@@ -202,9 +237,19 @@ function Decision({
           <div className="flex items-center gap-2.5">
             <Icon className={`h-6 w-6 shrink-0 ${style.text}`} aria-hidden />
             <span className={`text-2xl font-bold uppercase leading-none tracking-[0.04em] sm:text-3xl ${style.text}`}>
-              {recommendation.label}
+              {swing.label}
             </span>
           </div>
+          {/*
+            The provenance chip. Small, but it is the single element that
+            makes a standing plan READ as standing — "established 3 days
+            ago, still v1" is the difference between a decision and a feed.
+          */}
+          {swing.chip && (
+            <span className="rounded-full border border-hairline px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-muted">
+              {swing.chip}
+            </span>
+          )}
           {/*
             The score rides ALONGSIDE the verdict rather than above it, at
             a size that reads as a qualifier. Same numbers as before, an
@@ -238,12 +283,28 @@ function Decision({
           </div>
         )}
 
-        <p className="text-[13px] leading-relaxed text-ink-muted">{recommendation.reason}</p>
-        {recommendation.nextTrigger && (
-          <p className="text-[12px] leading-relaxed text-ink-faint">
-            <span className="text-ink-muted">Next trigger:</span> {recommendation.nextTrigger}
+        <p className="text-[13px] leading-relaxed text-ink-muted">{swing.detail}</p>
+
+        {/*
+          TACTICAL, kept visually and semantically separate from the action
+          above it. This is the line that lets a trader read "conditions are
+          softening" WITHOUT reading "get out" — the distinction this whole
+          layer exists to draw.
+        */}
+        {swing.tactical && (
+          <p className="rounded-md border border-warn/20 bg-warn/[0.04] px-3 py-2 text-[12px] leading-relaxed text-ink-muted">
+            <span className="font-semibold uppercase tracking-[0.12em] text-warn">Tactical</span> · {swing.tactical}
           </p>
         )}
+
+        {/*
+          The short-term read. Still real, still shown, but explicitly
+          labelled as the fast-moving one so it can never be mistaken for
+          the standing instruction above.
+        */}
+        <p className="text-[12px] leading-relaxed text-ink-faint">
+          <span className="text-ink-muted">Short-term read:</span> {shortTermCondition(recommendation.action)}.
+        </p>
       </div>
 
       {/* Secondary qualifiers — real information, but none of them is the decision. */}

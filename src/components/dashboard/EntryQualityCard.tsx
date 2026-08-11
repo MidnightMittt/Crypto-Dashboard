@@ -8,7 +8,7 @@ import { AggregateMarketData } from "@/types/market";
 import { buildEntryQuality, StarRating } from "@/lib/signals/entryQuality";
 import { SupportResistanceZone } from "@/lib/technicals/marketStructure";
 import { executionDistanceContext, ExecutionWallContext } from "@/lib/technicals/liquidityWalls";
-import { buildTradeRecommendation } from "@/lib/signals/tradeRecommendation";
+import type { SwingThesisState } from "@/lib/signals/swingThesis";
 import { lookupTradeStatsBySide, ExecutionStatsSnapshot } from "@/lib/sentiment/backtestStats";
 import { formatPrice, formatCompactUsd } from "@/lib/utils/format";
 import executionStatsJson from "@/data/executionStats.json";
@@ -42,43 +42,54 @@ export interface EntryQualityView {
   tradeStats: ReturnType<typeof lookupTradeStatsBySide>;
   isLong: boolean;
   price: number;
-}
-
-export function buildEntryQualityView(
-  aggregate: AggregateMarketData,
-  recommendation: ReturnType<typeof buildTradeRecommendation>
-): EntryQualityView | null {
-  const bias = aggregate.marketBias;
-  if (!bias) return null;
-  if (recommendation.action !== "enter-long" && recommendation.action !== "enter-short") return null;
-
-  /*
-   * Trade-level, not directional. The star rating implies "would this trade
-   * have worked," and only a measured trade outcome answers that — a
-   * directional win rate counts a signal as correct even when the position
-   * built on it stopped out first. Direction-specific because longs and
-   * shorts behaved very differently over the backtested window.
+  /**
+   * Present when the levels came from a FROZEN swing thesis rather than a
+   * live recomputation. Entry is then a zone rather than a tick, which is
+   * the whole point — see lib/signals/swingThesis.ts.
    */
-  const isEnterLong = recommendation.action === "enter-long";
-  const tradeStats = lookupTradeStatsBySide(executionStats, isEnterLong ? "long" : "short");
-  // Same "first exchange with a price" fallback aggregator.ts itself already
-  // uses internally when a single representative price is needed.
-  const price = aggregate.exchanges[0]?.price ?? 0;
-
-  const eq = buildEntryQuality({
-    verdict: bias.verdict,
-    confidence: bias.confidence,
-    agreement: bias.agreement,
-    price,
-    atrPct: aggregate.technicals?.atrPct ?? null,
-    supportResistance: aggregate.liquidityMap?.supportResistance ?? [],
-    historicalWinRatePct: tradeStats?.winRatePct ?? null,
-    historicalWinRateN: tradeStats?.n ?? null,
-  });
-  if (!eq) return null;
-
-  return { eq, tradeStats, isLong: eq.verdict === "bullish", price };
+  entryZone?: { low: number; high: number; basis: string };
 }
+
+/**
+ * Adapts a frozen swing plan into the same view shape the live path
+ * produces, so the execution grid below renders from ONE component instead
+ * of growing a parallel copy for swing plans.
+ *
+ * Nothing is recomputed here: every number is read straight off the plan
+ * that was frozen when the thesis activated.
+ */
+export function swingTradePlanView(state: SwingThesisState): EntryQualityView {
+  const { plan, direction } = state;
+  const isLong = direction === "long";
+
+  return {
+    isLong,
+    price: plan.activationPrice,
+    tradeStats: lookupTradeStatsBySide(executionStats, direction),
+    entryZone: { low: plan.entryLow, high: plan.entryHigh, basis: plan.entryBasis },
+    eq: {
+      verdict: isLong ? "bullish" : "bearish",
+      stars: plan.stars,
+      starRationale: plan.starRationale,
+      // Midpoint of the frozen zone — the reference the plan's own R:R was
+      // measured from, so this can never disagree with the ratio shown.
+      entryPrice: (plan.entryLow + plan.entryHigh) / 2,
+      stopPrice: plan.stopPrice,
+      targetPrice: plan.target1Price,
+      riskRewardRatio: plan.riskRewardRatio,
+      stopBasis: plan.stopBasis,
+      targetBasis: plan.target1Basis,
+      target2Price: plan.target2Price,
+      target2Basis: plan.target2Basis,
+      riskRewardRatio2: plan.riskRewardRatio2,
+      nearestSupport: plan.supportZone,
+      nearestResistance: plan.resistanceZone,
+      historicalWinRatePct: null,
+      historicalWinRateN: null,
+    },
+  };
+}
+
 
 /** 1-5 stars as a plain-language grade, so the rating reads without counting glyphs. */
 export function starGrade(stars: StarRating): string {
@@ -105,17 +116,19 @@ export function TradePlan({
   const bias = aggregate.marketBias;
   if (!bias) return null;
 
-  const recommendation = buildTradeRecommendation(bias, aggregate.marketThesis, aggregate.technicals, aggregate.technicals4h);
-  const isEnter = recommendation.action === "enter-long" || recommendation.action === "enter-short";
-
   /*
    * No qualifying entry: show STRUCTURE anyway. Support and resistance
    * don't depend on whether a trade cleared the gate, and a trader waiting
    * for a trigger needs "where is price relative to structure" more than
    * anyone. Deliberately does NOT restate the action's reason — that
    * sentence is already directly above this on the same surface.
+   *
+   * The caller decides whether a plan exists by passing `view` or not; this
+   * component no longer re-derives that itself, because the swing layer and
+   * the stateless read disagree by design and re-deriving here would let
+   * the grid contradict the action above it.
    */
-  if (!isEnter || !view) {
+  if (!view) {
     return (
       <MarketStructureRow
         price={aggregate.exchanges[0]?.price ?? 0}
@@ -124,7 +137,7 @@ export function TradePlan({
     );
   }
 
-  const { eq, tradeStats, isLong } = view;
+  const { eq, tradeStats, isLong, entryZone } = view;
 
   const walls = aggregate.liquidityMap?.walls ?? null;
   const wallContext = walls
@@ -144,7 +157,24 @@ export function TradePlan({
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
-        <PriceStat label="Entry" value={eq.entryPrice} tone="neutral" />
+        {/*
+          A swing plan's entry is a RANGE to work, not a single price — the
+          plan waits for a retest rather than buying wherever the last poll
+          landed. Falls back to the single price for the stateless path.
+        */}
+        {entryZone ? (
+          <div>
+            <dt className="text-[9px] uppercase tracking-[0.14em] text-ink-faint">Entry zone</dt>
+            <dd className="mt-0.5 font-mono text-lg leading-tight text-ink">
+              {formatPrice(entryZone.low)}
+              <span className="text-ink-faint">–</span>
+              {formatPrice(entryZone.high)}
+            </dd>
+            <dd className="mt-0.5 text-[10px] leading-snug text-ink-faint">{entryZone.basis}</dd>
+          </div>
+        ) : (
+          <PriceStat label="Entry" value={eq.entryPrice} tone="neutral" />
+        )}
         <PriceStat label="Stop" value={eq.stopPrice} tone="bear" />
         <PriceStat label="TP1" value={eq.targetPrice} tone="bull" />
         <PriceStat label="TP2" value={eq.target2Price} tone="bull" />

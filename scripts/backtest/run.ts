@@ -15,6 +15,15 @@ import { buildTradeRecommendation } from "../../src/lib/signals/tradeRecommendat
 import { buildEntryQuality } from "../../src/lib/signals/entryQuality";
 import { technicalAgreement } from "../../src/lib/sentiment/technicals";
 import { resolveTrade, HourBar } from "./execution";
+import {
+  applyDailyClose,
+  applyTick,
+  emptySwingStore,
+  swingReasons,
+  DEFAULT_SWING_CONFIG,
+  SwingThesisConfig,
+  SwingThesisStore,
+} from "../../src/lib/signals/swingThesis";
 import { applyCosts, DEFAULT_COST_CONFIG } from "./costs";
 import { LocalHistoryPoint, AggregateMarketData, ExchangeSnapshot, FearGreed, EtfFlowSummary } from "../../src/types/market";
 import type { StablecoinSummary } from "../../src/lib/providers/stablecoins";
@@ -161,11 +170,19 @@ export interface ReplayConfig {
    * caveat. This tests whether it should be a gate instead.
    */
   requireMtfNotWeakening: boolean;
+  /**
+   * Thresholds for the stateful swing layer (swingThesis.ts). Exposed here
+   * so `swingCalibration.ts` can sweep them through the SAME replay the
+   * production engine runs, rather than against a second, hand-rolled
+   * reconstruction of the evidence that could quietly diverge from it.
+   */
+  swing: SwingThesisConfig;
 }
 
 export const DEFAULT_REPLAY_CONFIG: ReplayConfig = {
   useRegimeWeights: true,
   requireMtfNotWeakening: false,
+  swing: DEFAULT_SWING_CONFIG,
 };
 
 export interface DayRecord {
@@ -239,6 +256,17 @@ export interface DayRecord {
     tp2ReachedBeforeStop: boolean;
     ambiguousBar: boolean;
   } | null;
+  /**
+   * The stateful swing layer's read for this day, replayed through the same
+   * reducer the live site uses (swingThesis.ts). Null means no thesis was
+   * standing at this close — which is itself the point: the stateless
+   * `action` above flips on most days, and these fields exist to measure
+   * how much less often the swing thesis does.
+   */
+  swingVersion: number | null;
+  swingDirection: string | null;
+  swingStatus: string | null;
+  swingHealth: string | null;
   forwardReturn1h: number | null;
   forwardReturn4h: number | null;
   forwardReturn1d: number | null;
@@ -482,6 +510,14 @@ export function replayAsset(
   const { asset, futuresKlines, spotKlines, fundingRate, oiHistory, longShortHistory, etfFlows } = data;
   const records: DayRecord[] = [];
 
+  /*
+   * The one piece of state that survives across evaluation days. Threaded
+   * through the loop rather than persisted, which is exactly what the live
+   * path does with KV — same reducer, same sequence of daily closes, so the
+   * replayed thesis trajectory is the one production would have produced.
+   */
+  let swingStore: SwingThesisStore = emptySwingStore();
+
   const dailyCandles = rollUpToDaily(futuresKlines);
   const fourHourCandles = rollUpTo4h(futuresKlines);
   // Date-string -> index, so each evaluated day can look up its OWN candle
@@ -659,6 +695,9 @@ export function replayAsset(
       etfFlows: etfSummary,
       spotPerpVolume,
       marketBias: null,
+      // The swing layer is replayed explicitly below via applyDailyClose /
+      // applyTick against threaded state, not read off this snapshot.
+      swingThesis: null,
       biasTimeline: [],
       history: [],
       historyHours: 0,
@@ -754,6 +793,57 @@ export function replayAsset(
 
     const costed = resolution ? applyCosts(resolution.grossReturnPct, side, t, resolution.exitT, fundingRate, DEFAULT_COST_CONFIG) : null;
 
+    /*
+     * ── The stateful swing layer ─────────────────────────────────────────
+     *
+     * Fold this day's close into the reducer, then replay the day's hourly
+     * bars through it as ticks. The order matters and mirrors production
+     * exactly: soft evidence enters ONLY at the close, price-driven status
+     * changes happen continuously afterwards.
+     *
+     * `technicalAgreement` is called against the BIAS direction here, not
+     * `thesis.dominant` — the same substitution swingThesis.ts makes, and
+     * for the same reason (dominant has no deadband). Passing dominant here
+     * while the live path passes the bias verdict would silently make the
+     * replay measure a different engine.
+     */
+    const swingDirectionVerdict = bias?.verdict ?? "neutral";
+    swingStore = applyDailyClose(
+      swingStore,
+      {
+        t,
+        closePrice: currentPrice,
+        biasScore: bias?.score ?? null,
+        biasVerdict: swingDirectionVerdict,
+        dailyAgreement: technicals ? technicalAgreement(technicals, swingDirectionVerdict) : null,
+        dailyDirection: technicals?.direction ?? null,
+        fourHourAgreement: technicals4h ? technicalAgreement(technicals4h, swingDirectionVerdict) : null,
+        planInputs: bias
+          ? {
+              verdict: bias.verdict,
+              confidence: bias.confidence,
+              agreement: bias.agreement,
+              price: currentPrice,
+              atrPct: technicals?.atrPct ?? null,
+              supportResistance,
+              // Same look-ahead reasoning as the entryQuality call above:
+              // the shipped win rate is a whole-window statistic.
+              historicalWinRatePct: null,
+              historicalWinRateN: null,
+            }
+          : null,
+        reasons: swingReasons(bias),
+      },
+      config.swing
+    );
+
+    // Intraday ticks for the 24 hours FOLLOWING this close. Bounded to the
+    // day so each evaluation day advances the machine exactly once.
+    for (const bar of futuresKlines) {
+      if (bar.t < t || bar.t >= t + DAY_MS) continue;
+      swingStore = applyTick(swingStore, { t: bar.t, price: bar.close, high: bar.high, low: bar.low });
+    }
+
     records.push({
       asset,
       date: new Date(t).toISOString().slice(0, 10),
@@ -806,6 +896,10 @@ export function replayAsset(
               ambiguousBar: resolution.ambiguousBar,
             }
           : null,
+      swingVersion: swingStore.active?.version ?? null,
+      swingDirection: swingStore.active?.direction ?? null,
+      swingStatus: swingStore.active?.status ?? null,
+      swingHealth: swingStore.active?.health ?? null,
       forwardReturn1h: forwardReturn(futuresKlines, t, 1 * 3_600_000, 30 * 60_000),
       forwardReturn4h: forwardReturn(futuresKlines, t, 4 * 3_600_000, 30 * 60_000),
       forwardReturn1d: forwardReturn(futuresKlines, t, 1 * DAY_MS, 3 * 3_600_000),
