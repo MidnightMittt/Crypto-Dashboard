@@ -92,7 +92,12 @@ import {
 import { recordDailyPoint } from "../history/dailyStore";
 import { fetchOkxDailyCandles, fetchOkx4hCandles } from "../providers/okxCandles";
 import { buildTechnicalRead, technicalAgreement } from "../sentiment/technicals";
-import { buildVolumeProfile, buildSupportResistanceZones, SupportResistanceZone } from "../technicals/marketStructure";
+import {
+  buildVolumeProfile,
+  buildSupportResistanceZones,
+  mergeTimeframeZones,
+  SupportResistanceZone,
+} from "../technicals/marketStructure";
 import {
   detectWalls,
   classifyWallVsZones,
@@ -111,6 +116,7 @@ import { readSwingThesis, writeSwingThesis } from "../history/swingThesisStore";
 import type { MarketBias, Verdict } from "../signals/types";
 import type { SwingThesisSnapshot } from "@/types/market";
 import { applyDailyClose, applyTick, swingReasons } from "../signals/swingThesis";
+import { buildPlannedSetups } from "../signals/plannedSetup";
 import { lookupTradeStatsBySide, ExecutionStatsSnapshot } from "../sentiment/backtestStats";
 import executionStatsJson from "@/data/executionStats.json";
 import type { TechnicalRead, EtfFlowSummary, SpotPerpVolume, LiquidityMapRead, LiquidityWallRead, LiquidityWallWithPersistence } from "@/types/market";
@@ -1234,6 +1240,44 @@ async function buildSwingThesis(
     });
   }
 
+  /*
+   * Forward-looking setups, anchored to the same closed daily bar.
+   *
+   * Keyed on `builtAt !== lastClosed.t` rather than on "a new close
+   * appeared", which matters for two cases the stricter condition gets
+   * wrong: a record written before planned setups existed, and any close
+   * where the thesis reducer short-circuited. Both would otherwise show no
+   * setups until the next midnight, which is exactly the empty page this
+   * feature exists to fix.
+   *
+   * Rebuilding is safe precisely BECAUSE the anchor is the closed bar and
+   * not the tick: the same close always yields the same plans, so this is
+   * idempotent rather than a second source of drift.
+   *
+   * Unlike the thesis these are unconditional — they exist whenever
+   * structure supports an honest plan, regardless of what the composite
+   * thinks. A swing trader always knows the level they want; only the
+   * decision to act on it depends on evidence.
+   */
+  if (lastClosed && next.plannedSetups?.builtAt !== lastClosed.t) {
+    next = {
+      ...next,
+      plannedSetups: buildPlannedSetups({
+        t: lastClosed.t,
+        closePrice: lastClosed.close,
+        atrPct: technicals?.atrPct ?? null,
+        zones: supportResistance,
+        dailyDirection: technicals?.direction ?? null,
+        fourHourDirection: technicals4h?.direction ?? null,
+        quality: {
+          confidence: bias.confidence,
+          agreement: bias.agreement,
+          ...swingWinRate(bias.verdict),
+        },
+      }),
+    };
+  }
+
   next = applyTick(next, { t: now, price });
 
   if (next !== store) {
@@ -1296,11 +1340,27 @@ async function buildLiquidityMap(
 ): Promise<LiquidityMapRead | null> {
   if (asset === "MARKET") return null;
 
-  const candles = await fetchOkxDailyCandles(asset).catch(() => []);
+  const [candles, candles4h] = await Promise.all([
+    fetchOkxDailyCandles(asset).catch(() => []),
+    fetchOkx4hCandles(asset).catch(() => []),
+  ]);
   if (candles.length === 0) return null;
 
   const volumeProfile = buildVolumeProfile(candles);
-  const supportResistance = buildSupportResistanceZones(candles, volumeProfile);
+
+  /*
+   * Structure is read on BOTH swing timeframes. Daily supplies the major
+   * levels, the clustering tolerance and the status classification; 4H adds
+   * precision between them and, where the two overlap, marks the level as
+   * multi-timeframe confirmed. Both series are already fetched and cached
+   * this poll, so this costs no extra requests.
+   */
+  const dailyZones = buildSupportResistanceZones(candles, volumeProfile, "1D");
+  const supportResistance =
+    candles4h.length > 0
+      ? mergeTimeframeZones(dailyZones, buildSupportResistanceZones(candles4h, null, "4H"), candles)
+      : dailyZones;
+
   const walls = await buildLiquidityWallRead(asset, bookDepth, supportResistance);
   return { volumeProfile, supportResistance, walls };
 }

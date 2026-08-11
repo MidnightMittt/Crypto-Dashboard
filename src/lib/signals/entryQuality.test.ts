@@ -14,6 +14,7 @@ function zone(priceLow: number, priceHigh: number, kind: "support" | "resistance
     status: "inactive",
     mostRecentTouchBarsAgo: null,
     source: "swing-cluster",
+    timeframe: "1D",
     ...overrides,
   };
 }

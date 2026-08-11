@@ -148,6 +148,7 @@ describe("mergeOverlappingZones", () => {
     status: "inactive",
     mostRecentTouchBarsAgo: null,
     source: "swing-cluster",
+    timeframe: "1D",
     ...overrides,
   });
 
@@ -185,6 +186,7 @@ describe("scoreZoneStrength", () => {
     strength: 0,
     status: "inactive" as const,
     source: "swing-cluster" as const,
+    timeframe: "1D" as const,
   };
 
   it("scores 0 for a zone with no touches, no confluence, and no recency", () => {

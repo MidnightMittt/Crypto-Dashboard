@@ -12,7 +12,13 @@ import { TradePlan, swingTradePlanView, starGrade, EntryQualityView } from "./En
 import { buildSwingView, shortTermCondition, SwingView, SwingTone } from "@/lib/signals/swingPresentation";
 import { intensityLabel } from "@/lib/signals/scoring";
 import { technicalAgreement, TechnicalAgreement } from "@/lib/sentiment/technicals";
-import { technicalDimensions, DimensionStance } from "@/lib/sentiment/technicalDimensions";
+import {
+  technicalDimensions,
+  timeframeRead,
+  multiTimeframeVerdict,
+  DimensionStance,
+  Lean,
+} from "@/lib/sentiment/technicalDimensions";
 import { lookupBiasVerdictStat, lookupCalibrationBucket, ExecutionStatsSnapshot } from "@/lib/sentiment/backtestStats";
 import { RegimeTags } from "@/lib/technicals/regimes";
 import { BiasHistoryEntry } from "@/lib/history/biasHistory";
@@ -520,6 +526,25 @@ const AGREEMENT_CONFIG: Record<TechnicalAgreement, { label: string; dot: string;
  * than inventing a new UI color for a state that's still "proceed with
  * caution," not "stop."
  */
+/**
+ * Absolute direction styling, replacing the thesis-relative stance colours
+ * for the technical read. Direction is always carried by the word itself as
+ * well as the colour — never colour alone.
+ */
+const DIRECTION_TEXT: Record<NonNullable<Lean> | "unavailable", string> = {
+  bullish: "text-success",
+  bearish: "text-danger",
+  neutral: "text-ink-muted",
+  unavailable: "text-ink-faint",
+};
+
+const LEAN_LABEL: Record<NonNullable<Lean> | "unavailable", string> = {
+  bullish: "BULLISH",
+  bearish: "BEARISH",
+  neutral: "NEUTRAL",
+  unavailable: "NO DATA",
+};
+
 function TechnicalConfirmation({
   technicals,
   technicals4h,
@@ -532,69 +557,78 @@ function TechnicalConfirmation({
 }) {
   if (!technicals || !thesis || thesis.technicalConfirmation.length === 0) return null;
 
-  const agreement = technicalAgreement(technicals, thesis.dominant);
-  const config = AGREEMENT_CONFIG[agreement];
-  const htfAgreement = technicals4h ? technicalAgreement(technicals4h, thesis.dominant) : null;
-  const htfConfig = htfAgreement ? AGREEMENT_CONFIG[htfAgreement] : null;
+  /*
+   * Read each timeframe on its OWN terms.
+   *
+   * This used to render one thesis-relative badge (CONFIRMS/CONTRADICTS)
+   * computed against `thesis.dominant`. That value has no deadband — it
+   * flips whenever bullWeight and bearWeight cross, measured at ~8 times a
+   * day — so the badge churned on days when no candle changed direction at
+   * all. "DAILY: BEARISH" is plainer English AND can only change when a
+   * daily bar closes.
+   */
+  const daily = timeframeRead("Daily", technicals);
+  const fourHour = timeframeRead("4H", technicals4h);
+  const alignment = multiTimeframeVerdict(daily, fourHour);
 
   return (
     <div className="border-t border-hairline pt-5">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <div className="flex items-center gap-2">
-          <SectionLabel>Technical confirmation</SectionLabel>
-          <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold tracking-wider ${config.text}`}>
-            <span aria-hidden>{config.dot}</span>
-            {config.label}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+        <SectionLabel>Technical read</SectionLabel>
+        {[daily, fourHour].map((tf) => (
+          <span key={tf.timeframe} className="inline-flex items-baseline gap-1.5">
+            <span className="text-[10px] uppercase tracking-wider text-ink-faint">{tf.timeframe}</span>
+            <span className={`text-[11px] font-semibold tracking-wider ${DIRECTION_TEXT[tf.direction ?? "unavailable"]}`}>
+              {tf.label}
+            </span>
+            <span className="text-[10px] text-ink-faint/80">{tf.qualifier}</span>
           </span>
-        </div>
-        {/*
-          Escalated to the SAME size/weight as the primary daily badge
-          specifically when the two timeframes disagree — a real daily/4H
-          conflict is exactly the case the multi-timeframe spec wants
-          unmissable, not a footnote. When 4H simply confirms (the
-          unsurprising case), it stays a quiet secondary line so it doesn't
-          compete with the daily verdict for attention.
-        */}
-        {htfConfig &&
-          (htfAgreement === "weakens" || htfAgreement === "contradicts" ? (
-            <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold tracking-wider ${htfConfig.text}`}>
-              <span className="text-ink-faint">4H:</span>
-              <span aria-hidden>{htfConfig.dot}</span>
-              {htfConfig.label}
-            </span>
-          ) : (
-            <span className={`inline-flex items-center gap-1 text-[10px] tracking-wide ${htfConfig.text}`}>
-              <span className="text-ink-faint">4H:</span>
-              <span aria-hidden>{htfConfig.dot}</span>
-              {htfConfig.label}
-            </span>
-          ))}
+        ))}
       </div>
+
       {/*
-        The per-indicator grid, so "CONTRADICTS" above is never an
-        unexplained badge — a trader can see WHICH dimensions disagree
-        without reading prose. Every stance comes from
-        technicalDimensions(), which imports its thresholds from
-        technicals.ts so this grid cannot drift from the verdict it sits
-        under. Stance is carried by an explicit text label as well as
-        colour, never colour alone.
+        The alignment sentence, stated outright rather than left for the
+        reader to infer by comparing two badges. Conflict between the two
+        swing timeframes is the single most decision-relevant thing this
+        section can say, so it is never a footnote.
       */}
-      <dl className="mt-3 grid grid-cols-1 gap-x-8 gap-y-1.5 sm:grid-cols-2">
-        {technicalDimensions(technicals, thesis.dominant).map((d) => {
-          const s = DIMENSION_STANCE[d.stance];
-          return (
-            <div key={d.label} className="flex items-baseline justify-between gap-3 border-b border-hairline/40 py-1">
-              <dt className="shrink-0 text-xs text-ink">{d.label}</dt>
-              <dd className="flex min-w-0 items-baseline gap-2 text-right">
-                <span className="truncate text-[11px] text-ink-faint">{d.detail}</span>
-                <span className={`shrink-0 text-[10px] font-semibold uppercase tracking-wider ${s.text}`}>
-                  <span aria-hidden>{s.dot}</span> {s.label}
-                </span>
-              </dd>
-            </div>
-          );
-        })}
-      </dl>
+      <p className={`mt-1.5 text-xs ${alignment.aligned ? "text-ink-muted" : "text-warning"}`}>{alignment.sentence}</p>
+
+      {/*
+        Per-indicator grid for BOTH timeframes side by side, so a direction
+        above is never an unexplained badge. Each row shows the indicator's
+        own lean — not its stance toward a thesis — for the same stability
+        reason as the headline.
+      */}
+      <div className="mt-3 grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
+        {[
+          { label: "Daily", read: technicals },
+          { label: "4H", read: technicals4h },
+        ].map(({ label, read }) => (
+          <div key={label}>
+            <p className="mb-1 text-[10px] uppercase tracking-[0.16em] text-ink-faint">{label}</p>
+            {read ? (
+              <dl>
+                {technicalDimensions(read, thesis.dominant).map((d) => (
+                  <div key={d.label} className="flex items-baseline justify-between gap-3 border-b border-hairline/40 py-1">
+                    <dt className="shrink-0 text-xs text-ink">{d.label}</dt>
+                    <dd className="flex min-w-0 items-baseline gap-2 text-right">
+                      <span className="truncate text-[11px] text-ink-faint">{d.detail}</span>
+                      <span
+                        className={`shrink-0 text-[10px] font-semibold uppercase tracking-wider ${DIRECTION_TEXT[d.lean ?? "unavailable"]}`}
+                      >
+                        {LEAN_LABEL[d.lean ?? "unavailable"]}
+                      </span>
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            ) : (
+              <p className="text-[11px] text-ink-faint">No 4-hour read available.</p>
+            )}
+          </div>
+        ))}
+      </div>
 
       {/*
         Non-negotiable caption. These six are the dimensions a trader

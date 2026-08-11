@@ -35,12 +35,25 @@ export type DimensionStance = "confirms" | "weakens" | "contradicts" | "neutral"
 export interface TechnicalDimension {
   label: string;
   stance: DimensionStance;
+  /**
+   * The indicator's OWN direction, independent of any thesis.
+   *
+   * `stance` answers "does this agree with the current thesis", which flips
+   * whenever the thesis direction flips — even when the indicator itself
+   * hasn't moved at all. `lean` answers "what is this indicator saying",
+   * which changes only when the indicator does. That makes it both plainer
+   * to read and structurally stable, which is why the UI leads with it.
+   *
+   * Always "neutral" for Volume: participation carries conviction, not
+   * direction, and giving it one would fabricate a signal.
+   */
+  lean: Lean;
   /** Plain-English reading, e.g. "Below all 3 MAs" — never a bare number without meaning. */
   detail: string;
 }
 
-/** A dimension's own directional lean, before it is compared to the thesis. */
-type Lean = "bullish" | "bearish" | "neutral" | null;
+/** A dimension's own directional lean, before it is compared to the thesis. Null means no data. */
+export type Lean = "bullish" | "bearish" | "neutral" | null;
 
 /**
  * A lean only "confirms" or "contradicts" once there is a thesis direction
@@ -85,6 +98,7 @@ export function technicalDimensions(read: TechnicalRead, dominant: ThesisDirecti
   dimensions.push({
     label: "Trend",
     stance: stanceOf(emaLean, dominant),
+    lean: emaLean,
     detail:
       read.emaAlignment === "above-all"
         ? "Above all 3 moving averages"
@@ -107,6 +121,7 @@ export function technicalDimensions(read: TechnicalRead, dominant: ThesisDirecti
   dimensions.push({
     label: "Structure",
     stance: stanceOf(structureLean, dominant),
+    lean: structureLean,
     detail:
       read.trendStructure === "higher-highs"
         ? "Higher highs"
@@ -142,7 +157,7 @@ export function technicalDimensions(read: TechnicalRead, dominant: ThesisDirecti
       rsiDetail = `${v.toFixed(0)} — neutral`;
     }
   }
-  dimensions.push({ label: "RSI", stance: stanceOf(rsiLean, dominant), detail: rsiDetail });
+  dimensions.push({ label: "RSI", stance: stanceOf(rsiLean, dominant), lean: rsiLean, detail: rsiDetail });
 
   // ── MACD ─────────────────────────────────────────────────────────────
   const macdLean: Lean =
@@ -150,6 +165,7 @@ export function technicalDimensions(read: TechnicalRead, dominant: ThesisDirecti
   dimensions.push({
     label: "MACD",
     stance: stanceOf(macdLean, dominant),
+    lean: macdLean,
     detail:
       read.macdHistogram === null
         ? "No data"
@@ -168,6 +184,7 @@ export function technicalDimensions(read: TechnicalRead, dominant: ThesisDirecti
   dimensions.push({
     label: "Divergence",
     stance: divergence ? stanceOf(DIVERGENCE_LEAN[divergence.kind], dominant) : "neutral",
+    lean: divergence ? DIVERGENCE_LEAN[divergence.kind] : "neutral",
     detail: divergence ? `${DIVERGENCE_LABEL[divergence.kind]} (${divergenceSource})` : "None meaningful",
   });
 
@@ -183,7 +200,107 @@ export function technicalDimensions(read: TechnicalRead, dominant: ThesisDirecti
     volumeDetail = `${r.toFixed(1)}x average`;
     volumeStance = r >= VOLUME_CONFIRMING ? "confirms" : r <= VOLUME_WEAK ? "weakens" : "neutral";
   }
-  dimensions.push({ label: "Volume", stance: volumeStance, detail: volumeDetail });
+  dimensions.push({
+    label: "Volume",
+    stance: volumeStance,
+    // Never directional by design — see TechnicalDimension.lean.
+    lean: read.volumeRatio === null ? null : "neutral",
+    detail: volumeDetail,
+  });
 
   return dimensions;
+}
+
+/* ───────────────────────────────────────────────────────────────────────
+ * ABSOLUTE TIMEFRAME READS
+ *
+ * The confirmation display used to render one thesis-RELATIVE badge
+ * ("CONFIRMS"/"CONTRADICTS") computed against `thesis.dominant`. That value
+ * has no deadband — it flips whenever bullWeight and bearWeight cross, which
+ * was measured at ~8 times a day — so the badge churned even on days no
+ * candle changed direction.
+ *
+ * These read each timeframe on its own terms instead. "DAILY: BEARISH" is
+ * both plainer English and structurally stable: a daily read can only change
+ * when a daily bar closes.
+ * ─────────────────────────────────────────────────────────────────────── */
+
+export type TimeframeLabel = "Daily" | "4H";
+
+export interface TimeframeRead {
+  timeframe: TimeframeLabel;
+  /** The timeframe's own direction — never relative to a thesis. */
+  direction: Lean;
+  /** 0-100, as computed by buildTechnicalRead. */
+  strength: number | null;
+  /** BULLISH / BEARISH / NEUTRAL. */
+  label: string;
+  /** How convincing the read is, in words rather than a bare number. */
+  qualifier: string;
+}
+
+/**
+ * Strength bands. `buildTechnicalRead`'s strength already folds in how
+ * lopsided the vote was AND how many indicators actually voted, so a low
+ * number genuinely means "little to go on" rather than "balanced".
+ */
+function strengthQualifier(strength: number | null): string {
+  if (strength === null) return "no data";
+  if (strength >= 60) return "strong";
+  if (strength >= 35) return "moderate";
+  if (strength >= 15) return "weak";
+  return "very weak";
+}
+
+export function timeframeRead(timeframe: TimeframeLabel, read: TechnicalRead | null): TimeframeRead {
+  if (!read) {
+    return { timeframe, direction: null, strength: null, label: "NO DATA", qualifier: "no data" };
+  }
+  const direction: Lean = read.direction;
+  return {
+    timeframe,
+    direction,
+    strength: read.strength,
+    label: direction === "bullish" ? "BULLISH" : direction === "bearish" ? "BEARISH" : "NEUTRAL",
+    qualifier: strengthQualifier(read.strength),
+  };
+}
+
+/**
+ * One sentence stating whether the two swing timeframes agree.
+ *
+ * Alignment is the single most useful thing a multi-timeframe display can
+ * say, and leaving the reader to compare two badges is exactly the
+ * ambiguity this replaces.
+ */
+export function multiTimeframeVerdict(daily: TimeframeRead, fourHour: TimeframeRead): { aligned: boolean; sentence: string } {
+  if (daily.direction === null || fourHour.direction === null) {
+    const present = daily.direction !== null ? daily : fourHour.direction !== null ? fourHour : null;
+    return {
+      aligned: false,
+      sentence: present
+        ? `${present.timeframe} is ${present.label.toLowerCase()}; the other timeframe has no read available.`
+        : "No technical read is available on either timeframe.",
+    };
+  }
+
+  if (daily.direction === "neutral" && fourHour.direction === "neutral") {
+    return { aligned: true, sentence: "Both timeframes are neutral — no directional edge on either chart." };
+  }
+  if (daily.direction === fourHour.direction) {
+    return { aligned: true, sentence: `Both timeframes are ${daily.direction} — aligned.` };
+  }
+  if (daily.direction === "neutral" || fourHour.direction === "neutral") {
+    const directional = daily.direction === "neutral" ? fourHour : daily;
+    const flat = daily.direction === "neutral" ? daily : fourHour;
+    return {
+      aligned: false,
+      sentence: `${directional.timeframe} is ${directional.direction} while ${flat.timeframe} is flat — partial agreement only.`,
+    };
+  }
+  return {
+    aligned: false,
+    // The case that matters most: genuinely opposed swing timeframes.
+    sentence: `Daily is ${daily.direction} but 4H is ${fourHour.direction} — the timeframes conflict.`,
+  };
 }

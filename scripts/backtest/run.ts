@@ -10,7 +10,11 @@ import { Candle } from "../../src/lib/technicals/indicators";
 import { evaluateAll, SignalContext } from "../../src/lib/signals/evaluators";
 import { classifyRegime, regimeTagsToStrings } from "../../src/lib/technicals/regimes";
 import { buildMarketBias } from "../../src/lib/signals/marketBias";
-import { buildVolumeProfile, buildSupportResistanceZones } from "../../src/lib/technicals/marketStructure";
+import {
+  buildVolumeProfile,
+  buildSupportResistanceZones,
+  mergeTimeframeZones,
+} from "../../src/lib/technicals/marketStructure";
 import { buildTradeRecommendation } from "../../src/lib/signals/tradeRecommendation";
 import { buildEntryQuality } from "../../src/lib/signals/entryQuality";
 import { technicalAgreement } from "../../src/lib/sentiment/technicals";
@@ -589,7 +593,18 @@ export function replayAsset(
 
     const technicals4h = prior4h.length > 0 ? buildTechnicalRead(prior4h) : null;
     const volumeProfile = buildVolumeProfile(liveWindowDaily);
-    const supportResistance = buildSupportResistanceZones(liveWindowDaily, volumeProfile);
+    /*
+     * Merge 4H structure into the daily zones exactly as `buildLiquidityMap`
+     * does live. Skipping it would leave the replay pricing entries against
+     * daily-only levels while production prices them against merged ones —
+     * the backtest would then be measuring a different system than the one
+     * actually shipped. `prior4h` is already point-in-time filtered above.
+     */
+    const supportResistance = mergeTimeframeZones(
+      buildSupportResistanceZones(liveWindowDaily, volumeProfile, "1D"),
+      prior4h.length > 0 ? buildSupportResistanceZones(prior4h, null, "4H") : [],
+      liveWindowDaily
+    );
 
     const thesisInputs: MarketThesisInputs = {
       asset: asset as "BTC" | "ETH",

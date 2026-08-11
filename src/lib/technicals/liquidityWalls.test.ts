@@ -24,6 +24,7 @@ function zone(overrides: Partial<SupportResistanceZone> = {}): SupportResistance
     status: "testing",
     mostRecentTouchBarsAgo: 1,
     source: "swing-cluster",
+    timeframe: "1D",
     ...overrides,
   };
 }

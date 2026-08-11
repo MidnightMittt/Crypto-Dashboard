@@ -31,6 +31,7 @@ function zone(kind: "support" | "resistance", priceLow: number, priceHigh: numbe
     status: "inactive",
     mostRecentTouchBarsAgo: 10,
     source: "swing-cluster",
+    timeframe: "1D",
   };
 }
 
@@ -107,8 +108,10 @@ describe("swing thesis — activation", () => {
     expect(state.plan.stopPrice).toBeCloseTo(91.25, 5);
     expect(state.plan.target1Price).toBe(110);
 
-    // R:R is measured from the real entry (midpoint 94), not the close.
-    expect(state.plan.riskRewardRatio).toBeCloseTo((110 - 94) / (94 - 91.25), 5);
+    // R:R is measured from the WORST fill in the zone (96 for a long), not
+    // the close and not the midpoint — so the ratio shown is a floor.
+    expect(state.plan.entryRef).toBe(96);
+    expect(state.plan.riskRewardRatio).toBeCloseTo((110 - 96) / (96 - 91.25), 5);
     expect(state.reasons).toEqual(["Spot demand is absorbing supply"]);
   });
 
@@ -443,7 +446,7 @@ describe("entry zone derivation", () => {
   it("uses the protective zone when it is a realistic pullback away", () => {
     const result = buildEntryZone("long", 100, 3, zone("support", 95, 96), DEFAULT_SWING_CONFIG);
     expect(result).toMatchObject({ entryLow: 95, entryHigh: 96 });
-    expect(result.entryBasis).toContain("Pullback into the support zone");
+    expect(result.entryBasis).toContain("Pullback into the 1D support zone");
   });
 
   it("falls back to an explicit at-market band when the zone is out of reach", () => {

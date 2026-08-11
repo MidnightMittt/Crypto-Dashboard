@@ -38,15 +38,13 @@
  */
 
 import { MarketBias, Verdict } from "./types";
-import {
-  StarRating,
-  buildEntryQuality,
-  EntryQualityInputs,
-  MIN_RR,
-  STRUCTURAL_STOP_MIN_ATR,
-} from "./entryQuality";
-import { SupportResistanceZone } from "@/lib/technicals/marketStructure";
+import { EntryQualityInputs } from "./entryQuality";
+import { TradePlan, TradePlanConfig, buildTradePlan } from "./tradePlan";
+import type { PlannedSetupsFrozen } from "./plannedSetup";
 import { TechnicalAgreement } from "@/lib/sentiment/technicals";
+
+export type { TradePlan } from "./tradePlan";
+export { buildEntryZone } from "./tradePlan";
 
 export type SwingDirection = "long" | "short";
 
@@ -89,39 +87,12 @@ export interface ThesisEvent {
 }
 
 /**
- * Every execution number, frozen at activation. Nothing in here is ever
- * recomputed from a later tick — that recomputation was the entire source
- * of the moving entry/stop/target problem this module replaces.
+ * The plan a thesis carries. Identical in shape and construction to the one
+ * a PLANNED setup carries (see plannedSetup.ts) because both come from
+ * `buildTradePlan` — a planned entry at a level must not become a different
+ * entry at that level the moment a thesis activates.
  */
-export interface FrozenPlan {
-  /** Entry is a ZONE, not a tick. See `buildEntryZone` for how it's derived. */
-  entryLow: number;
-  entryHigh: number;
-  entryBasis: string;
-  stopPrice: number;
-  stopBasis: string;
-  target1Price: number;
-  target1Basis: string;
-  target2Price: number;
-  target2Basis: string;
-  riskRewardRatio: number;
-  riskRewardRatio2: number;
-  stars: StarRating;
-  starRationale: string;
-  /** ATR in price terms at activation, retained for context alongside the frozen levels. */
-  atrAbs: number;
-  /**
-   * How far past the entry zone price must run to read MISSED. Frozen onto
-   * the plan rather than read from config at tick time, so a live plan keeps
-   * the geometry it was built with even if the config is later retuned.
-   */
-  missedDistance: number;
-  /** Price at the daily close that activated the thesis, for "how far has it run since" context. */
-  activationPrice: number;
-  /** S/R snapshot taken at activation, so displayed context can't drift out from under the frozen levels. */
-  supportZone: SupportResistanceZone | null;
-  resistanceZone: SupportResistanceZone | null;
-}
+export type FrozenPlan = TradePlan;
 
 export interface SwingThesisState {
   version: number;
@@ -157,6 +128,20 @@ export interface SwingThesisStore {
   /** Last daily close folded in. Tracked at store level because `pending` advances even with no active thesis. */
   lastCloseAt: number;
   /**
+   * The forward-looking conditional setups, rebuilt at the same daily close
+   * that drives this reducer and stored in the same record.
+   *
+   * Owned by the AGGREGATOR, not by this reducer — plannedSetup.ts builds
+   * them and nothing here reads them. They live here only because they share
+   * a cadence and a lifetime with the thesis, and splitting them into a
+   * second store would mean two reads, two writes and two chances for the
+   * two to disagree about which daily close they were built from.
+   *
+   * Optional so records written before planned setups existed still validate
+   * and degrade to "no setups yet" rather than "store unavailable".
+   */
+  plannedSetups?: PlannedSetupsFrozen | null;
+  /**
    * Versioned log across ALL theses for this asset, not just the live one.
    * Held at store level on purpose: the reason a thesis was retired has to
    * outlive the thesis, or the engine cannot answer "why did ENTER LONG
@@ -166,7 +151,7 @@ export interface SwingThesisStore {
 }
 
 export function emptySwingStore(): SwingThesisStore {
-  return { active: null, pending: null, nextVersion: 1, lastCloseAt: 0, events: [] };
+  return { active: null, pending: null, nextVersion: 1, lastCloseAt: 0, plannedSetups: null, events: [] };
 }
 
 export interface SwingThesisConfig {
@@ -303,50 +288,6 @@ function withEvent(events: ThesisEvent[], event: ThesisEvent): ThesisEvent[] {
 }
 
 /**
- * Derives the entry ZONE for a new thesis.
- *
- * A swing entry is a pullback into structure, not "wherever price happens to
- * be when the engine polled." So the zone is the nearest protective S/R zone
- * — support for a long, resistance for a short — provided it sits within
- * `entryPullbackMaxAtr` of the close. When nothing is in reach, waiting for
- * a retest that structure doesn't support would be fiction, so the zone
- * collapses to an explicit at-market band and says so.
- */
-export function buildEntryZone(
-  direction: SwingDirection,
-  closePrice: number,
-  atrAbs: number,
-  zone: SupportResistanceZone | null,
-  config: SwingThesisConfig
-): { entryLow: number; entryHigh: number; entryBasis: string; kind: "pullback" | "at-market" } {
-  const isLong = direction === "long";
-
-  if (zone) {
-    // The edge price would reach FIRST on a pullback: the top of a support
-    // zone for a long, the bottom of a resistance zone for a short.
-    const nearEdge = isLong ? zone.priceHigh : zone.priceLow;
-    const onTheCorrectSide = isLong ? nearEdge < closePrice : nearEdge > closePrice;
-
-    if (onTheCorrectSide && Math.abs(closePrice - nearEdge) <= config.entryPullbackMaxAtr * atrAbs) {
-      return {
-        entryLow: zone.priceLow,
-        entryHigh: zone.priceHigh,
-        entryBasis: `Pullback into the ${zone.kind} zone (${zone.reactionCount} touch${zone.reactionCount === 1 ? "" : "es"})`,
-        kind: "pullback",
-      };
-    }
-  }
-
-  const band = config.atMarketBandAtr * atrAbs;
-  return {
-    entryLow: closePrice - band,
-    entryHigh: closePrice + band,
-    entryBasis: `At market — no ${isLong ? "support" : "resistance"} zone within ${config.entryPullbackMaxAtr} ATR to retest`,
-    kind: "at-market",
-  };
-}
-
-/**
  * Status is a PURE function of price against the frozen plan, except that
  * the two terminal states latch (handled by the caller). That purity is
  * deliberate: a replay ticking hourly and a live feed ticking every 15
@@ -373,8 +314,8 @@ function statusForPrice(state: SwingThesisState, price: number, high: number, lo
   // "has price run away from where the plan was set", so that is what it
   // measures.
   const ranAway = isLong
-    ? price > plan.activationPrice + plan.missedDistance
-    : price < plan.activationPrice - plan.missedDistance;
+    ? price > plan.anchorPrice + plan.missedDistance
+    : price < plan.anchorPrice - plan.missedDistance;
   return ranAway ? "missed" : "active";
 }
 
@@ -472,90 +413,32 @@ function assess(direction: SwingDirection, ev: DailyCloseEvidence, config: Swing
 }
 
 /**
- * Buffer placed beyond the retested zone when the plan enters INTO that
- * zone. A stop at the zone's own edge would be inside the noise the zone is
- * made of.
+ * Delegates to the SHARED plan builder so an activated thesis and a merely
+ * planned setup describe the same level identically. All the geometry —
+ * pullback entry zone, stop beyond the retested zone, R:R re-measured from
+ * the real entry, refusal when risk is noise-tight — lives in tradePlan.ts
+ * and exists exactly once.
  */
-const PULLBACK_STOP_BUFFER_ATR = 0.25;
-
 function buildPlan(direction: SwingDirection, ev: DailyCloseEvidence, config: SwingThesisConfig): FrozenPlan | null {
   if (!ev.planInputs) return null;
 
-  const atrPct = ev.planInputs.atrPct;
-  if (atrPct === null || atrPct <= 0) return null;
+  const { price: _price, atrPct, supportResistance, ...quality } = ev.planInputs;
+  return buildTradePlan({
+    direction,
+    anchorPrice: ev.closePrice,
+    atrPct,
+    zones: supportResistance,
+    quality,
+    config: planConfigOf(config),
+  });
+}
 
-  const eq = buildEntryQuality(ev.planInputs);
-  if (!eq) return null;
-
-  const isLong = direction === "long";
-  const atrAbs = (atrPct / 100) * ev.closePrice;
-  const protectiveZone = isLong ? eq.nearestSupport : eq.nearestResistance;
-  const entry = buildEntryZone(direction, ev.closePrice, atrAbs, protectiveZone, config);
-
-  /*
-   * `buildEntryQuality` places its stop assuming entry AT the current price
-   * — for a long, at the top edge of the nearest support zone ("we're wrong
-   * if we lose support"). That is correct for an at-market entry and wrong
-   * for a pullback entry, because the pullback entry is INSIDE that same
-   * zone: the plan would be stopped out the instant it filled.
-   *
-   * So when the entry is a retest, the stop moves beyond the zone being
-   * retested, and risk/reward is re-measured from where the trade actually
-   * enters rather than from the close. Both numbers are strictly more
-   * honest than reporting a ratio the trader could never have obtained.
-   * The zone-edge stop is left untouched for at-market entries, where it
-   * was always right.
-   */
-  const entryRef = (entry.entryLow + entry.entryHigh) / 2;
-  let stopPrice = eq.stopPrice;
-  let stopBasis = eq.stopBasis;
-
-  if (entry.kind === "pullback" && protectiveZone) {
-    stopPrice = isLong
-      ? protectiveZone.priceLow - PULLBACK_STOP_BUFFER_ATR * atrAbs
-      : protectiveZone.priceHigh + PULLBACK_STOP_BUFFER_ATR * atrAbs;
-    stopBasis = `Beyond the ${protectiveZone.kind} zone being retested`;
-  }
-
-  const riskDistance = Math.abs(entryRef - stopPrice);
-  if (riskDistance <= 0) return null;
-
-  /*
-   * The stop stays where structure puts it; what gets rejected is the PLAN.
-   * Widening a structural stop to manufacture an acceptable risk distance
-   * would quietly detach it from the level it was supposed to represent, so
-   * a retest zone too narrow to leave room for a non-noise stop simply
-   * doesn't produce a thesis. Threshold reused from entryQuality's own
-   * answer to "how close is too close for a stop".
-   */
-  if (riskDistance < STRUCTURAL_STOP_MIN_ATR * atrAbs) return null;
-
-  const riskRewardRatio = Math.abs(eq.targetPrice - entryRef) / riskDistance;
-  const riskRewardRatio2 = Math.abs(eq.target2Price - entryRef) / riskDistance;
-
-  // A plan that no longer clears the module's own minimum reward:risk once
-  // measured from the real entry is not a plan worth activating.
-  if (riskRewardRatio < MIN_RR) return null;
-
+/** The plan-geometry subset of the swing config, so the two configs can't drift apart. */
+function planConfigOf(config: SwingThesisConfig): TradePlanConfig {
   return {
-    entryLow: entry.entryLow,
-    entryHigh: entry.entryHigh,
-    entryBasis: entry.entryBasis,
-    stopPrice,
-    stopBasis,
-    target1Price: eq.targetPrice,
-    target1Basis: eq.targetBasis,
-    target2Price: eq.target2Price,
-    target2Basis: eq.target2Basis,
-    riskRewardRatio,
-    riskRewardRatio2,
-    stars: eq.stars,
-    starRationale: eq.starRationale,
-    atrAbs,
-    missedDistance: config.missedAtr * atrAbs,
-    activationPrice: ev.closePrice,
-    supportZone: eq.nearestSupport,
-    resistanceZone: eq.nearestResistance,
+    entryPullbackMaxAtr: config.entryPullbackMaxAtr,
+    atMarketBandAtr: config.atMarketBandAtr,
+    missedAtr: config.missedAtr,
   };
 }
 

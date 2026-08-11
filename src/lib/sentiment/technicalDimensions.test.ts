@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { technicalDimensions } from "./technicalDimensions";
+import { technicalDimensions, timeframeRead, multiTimeframeVerdict } from "./technicalDimensions";
 import { TechnicalRead } from "@/types/market";
 import { DivergenceResult, DivergenceKind } from "@/lib/technicals/divergence";
 
@@ -142,5 +142,76 @@ describe("technicalDimensions", () => {
       expect(d.detail.length).toBeGreaterThan(0);
       expect(/^[\d.]+$/.test(d.detail)).toBe(false);
     }
+  });
+});
+
+describe("absolute timeframe reads", () => {
+  it("states a direction in plain words, independent of any thesis", () => {
+    // The same read produces the same label regardless of what the thesis
+    // says — that independence is the entire point.
+    const bullish = read({ direction: "bullish", strength: 70 });
+    for (const dominant of ["bullish", "bearish", "neutral"] as const) {
+      void dominant;
+      expect(timeframeRead("Daily", bullish).label).toBe("BULLISH");
+    }
+    expect(timeframeRead("4H", read({ direction: "bearish", strength: 40 })).label).toBe("BEARISH");
+    expect(timeframeRead("4H", read({ direction: "neutral", strength: 10 })).label).toBe("NEUTRAL");
+  });
+
+  it("qualifies conviction in words rather than a bare number", () => {
+    expect(timeframeRead("Daily", read({ strength: 75 })).qualifier).toBe("strong");
+    expect(timeframeRead("Daily", read({ strength: 45 })).qualifier).toBe("moderate");
+    expect(timeframeRead("Daily", read({ strength: 20 })).qualifier).toBe("weak");
+    expect(timeframeRead("Daily", read({ strength: 5 })).qualifier).toBe("very weak");
+  });
+
+  it("reports no data rather than inventing a neutral read", () => {
+    const absent = timeframeRead("4H", null);
+    expect(absent.label).toBe("NO DATA");
+    expect(absent.direction).toBeNull();
+  });
+
+  it("calls out agreement and conflict between the two swing timeframes", () => {
+    const daily = timeframeRead("Daily", read({ direction: "bearish", strength: 50 }));
+    const fourHour = timeframeRead("4H", read({ direction: "bearish", strength: 40 }));
+    expect(multiTimeframeVerdict(daily, fourHour)).toEqual({
+      aligned: true,
+      sentence: "Both timeframes are bearish — aligned.",
+    });
+
+    const bullish4h = timeframeRead("4H", read({ direction: "bullish", strength: 40 }));
+    const conflict = multiTimeframeVerdict(daily, bullish4h);
+    expect(conflict.aligned).toBe(false);
+    expect(conflict.sentence).toBe("Daily is bearish but 4H is bullish — the timeframes conflict.");
+  });
+
+  it("distinguishes partial agreement from real conflict", () => {
+    const daily = timeframeRead("Daily", read({ direction: "bullish", strength: 50 }));
+    const flat = timeframeRead("4H", read({ direction: "neutral", strength: 10 }));
+    const result = multiTimeframeVerdict(daily, flat);
+    expect(result.aligned).toBe(false);
+    expect(result.sentence).toContain("partial agreement");
+  });
+
+  it("exposes each indicator's own lean alongside its thesis-relative stance", () => {
+    // Same read, opposite theses: `stance` flips, `lean` does not.
+    const r = read({ emaAlignment: "below-all", macdHistogram: -3 });
+    const vsBull = Object.fromEntries(technicalDimensions(r, "bullish").map((d) => [d.label, d]));
+    const vsBear = Object.fromEntries(technicalDimensions(r, "bearish").map((d) => [d.label, d]));
+
+    expect(vsBull.Trend.stance).toBe("contradicts");
+    expect(vsBear.Trend.stance).toBe("confirms");
+    expect(vsBull.Trend.lean).toBe("bearish");
+    expect(vsBear.Trend.lean).toBe("bearish");
+  });
+
+  it("never gives Volume a direction", () => {
+    for (const ratio of [0.2, 1.0, 2.5]) {
+      const dims = technicalDimensions(read({ volumeRatio: ratio }), "bullish");
+      expect(dims.find((d) => d.label === "Volume")!.lean).toBe("neutral");
+    }
+    expect(
+      technicalDimensions(read({ volumeRatio: null }), "bullish").find((d) => d.label === "Volume")!.lean
+    ).toBeNull();
   });
 });

@@ -9,6 +9,7 @@ import { buildEntryQuality, StarRating } from "@/lib/signals/entryQuality";
 import { SupportResistanceZone } from "@/lib/technicals/marketStructure";
 import { executionDistanceContext, ExecutionWallContext } from "@/lib/technicals/liquidityWalls";
 import type { SwingThesisState } from "@/lib/signals/swingThesis";
+import { readPlannedSetups, PlannedSetupsView, PlannedSetupView, SetupStatus } from "@/lib/signals/plannedSetup";
 import { lookupTradeStatsBySide, ExecutionStatsSnapshot } from "@/lib/sentiment/backtestStats";
 import { formatPrice, formatCompactUsd } from "@/lib/utils/format";
 import executionStatsJson from "@/data/executionStats.json";
@@ -64,7 +65,7 @@ export function swingTradePlanView(state: SwingThesisState): EntryQualityView {
 
   return {
     isLong,
-    price: plan.activationPrice,
+    price: plan.anchorPrice,
     tradeStats: lookupTradeStatsBySide(executionStats, direction),
     entryZone: { low: plan.entryLow, high: plan.entryHigh, basis: plan.entryBasis },
     eq: {
@@ -129,11 +130,19 @@ export function TradePlan({
    * the grid contradict the action above it.
    */
   if (!view) {
+    const price = aggregate.exchanges[0]?.price ?? 0;
+    const planned = readPlannedSetups(aggregate.swingThesis?.store.plannedSetups ?? null, price);
     return (
-      <MarketStructureRow
-        price={aggregate.exchanges[0]?.price ?? 0}
-        zones={aggregate.liquidityMap?.supportResistance ?? []}
-      />
+      <div className="flex flex-col gap-5">
+        {/*
+          The forward-looking half. No thesis has cleared the evidence gate,
+          but the levels a swing trader would want are still real — so show
+          them, priced, with what has to happen first. This is the difference
+          between "nothing to do" and "here is what I am waiting for".
+        */}
+        {planned && <PlannedSetups view={planned} />}
+        <MarketStructureRow price={price} zones={aggregate.liquidityMap?.supportResistance ?? []} />
+      </div>
     );
   }
 
@@ -383,6 +392,89 @@ function PriceStat({
       <dt className="text-[9px] uppercase tracking-[0.14em] text-ink-faint">{label}</dt>
       <dd className={`mt-0.5 font-mono text-lg ${toneClass}`}>{formatPrice(value)}</dd>
       {caption && <dd className="mt-0.5 text-[10px] leading-snug text-ink-faint">{caption}</dd>}
+    </div>
+  );
+}
+
+/* ── Planned setups — the forward-looking levels, frozen at the daily close ── */
+
+/**
+ * Status styling. Every state is carried by its WORD as well as its colour,
+ * and the vocabulary is deliberately plain: a trader should not have to
+ * learn what "armed" or "primed" means here.
+ */
+const SETUP_STATUS: Record<SetupStatus, { label: string; text: string }> = {
+  "at-entry": { label: "AT ENTRY", text: "text-success" },
+  approaching: { label: "APPROACHING", text: "text-warning" },
+  waiting: { label: "WAITING", text: "text-ink-muted" },
+  invalidated: { label: "LEVEL BROKEN", text: "text-ink-faint" },
+};
+
+function PlannedSetupRow({ setup }: { setup: PlannedSetupView }) {
+  const status = SETUP_STATUS[setup.status];
+  const { plan } = setup;
+  const side = setup.direction === "long" ? "LONG" : "SHORT";
+
+  return (
+    <div className="border-t border-hairline/60 pt-3 first:border-t-0 first:pt-0">
+      <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+        <span className={`text-xs font-semibold tracking-wider ${setup.direction === "long" ? "text-success" : "text-danger"}`}>
+          {side}
+        </span>
+        <span className="font-mono text-sm text-ink">
+          {formatPrice(plan.entryLow)}–{formatPrice(plan.entryHigh)}
+        </span>
+        <span className={`text-[10px] font-semibold uppercase tracking-wider ${status.text}`}>{status.label}</span>
+        {setup.primary && (
+          <span className="text-[10px] uppercase tracking-wider text-ink-faint">favoured by both timeframes</span>
+        )}
+      </div>
+
+      <dl className="mt-1.5 flex flex-wrap gap-x-5 gap-y-1 font-mono text-[11px]">
+        <div>
+          <dt className="inline text-ink-faint">Stop </dt>
+          <dd className="inline text-ink">{formatPrice(plan.stopPrice)}</dd>
+        </div>
+        <div>
+          <dt className="inline text-ink-faint">TP1 </dt>
+          <dd className="inline text-ink">{formatPrice(plan.target1Price)}</dd>
+        </div>
+        <div>
+          <dt className="inline text-ink-faint">TP2 </dt>
+          <dd className="inline text-ink">{formatPrice(plan.target2Price)}</dd>
+        </div>
+        <div>
+          <dt className="inline text-ink-faint">R:R </dt>
+          <dd className="inline text-ink">{plan.riskRewardRatio.toFixed(1)}:1</dd>
+        </div>
+      </dl>
+
+      <p className="mt-1 text-[11px] text-ink-muted">
+        {setup.trigger}
+        {setup.triggerPrice !== null && <span className="text-ink-faint"> ({formatPrice(setup.triggerPrice)})</span>}
+      </p>
+    </div>
+  );
+}
+
+export function PlannedSetups({ view }: { view: PlannedSetupsView }) {
+  return (
+    <div>
+      <div className="mb-2 flex flex-wrap items-baseline gap-x-2.5">
+        <span className="text-[10px] uppercase tracking-[0.16em] text-ink-muted">Watching for entry</span>
+        <span className="text-[10px] text-ink-faint">
+          set at the {new Date(view.builtAt).toUTCString().slice(5, 16)} daily close
+        </span>
+      </div>
+      <div className="flex flex-col gap-3">
+        {view.setups.map((s) => (
+          <PlannedSetupRow key={s.direction} setup={s} />
+        ))}
+      </div>
+      <p className="mt-2 text-[11px] leading-relaxed text-ink-faint">
+        {view.rationale} These levels are set once per daily close and do not move with price — only
+        their status does. A conditional plan against structure, not a signal to act.
+      </p>
     </div>
   );
 }

@@ -117,7 +117,15 @@ export function buildVolumeProfile(candles: Candle[], window = VOLUME_PROFILE_WI
 // breaking/inactive) — never a bare precise number dressed up as a level.
 // ─────────────────────────────────────────────────────────────────────────
 
-export type ConfluenceTag = "swing-cluster" | "volume-poc" | "value-area-edge";
+export type ConfluenceTag = "swing-cluster" | "volume-poc" | "value-area-edge" | "multi-timeframe";
+
+/**
+ * Which chart a level came from. `"both"` means the daily and 4H series
+ * independently produced an overlapping zone — the strongest confirmation
+ * available here, since the two are computed from different bar sets rather
+ * than one being a resample of the other.
+ */
+export type ZoneTimeframe = "1D" | "4H" | "both";
 export type ZoneStatus = "approaching" | "testing" | "rejecting" | "reclaiming" | "breaking" | "inactive";
 
 export interface SupportResistanceZone {
@@ -134,6 +142,8 @@ export interface SupportResistanceZone {
   /** Bars since the most recent swing touch. Null when reactionCount is 0 (no swing touches to measure from). */
   mostRecentTouchBarsAgo: number | null;
   source: "swing-cluster" | "volume-poc";
+  /** Which chart produced this level. See ZoneTimeframe. */
+  timeframe: ZoneTimeframe;
 }
 
 /** Swing touches within this many ATRs of a cluster's running mean join that cluster — adapts to the asset's own volatility rather than a flat percentage. */
@@ -175,7 +185,12 @@ export function clusterTouches(sortedByPrice: SwingTouch[], tolerance: number): 
 }
 
 /** A single swing touch isn't a "level" by this feature's own definition — repeated reactions are the point. Clusters with only one touch are dropped. */
-export function zonesFromClusters(clusters: SwingTouch[][], kind: "support" | "resistance", totalBars: number): SupportResistanceZone[] {
+export function zonesFromClusters(
+  clusters: SwingTouch[][],
+  kind: "support" | "resistance",
+  totalBars: number,
+  timeframe: ZoneTimeframe = "1D"
+): SupportResistanceZone[] {
   return clusters
     .filter((cluster) => cluster.length >= 2)
     .map((cluster) => {
@@ -191,6 +206,7 @@ export function zonesFromClusters(clusters: SwingTouch[][], kind: "support" | "r
         status: "inactive" as ZoneStatus, // filled in after, see classifyZoneStatus
         mostRecentTouchBarsAgo: totalBars - 1 - mostRecentIndex,
         source: "swing-cluster" as const,
+        timeframe,
       };
     });
 }
@@ -219,6 +235,16 @@ export function mergeOverlappingZones(zones: SupportResistanceZone[], tolerance:
         last.priceHigh = Math.max(last.priceHigh, zone.priceHigh);
         last.reactionCount += zone.reactionCount;
         const tags = new Set<ConfluenceTag>([...last.confluence, ...zone.confluence, last.source, zone.source]);
+        /*
+         * Two charts independently finding a level in the same place is the
+         * strongest confirmation available here — the daily and 4H series
+         * are separate bar sets, not a resample of one another, so this is
+         * genuine agreement rather than the same evidence counted twice.
+         */
+        if (last.timeframe !== zone.timeframe) {
+          last.timeframe = "both";
+          tags.add("multi-timeframe");
+        }
         last.confluence = [...tags];
         last.mostRecentTouchBarsAgo =
           last.mostRecentTouchBarsAgo === null
@@ -315,7 +341,11 @@ export function classifyZoneStatus(
  * secondary read on the exact swing extremes this clustering now finds
  * directly and more richly.
  */
-export function buildSupportResistanceZones(candles: Candle[], profile: VolumeProfileResult | null): SupportResistanceZone[] {
+export function buildSupportResistanceZones(
+  candles: Candle[],
+  profile: VolumeProfileResult | null,
+  timeframe: ZoneTimeframe = "1D"
+): SupportResistanceZone[] {
   const atrValue = atr(candles);
   if (atrValue === null || atrValue <= 0) return [];
   const price = candles.length ? candles[candles.length - 1].close : null;
@@ -333,8 +363,8 @@ export function buildSupportResistanceZones(candles: Candle[], profile: VolumePr
     .sort((a, b) => a.price - b.price);
 
   let zones: SupportResistanceZone[] = [
-    ...zonesFromClusters(clusterTouches(highSwings, tolerance), "resistance", candles.length),
-    ...zonesFromClusters(clusterTouches(lowSwings, tolerance), "support", candles.length),
+    ...zonesFromClusters(clusterTouches(highSwings, tolerance), "resistance", candles.length, timeframe),
+    ...zonesFromClusters(clusterTouches(lowSwings, tolerance), "support", candles.length, timeframe),
   ];
 
   if (profile) {
@@ -349,6 +379,7 @@ export function buildSupportResistanceZones(candles: Candle[], profile: VolumePr
       status: "inactive",
       mostRecentTouchBarsAgo: null,
       source: "volume-poc",
+      timeframe,
     });
   }
 
@@ -369,4 +400,46 @@ export function buildSupportResistanceZones(candles: Candle[], profile: VolumePr
   }
 
   return zones.sort((a, b) => a.priceLow - b.priceLow);
+}
+
+/**
+ * Combines daily and 4H structure into one set of levels.
+ *
+ * The DAILY series is the authority for major structure and supplies the
+ * clustering tolerance and the status classification — a level's meaning
+ * ("testing", "breaking") is a statement about the swing chart, and
+ * re-deriving it from 4H bars would make a level look reclaimed on a wick
+ * the daily chart never registered.
+ *
+ * 4H zones exist to ADD PRECISION, never to override: they either overlap a
+ * daily zone (merging into it, which marks the level `"both"` and tags it
+ * multi-timeframe) or they stand alone as a finer level between the major
+ * ones. A 4H-only level can therefore tighten an entry, but can never move
+ * a daily level or invent a major one.
+ *
+ * Both series are already fetched and swr-cached by the aggregator, so this
+ * costs no additional requests.
+ */
+export function mergeTimeframeZones(
+  dailyZones: SupportResistanceZone[],
+  fourHourZones: SupportResistanceZone[],
+  dailyCandles: Candle[]
+): SupportResistanceZone[] {
+  const atrValue = atr(dailyCandles);
+  if (atrValue === null || atrValue <= 0) return dailyZones;
+
+  // Daily first: mergeOverlappingZones folds later zones into earlier ones,
+  // so leading with daily keeps the daily range as the anchor a 4H zone
+  // widens, rather than the other way round.
+  const merged = mergeOverlappingZones(
+    [...dailyZones, ...fourHourZones],
+    atrValue * CLUSTER_TOLERANCE_ATR_MULT
+  );
+
+  for (const zone of merged) {
+    zone.strength = scoreZoneStrength(zone);
+    zone.status = classifyZoneStatus(zone, dailyCandles, atrValue);
+  }
+
+  return merged.sort((a, b) => a.priceLow - b.priceLow);
 }
