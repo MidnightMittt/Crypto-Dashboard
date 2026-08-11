@@ -10,6 +10,8 @@ import {
 } from "../../src/lib/signals/swingThesis";
 import type { TechnicalAgreement } from "../../src/lib/sentiment/technicals";
 import type { Verdict } from "../../src/lib/signals/types";
+import type { SupportResistanceZone } from "../../src/lib/technicals/marketStructure";
+import { buildTradePlan, DEFAULT_TRADE_PLAN_CONFIG, TradePlan } from "../../src/lib/signals/tradePlan";
 
 /**
  * Swing activation calibration study. Derives the swing layer's thresholds
@@ -420,6 +422,176 @@ function swingPlanStats(records: DayRecord[], barsByAsset: Map<string, Bar[]>) {
   };
 }
 
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * ENTRY-METHODOLOGY COMPARISON — FAITHFUL HARNESS
+ *
+ * The previous version of this section reimplemented plan construction and
+ * was therefore invalid: its "current" control produced 37 plans where
+ * production produced 107, because the reimplementation demanded an opposing
+ * structural zone for targets while production has ATR fallbacks. Every
+ * number it produced has been discarded.
+ *
+ * This version never reimplements anything. It steers WHICH zone becomes the
+ * entry by FILTERING THE INPUT to the real `buildTradePlan`, then calls it:
+ *
+ *   candidate zone Z  ->  buildTradePlan({ zones: [Z, ...opposing], ... })
+ *
+ * `nearestZones` inside `buildEntryQuality` then has exactly one zone to pick
+ * from on the protective side, so Z is necessarily chosen, while targets,
+ * stop construction, ATR fallbacks, R:R and every refusal rule remain
+ * production's own. One source of truth.
+ *
+ * Distance-based methodologies vary `entryPullbackMaxAtr` through the real
+ * `TradePlanConfig` rather than bypassing it — a supported production knob,
+ * not a fork.
+ *
+ * HARNESS ACCEPTANCE TEST: methodology A (unfiltered zones, default config)
+ * must reproduce the production plans EXACTLY. If it does not, the harness is
+ * unfaithful and the study is void. That check is run first and reported.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+type Zone = SupportResistanceZone;
+
+interface MethodPlan {
+  plan: TradePlan;
+  standoffAtr: number;
+}
+
+/**
+ * Invokes the REAL builder with the zone set filtered so `pick` decides the
+ * protective zone. Returns null when production itself refuses the plan.
+ */
+function buildVia(
+  sp: NonNullable<DayRecord["swingPlan"]>,
+  quality: Parameters<typeof buildTradePlan>[0]["quality"],
+  protectiveZone: Zone | null,
+  maxPullbackAtr: number
+): MethodPlan | null {
+  const isLong = sp.direction === "long";
+  const protectiveKind = isLong ? "support" : "resistance";
+  const zones = protectiveZone
+    ? [protectiveZone, ...sp.zones.filter((z) => z.kind !== protectiveKind)]
+    : sp.zones;
+
+  const plan = buildTradePlan({
+    direction: sp.direction,
+    anchorPrice: sp.anchorPrice,
+    atrPct: (sp.atrAbs / sp.anchorPrice) * 100,
+    zones,
+    quality,
+    requirePullbackEntry: true,
+    config: { ...DEFAULT_TRADE_PLAN_CONFIG, entryPullbackMaxAtr: maxPullbackAtr },
+  });
+  if (!plan) return null;
+
+  const nearEdge = isLong ? plan.entryHigh : plan.entryLow;
+  return { plan, standoffAtr: Math.abs(sp.anchorPrice - nearEdge) / sp.atrAbs };
+}
+
+/** Protective-side candidates on the correct side of price. */
+function protectiveCandidates(sp: NonNullable<DayRecord["swingPlan"]>): Zone[] {
+  const isLong = sp.direction === "long";
+  return sp.zones.filter((z) =>
+    isLong ? z.kind === "support" && z.priceHigh < sp.anchorPrice : z.kind === "resistance" && z.priceLow > sp.anchorPrice
+  );
+}
+
+interface Methodology {
+  label: string;
+  /** null protectiveZone means "let production choose" (the control). */
+  maxPullbackAtr: number;
+  choose: (cands: Zone[], sp: NonNullable<DayRecord["swingPlan"]>) => Zone | null | "production";
+}
+
+const dist = (z: Zone, sp: NonNullable<DayRecord["swingPlan"]>) => {
+  const isLong = sp.direction === "long";
+  return Math.abs(sp.anchorPrice - (isLong ? z.priceHigh : z.priceLow)) / sp.atrAbs;
+};
+
+const METHODOLOGIES: Methodology[] = [
+  { label: "A control (production, unfiltered)", maxPullbackAtr: 1.5, choose: () => "production" },
+  { label: "B strongest zone", maxPullbackAtr: 1.5, choose: (c) => [...c].sort((a, b) => b.strength - a.strength)[0] ?? null },
+  { label: "C daily-dominant", maxPullbackAtr: 1.5, choose: (c) => [...c].filter((z) => z.timeframe !== "4H").sort((a, b) => b.strength - a.strength)[0] ?? null },
+  { label: "D daily+4H confluence", maxPullbackAtr: 1.5, choose: (c) => [...c].filter((z) => z.timeframe === "both").sort((a, b) => b.strength - a.strength)[0] ?? null },
+  { label: "E min standoff 1 ATR", maxPullbackAtr: 4, choose: (c, sp) => [...c].filter((z) => dist(z, sp) >= 1).sort((a, b) => dist(a, sp) - dist(b, sp))[0] ?? null },
+  { label: "F most touched zone", maxPullbackAtr: 1.5, choose: (c) => [...c].sort((a, b) => b.reactionCount - a.reactionCount)[0] ?? null },
+  { label: "G hybrid quality", maxPullbackAtr: 3, choose: (c) => [...c].filter((z) => z.reactionCount >= 2).sort((a, b) => b.strength - a.strength)[0] ?? null },
+];
+
+interface MethodOutcome extends PlanOutcome {
+  direction: "long" | "short";
+  standoffAtr: number;
+  rr: number;
+  tp1R: number;
+  tp2R: number;
+  asset: string;
+  t: number;
+  regime: string;
+  plan: TradePlan;
+}
+
+function evaluateMethodology(m: Methodology, records: DayRecord[], barsByAsset: Map<string, Bar[]>): MethodOutcome[] {
+  const out: MethodOutcome[] = [];
+  for (const d of records) {
+    const sp = d.swingPlan;
+    if (!sp) continue;
+    const quality = { confidence: d.biasConfidence ?? 50, agreement: d.biasAgreement ?? 50, historicalWinRatePct: null, historicalWinRateN: null };
+    const chosen = m.choose(protectiveCandidates(sp), sp);
+    if (chosen === null) continue;
+    const built = buildVia(sp, quality, chosen === "production" ? null : chosen, m.maxPullbackAtr);
+    if (!built) continue;
+
+    const bars = barsByAsset.get(d.asset);
+    if (!bars) continue;
+    const p = built.plan;
+    const risk = Math.abs(p.entryRef - p.stopPrice);
+    out.push({
+      ...resolveSwingPlan(
+        { direction: sp.direction, entryLow: p.entryLow, entryHigh: p.entryHigh, entryRef: p.entryRef,
+          stopPrice: p.stopPrice, target1Price: p.target1Price, target2Price: p.target2Price,
+          riskRewardRatio: p.riskRewardRatio, anchorPrice: sp.anchorPrice, atrAbs: sp.atrAbs, zones: [] },
+        bars, d.t, FILL_WINDOW_DAYS, MAX_HOLD_DAYS
+      ),
+      direction: sp.direction,
+      standoffAtr: built.standoffAtr,
+      rr: p.riskRewardRatio,
+      tp1R: Math.abs(p.target1Price - p.entryRef) / risk,
+      tp2R: Math.abs(p.target2Price - p.entryRef) / risk,
+      asset: d.asset,
+      t: d.t,
+      regime: d.regimeTags?.join(" · ") ?? "unlabelled",
+      plan: p,
+    });
+  }
+  return out;
+}
+
+function summarizeMethod(outs: MethodOutcome[]) {
+  if (!outs.length) return null;
+  const filled = outs.filter((o) => o.filled);
+  const resolved = filled.filter((o) => o.returnPct !== null);
+  const wins = resolved.filter((o) => (o.returnPct ?? 0) > 0).length;
+  return {
+    plans: outs.length,
+    medStandoff: median(outs.map((o) => o.standoffAtr)),
+    medRr: median(outs.map((o) => o.rr)),
+    medTp2R: median(outs.map((o) => o.tp2R)),
+    fillRate: pct(filled.length, outs.length),
+    medHoursToFill: median(filled.map((o) => o.hoursToFill ?? 0)),
+    n: resolved.length,
+    winRate: pct(wins, resolved.length),
+    ci: wilson(wins, resolved.length),
+    expectancy: mean(resolved.map((o) => o.returnPct ?? 0)),
+    mfe: mean(resolved.map((o) => o.mfePct ?? 0)),
+    mae: mean(resolved.map((o) => o.maePct ?? 0)),
+    tp1: pct(filled.filter((o) => o.outcome === "target" || o.outcome === "tp2").length, filled.length),
+    tp2: pct(filled.filter((o) => o.outcome === "tp2").length, filled.length),
+    stopped: pct(filled.filter((o) => o.outcome === "stop").length, filled.length),
+    medDaysHeld: median(filled.map((o) => (o.hoursHeld ?? 0) / 24)),
+  };
+}
+
 interface Asset { data: RawAssetData; marketWide: MarketWideData }
 
 function replayAll(assets: Asset[], swing: SwingThesisConfig): DayRecord[] {
@@ -648,6 +820,130 @@ function main() {
       `| ${c.label} | ${wins.length}/${FOLDS} | ${wins.length ? f1(mean(wins)) + "%" : "—"} | ` +
         `${wins.length ? f1(Math.min(...wins)) + "%" : "—"} | ${wins.length ? f1(Math.max(...wins)) + "%" : "—"} | ` +
         `${exps.length ? (mean(exps) >= 0 ? "+" : "") + f2(mean(exps)) + "%" : "—"} |`
+    );
+  }
+  say();
+
+  // ── 7. entry-methodology comparison ────────────────────────────────────
+  say("## 7. Entry-methodology comparison");
+  say();
+  say(
+    "Activation set held FIXED — only the choice of entry zone varies. Every methodology turns its " +
+      "chosen zone into levels by the same rules production uses (stop beyond the retested zone, R:R from " +
+      "the worst fill), so differences are attributable to zone choice alone."
+  );
+  say();
+  // ── HARNESS ACCEPTANCE TEST ──
+  // Methodology A must reproduce the production plans exactly. Without this,
+  // differences between rows are not attributable to zone choice — which is
+  // precisely how the previous version of this study went wrong.
+  {
+    const control = evaluateMethodology(METHODOLOGIES[0], baseline, barsByAsset);
+    const prodPlans = baseline.filter((d) => d.swingPlan);
+    let mismatches = 0;
+    const byT = new Map(control.map((o) => [`${o.asset}:${o.t}`, o.plan]));
+    for (const d of prodPlans) {
+      const c = byT.get(`${d.asset}:${d.t}`);
+      const p = d.swingPlan!;
+      if (!c) { mismatches++; continue; }
+      const same =
+        Math.abs(c.entryLow - p.entryLow) < 1e-6 &&
+        Math.abs(c.entryHigh - p.entryHigh) < 1e-6 &&
+        Math.abs(c.stopPrice - p.stopPrice) < 1e-6 &&
+        Math.abs(c.target1Price - p.target1Price) < 1e-6 &&
+        Math.abs(c.target2Price - p.target2Price) < 1e-6;
+      if (!same) mismatches++;
+    }
+    say(
+      `**Harness acceptance test** — control reproduced ${prodPlans.length - mismatches}/${prodPlans.length} production plans ` +
+        `exactly (entry, stop, TP1, TP2). ${mismatches === 0 ? "PASS — differences below are attributable to zone choice alone." : `**FAIL (${mismatches} mismatches) — the comparison below is NOT valid.**`}`
+    );
+    say();
+  }
+
+  say("| Methodology | Plans | Med standoff | Med R:R | Fill% | Med hrs to fill | n | Win | 95% CI | Expectancy | MFE | MAE | TP1 | TP2 | Stop | Med days held |");
+  say("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|");
+  const methodOutcomes = new Map<string, MethodOutcome[]>();
+  for (const m of METHODOLOGIES) {
+    const outs = evaluateMethodology(m, baseline, barsByAsset);
+    methodOutcomes.set(m.label, outs);
+    const st = summarizeMethod(outs);
+    if (!st) { say(`| ${m.label} | 0 | — | — | — | — | — | — | — | — | — | — | — | — | — | — |`); continue; }
+    say(
+      `| ${m.label} | ${st.plans} | ${f2(st.medStandoff)} ATR | ${f2(st.medRr)} | ${f1(st.fillRate)}% | ${f1(st.medHoursToFill)}h | ` +
+        `${st.n} | ${f1(st.winRate)}% | ${f1(st.ci[0])}–${f1(st.ci[1])}% | ${st.expectancy >= 0 ? "+" : ""}${f2(st.expectancy)}% | ` +
+        `${f2(st.mfe)}% | ${f2(st.mae)}% | ${f1(st.tp1)}% | ${f1(st.tp2)}% | ${f1(st.stopped)}% | ${f1(st.medDaysHeld)}d |`
+    );
+  }
+  say();
+
+  say("### Long vs short, per methodology");
+  say();
+  say("| Methodology | Long n | Long win | Long exp | Short n | Short win | Short exp |");
+  say("|---|---|---|---|---|---|---|");
+  for (const m of METHODOLOGIES) {
+    const outs = methodOutcomes.get(m.label) ?? [];
+    const L = summarizeMethod(outs.filter((o) => o.direction === "long"));
+    const S = summarizeMethod(outs.filter((o) => o.direction === "short"));
+    say(
+      `| ${m.label} | ${L?.n ?? 0} | ${L ? f1(L.winRate) + "%" : "—"} | ${L ? (L.expectancy >= 0 ? "+" : "") + f2(L.expectancy) + "%" : "—"} | ` +
+        `${S?.n ?? 0} | ${S ? f1(S.winRate) + "%" : "—"} | ${S ? (S.expectancy >= 0 ? "+" : "") + f2(S.expectancy) + "%" : "—"} |`
+    );
+  }
+  say();
+
+  say("### Walk-forward per methodology");
+  say();
+  say("| Methodology | Folds w/ >=8 | Mean fold win | Worst | Best | Mean expectancy |");
+  say("|---|---|---|---|---|---|");
+  const foldEdges = (() => {
+    const ts = [...new Set(baseline.map((r) => r.t))].sort((a, b) => a - b);
+    return Array.from({ length: FOLDS + 1 }, (_, i) => ts[Math.min(Math.floor((i * ts.length) / FOLDS), ts.length - 1)]);
+  })();
+  for (const m of METHODOLOGIES) {
+    const outs = methodOutcomes.get(m.label) ?? [];
+    const wins: number[] = [];
+    const exps: number[] = [];
+    for (let f = 0; f < FOLDS; f++) {
+      const lo = foldEdges[f] + (f > 0 ? EMBARGO_DAYS * 86_400_000 : 0);
+      const hi = foldEdges[f + 1];
+      const st = summarizeMethod(outs.filter((o) => o.t >= lo && o.t < hi));
+      if (st && st.n >= 8) { wins.push(st.winRate); exps.push(st.expectancy); }
+    }
+    say(
+      `| ${m.label} | ${wins.length}/${FOLDS} | ${wins.length ? f1(mean(wins)) + "%" : "—"} | ` +
+        `${wins.length ? f1(Math.min(...wins)) + "%" : "—"} | ${wins.length ? f1(Math.max(...wins)) + "%" : "—"} | ` +
+        `${exps.length ? (mean(exps) >= 0 ? "+" : "") + f2(mean(exps)) + "%" : "—"} |`
+    );
+  }
+  say();
+
+  // ── 8. TP2 diagnosis ───────────────────────────────────────────────────
+  say("## 8. TP2 diagnosis");
+  say();
+  say(
+    "Everything in R, so target distance and realized excursion are directly comparable. " +
+      "`MFE p90` is the 90th percentile favourable excursion actually achieved — if TP2 sits beyond even that, " +
+      "it is not a target the market declined to reach, it is a target the methodology never made reachable."
+  );
+  say();
+  say("| Methodology | TP1 dist | TP2 dist | MFE median | MFE p90 | MFE max | TP2 within MFE p90? | TP1 hit% | TP2 hit% |");
+  say("|---|---|---|---|---|---|---|---|---|");
+  for (const m of METHODOLOGIES) {
+    const outs = (methodOutcomes.get(m.label) ?? []).filter((o) => o.filled && o.mfePct !== null);
+    if (!outs.length) continue;
+    const st = summarizeMethod(outs);
+    // MFE expressed in R: excursion% divided by the plan's own risk%.
+    const mfeR = outs.map((o) => {
+      const riskPct = (Math.abs(o.plan.entryRef - o.plan.stopPrice) / o.plan.entryRef) * 100;
+      return riskPct > 0 ? (o.mfePct ?? 0) / riskPct : 0;
+    });
+    const sorted = [...mfeR].sort((a, b) => a - b);
+    const p90 = sorted[Math.floor(sorted.length * 0.9)];
+    const tp2 = median(outs.map((o) => o.tp2R));
+    say(
+      `| ${m.label} | ${f2(median(outs.map((o) => o.tp1R)))}R | ${f2(tp2)}R | ${f2(median(mfeR))}R | ${f2(p90)}R | ` +
+        `${f2(sorted[sorted.length - 1])}R | ${p90 >= tp2 ? "yes" : "**no**"} | ${st ? f1(st.tp1) + "%" : "—"} | ${st ? f1(st.tp2) + "%" : "—"} |`
     );
   }
   say();

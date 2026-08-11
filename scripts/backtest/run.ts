@@ -14,6 +14,7 @@ import {
   buildVolumeProfile,
   buildSupportResistanceZones,
   mergeTimeframeZones,
+  SupportResistanceZone,
 } from "../../src/lib/technicals/marketStructure";
 import { buildTradeRecommendation } from "../../src/lib/signals/tradeRecommendation";
 import { buildEntryQuality } from "../../src/lib/signals/entryQuality";
@@ -298,6 +299,16 @@ export interface DayRecord {
     target1Price: number;
     target2Price: number;
     riskRewardRatio: number;
+    /** Close the plan was anchored to, so distance-to-entry is measurable. */
+    anchorPrice: number;
+    atrAbs: number;
+    /**
+     * The FULL candidate zone set visible at that close. Recorded only on
+     * activation days (~107 of 2,896), so the cost is negligible, and it is
+     * what lets an alternative entry methodology be evaluated against
+     * IDENTICAL inputs rather than a re-derived approximation.
+     */
+    zones: SupportResistanceZone[];
   } | null;
   forwardReturn1h: number | null;
   forwardReturn4h: number | null;
@@ -962,6 +973,9 @@ export function replayAsset(
               target1Price: swingStore.active.plan.target1Price,
               target2Price: swingStore.active.plan.target2Price,
               riskRewardRatio: swingStore.active.plan.riskRewardRatio,
+              anchorPrice: swingStore.active.plan.anchorPrice,
+              atrAbs: swingStore.active.plan.atrAbs,
+              zones: supportResistance,
             }
           : null,
       forwardReturn1h: forwardReturn(futuresKlines, t, 1 * 3_600_000, 30 * 60_000),

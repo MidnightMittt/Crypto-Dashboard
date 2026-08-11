@@ -440,6 +440,18 @@ export function assess(direction: SwingDirection, ev: DailyCloseEvidence, config
  * pullback entry zone, stop beyond the retested zone, R:R re-measured from
  * the real entry, refusal when risk is noise-tight — lives in tradePlan.ts
  * and exists exactly once.
+ *
+ * `requirePullbackEntry` is NOT optional here, and the measurement that
+ * forced it is worth recording: without it, 42 of 107 historical swing plans
+ * (39%) were the at-market fallback — an entry band of ±0.25 ATR centred on
+ * the close, produced whenever no structural zone sat within reach. Price was
+ * already inside the "entry zone" in every one of those cases, so the median
+ * time to fill across all plans was two hours.
+ *
+ * That is not a swing entry. A swing plan is a price location the trader
+ * waits for, and a band around the current price is definitionally the
+ * opposite. When structure offers no such location the correct output is NO
+ * PLAN — the thesis still stands, there is simply nowhere good to enter yet.
  */
 function buildPlan(direction: SwingDirection, ev: DailyCloseEvidence, config: SwingThesisConfig): FrozenPlan | null {
   if (!ev.planInputs) return null;
@@ -452,6 +464,7 @@ function buildPlan(direction: SwingDirection, ev: DailyCloseEvidence, config: Sw
     zones: supportResistance,
     quality,
     config: planConfigOf(config),
+    requirePullbackEntry: true,
   });
 }
 
