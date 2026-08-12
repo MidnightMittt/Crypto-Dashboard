@@ -1,295 +1,188 @@
-"use client";
-
-import { AlertTriangle } from "lucide-react";
-import { Header } from "@/components/layout/Header";
-import { AiMarketSummary } from "@/components/dashboard/AiMarketSummary";
-import { OpportunityScanner } from "@/components/dashboard/OpportunityScanner";
-import { CategoryCard } from "@/components/dashboard/CategoryCard";
-import { LiquidityMapCard } from "@/components/dashboard/LiquidityMapCard";
-import { SignalBreakdown } from "@/components/dashboard/SignalBreakdown";
-import { ExchangeGrid } from "@/components/dashboard/ExchangeGrid";
-import { HeatMap } from "@/components/dashboard/HeatMap";
-import { Leaderboards } from "@/components/dashboard/Leaderboards";
-import { AlertsPanel } from "@/components/dashboard/AlertsPanel";
-import { AiSummary } from "@/components/dashboard/AiSummary";
-import { SimilarSetupsPanel } from "@/components/dashboard/SimilarSetupsPanel";
-import { ArbitrageScanner } from "@/components/dashboard/ArbitrageScanner";
-import { PoolExposure } from "@/components/dashboard/PoolExposure";
-import { PositioningIntelligence } from "@/components/dashboard/PositioningIntelligence";
-import { LiquidationIntelligence } from "@/components/dashboard/LiquidationIntelligence";
-import { OrderFlowIntelligence } from "@/components/dashboard/OrderFlowIntelligence";
-import { ExchangeFlowIntelligence } from "@/components/dashboard/ExchangeFlowIntelligence";
-import { DeribitOptionsIntelligence } from "@/components/dashboard/DeribitOptionsIntelligence";
-import { DominanceRotation, StablecoinSupply } from "@/components/dashboard/MarketBreadth";
-import { CorrelationHeatmap } from "@/components/dashboard/CorrelationHeatmap";
-import { NetworkHealth } from "@/components/dashboard/NetworkHealth";
-import { MacroCard } from "@/components/dashboard/MacroCard";
-import { DashboardSkeleton, LowerSkeleton, Skeleton } from "@/components/ui/Skeleton";
-import { Collapsible } from "@/components/ui/Collapsible";
-import { Button } from "@/components/ui/Button";
-import { useMarketData } from "@/lib/hooks/useMarketData";
-import { useAssetComposites } from "@/lib/hooks/useAssetComposites";
-import { useDashboardStore } from "@/lib/store/dashboardStore";
-import { getExchange } from "@/lib/exchanges/registry";
-import { regimeTagsToStrings } from "@/lib/technicals/regimes";
-import { Category } from "@/lib/signals/types";
+import Link from "next/link";
+import { Card, CardContent } from "@/components/ui/Card";
+import { ScannerTable } from "@/components/scanner/ScannerTable";
+import {
+  rankOpportunities,
+  explainRanking,
+  ScannableMarket,
+  SetupSummary,
+  ACTIONABLE_OPPORTUNITY,
+} from "@/lib/signals/opportunityRanking";
+import { TopOpportunity } from "@/components/scanner/TopOpportunity";
+import { getAssetComposites } from "@/lib/exchanges/assetComposites";
+import { MarketBias } from "@/lib/signals/types";
+import { TradePlan } from "@/lib/signals/tradePlan";
+import snapshot from "@/data/equityMarkets.json";
 
 /**
- * Dashboard V2's reading order: Leading Drivers -> Market Structure ->
- * Positioning -> Risk Monitor, the user's own explicit "macro backdrop
- * downstream to structure, then positioning, then risk" narrative order —
- * deliberately NOT the same as CATEGORY_ORDER in categories.ts (weight-
- * heaviest first), which drives scoring/renormalization, not page layout.
+ * THE MARKET SCANNER — one ranked view of every market the engine covers.
+ *
+ * This is the answer to the question the single-asset surfaces cannot answer:
+ * a swing thesis is active on roughly a quarter of days, so most visits to a
+ * given asset end in "no setup", and the honest reply to that is not a longer
+ * explanation — it is naming the market that DOES have one.
+ *
+ * ── One engine, two universes, no second opinion ───────────────────────
+ *
+ * Crypto rows come from `getAssetComposites`, which wraps the same
+ * `getAggregateForAsset` the live asset page reads. Equity rows come from the
+ * build-time snapshot, which is the same `buildMarketBias` output the Markets
+ * pages render. Both are mapped onto `ScannableMarket` by field selection
+ * alone — no adapter computes anything — and both then pass through the one
+ * `rankOpportunities`.
+ *
+ * The two halves refresh at different rates and the page says so rather than
+ * implying a uniform freshness it does not have. That asymmetry is real:
+ * crypto trades continuously and equities close.
  */
-const CATEGORY_DISPLAY_ORDER: Category[] = ["leadingDrivers", "marketStructure", "positioning", "risk"];
 
-export default function DashboardPage() {
-  const asset = useDashboardStore((s) => s.asset);
-  const { data, isLoading, isError, refetch } = useMarketData(asset);
-  const { data: assetComposites } = useAssetComposites();
+interface EquitySnapshotRow {
+  symbol: string;
+  name: string;
+  bias: MarketBias;
+  lastClose: number;
+  change24hPct: number;
+  asOf: number;
+  plan: TradePlan | null;
+}
 
-  const aggregate = data?.aggregate;
+const equity = snapshot as unknown as { generatedAt: number; decisions: EquitySnapshotRow[] };
 
-  // `ready` gates only the panels that need exchange data. The chart is
-  // rendered in both branches because it sources its series independently.
-  const ready = !isLoading && !!aggregate && aggregate.exchanges.length > 0;
-  const noData = !isLoading && !!aggregate && aggregate.exchanges.length === 0;
+/*
+ * Crypto composites are behind a 5-minute swr cache; re-rendering this page
+ * more often than that would produce identical output at real API cost. The
+ * equity half only changes when the snapshot is rebuilt.
+ */
+export const revalidate = 300;
 
-  // Today's live trend/volatility/range-bound tags, threaded to every
-  // per-metric HistoricalPerformancePanel so a backtested best/worst
-  // environment can be marked "(current)" — see that component's doc comment.
-  const currentRegimeTags = aggregate?.marketThesis?.regimeTags
-    ? regimeTagsToStrings(aggregate.marketThesis.regimeTags)
-    : undefined;
-
-  const venueCount = aggregate ? new Set(aggregate.exchanges.map((e) => e.exchangeId)).size : undefined;
-  const unavailable = (aggregate?.unavailableExchanges ?? [])
-    .map((id) => getExchange(id)?.name ?? id);
-
-  // How many venues came first-hand vs via an aggregator.
-  const directCount = aggregate?.exchanges.filter((e) => e.source === "direct").length ?? 0;
-  const viaProvider = aggregate?.exchanges.filter((e) => e.source && e.source !== "direct") ?? [];
-  const providerNames = Array.from(new Set(viaProvider.map((e) => e.source)));
-
-  const categoriesByName = new Map(
-    (aggregate?.marketBias?.categories ?? []).map((c) => [c.category, c] as const)
+/**
+ * An equity plan IS the setup — there is no separate thesis state machine for
+ * equities, so its state is always "planned": geometry that exists and waits
+ * for price. Labelling it "active" would claim a trigger the equity path has
+ * no way to fire.
+ */
+function Tape({ label, value, tone = "text-ink" }: { label: string; value: string; tone?: string }) {
+  return (
+    <span className="flex items-baseline gap-1.5">
+      <span className="uppercase tracking-[0.14em] text-ink-faint">{label}</span>
+      <span className={`font-mono ${tone}`}>{value}</span>
+    </span>
   );
+}
+
+function equitySetup(row: EquitySnapshotRow): SetupSummary | null {
+  if (!row.plan) return null;
+  return {
+    state: "planned",
+    direction: row.bias.verdict === "bearish" ? "short" : "long",
+    riskReward: row.plan.riskRewardRatio,
+    stars: row.plan.stars,
+    status: "waiting",
+  };
+}
+
+/** Same selection the crypto composite makes, so both universes show the same kind of reason. */
+function reasonsOf(bias: MarketBias, side: "for" | "against"): string[] {
+  const agreeing = bias.verdict === "bearish" ? bias.topBearish : bias.topBullish;
+  const opposing = bias.verdict === "bearish" ? bias.topBullish : bias.topBearish;
+  return (side === "for" ? agreeing : opposing).slice(0, 3).map((m) => m.explanation);
+}
+
+export default async function ScannerPage() {
+  const crypto = await getAssetComposites({}).catch(() => null);
+
+  const cryptoRows: ScannableMarket[] = [
+    ...(crypto?.btc ? [crypto.btc] : []),
+    ...(crypto?.eth ? [crypto.eth] : []),
+    ...(crypto?.altcoins?.assets ?? []),
+  ].map((c) => ({ ...c, assetClass: "crypto" as const }));
+
+  const equityRows: ScannableMarket[] = equity.decisions.map((d) => ({
+    asset: d.symbol,
+    name: d.name,
+    assetClass: "equity" as const,
+    score: d.bias.score,
+    verdict: d.bias.verdict,
+    confidence: d.bias.confidence,
+    agreement: d.bias.agreement,
+    riskLevel: d.bias.riskLevel,
+    priceChange24hPct: d.change24hPct,
+    headline: d.bias.headline,
+    setup: equitySetup(d),
+    reasonsFor: reasonsOf(d.bias, "for"),
+    reasonsAgainst: reasonsOf(d.bias, "against"),
+  }));
+
+  const ranked = rankOpportunities([...cryptoRows, ...equityRows]);
+  /* One-line state of the whole universe, so the tape has a shape before the table. */
+  const withSetups = ranked.filter((r) => r.setup != null).length;
+  const actionable = ranked.filter((r) => r.opportunity >= ACTIONABLE_OPPORTUNITY).length;
+  const bullish = ranked.filter((r) => r.verdict === "bullish").length;
+  const bearish = ranked.filter((r) => r.verdict === "bearish").length;
 
   return (
     <div className="min-h-screen">
-      <Header venueCount={venueCount} updatedAt={data?.meta.generatedAt} />
-
-      <main className="mx-auto flex max-w-[1600px] flex-col gap-6 px-4 py-6 sm:px-6">
-        {isError && (
-          <div className="flex items-center justify-between gap-4 rounded-lg border border-danger/30 bg-danger/5 px-4 py-3">
-            <span className="flex items-center gap-2 text-sm text-danger">
-              <AlertTriangle className="h-4 w-4" />
-              Market data didn&apos;t load. The exchange APIs may be unreachable or rate-limiting.
-            </span>
-            <Button size="sm" variant="danger" onClick={() => refetch()}>
-              Retry
-            </Button>
+      <main className="mx-auto flex max-w-[1200px] flex-col gap-5 px-4 py-6 sm:px-6">
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <h1 className="text-lg font-semibold text-ink">Scanner</h1>
+          <div className="flex gap-4 text-[11px] uppercase tracking-[0.16em] text-ink-muted">
+            <Link href="/crypto" className="hover:text-ink">
+              Crypto
+            </Link>
+            <Link href="/markets" className="hover:text-ink">
+              Markets
+            </Link>
           </div>
-        )}
+        </div>
 
-        {noData ? (
-          <div className="rounded-lg border border-amber/30 bg-amber/5 p-6">
-            <h2 className="text-sm font-semibold text-amber">No exchange returned data</h2>
-            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-ink-muted">
-              Every venue failed for this asset. Usually that means no network connection, a firewall
-              blocking the exchange APIs, or the asset isn&apos;t listed anywhere. Check your terminal — each
-              failure logs the reason.
-            </p>
-            <Button size="sm" variant="outline" className="mt-4" onClick={() => refetch()}>
-              Retry
-            </Button>
-          </div>
-        ) : !ready ? (
-          <>
-            <DashboardSkeleton />
-            <Skeleton className="h-[420px] w-full" />
-            <LowerSkeleton />
-          </>
-        ) : (
-          <>
-            <div className="flex flex-col gap-1.5 rounded-md border border-hairline bg-white/[0.02] px-3 py-2 text-[11px] text-ink-faint">
-              <span>
-                <span className="text-ink-muted">Sources:</span> {directCount} venue
-                {directCount === 1 ? "" : "s"} queried directly
-                {viaProvider.length > 0 && (
-                  <>
-                    , {viaProvider.length} via {providerNames.join(" / ")}
-                  </>
-                )}
-                . Data redistributed by DefiLlama and Coinalyze.
-              </span>
-              {unavailable.length > 0 && (
-                <span>
-                  Not reporting: {unavailable.join(", ")} — excluded from every number below rather than
-                  estimated.
-                </span>
-              )}
-            </div>
-
-            {/*
-              The BTC/ETH/Altcoins composite strip used to sit here. The
-              scanner above supersedes it: it says the same thing for all
-              ten tracked assets instead of three, ranks them, and links to
-              each. Keeping both would have been two widgets answering one
-              question, which is the duplication this phase exists to remove.
-            */}
-
-            {/*
-              ── LEADING DRIVERS / MARKET STRUCTURE / POSITIONING / RISK ────
-              The four scored categories, one card per trading question —
-              Dashboard V2's "one card = one decision" rule. Same underlying
-              18 metrics `evaluateAll()` already produces; nothing new is
-              fetched here. Each card's "Detail" expandable absorbs the raw
-              Intelligence components that used to render as their own
-              always-visible cards or collapsibles.
-            */}
-            {aggregate.marketBias && aggregate.marketBias.categories.length > 0 && (
-              <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                {CATEGORY_DISPLAY_ORDER.map((catName) => {
-                  const category = categoriesByName.get(catName);
-                  if (!category) return null;
-                  return (
-                    <CategoryCard
-                      key={catName}
-                      category={category}
-                      currentRegimeTags={currentRegimeTags}
-                      rawDetail={rawDetailFor(catName, aggregate, data)}
-                      rawDetailSummary={RAW_DETAIL_SUMMARY[catName]}
-                    />
-                  );
-                })}
-              </section>
-            )}
-
-            {/*
-              ── THE AUDIT TRAIL ───────────────────────────────────────────
-              Every metric in one uniform shape, so the summary and category
-              cards above are auditable rather than taken on trust. Collapsed
-              by default — this is raw-data depth, not the default reading
-              surface.
-            */}
-            <Collapsible
-              title="All Signals"
-              summary={`${aggregate.marketBias?.metrics.length ?? 0} metrics`}
-            >
-              <SignalBreakdown metrics={aggregate.marketBias?.metrics ?? []} currentRegimeTags={currentRegimeTags} />
-            </Collapsible>
-
-            <Collapsible title="Research" summary="historical analog, freeform AI narrative">
-              <div className="flex flex-col gap-4">
-                <SimilarSetupsPanel aggregate={aggregate} />
-                <AiSummary aggregate={aggregate} />
-              </div>
-            </Collapsible>
-
-            <Collapsible
-              title="Raw Venue Data"
-              summary={`${venueCount ?? aggregate.exchanges.length} venues`}
-            >
-              <div className="flex flex-col gap-6">
-                <ExchangeGrid exchanges={aggregate.exchanges} />
-                <section>
-                  <SectionTitle>Cross-Market Funding</SectionTitle>
-                  <HeatMap exchanges={aggregate.exchanges} />
-                </section>
-                <section>
-                  <SectionTitle>Leaderboards</SectionTitle>
-                  <Leaderboards exchanges={aggregate.exchanges} />
-                </section>
-              </div>
-            </Collapsible>
-
-            <Collapsible title="Tools" summary="arbitrage scanner, alerts">
-              <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <ArbitrageScanner exchanges={aggregate.exchanges} />
-                <AlertsPanel aggregate={aggregate} />
-              </section>
-            </Collapsible>
-
-            <footer className="border-t border-hairline pt-6 text-[11px] leading-relaxed text-ink-faint">
-              <p className="font-medium text-ink-muted">This is a market data tool, not financial advice.</p>
-              <p className="mt-1 max-w-3xl">
-                Every number here is fetched live from the exchange that publishes it. Where a venue
-                doesn&apos;t publish a metric, it shows as &ldquo;—&rdquo; rather than an estimate. Funding
-                and open interest describe how traders are positioned; they don&apos;t predict direction.
-                Crowded positioning can stay crowded far longer than it looks sustainable. Verify anything
-                you act on against the exchange&apos;s own interface before trading.
+        {/*
+          THE ANSWER FIRST, and in full. A scanner that opens on a table makes
+          the reader redo the ranking the engine already did.
+        */}
+        {ranked.length === 0 ? (
+          <Card>
+            <CardContent className="py-5">
+              <p className="text-[13px] leading-relaxed text-ink">
+                No market could be scored right now. Every data source for the crypto universe failed
+                this cycle, and the equity snapshot is empty — this is an outage, not a quiet tape.
               </p>
-            </footer>
-          </>
+            </CardContent>
+          </Card>
+        ) : (
+          <TopOpportunity
+            lead={ranked[0]}
+            runnerUp={ranked[1] ?? null}
+            comparison={ranked[1] ? explainRanking(ranked[0], ranked[1]) : null}
+            totalMarkets={ranked.length}
+          />
         )}
+
+        {ranked.length > 0 && (
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-1 text-[11px]">
+            <Tape label="Tracked" value={`${ranked.length} markets`} />
+            <Tape label="Clearing the bar" value={`${actionable}`} tone={actionable > 0 ? "text-cyan" : undefined} />
+            <Tape label="With a plan" value={`${withSetups}`} />
+            <Tape
+              label="Direction"
+              value={`${bullish} bullish · ${bearish} bearish · ${ranked.length - bullish - bearish} neutral`}
+            />
+          </div>
+        )}
+
+        <Card>
+          <CardContent className="py-5">
+            <ScannerTable rows={ranked} />
+          </CardContent>
+        </Card>
+
+        <p className="text-[11px] leading-relaxed text-ink-faint">
+          <span className="text-ink-muted">Freshness differs by universe, deliberately.</span> Crypto rows
+          are live, cached five minutes. Equity rows come from a daily-close snapshot built{" "}
+          {new Date(equity.generatedAt).toISOString().slice(0, 10)} — equities close and crypto does not, so
+          a single refresh rate would misrepresent one of them. Nothing on this page is computed here:
+          every score, confidence and plan is the same engine output the per-market pages render.
+        </p>
       </main>
     </div>
-  );
-}
-
-const RAW_DETAIL_SUMMARY: Record<Category, string> = {
-  positioning: "squeeze, funding percentile, liquidations, liquidity map, pool exposure",
-  marketStructure: "order flow, dominance/altseason rotation, correlation",
-  leadingDrivers: "macro (TradFi), on-chain network health, stablecoin supply",
-  risk: "exchange netflow, options positioning",
-};
-
-/**
- * The relocated Intelligence/detail components each CategoryCard's "Detail"
- * expandable absorbs — grouped by which trading question they support, per
- * the Dashboard V2 IA redesign's audit. Nothing here recomputes anything;
- * every component keeps reading the exact same `aggregate`/`data` it always
- * has, just rendered inside a different expandable location.
- */
-function rawDetailFor(
-  category: Category,
-  aggregate: NonNullable<ReturnType<typeof useMarketData>["data"]>["aggregate"],
-  data: ReturnType<typeof useMarketData>["data"]
-) {
-  switch (category) {
-    case "positioning":
-      return (
-        <div className="flex flex-col gap-4">
-          <PositioningIntelligence data={aggregate} />
-          <LiquidationIntelligence data={aggregate} />
-          <LiquidityMapCard
-            liquidityMap={aggregate.liquidityMap}
-            liquidationsMetric={aggregate.marketBias?.metrics.find((m) => m.id === "liquidations") ?? null}
-          />
-          <PoolExposure data={aggregate} />
-        </div>
-      );
-    case "marketStructure":
-      return (
-        <div className="flex flex-col gap-4">
-          <OrderFlowIntelligence data={aggregate} />
-          <DominanceRotation globalMarket={data?.globalMarket ?? null} />
-          <CorrelationHeatmap correlation={data?.correlation ?? null} />
-        </div>
-      );
-    case "leadingDrivers":
-      return (
-        <div className="flex flex-col gap-4">
-          <MacroCard macro={data?.macro} />
-          <NetworkHealth data={data?.networkHealth} stablecoins={data?.stablecoins ?? null} />
-          <StablecoinSupply stablecoins={data?.stablecoins ?? null} />
-        </div>
-      );
-    case "risk":
-      return (
-        <div className="flex flex-col gap-4">
-          <ExchangeFlowIntelligence data={aggregate} />
-          <DeribitOptionsIntelligence data={aggregate} />
-        </div>
-      );
-    default:
-      return null;
-  }
-}
-
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return (
-    <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-ink-muted">{children}</h2>
   );
 }

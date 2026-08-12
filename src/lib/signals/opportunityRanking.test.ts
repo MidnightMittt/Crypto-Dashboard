@@ -30,6 +30,8 @@ function composite(asset: string, score: number, confidence: number, verdict: Ve
     agreement: 0,
     riskLevel: "medium",
     setup: null,
+    reasonsFor: [],
+    reasonsAgainst: [],
   };
 }
 

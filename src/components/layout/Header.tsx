@@ -50,7 +50,7 @@ export function Header({ venueCount, updatedAt }: { venueCount?: number; updated
             days with no active thesis it is the only surface with an answer.
           */}
           <Link
-            href="/scanner"
+            href="/"
             className="hidden text-[11px] uppercase tracking-widest text-ink-faint transition-colors hover:text-ink sm:inline"
           >
             Scanner

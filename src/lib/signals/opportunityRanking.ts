@@ -72,6 +72,9 @@ export interface ScannableMarket {
   agreement?: number;
   riskLevel?: string;
   setup?: SetupSummary | null;
+  /** The engine's own top explanations, agreeing and opposing. Verbatim. */
+  reasonsFor?: string[];
+  reasonsAgainst?: string[];
 }
 
 export interface RankedOpportunity {
@@ -81,6 +84,8 @@ export interface RankedOpportunity {
   agreement?: number;
   riskLevel?: string;
   setup?: SetupSummary | null;
+  reasonsFor?: string[];
+  reasonsAgainst?: string[];
   /** 0-100, the engine's directional score. Passed through untouched. */
   score: number;
   verdict: string;
@@ -119,6 +124,8 @@ export function rankOpportunities(composites: ScannableMarket[]): RankedOpportun
         agreement: c.agreement,
         riskLevel: c.riskLevel,
         setup: c.setup,
+        reasonsFor: c.reasonsFor,
+        reasonsAgainst: c.reasonsAgainst,
         score: c.score,
         verdict: c.verdict,
         confidence: c.confidence,
@@ -262,4 +269,86 @@ export function sortMarkets(rows: RankedOpportunity[], sort: ScanSort): RankedOp
   };
 
   return [...rows].sort((a, b) => key(b) - key(a) || defaultOrder(a, b));
+}
+
+/* ── WHY IS #1 ABOVE #2? ───────────────────────────────────────────────
+ *
+ * The question every ranked list invites and almost none answers. A user
+ * who cannot see why the order is what it is has to take it on trust, and a
+ * list taken on trust is indistinguishable from a list that is wrong.
+ *
+ * This is an EXACT decomposition, not a narrative fitted after the fact.
+ * `opportunity` is a product — conviction x confidence — so taking logs
+ * turns the gap into a sum:
+ *
+ *   log(oppA) - log(oppB) = log(convA/convB) + log(confA/confB)
+ *
+ * The two terms are the entire difference, and their relative size says
+ * precisely how much of the gap each factor explains. No weighting is
+ * chosen here; the split falls out of the arithmetic the ranking already
+ * uses. When one term is negative the factor is a DRAG — the leader is
+ * ahead despite it — which is the most decision-relevant thing the
+ * comparison can surface, and a hand-written explanation would gloss it.
+ */
+
+export interface RankingFactor {
+  label: string;
+  leadValue: string;
+  rivalValue: string;
+  /** Share of the ranking gap this factor explains, 0-100. Negative share means it works AGAINST the leader. */
+  sharePct: number;
+  favoursLeader: boolean;
+}
+
+export interface RankingComparison {
+  lead: string;
+  rival: string;
+  /** One sentence naming the dominant driver. */
+  summary: string;
+  factors: RankingFactor[];
+  /** True when the two are close enough that the order is not meaningful. */
+  tooClose: boolean;
+}
+
+/** Below this gap in opportunity points, calling one "better" overstates the engine. */
+export const MEANINGFUL_RANK_GAP = 3;
+
+export function explainRanking(lead: RankedOpportunity, rival: RankedOpportunity): RankingComparison | null {
+  if (lead.opportunity <= 0 || rival.opportunity <= 0) return null;
+
+  const convTerm = Math.log(lead.conviction / rival.conviction);
+  const confTerm = Math.log(lead.confidence / rival.confidence);
+  const total = Math.abs(convTerm) + Math.abs(confTerm);
+  if (!Number.isFinite(total) || total === 0) return null;
+
+  const share = (term: number) => Math.round((term / total) * 100);
+
+  const factors: RankingFactor[] = [
+    {
+      label: "Conviction",
+      leadValue: `${lead.conviction} from neutral`,
+      rivalValue: `${rival.conviction} from neutral`,
+      sharePct: share(convTerm),
+      favoursLeader: convTerm > 0,
+    },
+    {
+      label: "Evidence quality",
+      leadValue: `${lead.confidence}% confidence`,
+      rivalValue: `${rival.confidence}% confidence`,
+      sharePct: share(confTerm),
+      favoursLeader: confTerm > 0,
+    },
+  ].sort((a, b) => Math.abs(b.sharePct) - Math.abs(a.sharePct));
+
+  const dominant = factors[0];
+  const other = factors[1];
+  const tooClose = lead.opportunity - rival.opportunity < MEANINGFUL_RANK_GAP;
+
+  const summary = tooClose
+    ? `${lead.asset} and ${rival.asset} are within ${MEANINGFUL_RANK_GAP} points of each other. The order between them is not a meaningful distinction — treat them as tied.`
+    : other.favoursLeader
+      ? `${lead.asset} leads on ${dominant.label.toLowerCase()} (${Math.abs(dominant.sharePct)}% of the gap), and ${other.label.toLowerCase()} agrees.`
+      : `${lead.asset} leads entirely on ${dominant.label.toLowerCase()}. Its ${other.label.toLowerCase()} is actually WEAKER than ${rival.asset}'s — it ranks higher in spite of that, not because of it.`;
+
+  return { lead: lead.asset, rival: rival.asset, summary, factors, tooClose };
 }

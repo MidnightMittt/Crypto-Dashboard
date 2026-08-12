@@ -14,6 +14,7 @@ import {
   HIGH_CONFIDENCE,
 } from "@/lib/signals/opportunityRanking";
 import { intensityLabel } from "@/lib/signals/scoring";
+import { hrefFor, verdictTone, RISK_TONE } from "./shared";
 
 /**
  * THE SCANNER TABLE.
@@ -44,6 +45,12 @@ const FILTERS: ScanFilter[] = [
 export function ScannerTable({ rows }: { rows: RankedOpportunity[] }) {
   const [sort, setSort] = React.useState<ScanSort>("opportunity");
   const [filters, setFilters] = React.useState<ScanFilter[]>([]);
+  /*
+   * Rows expand IN PLACE rather than navigating. A scanner's job is triage,
+   * and triage means comparing three candidates without losing the list —
+   * every round trip to an asset page and back is a comparison abandoned.
+   */
+  const [expanded, setExpanded] = React.useState<string | null>(null);
 
   const visible = React.useMemo(() => sortMarkets(filterMarkets(rows, filters), sort), [rows, filters, sort]);
 
@@ -113,7 +120,8 @@ export function ScannerTable({ rows }: { rows: RankedOpportunity[] }) {
           <table className="w-full min-w-[760px] border-collapse text-left">
             <thead>
               <tr className="border-b border-hairline text-[9px] uppercase tracking-[0.14em] text-ink-faint">
-                <Th className="w-[15%]">Market</Th>
+                <Th className="w-[4%]">#</Th>
+                <Th className="w-[13%]">Market</Th>
                 <Th className="w-[22%]">Decision</Th>
                 <Th className="w-[9%] text-right">Conf</Th>
                 <Th className="w-[9%] text-right">Agree</Th>
@@ -124,7 +132,17 @@ export function ScannerTable({ rows }: { rows: RankedOpportunity[] }) {
             </thead>
             <tbody>
               {visible.map((r) => (
-                <Row key={`${r.assetClass}-${r.asset}`} row={r} />
+                <Row
+                  key={`${r.assetClass}-${r.asset}`}
+                  row={r}
+                  rank={visible.indexOf(r) + 1}
+                  isOpen={expanded === `${r.assetClass}-${r.asset}`}
+                  onToggle={() =>
+                    setExpanded((cur) =>
+                      cur === `${r.assetClass}-${r.asset}` ? null : `${r.assetClass}-${r.asset}`
+                    )
+                  }
+                />
               ))}
             </tbody>
           </table>
@@ -134,73 +152,182 @@ export function ScannerTable({ rows }: { rows: RankedOpportunity[] }) {
   );
 }
 
-function Row({ row }: { row: RankedOpportunity }) {
-  const tone =
-    row.verdict === "bullish" ? "text-success" : row.verdict === "bearish" ? "text-danger" : "text-ink-muted";
-  const href = row.assetClass === "equity" ? `/markets/${row.asset.toLowerCase()}` : `/asset/${row.asset.toLowerCase()}`;
+function Row({
+  row,
+  rank,
+  isOpen,
+  onToggle,
+}: {
+  row: RankedOpportunity;
+  rank: number;
+  isOpen: boolean;
+  onToggle: () => void;
+}) {
+  const tone = verdictTone(row.verdict);
 
   return (
-    <tr className="border-b border-hairline/60 align-top transition-colors hover:bg-panel-hi/40">
-      <Td>
-        <Link href={href} className="font-mono text-[13px] font-semibold text-ink hover:text-cyan">
-          {row.asset}
-        </Link>
-        {row.name && <div className="mt-0.5 text-[10px] text-ink-faint">{row.name}</div>}
-      </Td>
-      <Td>
-        <span className={`text-[12px] font-semibold uppercase tracking-[0.04em] ${tone}`}>
-          {intensityLabel(row.score)}
-        </span>
-        <span className="ml-1.5 font-mono text-[11px] text-ink-faint">{row.score}</span>
-      </Td>
-      <Td className="text-right">
-        <span
-          className={`font-mono text-[12px] ${row.confidence >= HIGH_CONFIDENCE ? "text-ink" : "text-ink-faint"}`}
-        >
-          {row.confidence}%
-        </span>
-      </Td>
-      <Td className="text-right font-mono text-[12px] text-ink-muted">
-        {row.agreement === undefined ? "—" : `${row.agreement}%`}
-      </Td>
-      <Td className="text-right">
-        <span
-          className={`font-mono text-[12px] ${
-            row.opportunity >= ACTIONABLE_OPPORTUNITY ? "text-ink" : "text-ink-faint"
-          }`}
-        >
-          {row.opportunity}
-        </span>
-      </Td>
-      <Td
-        className={`text-right font-mono text-[12px] ${
-          row.priceChange24hPct > 0 ? "text-success" : row.priceChange24hPct < 0 ? "text-danger" : "text-ink-faint"
+    <>
+      <tr
+        onClick={onToggle}
+        className={`cursor-pointer border-b border-hairline/60 align-top transition-colors hover:bg-panel-hi/40 ${
+          isOpen ? "bg-panel-hi/50" : ""
         }`}
       >
-        {row.priceChange24hPct >= 0 ? "+" : ""}
-        {row.priceChange24hPct.toFixed(2)}%
-      </Td>
-      <Td>
-        {row.setup ? (
-          <div className="flex flex-wrap items-baseline gap-x-2 text-[11px]">
+        <Td className="font-mono text-[11px] text-ink-faint">{rank}</Td>
+        <Td>
+          <Link
+            href={hrefFor(row)}
+            onClick={(e) => e.stopPropagation()}
+            className="font-mono text-[13px] font-semibold text-ink hover:text-cyan"
+          >
+            {row.asset}
+          </Link>
+          {row.name && <div className="mt-0.5 text-[10px] text-ink-faint">{row.name}</div>}
+        </Td>
+        <Td>
+          <span className={`text-[12px] font-semibold uppercase tracking-[0.04em] ${tone}`}>
+            {intensityLabel(row.score)}
+          </span>
+          <span className="ml-1.5 font-mono text-[11px] text-ink-faint">{row.score}</span>
+        </Td>
+        <Td className="text-right">
+          <span
+            className={`font-mono text-[12px] ${row.confidence >= HIGH_CONFIDENCE ? "text-ink" : "text-ink-faint"}`}
+          >
+            {row.confidence}%
+          </span>
+        </Td>
+        <Td className="text-right font-mono text-[12px] text-ink-muted">
+          {row.agreement === undefined ? "—" : `${row.agreement}%`}
+        </Td>
+        <Td className="text-right">
+          {/* A bar, not just a number: relative strength across the list is the
+              thing a scanner exists to make visible at a glance. */}
+          <div className="flex items-center justify-end gap-1.5">
+            <span className="h-1 w-10 overflow-hidden rounded-full bg-hairline">
+              <span
+                className={`block h-full ${row.opportunity >= ACTIONABLE_OPPORTUNITY ? "bg-cyan" : "bg-ink-faint"}`}
+                style={{ width: `${row.opportunity}%` }}
+              />
+            </span>
             <span
-              className={`font-semibold uppercase tracking-[0.1em] ${
-                row.setup.state === "active" ? "text-cyan" : "text-ink-muted"
+              className={`font-mono text-[12px] ${
+                row.opportunity >= ACTIONABLE_OPPORTUNITY ? "text-ink" : "text-ink-faint"
               }`}
             >
-              {row.setup.state === "active" ? "Active" : "Planned"} {row.setup.direction}
-            </span>
-            <span className="font-mono text-ink">{row.setup.riskReward.toFixed(2)}R</span>
-            <span className="text-ink-faint">
-              {"★".repeat(row.setup.stars)}
-              {"☆".repeat(Math.max(0, 5 - row.setup.stars))} · {row.setup.status.toLowerCase().replace(/-/g, " ")}
+              {row.opportunity}
             </span>
           </div>
-        ) : (
-          <span className="text-[11px] text-ink-faint">No plan</span>
-        )}
-      </Td>
-    </tr>
+        </Td>
+        <Td
+          className={`text-right font-mono text-[12px] ${
+            row.priceChange24hPct > 0 ? "text-success" : row.priceChange24hPct < 0 ? "text-danger" : "text-ink-faint"
+          }`}
+        >
+          {row.priceChange24hPct >= 0 ? "+" : ""}
+          {row.priceChange24hPct.toFixed(2)}%
+        </Td>
+        <Td>
+          {row.setup ? (
+            <div className="flex flex-wrap items-baseline gap-x-2 text-[11px]">
+              <span
+                className={`font-semibold uppercase tracking-[0.1em] ${
+                  row.setup.state === "active" ? "text-cyan" : "text-ink-muted"
+                }`}
+              >
+                {row.setup.state === "active" ? "Active" : "Planned"} {row.setup.direction}
+              </span>
+              <span className="font-mono text-ink">{row.setup.riskReward.toFixed(2)}R</span>
+              <span className="text-ink-faint">
+                {"★".repeat(row.setup.stars)}
+                {"☆".repeat(Math.max(0, 5 - row.setup.stars))}
+              </span>
+            </div>
+          ) : (
+            <span className="text-[11px] text-ink-faint">No plan</span>
+          )}
+        </Td>
+      </tr>
+
+      {isOpen && (
+        <tr className="border-b border-hairline/60 bg-void/40">
+          <td colSpan={8} className="px-4 py-4">
+            <div className="flex flex-col gap-3">
+              <p className="max-w-4xl text-[13px] leading-relaxed text-ink">{row.headline}</p>
+
+              <div className="grid grid-cols-1 gap-x-10 gap-y-3 sm:grid-cols-2">
+                <InlineReasons title="Why" mark="✓" markClass="text-success" items={row.reasonsFor ?? []} />
+                <InlineReasons
+                  title="Against"
+                  mark="✕"
+                  markClass="text-danger"
+                  items={row.reasonsAgainst ?? []}
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-hairline pt-3 text-[11px]">
+                {row.riskLevel && (
+                  <span className="text-ink-muted">
+                    Risk{" "}
+                    <span className={`font-semibold uppercase ${RISK_TONE[row.riskLevel] ?? "text-ink"}`}>
+                      {row.riskLevel}
+                    </span>
+                  </span>
+                )}
+                {row.setup && (
+                  <span className="text-ink-muted">
+                    Setup status <span className="text-ink">{row.setup.status.replace(/-/g, " ")}</span>
+                  </span>
+                )}
+                <span className="text-ink-faint">
+                  Conviction {row.conviction} from neutral × {row.confidence}% evidence = {row.opportunity}
+                </span>
+                <Link
+                  href={hrefFor(row)}
+                  className="ml-auto uppercase tracking-[0.14em] text-cyan hover:underline"
+                >
+                  Full decision →
+                </Link>
+              </div>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+function InlineReasons({
+  title,
+  mark,
+  markClass,
+  items,
+}: {
+  title: string;
+  mark: string;
+  markClass: string;
+  items: string[];
+}) {
+  return (
+    <div>
+      <h4 className="text-[9px] font-semibold uppercase tracking-[0.16em] text-ink-faint">{title}</h4>
+      {items.length === 0 ? (
+        <p className="mt-1 text-[11px] text-ink-faint">
+          Nothing on this side — open the full decision for the per-module detail.
+        </p>
+      ) : (
+        <ul className="mt-1 flex flex-col gap-1">
+          {items.map((r) => (
+            <li key={r} className="flex items-start gap-2 text-[11px] leading-relaxed text-ink-muted">
+              <span aria-hidden className={`shrink-0 ${markClass}`}>
+                {mark}
+              </span>
+              <span>{r}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 

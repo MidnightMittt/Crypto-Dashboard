@@ -36,6 +36,15 @@ export interface AssetComposite {
    * rather than a gap.
    */
   setup: SetupSummary | null;
+  /**
+   * The engine's own top reasons, already ranked by weight x confidence.
+   *
+   * Carried so the scanner can show WHY a row is where it is without a second
+   * request per asset. These are `bias.topBullish` / `topBearish` explanations
+   * verbatim — the same sentences the asset page prints.
+   */
+  reasonsFor: string[];
+  reasonsAgainst: string[];
 }
 
 /**

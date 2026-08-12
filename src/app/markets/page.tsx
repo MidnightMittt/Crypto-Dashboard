@@ -42,7 +42,7 @@ export default function MarketsPage() {
         <header className="flex flex-col gap-2">
           <div className="flex flex-wrap items-baseline justify-between gap-3">
             <h1 className="text-lg font-semibold tracking-tight text-ink">Markets</h1>
-            <Link href="/" className="text-[11px] uppercase tracking-[0.16em] text-ink-muted hover:text-ink">
+            <Link href="/crypto" className="text-[11px] uppercase tracking-[0.16em] text-ink-muted hover:text-ink">
               ← Crypto
             </Link>
           </div>

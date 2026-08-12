@@ -12,7 +12,7 @@ import {
   referencePrice,
 } from "../signals/assetComposite";
 import { verdictFromScore } from "../signals/scoring";
-import { Verdict } from "../signals/types";
+import { Verdict, MarketBias } from "../signals/types";
 
 /**
  * Wraps getAggregateForAsset in a MUCH slower cache specifically for the
@@ -54,6 +54,8 @@ async function getAssetComposite(
         agreement: agg.marketBias.agreement,
         riskLevel: agg.marketBias.riskLevel,
         setup: summariseSetup(agg),
+        reasonsFor: sideReasons(agg.marketBias, "for"),
+        reasonsAgainst: sideReasons(agg.marketBias, "against"),
       };
       return composite;
     },
@@ -62,6 +64,18 @@ async function getAssetComposite(
     console.warn(`[asset-composites] failed for ${asset}:`, err);
     return null;
   });
+}
+
+/**
+ * The engine's top reasons on the side that AGREES with its verdict, and on
+ * the side that argues against it. Explanations verbatim — never rewritten
+ * for the scanner, so a row's reasons and the asset page's reasons are the
+ * same sentences.
+ */
+function sideReasons(bias: MarketBias, side: "for" | "against"): string[] {
+  const agreeing = bias.verdict === "bearish" ? bias.topBearish : bias.topBullish;
+  const opposing = bias.verdict === "bearish" ? bias.topBullish : bias.topBearish;
+  return (side === "for" ? agreeing : opposing).slice(0, 3).map((m) => m.explanation);
 }
 
 /**
