@@ -154,6 +154,20 @@ export interface MetricPerformanceSummary {
   label: string;
   hasHistoricalSource: boolean;
   n24h: number | null;
+  /**
+   * How many INDEPENDENT observations `n24h` is worth.
+   *
+   * The replay evaluates several correlated assets on the same calendar day,
+   * so two rows from one day are not two days of evidence — BTC and ETH move
+   * together at rho around 0.82. `n24h` is literally correct and was being
+   * read as independent evidence; this is the number that actually backs a
+   * claim about how well-sampled a metric is.
+   *
+   * 24h windows sampled daily do not overlap each other in TIME (one ends
+   * where the next begins), so the cross-sectional dependence is the only one
+   * at this horizon. The 7d bucket suffers both and is not published here.
+   */
+  effectiveN24h: number | null;
   winRate24h: number | null;
   /** Looked up separately from the 24h headline — the panel wants both explicitly, not just whichever holding period happens to be best/worst. */
   winRate7d: number | null;
@@ -198,17 +212,45 @@ export interface AgreementBucketStat {
 }
 
 /**
- * Bucket definitions for `sampleSizeLabel`, checked against the real `n`
- * distribution across this app's 10 backtestable metrics (hand-verified
- * against a real run: 33, 536, 647, 806, 1269, 2070, 2260, 2277, 2339,
- * 2704) — the two widest gaps in that sorted list sit at 33→536 and
- * 806→1269, so the cut points below (200, 1000) land in real gaps rather
- * than round numbers picked without looking. A one-time judgment call, not
- * a derived constant like MIN_SAMPLE_N — worth revisiting if the metric
- * roster or window length changes materially.
+ * Bucket definitions for `sampleSizeLabel`.
+ *
+ * TAKES THE EFFECTIVE SAMPLE, NOT THE RAW COUNT. This label is a claim about
+ * how much independent evidence stands behind a win rate, and the raw count
+ * overstates that roughly two-fold because the replay scores two correlated
+ * assets on every calendar day. Feeding it the raw count made "Large" mean
+ * "large in rows", which is not what a reader takes it to mean.
+ *
+ * ── The cut points, and an honest note about one of them ──────────────
+ *
+ * 200 and 1000 were chosen against the RAW distribution of ten metrics, where
+ * the two widest gaps sat at 33→536 and 806→1269, so both landed in real gaps
+ * rather than being round numbers picked without looking.
+ *
+ * That distribution no longer exists — the roster is twelve now, and the
+ * values are effective rather than raw. Measured, not assumed, the current
+ * one is:
+ *
+ *   17, 271, 324, 403, 636, 881, 1033, 1098, 1131, 1170, 1175, 1353
+ *
+ * **200 still lands in the widest gap (17→271). 1000 does not.** It falls in
+ * 881→1033, which is a genuine gap but only the sixth widest; 403→636 and
+ * 636→881 are both wider and sit below it. Chosen fresh on this data, a
+ * Medium/Large boundary would plausibly land nearer 750.
+ *
+ * The cut points are deliberately NOT being moved. 1000 was fixed before
+ * anyone knew which metrics would land where, and re-drawing it now — after
+ * seeing that it demotes market structure from Large to Medium at 881 — would
+ * be choosing a threshold to obtain a label. That is the same
+ * after-the-fact-tuning this codebase corrects for everywhere else.
+ *
+ * What this does mean: the Large/Medium boundary is SENSITIVE right now, with
+ * a metric sitting 12% below it. Read "Medium" at 881 as "near the boundary",
+ * not as a verdict. If the roster or the replay universe changes materially,
+ * re-derive both cut points from scratch — before looking at which metric
+ * lands where.
  */
-export function deriveSampleSizeLabel(n: number): "Small" | "Medium" | "Large" {
-  return n < 200 ? "Small" : n < 1000 ? "Medium" : "Large";
+export function deriveSampleSizeLabel(effectiveN: number): "Small" | "Medium" | "Large" {
+  return effectiveN < 200 ? "Small" : effectiveN < 1000 ? "Medium" : "Large";
 }
 
 /**

@@ -58,7 +58,19 @@ export function HistoricalPerformancePanel({
     <div className="mt-1 rounded-md border border-hairline/60 bg-white/[0.02] p-2.5">
       <span className="text-[10px] uppercase tracking-[0.16em] text-ink-muted">Historical Performance</span>
       <dl className="mt-1.5 grid grid-cols-2 gap-x-4 gap-y-1.5 sm:grid-cols-4">
-        <Stat label="Occurrences" value={String(perf.n24h)} />
+        {/*
+          Both counts, because they answer different questions and only one of
+          them backs a claim. `n24h` is how many rows fired; `effectiveN24h` is
+          how many INDEPENDENT observations those rows are worth, after the
+          replay's two correlated assets per day are accounted for. Showing
+          only the first let a reader treat 1,762 rows as 1,762 days of
+          evidence, which is roughly double the truth.
+        */}
+        <Stat
+          label="Occurrences"
+          value={String(perf.n24h)}
+          suffix={perf.effectiveN24h !== null ? ` · ${perf.effectiveN24h} independent` : undefined}
+        />
         <Stat label="24 Hour Win Rate" value={pct(perf.winRate24h)} />
         <Stat label="7 Day Win Rate" value={pct(perf.winRate7d)} />
         <Stat
@@ -76,6 +88,7 @@ export function HistoricalPerformancePanel({
           value={perf.confidenceLabel ?? "—"}
           tone={perf.confidenceLabel ? CONFIDENCE_TONE[perf.confidenceLabel] : undefined}
         />
+        {/* Graded on the effective count, never the raw one — see deriveSampleSizeLabel. */}
         <Stat label="Sample Size" value={perf.sampleSizeLabel ?? "—"} />
       </dl>
     </div>

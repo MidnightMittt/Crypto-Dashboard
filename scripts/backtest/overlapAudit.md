@@ -72,26 +72,28 @@ Four lookups feed the UI (`lookupMetricPerformance`, `lookupBiasVerdictStat`, `l
 | Category / bias verdict win rates | CategoryCard, AiMarketSummary | Point estimates, all at 24h — unaffected |
 | Calibration buckets | AiMarketSummary | Point estimates — unaffected |
 
-### sampleSizeLabel, recomputed on effective sample
+### sampleSizeLabel — now a standing check, not a finding
 
-The label is derived from the 24h occurrence count against cut points of 200 and 1000. At 24h the only dependence is cross-asset, so the effective count is half the printed one.
+This section originally reported that the shipped label was computed on the RAW occurrence count and would change tier for two metrics if computed honestly. That has been applied: `deriveSampleSizeLabel` now takes the effective sample, and report.ts feeds it one.
 
-| Metric | n (24h) | Label shown | Effective n | Label on effective n | Changes? |
+So the table below no longer recomputes what the label *would* be. It reads the label actually shipped in `src/data/backtestMetricStats.json` and checks it against what this audit derives independently. A DRIFT row means the published file and this audit disagree about how much evidence a metric has — which is the failure this section now exists to catch.
+
+| Metric | n (24h) | Effective n | Shipped label | Audit's label | |
 |---|---|---|---|---|---|
-| Funding Rate | 33 | Small | 17 | Small | no |
-| Open Interest | 648 | Medium | 324 | Medium | no |
-| Squeeze Setup | 2340 | Large | 1170 | Large | no |
-| Long/Short Positioning | 1271 | Large | 636 | Medium | **yes** |
-| Basis vs Spot | 2706 | Large | 1353 | Large | no |
-| Price Action | 2196 | Large | 1098 | Large | no |
-| ETF Flows | 541 | Medium | 271 | Medium | no |
-| Spot vs Perp Volume | 2066 | Large | 1033 | Large | no |
-| Stablecoin Supply | 2262 | Large | 1131 | Large | no |
-| Fear & Greed | 806 | Medium | 403 | Medium | no |
-| Macro Liquidity | 2350 | Large | 1175 | Large | no |
-| Market Structure | 1762 | Large | 881 | Medium | **yes** |
+| Funding Rate | 33 | 17 | Small | Small | ok |
+| Open Interest | 648 | 324 | Medium | Medium | ok |
+| Squeeze Setup | 2340 | 1170 | Large | Large | ok |
+| Long/Short Positioning | 1271 | 636 | Medium | Medium | ok |
+| Basis vs Spot | 2706 | 1353 | Large | Large | ok |
+| Price Action | 2196 | 1098 | Large | Large | ok |
+| ETF Flows | 541 | 271 | Medium | Medium | ok |
+| Spot vs Perp Volume | 2066 | 1033 | Large | Large | ok |
+| Stablecoin Supply | 2262 | 1131 | Large | Large | ok |
+| Fear & Greed | 806 | 403 | Medium | Medium | ok |
+| Macro Liquidity | 2350 | 1175 | Large | Large | ok |
+| Market Structure | 1762 | 881 | Medium | Medium | ok |
 
-**2** metric labels would change tier if computed on the effective sample.
+**No drift.** Every shipped label matches what this audit derives from the replay independently.
 
 ## Conclusion
 
@@ -102,5 +104,7 @@ So: **no win rate displayed anywhere in the app is wrong, and none needs to chan
 Recommended follow-ups, in value order:
 
 1. Route report.ts's hypothesis section through `blockBootstrapProportion` so future reports cannot repeat the error. This is the durable fix.
-2. Recompute `sampleSizeLabel` on the effective count, so "Large" means large in independent observations.
-3. Leave every displayed win rate exactly as it is.
+2. ~~Recompute `sampleSizeLabel` on the effective count.~~ **DONE.** `deriveSampleSizeLabel` takes the effective sample and report.ts feeds it one; the section above is now a standing drift check rather than a finding. Long/Short Positioning and Market Structure both moved Large -> Medium, and their `confidenceLabel` moved with them.
+3. Leave every displayed win rate exactly as it is. Overlap inflates confidence, never the point estimate — this remains true and nothing about item 2 changed a single win rate.
+
+One caveat worth carrying forward: the Medium/Large cut point of 1000 was fixed against the OLD raw distribution and was not re-drawn for the effective one, deliberately — re-drawing a threshold after seeing which metrics it demotes would be choosing a cut to obtain a label. But it does mean the boundary is currently sensitive: Market Structure sits at 881, 12% below it. Read that "Medium" as near-the-boundary rather than as a verdict. See `deriveSampleSizeLabel`'s own note.

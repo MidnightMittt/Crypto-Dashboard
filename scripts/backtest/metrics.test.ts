@@ -8,6 +8,8 @@ import {
   signTestPValue,
   testSignificance,
   Occurrence,
+  assetsPerDay,
+  blockLengthFor,
 } from "./metrics";
 
 describe("winRate", () => {
@@ -209,5 +211,46 @@ describe("testSignificance", () => {
 
   it("returns null with no scoreable occurrences", () => {
     expect(testSignificance([{ t: 1, verdict: "neutral", forwardReturnPct: 1 }], 10)).toBeNull();
+  });
+});
+
+describe("assetsPerDay / blockLengthFor", () => {
+  /*
+   * These decide how much independent evidence every published sample-size
+   * label claims. Getting them too SMALL overstates the evidence, which is
+   * the direction that flatters results — so the cases below pin the
+   * behaviour rather than trusting a literal.
+   */
+  it("counts distinct assets, not rows", () => {
+    const records = [
+      { asset: "BTC" },
+      { asset: "ETH" },
+      { asset: "BTC" },
+      { asset: "ETH" },
+      { asset: "BTC" },
+    ];
+    expect(assetsPerDay(records)).toBe(2);
+  });
+
+  it("grows when the replay universe grows — the case a hardcoded 2 got wrong", () => {
+    expect(assetsPerDay([{ asset: "BTC" }, { asset: "ETH" }, { asset: "SOL" }])).toBe(3);
+  });
+
+  it("never returns 0, which would divide the effective sample by nothing", () => {
+    expect(assetsPerDay([])).toBe(1);
+    expect(blockLengthFor("24h", 0)).toBe(1);
+  });
+
+  it("treats 1h/4h/24h as non-overlapping in time — cross-sectional dependence only", () => {
+    // A 24h window sampled daily ends exactly where the next begins, so the
+    // block is just the number of correlated assets sharing that day.
+    expect(blockLengthFor("1h", 2)).toBe(2);
+    expect(blockLengthFor("4h", 2)).toBe(2);
+    expect(blockLengthFor("24h", 2)).toBe(2);
+  });
+
+  it("treats 7d as overlapping BOTH ways — seven days x the asset count", () => {
+    expect(blockLengthFor("7d", 2)).toBe(14);
+    expect(blockLengthFor("7d", 3)).toBe(21);
   });
 });

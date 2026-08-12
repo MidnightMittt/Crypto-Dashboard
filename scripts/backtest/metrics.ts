@@ -284,3 +284,35 @@ export function wilsonInterval(successes: number, n: number, z = 1.96): Proporti
     upper: Math.min(1, (center + spread) / denominator),
   };
 }
+
+// ── Dependence structure of the replay ──────────────────────────────────
+
+/**
+ * How many observations in this replay are NOT independent of each other,
+ * per holding period — the block length every overlap correction needs.
+ *
+ * Two distinct dependencies, and only the 7d bucket suffers both:
+ *
+ *  - CROSS-SECTIONAL. The replay evaluates several assets on the same
+ *    calendar day, and they are not independent views of the world. BTC and
+ *    ETH move together at rho around 0.82, so two rows from one day carry
+ *    closer to one day's worth of evidence than two.
+ *  - TEMPORAL. A 7-day forward return sampled daily shares six of its seven
+ *    days with its neighbour. The 1h/4h/24h returns do NOT overlap in time —
+ *    a 24h window ends exactly where the next begins — so their only
+ *    dependence is the cross-sectional one.
+ *
+ * DERIVED FROM THE DATA, not hardcoded. This used to be a literal `2` in
+ * overlapAudit.ts, which silently becomes wrong the day a third asset joins
+ * the replay — and would become wrong in the direction that OVERSTATES
+ * independent evidence, which is the direction that flatters results.
+ */
+export function assetsPerDay(records: Array<{ asset: string }>): number {
+  return new Set(records.map((r) => r.asset)).size || 1;
+}
+
+export function blockLengthFor(holdingPeriod: string, assetCount: number): number {
+  const perDay = Math.max(1, assetCount);
+  // Only 7d overlaps itself in time; the rest are back-to-back windows.
+  return holdingPeriod === "7d" ? 7 * perDay : perDay;
+}

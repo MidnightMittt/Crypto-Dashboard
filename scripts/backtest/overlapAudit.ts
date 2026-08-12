@@ -5,7 +5,9 @@ import { DayRecord } from "./run";
 import { SIGNAL_HYPOTHESES, HOLDING_PERIODS, HoldingPeriod } from "../../src/lib/signals/hypothesis";
 import { signTestPValue } from "./metrics";
 import { blockBootstrapProportion } from "../../src/lib/research/overlap";
+import { assetsPerDay, blockLengthFor } from "./metrics";
 import { deriveSampleSizeLabel, MIN_SAMPLE_N } from "../../src/lib/sentiment/backtestStats";
+import { effectiveSampleSize } from "../../src/lib/research/overlap";
 
 /**
  * Audit of every published backtest statistic against the overlap flaw that
@@ -22,24 +24,20 @@ import { deriveSampleSizeLabel, MIN_SAMPLE_N } from "../../src/lib/sentiment/bac
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, "data");
+/** The committed per-metric snapshot the live site reads — checked against, never written by this audit. */
+const SHIPPED_STATS_PATH = path.join(__dirname, "..", "..", "src", "data", "backtestMetricStats.json");
 
-/**
- * Block length in OBSERVATIONS for each holding period, given records are
- * sorted by timestamp with two assets (BTC, ETH) per calendar day.
+/*
+ * Block lengths come from `blockLengthFor` in metrics.ts, derived from the
+ * replay's own asset count rather than written here as a literal.
  *
- * Two dependencies, and only the 7d bucket suffers both. 1h/4h/24h forward
- * returns sampled once per day do NOT overlap each other in time — a 24h
- * window ends exactly where the next begins — so their only dependence is
- * cross-sectional: BTC and ETH are two correlated views of the same day,
- * hence block 2. The 7d window shares six of its seven days with its
- * neighbour, so its block spans 7 days of both assets: 14.
+ * This file used to hold its own `BLOCK_BY_PERIOD = { 24h: 2, 7d: 14 }`. Once
+ * report.ts needed the same numbers to label sample sizes honestly, a second
+ * copy would have been two places to update the day a third asset joins the
+ * replay — and a stale copy understates the block, which OVERSTATES
+ * independent evidence. That is the direction that flatters results, so it is
+ * the copy worth removing.
  */
-const BLOCK_BY_PERIOD: Record<HoldingPeriod, number> = {
-  "1h": 2,
-  "4h": 2,
-  "24h": 2,
-  "7d": 14,
-};
 
 function fieldFor(hp: HoldingPeriod): keyof DayRecord {
   switch (hp) {
@@ -63,6 +61,8 @@ function main() {
 
   const records: DayRecord[] = JSON.parse(fs.readFileSync(path.join(DATA_DIR, "results.json"), "utf8"))
     .sort((a: DayRecord, b: DayRecord) => a.t - b.t);
+
+  const perDay = assetsPerDay(records);
 
   say("## Per-metric hypothesis stats (report.ts's core table)");
   say("");
@@ -93,7 +93,7 @@ function main() {
 
       const wins = scored.reduce((a, b) => a + b, 0);
       const naiveP = signTestPValue(scored.length, wins);
-      const corrected = blockBootstrapProportion(scored, BLOCK_BY_PERIOD[hp])!;
+      const corrected = blockBootstrapProportion(scored, blockLengthFor(hp, perDay))!;
 
       const wasSig = naiveP < 0.05;
       const isSig = corrected.pValue < 0.05;
@@ -129,13 +129,19 @@ function main() {
   say("| Calibration buckets | AiMarketSummary | Point estimates — unaffected |");
   say("");
 
-  say("### sampleSizeLabel, recomputed on effective sample");
+  say("### sampleSizeLabel — now a standing check, not a finding");
   say("");
-  say("The label is derived from the 24h occurrence count against cut points of 200 and 1000. At 24h the only dependence is cross-asset, so the effective count is half the printed one.");
+  say("This section originally reported that the shipped label was computed on the RAW occurrence count and would change tier for two metrics if computed honestly. That has been applied: `deriveSampleSizeLabel` now takes the effective sample, and report.ts feeds it one.");
   say("");
-  say("| Metric | n (24h) | Label shown | Effective n | Label on effective n | Changes? |");
+  say("So the table below no longer recomputes what the label *would* be. It reads the label actually shipped in `src/data/backtestMetricStats.json` and checks it against what this audit derives independently. A DRIFT row means the published file and this audit disagree about how much evidence a metric has — which is the failure this section now exists to catch.");
+  say("");
+  say("| Metric | n (24h) | Effective n | Shipped label | Audit's label | |");
   say("|---|---|---|---|---|---|");
-  let labelChanges = 0;
+
+  const shipped: Record<string, { effectiveN24h: number | null; sampleSizeLabel: string | null }> =
+    JSON.parse(fs.readFileSync(SHIPPED_STATS_PATH, "utf8")).metrics ?? {};
+
+  let drift = 0;
   for (const h of SIGNAL_HYPOTHESES) {
     if (!h.hasHistoricalSource) continue;
     const n = records.filter((r) => {
@@ -143,14 +149,21 @@ function main() {
       return m && m.verdict !== "neutral" && r.forwardReturn1d !== null;
     }).length;
     if (n < MIN_SAMPLE_N) continue;
-    const shown = deriveSampleSizeLabel(n);
-    const effN = Math.round(n / 2);
-    const honest = deriveSampleSizeLabel(effN);
-    if (shown !== honest) labelChanges++;
-    say(`| ${h.label} | ${n} | ${shown} | ${effN} | ${honest} | ${shown !== honest ? "**yes**" : "no"} |`);
+
+    const effN = Math.round(effectiveSampleSize(n, blockLengthFor("24h", perDay)));
+    const auditLabel = deriveSampleSizeLabel(effN);
+    const ship = shipped[h.id];
+    const shipLabel = ship?.sampleSizeLabel ?? "—";
+    const agrees = shipLabel === auditLabel && ship?.effectiveN24h === effN;
+    if (!agrees) drift++;
+    say(`| ${h.label} | ${n} | ${effN} | ${shipLabel} | ${auditLabel} | ${agrees ? "ok" : "**DRIFT**"} |`);
   }
   say("");
-  say(`**${labelChanges}** metric labels would change tier if computed on the effective sample.`);
+  say(
+    drift === 0
+      ? "**No drift.** Every shipped label matches what this audit derives from the replay independently."
+      : `**${drift} metric(s) DRIFT.** The published file and this audit disagree; regenerate the report.`
+  );
   say("");
 
   say("## Conclusion");
@@ -162,8 +175,10 @@ function main() {
   say("Recommended follow-ups, in value order:");
   say("");
   say("1. Route report.ts's hypothesis section through `blockBootstrapProportion` so future reports cannot repeat the error. This is the durable fix.");
-  say("2. Recompute `sampleSizeLabel` on the effective count, so \"Large\" means large in independent observations.");
-  say("3. Leave every displayed win rate exactly as it is.");
+  say("2. ~~Recompute `sampleSizeLabel` on the effective count.~~ **DONE.** `deriveSampleSizeLabel` takes the effective sample and report.ts feeds it one; the section above is now a standing drift check rather than a finding. Long/Short Positioning and Market Structure both moved Large -> Medium, and their `confidenceLabel` moved with them.");
+  say("3. Leave every displayed win rate exactly as it is. Overlap inflates confidence, never the point estimate — this remains true and nothing about item 2 changed a single win rate.");
+  say("");
+  say("One caveat worth carrying forward: the Medium/Large cut point of 1000 was fixed against the OLD raw distribution and was not re-drawn for the effective one, deliberately — re-drawing a threshold after seeing which metrics it demotes would be choosing a cut to obtain a label. But it does mean the boundary is currently sensitive: Market Structure sits at 881, 12% below it. Read that \"Medium\" as near-the-boundary rather than as a verdict. See `deriveSampleSizeLabel`\'s own note.");
 
   const outPath = path.join(__dirname, "overlapAudit.md");
   fs.writeFileSync(outPath, lines.join("\n"));

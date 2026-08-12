@@ -20,11 +20,12 @@ import {
 } from "../../src/lib/sentiment/backtestStats";
 import { MarketRegime } from "../../src/types/market";
 import { SIGNAL_HYPOTHESES, HOLDING_PERIODS, HoldingPeriod } from "../../src/lib/signals/hypothesis";
-import { summarizeOccurrences, winRate, Occurrence } from "./metrics";
+import { summarizeOccurrences, winRate, Occurrence, assetsPerDay, blockLengthFor } from "./metrics";
 import { buildCombinations, CombinationDayRecord } from "./combinations";
 import { buildWeightReview, WeightReviewDayRecord } from "./weightReview";
 import { buildMetricCombinations, MetricComboDayRecord } from "./metricCombinations";
 import { DayFingerprint } from "../../src/lib/signals/similarity";
+import { effectiveSampleSize } from "../../src/lib/research/overlap";
 
 /**
  * Aggregates run.ts's per-day output into descriptive statistics. These are
@@ -647,9 +648,16 @@ export function computeStability(
 export function metricPerformanceSection(
   signalResearch: Record<string, SignalResearchReport>,
   hypothesesStats: Partial<Record<`${string}:${HoldingPeriod}`, HypothesisStat>>,
-  rollingStats: Record<string, RollingWindowStats> | undefined
+  rollingStats: Record<string, RollingWindowStats> | undefined,
+  /**
+   * How many correlated assets the replay scores per calendar day. Passed in
+   * rather than assumed, so adding a third asset cannot silently inflate the
+   * independent-evidence claim below.
+   */
+  assetCount: number
 ): Record<string, MetricPerformanceSummary> {
   const out: Record<string, MetricPerformanceSummary> = {};
+  const block = blockLengthFor("24h", assetCount);
 
   for (const h of SIGNAL_HYPOTHESES) {
     const research = signalResearch[h.id];
@@ -659,7 +667,24 @@ export function metricPerformanceSection(
 
     const n24h = headline?.n ?? null;
     const significant24h = headline?.significance?.significant ?? null;
-    const size = headline !== null ? deriveSampleSizeLabel(headline.n) : null;
+
+    /*
+     * LABELLED ON THE EFFECTIVE SAMPLE, not the raw count.
+     *
+     * `sampleSizeLabel` is read as "how much independent evidence is behind
+     * this win rate", and the raw count answers a different question — the
+     * replay scores two correlated assets on every calendar day, so 1,762
+     * rows are worth roughly 881 independent observations. The overlap audit
+     * flagged this as its own follow-up #2; two metrics were labelled "Large"
+     * on evidence that is only Medium.
+     *
+     * `confidenceLabel` is derived from the size label, so it moves with it —
+     * which is the point. A metric should not read "High" confidence on an
+     * inflated n. The WIN RATES are untouched: overlap inflates confidence,
+     * never the point estimate.
+     */
+    const effectiveN24h = headline !== null ? Math.round(effectiveSampleSize(headline.n, block)) : null;
+    const size = effectiveN24h !== null ? deriveSampleSizeLabel(effectiveN24h) : null;
     const confidence = size !== null && significant24h !== null ? deriveConfidenceLabel(size, significant24h) : null;
 
     out[h.id] = {
@@ -667,6 +692,7 @@ export function metricPerformanceSection(
       label: h.label,
       hasHistoricalSource: h.hasHistoricalSource,
       n24h,
+      effectiveN24h,
       winRate24h: headline?.winRate ?? null,
       winRate7d,
       significant24h,
@@ -709,7 +735,12 @@ function main() {
   const rolling = rollingWindowsSection();
   const metricCombinations = buildMetricCombinations(records as MetricComboDayRecord[]);
   const signalResearch = signalResearchSection(hypotheses.stats, metricRegimeCrosstab.stats, metricCombinations.results);
-  const metricPerformance = metricPerformanceSection(signalResearch.stats, hypotheses.stats, rolling?.stats);
+  const metricPerformance = metricPerformanceSection(
+    signalResearch.stats,
+    hypotheses.stats,
+    rolling?.stats,
+    assetsPerDay(records)
+  );
   const agreementValidation = agreementValidationSection(records);
   const fingerprints = buildFingerprints(records);
 
