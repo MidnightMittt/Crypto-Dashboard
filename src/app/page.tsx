@@ -154,7 +154,7 @@ export default function DashboardPage() {
               to be a separate card here, which split one trade across two
               places. Only the cross-asset composites remain at this level.
             */}
-            <AssetCompositeSection data={assetComposites} />
+            <AssetCompositeSection data={assetComposites} selectedAsset={asset} />
 
             {/*
               ── LEADING DRIVERS / MARKET STRUCTURE / POSITIONING / RISK ────
