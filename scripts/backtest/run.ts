@@ -5,6 +5,7 @@ import { computeSqueezeRisk, computeFundingPercentile } from "../../src/lib/sent
 import { oiPercentileFromHistory } from "../../src/lib/history/store";
 import { computeLeverageHeat } from "../../src/lib/sentiment/compositeIndex";
 import { buildMarketThesis, MarketThesisInputs } from "../../src/lib/sentiment/marketThesis";
+import { evaluateMarketStructure } from "../../src/lib/signals/marketStructureEvidence";
 import { buildTechnicalRead } from "../../src/lib/sentiment/technicals";
 import { Candle } from "../../src/lib/technicals/indicators";
 import { evaluateAll, SignalContext } from "../../src/lib/signals/evaluators";
@@ -784,6 +785,13 @@ export function replayAsset(
     };
 
     const metricVerdicts = evaluateAll(fakeAggregate, signalContext);
+    // Mirrors the aggregator block exactly — see the comment there. `priorDaily`
+    // is already point-in-time filtered (c.t < t), so no look-ahead is possible.
+    const structureMetric = evaluateMarketStructure(
+      { symbol: asset, bars: priorDaily as never },
+      t
+    );
+    if (structureMetric) metricVerdicts.push(structureMetric);
     const bias = buildMarketBias({
       asset,
       metrics: metricVerdicts,

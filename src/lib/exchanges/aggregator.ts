@@ -91,6 +91,7 @@ import {
 } from "../history/store";
 import { recordDailyPoint } from "../history/dailyStore";
 import { fetchOkxDailyCandles, fetchOkx4hCandles } from "../providers/okxCandles";
+import { evaluateMarketStructure } from "../signals/marketStructureEvidence";
 import { buildTechnicalRead, technicalAgreement } from "../sentiment/technicals";
 import {
   buildVolumeProfile,
@@ -680,6 +681,25 @@ async function withRecordedHistory(
       now: agg.updatedAt,
     }
   );
+
+  /*
+   * MARKET STRUCTURE — appended as a first-class metric rather than left as
+   * a vote inside `technicals`. fetchOkxDailyCandles is swr-cached and
+   * buildTechnicals already pulled this series this poll, so this is a cache
+   * hit, not a second network call.
+   *
+   * Must stay in lockstep with the identical block in scripts/backtest/run.ts
+   * — if the replay and production disagree about which metrics exist, every
+   * published statistic describes a different engine than the live one.
+   */
+  if (asset !== "MARKET") {
+    const structureBars = await fetchOkxDailyCandles(asset).catch(() => []);
+    const structure = evaluateMarketStructure(
+      { symbol: asset, bars: structureBars as never },
+      Date.now()
+    );
+    if (structure) metricVerdicts.push(structure);
+  }
 
   const marketBias = buildMarketBias({
     asset,

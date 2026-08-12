@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1786528170791,
+  "generatedAt": 1786528744365,
   "coverageStart": "2022-08-13",
   "coverageEnd": "2026-07-30",
   "metrics": {
@@ -179,25 +179,25 @@
       "metricId": "technicals",
       "label": "Price Action",
       "hasHistoricalSource": true,
-      "n24h": 2277,
-      "winRate24h": 0.48177426438296006,
-      "winRate7d": 0.484182776801406,
+      "n24h": 2196,
+      "winRate24h": 0.48041894353369763,
+      "winRate7d": 0.4861047835990888,
       "significant24h": false,
       "bestRegime": {
         "tag": "bear",
-        "winRate": 0.5505804311774462
+        "winRate": 0.543918918918919
       },
       "worstRegime": {
         "tag": "neutral",
-        "winRate": 0.38678223185265437
+        "winRate": 0.3925339366515837
       },
       "bestHoldingPeriod": {
         "holdingPeriod": "4h",
-        "winRate": 0.49407114624505927
+        "winRate": 0.4918032786885246
       },
       "worstHoldingPeriod": {
         "holdingPeriod": "24h",
-        "winRate": 0.48177426438296006
+        "winRate": 0.48041894353369763
       },
       "sampleSizeLabel": "Large",
       "confidenceLabel": "Medium",
@@ -235,28 +235,28 @@
       "metricId": "spotPerpVolume",
       "label": "Spot vs Perp Volume",
       "hasHistoricalSource": true,
-      "n24h": 2070,
-      "winRate24h": 0.47632850241545893,
-      "winRate7d": 0.49250845819236344,
-      "significant24h": true,
+      "n24h": 2066,
+      "winRate24h": 0.48160696999031943,
+      "winRate7d": 0.49830508474576274,
+      "significant24h": false,
       "bestRegime": {
         "tag": "bull",
-        "winRate": 0.5420560747663551
+        "winRate": 0.5438871473354232
       },
       "worstRegime": {
         "tag": "neutral",
-        "winRate": 0.4080578512396694
+        "winRate": 0.4174454828660436
       },
       "bestHoldingPeriod": {
         "holdingPeriod": "1h",
-        "winRate": 0.5101449275362319
+        "winRate": 0.5067763794772507
       },
       "worstHoldingPeriod": {
         "holdingPeriod": "24h",
-        "winRate": 0.47632850241545893
+        "winRate": 0.48160696999031943
       },
       "sampleSizeLabel": "Large",
-      "confidenceLabel": "High",
+      "confidenceLabel": "Medium",
       "stableAcrossWindows": true
     },
     "exchangeFlow": {
@@ -427,30 +427,30 @@
   "agreementBuckets": [
     {
       "bucketLabel": "0-25%",
-      "n": 205,
-      "winRate": 0.5365853658536586,
-      "meanReturnPct": -0.06251314394860416,
+      "n": 268,
+      "winRate": 0.5559701492537313,
+      "meanReturnPct": -0.03213642072717985,
       "significant": false
     },
     {
       "bucketLabel": "25-50%",
-      "n": 442,
-      "winRate": 0.5090497737556561,
-      "meanReturnPct": 0.08532960048555653,
+      "n": 387,
+      "winRate": 0.524547803617571,
+      "meanReturnPct": 0.16428860657913572,
       "significant": false
     },
     {
       "bucketLabel": "50-75%",
-      "n": 690,
-      "winRate": 0.5405797101449276,
-      "meanReturnPct": -0.01681843816646216,
+      "n": 641,
+      "winRate": 0.5507020280811232,
+      "meanReturnPct": -0.11739352936210877,
       "significant": true
     },
     {
       "bucketLabel": "75-100%",
-      "n": 185,
-      "winRate": 0.5513513513513514,
-      "meanReturnPct": -0.0073720750046335675,
+      "n": 198,
+      "winRate": 0.5656565656565656,
+      "meanReturnPct": 0.15753927597867756,
       "significant": false
     }
   ]

@@ -170,8 +170,17 @@ export function buildTechnicalRead(candles: Candle[]): TechnicalRead | null {
     votes.push(macdResult.histogram > 0 ? "bullish" : "bearish");
   }
 
-  if (structure === "higher-highs") votes.push("bullish");
-  else if (structure === "lower-lows") votes.push("bearish");
+  /*
+   * STRUCTURE NO LONGER VOTES HERE.
+   *
+   * It is now a first-class evidence module (`marketStructure`), scored
+   * directly by the engine rather than diluted as one of thirteen votes
+   * inside this composite. Leaving the vote in place would double-count it.
+   *
+   * `structure` is still computed and still carried on TechnicalRead — the
+   * summary line and the display grid both read it, and that is a
+   * DESCRIPTION rather than a second opinion.
+   */
 
   if (vwap !== null) votes.push(price > vwap ? "bullish" : "bearish");
 
