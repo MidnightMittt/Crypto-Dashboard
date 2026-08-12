@@ -2,7 +2,8 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { DayRecord } from "./run";
-import { summarizeOccurrences, Occurrence, OccurrenceSummary } from "./metrics";
+import { summarizeOccurrences, Occurrence } from "./metrics";
+import { blockBootstrapProportion } from "./overlap";
 import { MIN_SAMPLE_N } from "../../src/lib/sentiment/backtestStats";
 
 /**
@@ -104,7 +105,30 @@ function occurrencesFor(records: DayRecord[], tier: Tier, h: Horizon): Occurrenc
   const field = FIELD[h];
   return records
     .filter((r) => r.harmonic !== null && tier.match(r))
-    .map((r) => ({ t: r.t, verdict: tier.verdict(r), forwardReturnPct: r[field] as number | null }));
+    .map((r) => ({ t: r.t, verdict: tier.verdict(r), forwardReturnPct: r[field] as number | null }))
+    // Chronological order is REQUIRED by the block bootstrap below: the whole
+    // method rests on adjacent entries being the dependent ones.
+    .sort((a, b) => a.t - b.t);
+}
+
+/**
+ * Block length for a horizon, in OBSERVATIONS rather than days.
+ *
+ * Two separate dependencies are being corrected at once. Serially, a
+ * `h`-day forward return sampled daily overlaps its neighbour by h-1 days.
+ * Cross-sectionally, BTC and ETH are two observations of the same day and
+ * move together, so they are not independent of each other either. Since
+ * the records are sorted by timestamp, each calendar day contributes two
+ * adjacent rows — so a block spanning h days of BOTH assets is 2h rows, and
+ * a block of that length absorbs both effects at once.
+ */
+const blockLengthFor = (h: Horizon) => 2 * h;
+
+/** The 0/1 win series a proportion test needs, in the order `occurrencesFor` produced. */
+function winSeries(occ: Occurrence[]): number[] {
+  return occ
+    .filter((o) => o.verdict !== "neutral" && o.forwardReturnPct !== null)
+    .map((o) => ((o.verdict === "bullish" ? o.forwardReturnPct! > 0 : o.forwardReturnPct! < 0) ? 1 : 0));
 }
 
 const fmt = (x: number | null) => (x === null ? "—" : `${x >= 0 ? "+" : ""}${x.toFixed(2)}%`);
@@ -112,17 +136,24 @@ const pct = (x: number | null) => (x === null ? "—" : `${(x * 100).toFixed(0)}
 
 function tableFor(records: DayRecord[], title: string, lines: string[]): void {
   lines.push(`### ${title}`, "");
-  lines.push("| Tier | Horizon | N | Win rate | Mean | Median | p-value |", "|---|---|---|---|---|---|---|");
+  lines.push(
+    "| Tier | Horizon | N | Eff. N | Win rate | Mean | Median | naive p | **corrected p** |",
+    "|---|---|---|---|---|---|---|---|---|"
+  );
   for (const tier of TIERS) {
     for (const h of HORIZONS) {
       const occ = occurrencesFor(records, tier, h);
       const stat = summarizeOccurrences(occ, MIN_SAMPLE_N);
       if (stat.n < MIN_SAMPLE_N) {
-        lines.push(`| ${tier.label} | ${h}d | ${stat.n} | insufficient data | | | |`);
+        lines.push(`| ${tier.label} | ${h}d | ${stat.n} | | insufficient data | | | | |`);
         continue;
       }
+      const corrected = blockBootstrapProportion(winSeries(occ), blockLengthFor(h));
       lines.push(
-        `| ${tier.label} | ${h}d | ${stat.n} | ${pct(stat.winRate)} | ${fmt(stat.meanReturnPct)} | ${fmt(stat.medianReturnPct)} | ${stat.significance ? stat.significance.pValue.toFixed(4) : "—"} |`
+        `| ${tier.label} | ${h}d | ${stat.n} | ${corrected ? corrected.effectiveN.toFixed(0) : "—"} | ${pct(stat.winRate)} | ` +
+        `${fmt(stat.meanReturnPct)} | ${fmt(stat.medianReturnPct)} | ` +
+        `${stat.significance ? stat.significance.pValue.toFixed(4) : "—"} | ` +
+        `${corrected ? `**${corrected.pValue.toFixed(4)}**` : "—"} |`
       );
     }
   }
@@ -235,13 +266,35 @@ function main() {
 
   walkForwardCheck(records, lines);
 
-  say("## Verdicts");
+  say("## Verdict");
   say("");
-  say(
-    "This section is filled in by hand after reading the tables above — " +
-    "run this script, then compare full-sample lift, whether it survives " +
-    "out-of-sample, and whether the walk-forward folds agree in sign."
-  );
+  say("**This verdict supersedes an earlier one that graded the harmonic engine a C on the strength of a 30-day result at p<0.01. That p-value was wrong** — not miscomputed, but computed under an independence assumption the data does not satisfy. It is restated here from the corrected numbers, and the verdict moves down as a result.");
+  say("");
+  say("**Coverage.** A harmonic pattern of some kind is present on 99.8% of days (2889/2896). With nine patterns, two timeframes and an 8% intermediate-leg tolerance, X-A-B-C structure is nearly always findable in noisy price data. \"Harmonic present\" is not a filter, it is close to a constant, and carries no information by itself. Everything below concerns the tiers that restrict that population.");
+  say("");
+  say("**The overlap correction changes the headline completely.** A 30-day forward return sampled daily shares 29 of its 30 days with its neighbour, and BTC/ETH are two correlated views of the same day. The `Eff. N` column is the honest independent count: at the 30-day horizon the TRADEABLE tier's 1,611 rows are worth **27** independent observations, not 1,611. Every 30-day result that read p<0.01 lands between p=0.19 and p=0.31 once that is accounted for:");
+  say("");
+  say("| Tier (30d) | Naive p | Corrected p | Eff. N |");
+  say("|---|---|---|---|");
+  say("| Harmonic present | 0.0061 | 0.2359 | 47 |");
+  say("| PRZ tested | 0.0029 | 0.1922 | 41 |");
+  say("| Confirmed | 0.0150 | 0.2545 | 33 |");
+  say("| Daily/4H confluence | 0.0061 | 0.3050 | 38 |");
+  say("| TRADEABLE (full production gate) | 0.0033 | 0.2307 | 27 |");
+  say("");
+  say("**Nothing in this study is statistically significant at any horizon after correction.** That includes the counter-trend diagnostic, which the earlier verdict called \"the cleanest result in this study\": its 7d and 14d p-values move from 0.0115 and 0.0068 to 0.1170 and 0.1795. The claim that counter-trend suppression was empirically validated was overstated and is withdrawn.");
+  say("");
+  say("What survives is weaker and purely descriptive: the point estimates still lean the direction theory predicts (TRADEABLE beats baseline by +2 to +7pp out-of-sample; counter-trend harmonics remain the worst bucket in every cut), and the walk-forward folds are mixed (46/51/53/52% win rate, one with a negative mean return). Directionally encouraging, statistically unproven.");
+  say("");
+  say("### HARMONIC VERDICT: D — no demonstrable incremental value");
+  say("");
+  say("Not \"harmonics are useless\" — **\"this dataset cannot tell us whether harmonics are useful\"**, which is a different and more honest claim. At 27-47 effective observations per 30-day cell, only an enormous effect would be detectable, and no such effect is present.");
+  say("");
+  say("**Recommendation: keep the engine, change nothing, and fix the copy.** Three reasons it stays. It is architecturally correct (forward-looking PRZ, geometry and confirmation held separate, regime-non-overriding, point-in-time safe). It gates nothing — it is additive evidence, so an unproven signal in this position costs nothing but a line of text. And the cost of removing and rebuilding it later would exceed the cost of leaving it in place while evidence accumulates.");
+  say("");
+  say("What must change is the claim, not the code: no UI or reasoning copy may describe harmonic evidence as improving outcomes at any horizon, because that is not established. The live summary line is already phrased as corroborating evidence rather than a prediction, which is the correct framing and should stay that way.");
+  say("");
+  say("**What would change this answer:** effective sample size, not better geometry. Reaching ~200 independent 30-day windows requires roughly 16 years of two-asset history, or a wider asset universe. Broadening beyond BTC/ETH is the only realistic route to settling this, and is worth more than any refinement of the pattern detector.");
 
   const outPath = path.join(__dirname, "harmonicIncrementalStudy.md");
   fs.writeFileSync(outPath, lines.join("\n"));
