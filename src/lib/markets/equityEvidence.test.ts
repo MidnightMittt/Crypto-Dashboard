@@ -3,6 +3,8 @@ import {
   evaluateRelativeStrength,
   evaluateBreadth,
   evaluateRiskAppetite,
+  evaluateVolatilityRegime,
+  evaluateTrendQuality,
   buildEquityEvidence,
   EquityInstrumentInput,
 } from "./equityEvidence";
@@ -216,6 +218,78 @@ describe("buildEquityEvidence", () => {
       duration: series("TLT", 600, 0),
       asOf: ASOF,
     });
-    expect(evidence).toHaveLength(3);
+    expect(evidence).toHaveLength(5);
+  });
+});
+
+/** A series with controllable per-session noise, for exercising path efficiency. */
+function noisy(symbol: string, n: number, driftPct: number, noisePct: number): EquityInstrumentInput {
+  const bars: Bar[] = [];
+  let close = 100;
+  for (let i = 0; i < n; i++) {
+    // Deterministic alternating noise — no PRNG, so the test cannot flake.
+    const noise = (i % 2 === 0 ? 1 : -1) * noisePct;
+    close = close * (1 + (driftPct + noise) / 100);
+    const span = Math.abs(close * (noisePct / 100)) + 0.01;
+    bars.push({ t: T0 + i * DAY, open: close, high: close + span, low: close - span, close, volume: 1000 });
+  }
+  return { symbol, bars };
+}
+
+describe("evaluateVolatilityRegime", () => {
+  it("returns null without enough history to form a distribution", () => {
+    expect(evaluateVolatilityRegime(series("SPY", 30, 0.05), ASOF)).toBeNull();
+  });
+
+  it("reads BEARISH on elevated volatility — vol expands into equity drawdowns", () => {
+    // Calm for 540 sessions, then a violently wide-ranged final stretch.
+    const calm = noisy("SPY", 540, 0.02, 0.1).bars;
+    const stressed = noisy("SPY", 60, -0.2, 3).bars.map((b, i) => ({ ...b, t: T0 + (540 + i) * DAY }));
+    const v = evaluateVolatilityRegime({ symbol: "SPY", bars: [...calm, ...stressed] }, ASOF)!;
+    expect(v.verdict).toBe("bearish");
+    expect(v.explanation).toMatch(/Elevated volatility/);
+  });
+
+  it("halves confidence — a conditional regularity must not outweigh a direct read", () => {
+    const calm = noisy("SPY", 540, 0.02, 0.1).bars;
+    const stressed = noisy("SPY", 60, -0.2, 3).bars.map((b, i) => ({ ...b, t: T0 + (540 + i) * DAY }));
+    const v = evaluateVolatilityRegime({ symbol: "SPY", bars: [...calm, ...stressed] }, ASOF)!;
+    expect(v.confidence).toBeLessThanOrEqual(50);
+    expect(v.confidenceBasis).toMatch(/halved/);
+  });
+});
+
+describe("evaluateTrendQuality", () => {
+  it("returns null when history is shorter than the window", () => {
+    expect(evaluateTrendQuality(series("SPY", 30, 0.1), ASOF)).toBeNull();
+  });
+
+  it("reads bullish with high confidence on a clean upward path", () => {
+    // A straight line: efficiency is 1.0 by construction.
+    const v = evaluateTrendQuality(series("QQQ", 200, 0.2), ASOF)!;
+    expect(v.verdict).toBe("bullish");
+    expect(v.confidence).toBe(100);
+    expect(v.explanation).toMatch(/clean, persistent path/);
+  });
+
+  it("reads bearish on a clean downward path", () => {
+    const v = evaluateTrendQuality(series("IWM", 200, -0.2), ASOF)!;
+    expect(v.verdict).toBe("bearish");
+  });
+
+  it("refuses a direction when the path is a round trip, and says so", () => {
+    // Tiny drift swamped by alternating noise — the sign is positive but the
+    // path is chop. Claiming "bullish" here is the false precision the
+    // deadband exists to prevent.
+    const v = evaluateTrendQuality(noisy("XLF", 200, 0.001, 2), ASOF)!;
+    expect(v.verdict).toBe("neutral");
+    expect(v.conflicts.length).toBeGreaterThan(0);
+    expect(v.explanation).toMatch(/round trip/);
+  });
+
+  it("scales confidence with efficiency, not with the size of the move", () => {
+    const clean = evaluateTrendQuality(series("A", 200, 0.05), ASOF)!;   // small but perfectly efficient
+    const choppy = evaluateTrendQuality(noisy("B", 200, 0.05, 1.5), ASOF)!; // larger swings, poor path
+    expect(clean.confidence).toBeGreaterThan(choppy.confidence);
   });
 });

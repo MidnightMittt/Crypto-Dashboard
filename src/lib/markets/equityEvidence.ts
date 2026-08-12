@@ -325,5 +325,141 @@ export function buildEquityEvidence(opts: {
     evaluateRelativeStrength(opts.instrument, opts.benchmark, opts.asOf),
     evaluateBreadth(opts.universe, opts.asOf),
     evaluateRiskAppetite(opts.credit, opts.duration, opts.asOf),
+    evaluateVolatilityRegime(opts.instrument, opts.asOf),
+    evaluateTrendQuality(opts.instrument, opts.asOf),
   ].filter((m): m is MetricVerdict => m !== null);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * VOLATILITY REGIME and TREND QUALITY
+ *
+ * Both are computable honestly from ingested OHLCV alone, which is why they
+ * are here and options flow is not. They widen the equity evidence base from
+ * three modules to five so a Markets decision does not rest on relative
+ * strength almost by itself.
+ * ═══════════════════════════════════════════════════════════════════════ */
+
+const ATR_WINDOW = 14;
+const TREND_WINDOW = 60;
+
+/** Average true range over `n` bars ending at `endIdx`, as a percent of price. */
+function atrPctAt(bars: Bar[], endIdx: number, n: number): number | null {
+  if (endIdx < n) return null;
+  let sum = 0;
+  for (let i = endIdx - n + 1; i <= endIdx; i++) {
+    const prev = bars[i - 1].close;
+    sum += Math.max(bars[i].high - bars[i].low, Math.abs(bars[i].high - prev), Math.abs(bars[i].low - prev));
+  }
+  const price = bars[endIdx].close;
+  return price > 0 ? (sum / n / price) * 100 : null;
+}
+
+/**
+ * VOLATILITY REGIME — is this market calm or stressed, for itself?
+ *
+ * Direction, and why it is defensible. Volatility is not directional in
+ * general, but in EQUITY indices the negative volatility-return relationship
+ * is among the most robust facts in the literature: vol expands into
+ * drawdowns and compresses through advances. So an elevated reading is
+ * treated as a headwind and a compressed one as benign.
+ *
+ * Confidence is deliberately halved against the other modules. This is a
+ * conditional regularity, not a mechanism, and it should never outweigh a
+ * direct read like relative strength. Overstating it would be the
+ * indicator-bloat the charter warns against.
+ */
+export function evaluateVolatilityRegime(
+  instrument: EquityInstrumentInput,
+  asOf: number
+): MetricVerdict | null {
+  const bars = instrument.bars;
+  const now = atrPctAt(bars, bars.length - 1, ATR_WINDOW);
+  if (now === null) return null;
+
+  const history: number[] = [];
+  const start = Math.max(ATR_WINDOW, bars.length - BAND_HISTORY);
+  for (let i = start; i < bars.length - 1; i++) {
+    const v = atrPctAt(bars, i, ATR_WINDOW);
+    if (v !== null) history.push(v);
+  }
+
+  const p = percentileOf(now, history);
+  if (p === null) return null;
+
+  // Inverted against the generic mapping: HIGH volatility is the bearish end.
+  const verdict: Verdict = p >= UPPER_PERCENTILE ? "bearish" : p <= LOWER_PERCENTILE ? "bullish" : "neutral";
+
+  return {
+    id: "equityVolatilityRegime",
+    label: "Volatility Regime",
+    verdict,
+    confidence: Math.round(confidenceFrom(p, history.length) / 2),
+    confidenceBasis: `${history.length} prior sessions of this instrument's own ATR history. Confidence is halved deliberately: the volatility-return relationship is a conditional regularity, not a mechanism.`,
+    explanation: `${instrument.symbol}'s 14-session ATR is ${now.toFixed(2)}% of price — the ${ordinal(Math.round(p * 100))} percentile of its own history. ${verdict === "bearish" ? "Elevated volatility is a headwind; equity vol expands into drawdowns." : verdict === "bullish" ? "Compressed volatility is the benign regime equity advances usually occur in." : "Volatility is unremarkable for this instrument."}`,
+    whyItMatters:
+      "Position size and stop distance both scale with volatility, so the same trade is a different risk in a different regime. In equities specifically, expanding volatility tends to accompany falling prices.",
+    asOf,
+    conflicts: [],
+    nextTrigger: triggerText(p, verdict === "bearish" ? "bullish" : verdict === "bullish" ? "bearish" : "neutral"),
+  };
+}
+
+/**
+ * TREND QUALITY — is the move a trend, or a round trip that happens to end
+ * somewhere?
+ *
+ * Kaufman's efficiency ratio: net displacement divided by the total distance
+ * travelled. 1.0 is a straight line, near 0 is chop. The same measure
+ * `features.ts` already publishes as `efficiency_20d`, so this is a house
+ * statistic rather than a new one.
+ *
+ * The efficiency ratio is DIRECTIONLESS, so it is used the honest way: the
+ * SIGN of the net move sets the verdict, and efficiency scales the
+ * confidence. "Up and clean" is strong evidence; "up but choppy" is the same
+ * direction with much less to say for itself. Using efficiency alone as a
+ * verdict would claim a direction the measure does not contain.
+ */
+export function evaluateTrendQuality(
+  instrument: EquityInstrumentInput,
+  asOf: number
+): MetricVerdict | null {
+  const bars = instrument.bars;
+  if (bars.length < TREND_WINDOW + 1) return null;
+
+  const window = bars.slice(-(TREND_WINDOW + 1));
+  const net = window[window.length - 1].close - window[0].close;
+  let distance = 0;
+  for (let i = 1; i < window.length; i++) distance += Math.abs(window[i].close - window[i - 1].close);
+  if (distance <= 0) return null;
+
+  const efficiency = Math.abs(net) / distance; // 0..1
+  const netPct = window[0].close > 0 ? (net / window[0].close) * 100 : 0;
+
+  /*
+   * A deadband on efficiency, not on the return. A 0.5% move over 60
+   * sessions is directionally up, but calling it a bullish trend because the
+   * sign happens to be positive is exactly the false precision the engine is
+   * supposed to avoid. Below the floor the module reports neutral and says
+   * why.
+   */
+  const EFFICIENCY_FLOOR = 0.2;
+  const verdict: Verdict =
+    efficiency < EFFICIENCY_FLOOR ? "neutral" : netPct > 0 ? "bullish" : "bearish";
+
+  return {
+    id: "equityTrendQuality",
+    label: "Trend Quality",
+    verdict,
+    confidence: Math.round(Math.min(1, efficiency / 0.6) * 100),
+    confidenceBasis: `Kaufman efficiency ratio of ${efficiency.toFixed(2)} over ${TREND_WINDOW} sessions. Confidence scales with efficiency and reaches 100 at 0.60, a strongly directional path.`,
+    explanation: `Over ${TREND_WINDOW} sessions ${instrument.symbol} moved ${netPct >= 0 ? "+" : ""}${netPct.toFixed(1)}% with an efficiency ratio of ${efficiency.toFixed(2)} — ${efficiency < EFFICIENCY_FLOOR ? "a round trip rather than a trend, so no direction is claimed" : efficiency > 0.4 ? "a clean, persistent path" : "a directional but choppy path"}.`,
+    whyItMatters:
+      "Direction alone does not say whether a move is worth following. The same net return produced by a straight line and by a round trip demand different trades; efficiency is what separates them.",
+    asOf,
+    conflicts:
+      efficiency < EFFICIENCY_FLOOR
+        ? [`Net move is ${netPct >= 0 ? "positive" : "negative"} but the path is inefficient — the sign is not evidence of a trend.`]
+        : [],
+    nextTrigger: `turns directional above an efficiency ratio of ${EFFICIENCY_FLOOR.toFixed(2)} (currently ${efficiency.toFixed(2)})`,
+  };
 }
