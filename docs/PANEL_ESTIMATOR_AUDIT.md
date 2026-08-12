@@ -67,22 +67,6 @@ wrong `SessionModel` produces a wrong key. This is now an explicit, typed,
 required declaration rather than an invisible default, which is the most that
 can be enforced without the framework owning instrument metadata.
 
-### L1-original — Period granularity is a caller choice, and it is load-bearing. (superseded)
-
-The estimator clusters on whatever `period` the caller supplies. In
-`executeStudy` that is `entryT`, which works because contemporaneous
-observations across instruments share a sampling timestamp. **It breaks
-silently if they do not.** Two instruments sampled at different closes — a US
-equity at 16:00 ET and a crypto perp at 00:00 UTC — would land in different
-periods and be treated as independent when they are not.
-
-Choosing a period *finer* than the true dependence horizon under-corrects;
-*coarser* over-corrects. Nothing validates the choice, and a wrong choice
-produces a plausible-looking number.
-
-*Mitigation when the universe widens: normalise every instrument to a session
-date before study construction.*
-
 ### L2 — Time-varying correlation is averaged, not tracked. (Medium)
 
 Blocks are drawn uniformly across history, so the resulting SE reflects
@@ -148,7 +132,7 @@ expectancy rather than win rate cannot yet use the panel path.
 |---|---|---|
 | Crypto (2–10) | Correct. ρ≈0.82 collapses to near the period count, matching the Phase 7 finding | None |
 | Sector ETFs (11) | Correct. Shared market beta collapses appropriately | None |
-| Multi-class (40+) | Correct, and this is where it earns its keep — sublinear growth is exactly right | L1 becomes critical: session alignment across classes |
+| Multi-class (40+) | Correct, and this is where it earns its keep — sublinear growth is exactly right | Session alignment handled by session.ts; verify each instrument's declared SessionModel |
 | Single-name equities (100s) | Works computationally; O(periods × units) per iteration | Survivorship, not the estimator, is the binding risk |
 | Intraday | Untested. Period granularity ambiguous | L3 |
 
