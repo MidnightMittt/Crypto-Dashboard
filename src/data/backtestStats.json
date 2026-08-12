@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1786521706079,
+  "generatedAt": 1786527152241,
   "coverageStart": "2022-08-13",
   "coverageEnd": "2026-07-30",
   "squeeze": {
@@ -112,74 +112,74 @@
   },
   "categories": {
     "leadingDrivers:bullish": {
-      "n": 1185,
-      "mean1dPct": 0.35396584576581713,
-      "mean3dPct": 0.7454861902405275,
-      "mean7dPct": 1.2974335693794932,
+      "n": 751,
+      "mean1dPct": 0.31923224704481684,
+      "mean3dPct": 0.48461602116784724,
+      "mean7dPct": 0.8984246949580543,
       "fadeHitRatePct": null,
       "winRatePct": null
     },
     "leadingDrivers:bearish": {
-      "n": 1288,
-      "mean1dPct": -0.15539033530390975,
-      "mean3dPct": -0.24765068536616827,
-      "mean7dPct": -0.25601061065016967,
+      "n": 1260,
+      "mean1dPct": -0.1440963544154298,
+      "mean3dPct": -0.24579211749494773,
+      "mean7dPct": -0.283005752510197,
       "fadeHitRatePct": null,
       "winRatePct": null
     },
     "leadingDrivers:neutral": {
-      "n": 423,
-      "mean1dPct": -0.00035601670805185604,
-      "mean3dPct": 0.17473775696722388,
-      "mean7dPct": 0.7426796237838642,
+      "n": 885,
+      "mean1dPct": 0.18189171675292123,
+      "mean3dPct": 0.659991593250979,
+      "mean7dPct": 1.360827173689548,
       "fadeHitRatePct": null,
       "winRatePct": null
     },
     "marketStructure:bullish": {
-      "n": 1280,
-      "mean1dPct": 0.06845894006159936,
-      "mean3dPct": 0.14908645906647955,
-      "mean7dPct": 0.38449357974917714,
+      "n": 1107,
+      "mean1dPct": 0.06981765354572053,
+      "mean3dPct": 0.15571625220060137,
+      "mean7dPct": 0.43482168842681346,
       "fadeHitRatePct": null,
       "winRatePct": null
     },
     "marketStructure:bearish": {
-      "n": 1359,
-      "mean1dPct": 0.09793398468343557,
-      "mean3dPct": 0.29277188764169765,
-      "mean7dPct": 0.6664402755159532,
+      "n": 1170,
+      "mean1dPct": 0.08722952965524156,
+      "mean3dPct": 0.20806482982665167,
+      "mean7dPct": 0.5328156414445877,
       "fadeHitRatePct": null,
       "winRatePct": null
     },
     "marketStructure:neutral": {
-      "n": 257,
-      "mean1dPct": -0.00608384501978565,
-      "mean3dPct": 0.19312630727771973,
-      "mean7dPct": 0.4847888809138499,
+      "n": 619,
+      "mean1dPct": 0.06431258177997755,
+      "mean3dPct": 0.35949496251581053,
+      "mean7dPct": 0.6748816135186065,
       "fadeHitRatePct": null,
       "winRatePct": null
     },
     "positioning:bullish": {
-      "n": 204,
-      "mean1dPct": 0.7877378242889579,
-      "mean3dPct": 1.2668643954107373,
-      "mean7dPct": 2.0554536027227344,
+      "n": 129,
+      "mean1dPct": 0.8964540664266368,
+      "mean3dPct": 1.7888843230104126,
+      "mean7dPct": 2.2550901652650746,
       "fadeHitRatePct": null,
       "winRatePct": null
     },
     "positioning:bearish": {
-      "n": 2525,
-      "mean1dPct": -0.015912608470357432,
-      "mean3dPct": 0.1290614359749751,
-      "mean7dPct": 0.34866883103004753,
+      "n": 2135,
+      "mean1dPct": 0.07650088395702703,
+      "mean3dPct": 0.21497814621309622,
+      "mean7dPct": 0.43839383213162214,
       "fadeHitRatePct": null,
       "winRatePct": null
     },
     "positioning:neutral": {
-      "n": 167,
-      "mean1dPct": 0.5906407217141089,
-      "mean3dPct": 0.3234770142510945,
-      "mean7dPct": 1.3316163437154296,
+      "n": 632,
+      "mean1dPct": -0.09464522392996454,
+      "mean3dPct": -0.08133432903918998,
+      "mean7dPct": 0.4673785597923743,
       "fadeHitRatePct": null,
       "winRatePct": null
     },
@@ -210,26 +210,26 @@
   },
   "biasVerdict": {
     "bullish": {
-      "n": 531,
-      "mean1dPct": 0.37584787317356705,
-      "mean3dPct": 0.8990502812180228,
-      "mean7dPct": 1.3851008579129909,
+      "n": 327,
+      "mean1dPct": 0.43025047313536696,
+      "mean3dPct": 0.8053866253182507,
+      "mean7dPct": 1.5637219183920028,
       "fadeHitRatePct": null,
-      "winRatePct": 55.74387947269304
+      "winRatePct": 57.798165137614674
     },
     "bearish": {
-      "n": 1608,
-      "mean1dPct": -0.03340252723875308,
-      "mean3dPct": 0.02286840117710584,
-      "mean7dPct": 0.09063929610530903,
+      "n": 1195,
+      "mean1dPct": -0.10774893056136316,
+      "mean3dPct": -0.14825434184333192,
+      "mean7dPct": -0.11769093788514126,
       "fadeHitRatePct": null,
-      "winRatePct": 50.74626865671642
+      "winRatePct": 51.96652719665272
     },
     "neutral": {
-      "n": 757,
-      "mean1dPct": 0.09681931761995016,
-      "mean3dPct": 0.1640330719431702,
-      "mean7dPct": 0.8458766974211291,
+      "n": 1374,
+      "mean1dPct": 0.15081822969367908,
+      "mean3dPct": 0.4018512633946493,
+      "mean7dPct": 0.8373014167594703,
       "fadeHitRatePct": null,
       "winRatePct": null
     }

@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1786521706085,
+  "generatedAt": 1786527152247,
   "coverageStart": "2022-08-13",
   "coverageEnd": "2026-07-30",
   "metrics": {
@@ -427,30 +427,30 @@
   "agreementBuckets": [
     {
       "bucketLabel": "0-25%",
-      "n": 423,
-      "winRate": 0.5200945626477541,
-      "meanReturnPct": -0.09644465240503411,
+      "n": 205,
+      "winRate": 0.5365853658536586,
+      "meanReturnPct": -0.06251314394860416,
       "significant": false
     },
     {
       "bucketLabel": "25-50%",
-      "n": 722,
-      "winRate": 0.4916897506925208,
-      "meanReturnPct": 0.2754074561119349,
+      "n": 442,
+      "winRate": 0.5090497737556561,
+      "meanReturnPct": 0.08532960048555653,
       "significant": false
     },
     {
       "bucketLabel": "50-75%",
-      "n": 808,
-      "winRate": 0.5371287128712872,
-      "meanReturnPct": -0.0015246004242155996,
+      "n": 690,
+      "winRate": 0.5405797101449276,
+      "meanReturnPct": -0.01681843816646216,
       "significant": true
     },
     {
       "bucketLabel": "75-100%",
-      "n": 186,
-      "winRate": 0.553763440860215,
-      "meanReturnPct": -0.0588831255240451,
+      "n": 185,
+      "winRate": 0.5513513513513514,
+      "meanReturnPct": -0.0073720750046335675,
       "significant": false
     }
   ]

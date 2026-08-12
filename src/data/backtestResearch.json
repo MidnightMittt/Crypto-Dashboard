@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1786521706079,
+  "generatedAt": 1786527152241,
   "coverageStart": "2022-08-13",
   "coverageEnd": "2026-07-30",
   "hypotheses": {
@@ -1286,18 +1286,18 @@
       "label": "None bullish",
       "holdingPeriod": "1h",
       "stat": {
-        "n": 702,
-        "winRate": 0.4658119658119658,
-        "meanReturnPct": -0.0875649093670274,
-        "medianReturnPct": -0.02695876062798587,
-        "maxDrawdownPct": 48.97449298582871,
+        "n": 957,
+        "winRate": 0.48066875653082547,
+        "meanReturnPct": -0.07555483385169098,
+        "medianReturnPct": -0.015037182852136021,
+        "maxDrawdownPct": 55.148343546571155,
         "bullish": {
-          "truePositives": 327,
-          "falsePositives": 375,
-          "falseNegatives": 1118,
-          "trueNegatives": 1076,
-          "precision": 0.4658119658119658,
-          "recall": 0.22629757785467128
+          "truePositives": 460,
+          "falsePositives": 497,
+          "falseNegatives": 985,
+          "trueNegatives": 954,
+          "precision": 0.48066875653082547,
+          "recall": 0.31833910034602075
         },
         "bearish": {
           "truePositives": 0,
@@ -1308,9 +1308,9 @@
           "recall": 0
         },
         "significance": {
-          "n": 702,
-          "wins": 327,
-          "pValue": 0.07600475344465675,
+          "n": 957,
+          "wins": 460,
+          "pValue": 0.24452513281935623,
           "significant": false
         }
       }
@@ -1320,18 +1320,18 @@
       "label": "None bullish",
       "holdingPeriod": "4h",
       "stat": {
-        "n": 702,
-        "winRate": 0.4772079772079772,
-        "meanReturnPct": -0.045543747367929044,
-        "medianReturnPct": -0.022076130464815838,
-        "maxDrawdownPct": 46.4271964854482,
+        "n": 957,
+        "winRate": 0.48798328108672934,
+        "meanReturnPct": -0.034620654281084635,
+        "medianReturnPct": -0.01408680770459774,
+        "maxDrawdownPct": 52.00251728594301,
         "bullish": {
-          "truePositives": 335,
-          "falsePositives": 367,
-          "falseNegatives": 1135,
-          "trueNegatives": 1059,
-          "precision": 0.4772079772079772,
-          "recall": 0.22789115646258504
+          "truePositives": 467,
+          "falsePositives": 490,
+          "falseNegatives": 1003,
+          "trueNegatives": 936,
+          "precision": 0.48798328108672934,
+          "recall": 0.31768707482993197
         },
         "bearish": {
           "truePositives": 0,
@@ -1342,9 +1342,9 @@
           "recall": 0
         },
         "significance": {
-          "n": 702,
-          "wins": 335,
-          "pValue": 0.241972545519958,
+          "n": 957,
+          "wins": 467,
+          "pValue": 0.4770047337538742,
           "significant": false
         }
       }
@@ -1354,18 +1354,18 @@
       "label": "None bullish",
       "holdingPeriod": "24h",
       "stat": {
-        "n": 702,
-        "winRate": 0.4928774928774929,
-        "meanReturnPct": -0.023621237946857995,
-        "medianReturnPct": -0.016405955219330554,
-        "maxDrawdownPct": 68.16370817110734,
+        "n": 957,
+        "winRate": 0.49007314524555906,
+        "meanReturnPct": 0.0070578708085679825,
+        "medianReturnPct": -0.023389023668768064,
+        "maxDrawdownPct": 71.34201353678475,
         "bullish": {
-          "truePositives": 346,
-          "falsePositives": 356,
-          "falseNegatives": 1106,
-          "trueNegatives": 1088,
-          "precision": 0.4928774928774929,
-          "recall": 0.23829201101928374
+          "truePositives": 469,
+          "falsePositives": 488,
+          "falseNegatives": 983,
+          "trueNegatives": 956,
+          "precision": 0.49007314524555906,
+          "recall": 0.32300275482093666
         },
         "bearish": {
           "truePositives": 0,
@@ -1376,9 +1376,9 @@
           "recall": 0
         },
         "significance": {
-          "n": 702,
-          "wins": 346,
-          "pValue": 0.7341221105438696,
+          "n": 957,
+          "wins": 469,
+          "pValue": 0.5606853881125764,
           "significant": false
         }
       }
@@ -1388,18 +1388,18 @@
       "label": "None bullish",
       "holdingPeriod": "7d",
       "stat": {
-        "n": 701,
-        "winRate": 0.4964336661911555,
-        "meanReturnPct": 0.3638963480444286,
-        "medianReturnPct": -0.009957514604358276,
-        "maxDrawdownPct": 99.45464033050627,
+        "n": 956,
+        "winRate": 0.4895397489539749,
+        "meanReturnPct": 0.48030866556079127,
+        "medianReturnPct": -0.0814412100288009,
+        "maxDrawdownPct": 99.81885995281861,
         "bullish": {
-          "truePositives": 348,
-          "falsePositives": 353,
-          "falseNegatives": 1138,
-          "trueNegatives": 1055,
-          "precision": 0.4964336661911555,
-          "recall": 0.23418573351278602
+          "truePositives": 468,
+          "falsePositives": 488,
+          "falseNegatives": 1018,
+          "trueNegatives": 920,
+          "precision": 0.4895397489539749,
+          "recall": 0.3149394347240915
         },
         "bearish": {
           "truePositives": 0,
@@ -1410,9 +1410,9 @@
           "recall": 0
         },
         "significance": {
-          "n": 701,
-          "wins": 348,
-          "pValue": 0.8799281266492035,
+          "n": 956,
+          "wins": 468,
+          "pValue": 0.5389044640003872,
           "significant": false
         }
       }
@@ -1424,17 +1424,17 @@
       "label": "Positioning Intelligence bullish",
       "holdingPeriod": "1h",
       "stat": {
-        "n": 11,
-        "winRate": 0.36363636363636365,
-        "meanReturnPct": -0.10178018979306404,
-        "medianReturnPct": -0.14534910805960802,
-        "maxDrawdownPct": 1.196736982184767,
+        "n": 10,
+        "winRate": 0.4,
+        "meanReturnPct": -0.041364330579915086,
+        "medianReturnPct": -0.14482896160062925,
+        "maxDrawdownPct": 0.9051531573529115,
         "bullish": {
           "truePositives": 4,
-          "falsePositives": 7,
+          "falsePositives": 6,
           "falseNegatives": 1441,
-          "trueNegatives": 1444,
-          "precision": 0.36363636363636365,
+          "trueNegatives": 1445,
+          "precision": 0.4,
           "recall": 0.002768166089965398
         },
         "bearish": {
@@ -1446,9 +1446,9 @@
           "recall": 0
         },
         "significance": {
-          "n": 11,
+          "n": 10,
           "wins": 4,
-          "pValue": 0.5488281250000002,
+          "pValue": 0.7539062500000004,
           "significant": false
         }
       }
@@ -1460,17 +1460,17 @@
       "label": "Positioning Intelligence bullish",
       "holdingPeriod": "4h",
       "stat": {
-        "n": 11,
-        "winRate": 0.45454545454545453,
-        "meanReturnPct": 0.24189750435951216,
-        "medianReturnPct": -0.17149567843317515,
-        "maxDrawdownPct": 2.412737724560734,
+        "n": 10,
+        "winRate": 0.5,
+        "meanReturnPct": 0.30724579027436194,
+        "medianReturnPct": -0.07981331893300116,
+        "maxDrawdownPct": 2.103334586365157,
         "bullish": {
           "truePositives": 5,
-          "falsePositives": 6,
+          "falsePositives": 5,
           "falseNegatives": 1465,
-          "trueNegatives": 1420,
-          "precision": 0.45454545454545453,
+          "trueNegatives": 1421,
+          "precision": 0.5,
           "recall": 0.003401360544217687
         },
         "bearish": {
@@ -1482,7 +1482,7 @@
           "recall": 0
         },
         "significance": {
-          "n": 11,
+          "n": 10,
           "wins": 5,
           "pValue": 1,
           "significant": false
@@ -1496,18 +1496,18 @@
       "label": "Positioning Intelligence bullish",
       "holdingPeriod": "24h",
       "stat": {
-        "n": 11,
-        "winRate": 0.6363636363636364,
-        "meanReturnPct": 0.5085372449034963,
-        "medianReturnPct": 0.6561573783530309,
-        "maxDrawdownPct": 6.877980497757951,
+        "n": 10,
+        "winRate": 0.5,
+        "meanReturnPct": -0.2698845992268306,
+        "medianReturnPct": -0.21966449666711632,
+        "maxDrawdownPct": 6.877980497757956,
         "bullish": {
-          "truePositives": 7,
-          "falsePositives": 4,
-          "falseNegatives": 1445,
-          "trueNegatives": 1440,
-          "precision": 0.6363636363636364,
-          "recall": 0.0048209366391184574
+          "truePositives": 5,
+          "falsePositives": 5,
+          "falseNegatives": 1447,
+          "trueNegatives": 1439,
+          "precision": 0.5,
+          "recall": 0.003443526170798898
         },
         "bearish": {
           "truePositives": 0,
@@ -1518,9 +1518,9 @@
           "recall": 0
         },
         "significance": {
-          "n": 11,
-          "wins": 7,
-          "pValue": 0.5488281250000002,
+          "n": 10,
+          "wins": 5,
+          "pValue": 1,
           "significant": false
         }
       }
@@ -1532,17 +1532,17 @@
       "label": "Positioning Intelligence bullish",
       "holdingPeriod": "7d",
       "stat": {
-        "n": 11,
-        "winRate": 0.7272727272727273,
-        "meanReturnPct": -0.5307750702561941,
-        "medianReturnPct": 1.2842854159615653,
-        "maxDrawdownPct": 22.351570346820104,
+        "n": 10,
+        "winRate": 0.8,
+        "meanReturnPct": 1.3252312270256528,
+        "medianReturnPct": 1.5161020439403747,
+        "maxDrawdownPct": 18.814799876628147,
         "bullish": {
           "truePositives": 8,
-          "falsePositives": 3,
+          "falsePositives": 2,
           "falseNegatives": 1478,
-          "trueNegatives": 1405,
-          "precision": 0.7272727272727273,
+          "trueNegatives": 1406,
+          "precision": 0.8,
           "recall": 0.005383580080753701
         },
         "bearish": {
@@ -1554,9 +1554,9 @@
           "recall": 0
         },
         "significance": {
-          "n": 11,
+          "n": 10,
           "wins": 8,
-          "pValue": 0.22656250000000008,
+          "pValue": 0.10937500000000007,
           "significant": false
         }
       }
@@ -1568,18 +1568,18 @@
       "label": "Market Structure bullish",
       "holdingPeriod": "1h",
       "stat": {
-        "n": 533,
-        "winRate": 0.5196998123827392,
-        "meanReturnPct": -0.031280816676318365,
-        "medianReturnPct": 0.02566593946503904,
-        "maxDrawdownPct": 22.027852336516485,
+        "n": 684,
+        "winRate": 0.5073099415204678,
+        "meanReturnPct": -0.027819162726974146,
+        "medianReturnPct": 0.006827670605460134,
+        "maxDrawdownPct": 27.6669620620758,
         "bullish": {
-          "truePositives": 277,
-          "falsePositives": 256,
-          "falseNegatives": 1168,
-          "trueNegatives": 1195,
-          "precision": 0.5196998123827392,
-          "recall": 0.1916955017301038
+          "truePositives": 347,
+          "falsePositives": 337,
+          "falseNegatives": 1098,
+          "trueNegatives": 1114,
+          "precision": 0.5073099415204678,
+          "recall": 0.24013840830449826
         },
         "bearish": {
           "truePositives": 0,
@@ -1590,9 +1590,9 @@
           "recall": 0
         },
         "significance": {
-          "n": 533,
-          "wins": 277,
-          "pValue": 0.38634649412643035,
+          "n": 684,
+          "wins": 347,
+          "pValue": 0.7307811963942197,
           "significant": false
         }
       }
@@ -1604,18 +1604,18 @@
       "label": "Market Structure bullish",
       "holdingPeriod": "4h",
       "stat": {
-        "n": 533,
-        "winRate": 0.5028142589118199,
-        "meanReturnPct": -0.05875407123383315,
-        "medianReturnPct": 0.002968173756902527,
-        "maxDrawdownPct": 35.9740897356746,
+        "n": 684,
+        "winRate": 0.5146198830409356,
+        "meanReturnPct": -0.011589859022332456,
+        "medianReturnPct": 0.021783029896665522,
+        "maxDrawdownPct": 23.69760825684307,
         "bullish": {
-          "truePositives": 268,
-          "falsePositives": 265,
-          "falseNegatives": 1202,
-          "trueNegatives": 1161,
-          "precision": 0.5028142589118199,
-          "recall": 0.18231292517006803
+          "truePositives": 352,
+          "falsePositives": 332,
+          "falseNegatives": 1118,
+          "trueNegatives": 1094,
+          "precision": 0.5146198830409356,
+          "recall": 0.23945578231292516
         },
         "bearish": {
           "truePositives": 0,
@@ -1626,9 +1626,9 @@
           "recall": 0
         },
         "significance": {
-          "n": 533,
-          "wins": 268,
-          "pValue": 0.9309766382838903,
+          "n": 684,
+          "wins": 352,
+          "pValue": 0.4675683578224226,
           "significant": false
         }
       }
@@ -1640,18 +1640,18 @@
       "label": "Market Structure bullish",
       "holdingPeriod": "24h",
       "stat": {
-        "n": 533,
-        "winRate": 0.39587242026266417,
-        "meanReturnPct": -0.36650500238271444,
-        "medianReturnPct": -0.36651739579745596,
-        "maxDrawdownPct": 88.89799943402991,
+        "n": 684,
+        "winRate": 0.43859649122807015,
+        "meanReturnPct": -0.16251792168094972,
+        "medianReturnPct": -0.24930825161731424,
+        "maxDrawdownPct": 75.71563496120467,
         "bullish": {
-          "truePositives": 211,
-          "falsePositives": 322,
-          "falseNegatives": 1241,
-          "trueNegatives": 1122,
-          "precision": 0.39587242026266417,
-          "recall": 0.1453168044077135
+          "truePositives": 300,
+          "falsePositives": 384,
+          "falseNegatives": 1152,
+          "trueNegatives": 1060,
+          "precision": 0.43859649122807015,
+          "recall": 0.2066115702479339
         },
         "bearish": {
           "truePositives": 0,
@@ -1662,9 +1662,9 @@
           "recall": 0
         },
         "significance": {
-          "n": 533,
-          "wins": 211,
-          "pValue": 0.000001743823244482462,
+          "n": 684,
+          "wins": 300,
+          "pValue": 0.0014875041410662383,
           "significant": true
         }
       }
@@ -1676,18 +1676,18 @@
       "label": "Market Structure bullish",
       "holdingPeriod": "7d",
       "stat": {
-        "n": 532,
-        "winRate": 0.424812030075188,
-        "meanReturnPct": -0.6898473975298459,
-        "medianReturnPct": -0.8080346281928442,
-        "maxDrawdownPct": 99.6996310909664,
+        "n": 683,
+        "winRate": 0.4670571010248902,
+        "meanReturnPct": 0.09364622357009092,
+        "medianReturnPct": -0.34183088887450913,
+        "maxDrawdownPct": 99.51097797299181,
         "bullish": {
-          "truePositives": 226,
-          "falsePositives": 306,
-          "falseNegatives": 1260,
-          "trueNegatives": 1102,
-          "precision": 0.424812030075188,
-          "recall": 0.15208613728129206
+          "truePositives": 319,
+          "falsePositives": 364,
+          "falseNegatives": 1167,
+          "trueNegatives": 1044,
+          "precision": 0.4670571010248902,
+          "recall": 0.21467025572005383
         },
         "bearish": {
           "truePositives": 0,
@@ -1698,10 +1698,10 @@
           "recall": 0
         },
         "significance": {
-          "n": 532,
-          "wins": 226,
-          "pValue": 0.000601609316152557,
-          "significant": true
+          "n": 683,
+          "wins": 319,
+          "pValue": 0.09218354336629704,
+          "significant": false
         }
       }
     },
@@ -1713,18 +1713,18 @@
       "label": "Positioning Intelligence + Market Structure bullish",
       "holdingPeriod": "1h",
       "stat": {
-        "n": 69,
-        "winRate": 0.5217391304347826,
-        "meanReturnPct": 0.01750469506555153,
-        "medianReturnPct": 0.02619629758994768,
-        "maxDrawdownPct": 2.359189324594211,
+        "n": 63,
+        "winRate": 0.4603174603174603,
+        "meanReturnPct": -0.0501510382216354,
+        "medianReturnPct": -0.01778591684753786,
+        "maxDrawdownPct": 4.394254430379265,
         "bullish": {
-          "truePositives": 36,
-          "falsePositives": 33,
-          "falseNegatives": 1409,
-          "trueNegatives": 1418,
-          "precision": 0.5217391304347826,
-          "recall": 0.02491349480968858
+          "truePositives": 29,
+          "falsePositives": 34,
+          "falseNegatives": 1416,
+          "trueNegatives": 1417,
+          "precision": 0.4603174603174603,
+          "recall": 0.020069204152249134
         },
         "bearish": {
           "truePositives": 0,
@@ -1735,9 +1735,9 @@
           "recall": 0
         },
         "significance": {
-          "n": 69,
-          "wins": 36,
-          "pValue": 0.8099490529189156,
+          "n": 63,
+          "wins": 29,
+          "pValue": 0.6146550157654574,
           "significant": false
         }
       }
@@ -1750,18 +1750,18 @@
       "label": "Positioning Intelligence + Market Structure bullish",
       "holdingPeriod": "4h",
       "stat": {
-        "n": 69,
-        "winRate": 0.5072463768115942,
-        "meanReturnPct": 0.06416001652117131,
-        "medianReturnPct": 0.013645842342469407,
-        "maxDrawdownPct": 3.075958670694363,
+        "n": 63,
+        "winRate": 0.4603174603174603,
+        "meanReturnPct": -0.010725176767112335,
+        "medianReturnPct": -0.033346960301061296,
+        "maxDrawdownPct": 5.9484700483694954,
         "bullish": {
-          "truePositives": 35,
+          "truePositives": 29,
           "falsePositives": 34,
-          "falseNegatives": 1435,
+          "falseNegatives": 1441,
           "trueNegatives": 1392,
-          "precision": 0.5072463768115942,
-          "recall": 0.023809523809523808
+          "precision": 0.4603174603174603,
+          "recall": 0.019727891156462583
         },
         "bearish": {
           "truePositives": 0,
@@ -1772,9 +1772,9 @@
           "recall": 0
         },
         "significance": {
-          "n": 69,
-          "wins": 35,
-          "pValue": 0.9999999999999897,
+          "n": 63,
+          "wins": 29,
+          "pValue": 0.6146550157654574,
           "significant": false
         }
       }
@@ -1787,17 +1787,17 @@
       "label": "Positioning Intelligence + Market Structure bullish",
       "holdingPeriod": "24h",
       "stat": {
-        "n": 69,
-        "winRate": 0.5362318840579711,
-        "meanReturnPct": 0.7374089260843582,
-        "medianReturnPct": 0.18214760887940432,
-        "maxDrawdownPct": 12.590033898669992,
+        "n": 63,
+        "winRate": 0.5873015873015873,
+        "meanReturnPct": 1.1616264618851406,
+        "medianReturnPct": 0.497768687943392,
+        "maxDrawdownPct": 6.786570392400329,
         "bullish": {
           "truePositives": 37,
-          "falsePositives": 32,
+          "falsePositives": 26,
           "falseNegatives": 1415,
-          "trueNegatives": 1412,
-          "precision": 0.5362318840579711,
+          "trueNegatives": 1418,
+          "precision": 0.5873015873015873,
           "recall": 0.025482093663911846
         },
         "bearish": {
@@ -1809,9 +1809,9 @@
           "recall": 0
         },
         "significance": {
-          "n": 69,
+          "n": 63,
           "wins": 37,
-          "pValue": 0.6304564917867904,
+          "pValue": 0.20736789985685267,
           "significant": false
         }
       }
@@ -1824,18 +1824,18 @@
       "label": "Positioning Intelligence + Market Structure bullish",
       "holdingPeriod": "7d",
       "stat": {
-        "n": 69,
-        "winRate": 0.5652173913043478,
-        "meanReturnPct": 1.178641031050484,
-        "medianReturnPct": 1.2530123655135161,
-        "maxDrawdownPct": 66.76630655914944,
+        "n": 63,
+        "winRate": 0.6825396825396826,
+        "meanReturnPct": 2.265238046445942,
+        "medianReturnPct": 1.9071526924074562,
+        "maxDrawdownPct": 45.35941737863539,
         "bullish": {
-          "truePositives": 39,
-          "falsePositives": 30,
-          "falseNegatives": 1447,
-          "trueNegatives": 1378,
-          "precision": 0.5652173913043478,
-          "recall": 0.026244952893674293
+          "truePositives": 43,
+          "falsePositives": 20,
+          "falseNegatives": 1443,
+          "trueNegatives": 1388,
+          "precision": 0.6825396825396826,
+          "recall": 0.028936742934051143
         },
         "bearish": {
           "truePositives": 0,
@@ -1846,624 +1846,32 @@
           "recall": 0
         },
         "significance": {
-          "n": 69,
-          "wins": 39,
-          "pValue": 0.33555761823401087,
-          "significant": false
-        }
-      }
-    },
-    {
-      "subset": [
-        "leadingDrivers"
-      ],
-      "label": "Leading Drivers bullish",
-      "holdingPeriod": "1h",
-      "stat": {
-        "n": 404,
-        "winRate": 0.5247524752475248,
-        "meanReturnPct": -0.0077500538435348,
-        "medianReturnPct": 0.017598872424199857,
-        "maxDrawdownPct": 17.21492640159247,
-        "bullish": {
-          "truePositives": 212,
-          "falsePositives": 192,
-          "falseNegatives": 1233,
-          "trueNegatives": 1259,
-          "precision": 0.5247524752475248,
-          "recall": 0.1467128027681661
-        },
-        "bearish": {
-          "truePositives": 0,
-          "falsePositives": 0,
-          "falseNegatives": 1450,
-          "trueNegatives": 1446,
-          "precision": null,
-          "recall": 0
-        },
-        "significance": {
-          "n": 404,
-          "wins": 212,
-          "pValue": 0.3445241502878837,
-          "significant": false
-        }
-      }
-    },
-    {
-      "subset": [
-        "leadingDrivers"
-      ],
-      "label": "Leading Drivers bullish",
-      "holdingPeriod": "4h",
-      "stat": {
-        "n": 404,
-        "winRate": 0.5420792079207921,
-        "meanReturnPct": 0.038978145638611864,
-        "medianReturnPct": 0.0558528155631713,
-        "maxDrawdownPct": 27.401134417817275,
-        "bullish": {
-          "truePositives": 219,
-          "falsePositives": 185,
-          "falseNegatives": 1251,
-          "trueNegatives": 1241,
-          "precision": 0.5420792079207921,
-          "recall": 0.1489795918367347
-        },
-        "bearish": {
-          "truePositives": 0,
-          "falsePositives": 0,
-          "falseNegatives": 1426,
-          "trueNegatives": 1470,
-          "precision": null,
-          "recall": 0
-        },
-        "significance": {
-          "n": 404,
-          "wins": 219,
-          "pValue": 0.1005100278809208,
-          "significant": false
-        }
-      }
-    },
-    {
-      "subset": [
-        "leadingDrivers"
-      ],
-      "label": "Leading Drivers bullish",
-      "holdingPeriod": "24h",
-      "stat": {
-        "n": 404,
-        "winRate": 0.5371287128712872,
-        "meanReturnPct": 0.15686557062342654,
-        "medianReturnPct": 0.156618287319285,
-        "maxDrawdownPct": 47.076227518184986,
-        "bullish": {
-          "truePositives": 217,
-          "falsePositives": 187,
-          "falseNegatives": 1235,
-          "trueNegatives": 1257,
-          "precision": 0.5371287128712872,
-          "recall": 0.1494490358126722
-        },
-        "bearish": {
-          "truePositives": 0,
-          "falsePositives": 0,
-          "falseNegatives": 1444,
-          "trueNegatives": 1452,
-          "precision": null,
-          "recall": 0
-        },
-        "significance": {
-          "n": 404,
-          "wins": 217,
-          "pValue": 0.14898509948891853,
-          "significant": false
-        }
-      }
-    },
-    {
-      "subset": [
-        "leadingDrivers"
-      ],
-      "label": "Leading Drivers bullish",
-      "holdingPeriod": "7d",
-      "stat": {
-        "n": 404,
-        "winRate": 0.5420792079207921,
-        "meanReturnPct": 1.4103011167733643,
-        "medianReturnPct": 0.49892994950924047,
-        "maxDrawdownPct": 98.42332119735278,
-        "bullish": {
-          "truePositives": 219,
-          "falsePositives": 185,
-          "falseNegatives": 1267,
-          "trueNegatives": 1223,
-          "precision": 0.5420792079207921,
-          "recall": 0.14737550471063257
-        },
-        "bearish": {
-          "truePositives": 0,
-          "falsePositives": 0,
-          "falseNegatives": 1408,
-          "trueNegatives": 1486,
-          "precision": null,
-          "recall": 0
-        },
-        "significance": {
-          "n": 404,
-          "wins": 219,
-          "pValue": 0.1005100278809208,
-          "significant": false
-        }
-      }
-    },
-    {
-      "subset": [
-        "positioning",
-        "leadingDrivers"
-      ],
-      "label": "Positioning Intelligence + Leading Drivers bullish",
-      "holdingPeriod": "1h",
-      "stat": {
-        "n": 9,
-        "winRate": 0.4444444444444444,
-        "meanReturnPct": 0.005389613046586232,
-        "medianReturnPct": -0.015515728717357022,
-        "maxDrawdownPct": 0.3607838518225504,
-        "bullish": {
-          "truePositives": 4,
-          "falsePositives": 5,
-          "falseNegatives": 1441,
-          "trueNegatives": 1446,
-          "precision": 0.4444444444444444,
-          "recall": 0.002768166089965398
-        },
-        "bearish": {
-          "truePositives": 0,
-          "falsePositives": 0,
-          "falseNegatives": 1450,
-          "trueNegatives": 1446,
-          "precision": null,
-          "recall": 0
-        },
-        "significance": {
-          "n": 9,
-          "wins": 4,
-          "pValue": 1,
-          "significant": false
-        }
-      }
-    },
-    {
-      "subset": [
-        "positioning",
-        "leadingDrivers"
-      ],
-      "label": "Positioning Intelligence + Leading Drivers bullish",
-      "holdingPeriod": "4h",
-      "stat": {
-        "n": 9,
-        "winRate": 0.4444444444444444,
-        "meanReturnPct": -0.021306521749194722,
-        "medianReturnPct": -0.18729973729629024,
-        "maxDrawdownPct": 0.908745545610623,
-        "bullish": {
-          "truePositives": 4,
-          "falsePositives": 5,
-          "falseNegatives": 1466,
-          "trueNegatives": 1421,
-          "precision": 0.4444444444444444,
-          "recall": 0.0027210884353741495
-        },
-        "bearish": {
-          "truePositives": 0,
-          "falsePositives": 0,
-          "falseNegatives": 1426,
-          "trueNegatives": 1470,
-          "precision": null,
-          "recall": 0
-        },
-        "significance": {
-          "n": 9,
-          "wins": 4,
-          "pValue": 1,
-          "significant": false
-        }
-      }
-    },
-    {
-      "subset": [
-        "positioning",
-        "leadingDrivers"
-      ],
-      "label": "Positioning Intelligence + Leading Drivers bullish",
-      "holdingPeriod": "24h",
-      "stat": {
-        "n": 9,
-        "winRate": 0.8888888888888888,
-        "meanReturnPct": 0.8686026230459757,
-        "medianReturnPct": 0.55124842961073,
-        "maxDrawdownPct": 0.15970679760922657,
-        "bullish": {
-          "truePositives": 8,
-          "falsePositives": 1,
-          "falseNegatives": 1444,
-          "trueNegatives": 1443,
-          "precision": 0.8888888888888888,
-          "recall": 0.005509641873278237
-        },
-        "bearish": {
-          "truePositives": 0,
-          "falsePositives": 0,
-          "falseNegatives": 1444,
-          "trueNegatives": 1452,
-          "precision": null,
-          "recall": 0
-        },
-        "significance": {
-          "n": 9,
-          "wins": 8,
-          "pValue": 0.03906249999999999,
-          "significant": false
-        }
-      }
-    },
-    {
-      "subset": [
-        "positioning",
-        "leadingDrivers"
-      ],
-      "label": "Positioning Intelligence + Leading Drivers bullish",
-      "holdingPeriod": "7d",
-      "stat": {
-        "n": 9,
-        "winRate": 0.7777777777777778,
-        "meanReturnPct": 1.9728979103316118,
-        "medianReturnPct": 1.053021127708252,
-        "maxDrawdownPct": 3.344564080935631,
-        "bullish": {
-          "truePositives": 7,
-          "falsePositives": 2,
-          "falseNegatives": 1479,
-          "trueNegatives": 1406,
-          "precision": 0.7777777777777778,
-          "recall": 0.004710632570659489
-        },
-        "bearish": {
-          "truePositives": 0,
-          "falsePositives": 0,
-          "falseNegatives": 1408,
-          "trueNegatives": 1486,
-          "precision": null,
-          "recall": 0
-        },
-        "significance": {
-          "n": 9,
-          "wins": 7,
-          "pValue": 0.1796875,
-          "significant": false
-        }
-      }
-    },
-    {
-      "subset": [
-        "marketStructure",
-        "leadingDrivers"
-      ],
-      "label": "Market Structure + Leading Drivers bullish",
-      "holdingPeriod": "1h",
-      "stat": {
-        "n": 511,
-        "winRate": 0.5068493150684932,
-        "meanReturnPct": 0.00943738247137637,
-        "medianReturnPct": 0.005562866984513795,
-        "maxDrawdownPct": 14.77974988338585,
-        "bullish": {
-          "truePositives": 259,
-          "falsePositives": 252,
-          "falseNegatives": 1186,
-          "trueNegatives": 1199,
-          "precision": 0.5068493150684932,
-          "recall": 0.17923875432525951
-        },
-        "bearish": {
-          "truePositives": 0,
-          "falsePositives": 0,
-          "falseNegatives": 1450,
-          "trueNegatives": 1446,
-          "precision": null,
-          "recall": 0
-        },
-        "significance": {
-          "n": 511,
-          "wins": 259,
-          "pValue": 0.7907136485520351,
-          "significant": false
-        }
-      }
-    },
-    {
-      "subset": [
-        "marketStructure",
-        "leadingDrivers"
-      ],
-      "label": "Market Structure + Leading Drivers bullish",
-      "holdingPeriod": "4h",
-      "stat": {
-        "n": 511,
-        "winRate": 0.5146771037181996,
-        "meanReturnPct": 0.09498631558815558,
-        "medianReturnPct": 0.030497147490346273,
-        "maxDrawdownPct": 10.845513138197642,
-        "bullish": {
-          "truePositives": 263,
-          "falsePositives": 248,
-          "falseNegatives": 1207,
-          "trueNegatives": 1178,
-          "precision": 0.5146771037181996,
-          "recall": 0.17891156462585034
-        },
-        "bearish": {
-          "truePositives": 0,
-          "falsePositives": 0,
-          "falseNegatives": 1426,
-          "trueNegatives": 1470,
-          "precision": null,
-          "recall": 0
-        },
-        "significance": {
-          "n": 511,
-          "wins": 263,
-          "pValue": 0.5357444395302475,
-          "significant": false
-        }
-      }
-    },
-    {
-      "subset": [
-        "marketStructure",
-        "leadingDrivers"
-      ],
-      "label": "Market Structure + Leading Drivers bullish",
-      "holdingPeriod": "24h",
-      "stat": {
-        "n": 511,
-        "winRate": 0.5264187866927593,
-        "meanReturnPct": 0.25290751513599896,
-        "medianReturnPct": 0.08806394797452612,
-        "maxDrawdownPct": 35.35362231268394,
-        "bullish": {
-          "truePositives": 269,
-          "falsePositives": 242,
-          "falseNegatives": 1183,
-          "trueNegatives": 1202,
-          "precision": 0.5264187866927593,
-          "recall": 0.18526170798898073
-        },
-        "bearish": {
-          "truePositives": 0,
-          "falsePositives": 0,
-          "falseNegatives": 1444,
-          "trueNegatives": 1452,
-          "precision": null,
-          "recall": 0
-        },
-        "significance": {
-          "n": 511,
-          "wins": 269,
-          "pValue": 0.25004814768850425,
-          "significant": false
-        }
-      }
-    },
-    {
-      "subset": [
-        "marketStructure",
-        "leadingDrivers"
-      ],
-      "label": "Market Structure + Leading Drivers bullish",
-      "holdingPeriod": "7d",
-      "stat": {
-        "n": 511,
-        "winRate": 0.5088062622309197,
-        "meanReturnPct": 0.7849131186695065,
-        "medianReturnPct": 0.15432658406366184,
-        "maxDrawdownPct": 97.81834891187354,
-        "bullish": {
-          "truePositives": 260,
-          "falsePositives": 251,
-          "falseNegatives": 1226,
-          "trueNegatives": 1157,
-          "precision": 0.5088062622309197,
-          "recall": 0.17496635262449528
-        },
-        "bearish": {
-          "truePositives": 0,
-          "falsePositives": 0,
-          "falseNegatives": 1408,
-          "trueNegatives": 1486,
-          "precision": null,
-          "recall": 0
-        },
-        "significance": {
-          "n": 511,
-          "wins": 260,
-          "pValue": 0.7234524125363412,
-          "significant": false
-        }
-      }
-    },
-    {
-      "subset": [
-        "positioning",
-        "marketStructure",
-        "leadingDrivers"
-      ],
-      "label": "Positioning Intelligence + Market Structure + Leading Drivers bullish",
-      "holdingPeriod": "1h",
-      "stat": {
-        "n": 91,
-        "winRate": 0.4065934065934066,
-        "meanReturnPct": -0.0230626460179037,
-        "medianReturnPct": -0.040541184268804265,
-        "maxDrawdownPct": 5.728151482177289,
-        "bullish": {
-          "truePositives": 37,
-          "falsePositives": 54,
-          "falseNegatives": 1408,
-          "trueNegatives": 1397,
-          "precision": 0.4065934065934066,
-          "recall": 0.02560553633217993
-        },
-        "bearish": {
-          "truePositives": 0,
-          "falsePositives": 0,
-          "falseNegatives": 1450,
-          "trueNegatives": 1446,
-          "precision": null,
-          "recall": 0
-        },
-        "significance": {
-          "n": 91,
-          "wins": 37,
-          "pValue": 0.09294694311794159,
-          "significant": false
-        }
-      }
-    },
-    {
-      "subset": [
-        "positioning",
-        "marketStructure",
-        "leadingDrivers"
-      ],
-      "label": "Positioning Intelligence + Market Structure + Leading Drivers bullish",
-      "holdingPeriod": "4h",
-      "stat": {
-        "n": 91,
-        "winRate": 0.42857142857142855,
-        "meanReturnPct": 0.18347233366808852,
-        "medianReturnPct": -0.04494305799350857,
-        "maxDrawdownPct": 4.802860694832751,
-        "bullish": {
-          "truePositives": 39,
-          "falsePositives": 52,
-          "falseNegatives": 1431,
-          "trueNegatives": 1374,
-          "precision": 0.42857142857142855,
-          "recall": 0.026530612244897958
-        },
-        "bearish": {
-          "truePositives": 0,
-          "falsePositives": 0,
-          "falseNegatives": 1426,
-          "trueNegatives": 1470,
-          "precision": null,
-          "recall": 0
-        },
-        "significance": {
-          "n": 91,
-          "wins": 39,
-          "pValue": 0.20817442238117667,
-          "significant": false
-        }
-      }
-    },
-    {
-      "subset": [
-        "positioning",
-        "marketStructure",
-        "leadingDrivers"
-      ],
-      "label": "Positioning Intelligence + Market Structure + Leading Drivers bullish",
-      "holdingPeriod": "24h",
-      "stat": {
-        "n": 91,
-        "winRate": 0.5824175824175825,
-        "meanReturnPct": 0.8075955832379268,
-        "medianReturnPct": 0.36436554898094126,
-        "maxDrawdownPct": 7.140652158265877,
-        "bullish": {
-          "truePositives": 53,
-          "falsePositives": 38,
-          "falseNegatives": 1399,
-          "trueNegatives": 1406,
-          "precision": 0.5824175824175825,
-          "recall": 0.03650137741046832
-        },
-        "bearish": {
-          "truePositives": 0,
-          "falsePositives": 0,
-          "falseNegatives": 1444,
-          "trueNegatives": 1452,
-          "precision": null,
-          "recall": 0
-        },
-        "significance": {
-          "n": 91,
-          "wins": 53,
-          "pValue": 0.14179337454474777,
-          "significant": false
-        }
-      }
-    },
-    {
-      "subset": [
-        "positioning",
-        "marketStructure",
-        "leadingDrivers"
-      ],
-      "label": "Positioning Intelligence + Market Structure + Leading Drivers bullish",
-      "holdingPeriod": "7d",
-      "stat": {
-        "n": 91,
-        "winRate": 0.6923076923076923,
-        "meanReturnPct": 2.9229998011827023,
-        "medianReturnPct": 2.0960924155441067,
-        "maxDrawdownPct": 31.766164028893616,
-        "bullish": {
-          "truePositives": 63,
-          "falsePositives": 28,
-          "falseNegatives": 1423,
-          "trueNegatives": 1380,
-          "precision": 0.6923076923076923,
-          "recall": 0.0423956931359354
-        },
-        "bearish": {
-          "truePositives": 0,
-          "falsePositives": 0,
-          "falseNegatives": 1408,
-          "trueNegatives": 1486,
-          "precision": null,
-          "recall": 0
-        },
-        "significance": {
-          "n": 91,
-          "wins": 63,
-          "pValue": 0.00031283899640671724,
+          "n": 63,
+          "wins": 43,
+          "pValue": 0.00515239704209204,
           "significant": true
         }
       }
     },
     {
       "subset": [
-        "risk"
+        "leadingDrivers"
       ],
-      "label": "Risk Monitor bullish",
+      "label": "Leading Drivers bullish",
       "holdingPeriod": "1h",
       "stat": {
-        "n": 364,
-        "winRate": 0.5027472527472527,
-        "meanReturnPct": 0.012323209648842266,
-        "medianReturnPct": 0.004323733736612356,
-        "maxDrawdownPct": 17.994803559870956,
+        "n": 302,
+        "winRate": 0.5496688741721855,
+        "meanReturnPct": 0.03559418337309903,
+        "medianReturnPct": 0.04988601831802815,
+        "maxDrawdownPct": 10.145600153522615,
         "bullish": {
-          "truePositives": 183,
-          "falsePositives": 181,
-          "falseNegatives": 1262,
-          "trueNegatives": 1270,
-          "precision": 0.5027472527472527,
-          "recall": 0.12664359861591695
+          "truePositives": 166,
+          "falsePositives": 136,
+          "falseNegatives": 1279,
+          "trueNegatives": 1315,
+          "precision": 0.5496688741721855,
+          "recall": 0.11487889273356401
         },
         "bearish": {
           "truePositives": 0,
@@ -2474,32 +1882,32 @@
           "recall": 0
         },
         "significance": {
-          "n": 364,
-          "wins": 183,
-          "pValue": 0.9582081986559757,
+          "n": 302,
+          "wins": 166,
+          "pValue": 0.09500142279617046,
           "significant": false
         }
       }
     },
     {
       "subset": [
-        "risk"
+        "leadingDrivers"
       ],
-      "label": "Risk Monitor bullish",
+      "label": "Leading Drivers bullish",
       "holdingPeriod": "4h",
       "stat": {
-        "n": 364,
-        "winRate": 0.5192307692307693,
-        "meanReturnPct": 0.02018717502581778,
-        "medianReturnPct": 0.02886062960974712,
-        "maxDrawdownPct": 28.664912131108757,
+        "n": 302,
+        "winRate": 0.5198675496688742,
+        "meanReturnPct": 0.05800254932861841,
+        "medianReturnPct": 0.03922087405565859,
+        "maxDrawdownPct": 16.15107341347409,
         "bullish": {
-          "truePositives": 189,
-          "falsePositives": 175,
-          "falseNegatives": 1281,
-          "trueNegatives": 1251,
-          "precision": 0.5192307692307693,
-          "recall": 0.12857142857142856
+          "truePositives": 157,
+          "falsePositives": 145,
+          "falseNegatives": 1313,
+          "trueNegatives": 1281,
+          "precision": 0.5198675496688742,
+          "recall": 0.10680272108843537
         },
         "bearish": {
           "truePositives": 0,
@@ -2510,32 +1918,32 @@
           "recall": 0
         },
         "significance": {
-          "n": 364,
-          "wins": 189,
-          "pValue": 0.4956810815749324,
+          "n": 302,
+          "wins": 157,
+          "pValue": 0.5268163559154363,
           "significant": false
         }
       }
     },
     {
       "subset": [
-        "risk"
+        "leadingDrivers"
       ],
-      "label": "Risk Monitor bullish",
+      "label": "Leading Drivers bullish",
       "holdingPeriod": "24h",
       "stat": {
-        "n": 364,
-        "winRate": 0.5,
-        "meanReturnPct": -0.1185690157441333,
-        "medianReturnPct": 0.0018886313907140705,
-        "maxDrawdownPct": 74.74147362304,
+        "n": 302,
+        "winRate": 0.5397350993377483,
+        "meanReturnPct": 0.17106699627167823,
+        "medianReturnPct": 0.21866852177957974,
+        "maxDrawdownPct": 45.39631073629479,
         "bullish": {
-          "truePositives": 182,
-          "falsePositives": 182,
-          "falseNegatives": 1270,
-          "trueNegatives": 1262,
-          "precision": 0.5,
-          "recall": 0.12534435261707988
+          "truePositives": 163,
+          "falsePositives": 139,
+          "falseNegatives": 1289,
+          "trueNegatives": 1305,
+          "precision": 0.5397350993377483,
+          "recall": 0.11225895316804407
         },
         "bearish": {
           "truePositives": 0,
@@ -2546,32 +1954,32 @@
           "recall": 0
         },
         "significance": {
-          "n": 364,
-          "wins": 182,
-          "pValue": 1,
+          "n": 302,
+          "wins": 163,
+          "pValue": 0.18557781760236625,
           "significant": false
         }
       }
     },
     {
       "subset": [
-        "risk"
+        "leadingDrivers"
       ],
-      "label": "Risk Monitor bullish",
+      "label": "Leading Drivers bullish",
       "holdingPeriod": "7d",
       "stat": {
-        "n": 364,
-        "winRate": 0.521978021978022,
-        "meanReturnPct": -0.048244743051069044,
-        "medianReturnPct": 0.3139645121541669,
-        "maxDrawdownPct": 99.71125958510127,
+        "n": 302,
+        "winRate": 0.5463576158940397,
+        "meanReturnPct": 1.1384764268919731,
+        "medianReturnPct": 0.7350749210734597,
+        "maxDrawdownPct": 96.66133764000364,
         "bullish": {
-          "truePositives": 190,
-          "falsePositives": 174,
-          "falseNegatives": 1296,
-          "trueNegatives": 1234,
-          "precision": 0.521978021978022,
-          "recall": 0.1278600269179004
+          "truePositives": 165,
+          "falsePositives": 137,
+          "falseNegatives": 1321,
+          "trueNegatives": 1271,
+          "precision": 0.5463576158940397,
+          "recall": 0.11103633916554509
         },
         "bearish": {
           "truePositives": 0,
@@ -2582,9 +1990,9 @@
           "recall": 0
         },
         "significance": {
-          "n": 364,
-          "wins": 190,
-          "pValue": 0.43178302101503396,
+          "n": 302,
+          "wins": 165,
+          "pValue": 0.12011723303906091,
           "significant": false
         }
       }
@@ -2592,23 +2000,23 @@
     {
       "subset": [
         "positioning",
-        "risk"
+        "leadingDrivers"
       ],
-      "label": "Positioning Intelligence + Risk Monitor bullish",
+      "label": "Positioning Intelligence + Leading Drivers bullish",
       "holdingPeriod": "1h",
       "stat": {
-        "n": 10,
-        "winRate": 0.3,
-        "meanReturnPct": 0.03872013869490074,
-        "medianReturnPct": -0.1587565178912555,
-        "maxDrawdownPct": 2.379280143351159,
+        "n": 13,
+        "winRate": 0.46153846153846156,
+        "meanReturnPct": -0.0031469962209529365,
+        "medianReturnPct": -0.0044725015695239855,
+        "maxDrawdownPct": 0.8231358908015889,
         "bullish": {
-          "truePositives": 3,
+          "truePositives": 6,
           "falsePositives": 7,
-          "falseNegatives": 1442,
+          "falseNegatives": 1439,
           "trueNegatives": 1444,
-          "precision": 0.3,
-          "recall": 0.0020761245674740486
+          "precision": 0.46153846153846156,
+          "recall": 0.004152249134948097
         },
         "bearish": {
           "truePositives": 0,
@@ -2619,9 +2027,9 @@
           "recall": 0
         },
         "significance": {
-          "n": 10,
-          "wins": 3,
-          "pValue": 0.3437500000000002,
+          "n": 13,
+          "wins": 6,
+          "pValue": 1,
           "significant": false
         }
       }
@@ -2629,97 +2037,97 @@
     {
       "subset": [
         "positioning",
-        "risk"
+        "leadingDrivers"
       ],
-      "label": "Positioning Intelligence + Risk Monitor bullish",
+      "label": "Positioning Intelligence + Leading Drivers bullish",
       "holdingPeriod": "4h",
       "stat": {
-        "n": 10,
-        "winRate": 0.7,
-        "meanReturnPct": 0.7026684218024724,
-        "medianReturnPct": 0.6264105524951202,
-        "maxDrawdownPct": 1.0459676878320168,
-        "bullish": {
-          "truePositives": 7,
-          "falsePositives": 3,
-          "falseNegatives": 1463,
-          "trueNegatives": 1423,
-          "precision": 0.7,
-          "recall": 0.004761904761904762
-        },
-        "bearish": {
-          "truePositives": 0,
-          "falsePositives": 0,
-          "falseNegatives": 1426,
-          "trueNegatives": 1470,
-          "precision": null,
-          "recall": 0
-        },
-        "significance": {
-          "n": 10,
-          "wins": 7,
-          "pValue": 0.3437500000000002,
-          "significant": false
-        }
-      }
-    },
-    {
-      "subset": [
-        "positioning",
-        "risk"
-      ],
-      "label": "Positioning Intelligence + Risk Monitor bullish",
-      "holdingPeriod": "24h",
-      "stat": {
-        "n": 10,
-        "winRate": 0.7,
-        "meanReturnPct": 1.338256337888088,
-        "medianReturnPct": 0.8663361458951464,
-        "maxDrawdownPct": 4.158600093046987,
-        "bullish": {
-          "truePositives": 7,
-          "falsePositives": 3,
-          "falseNegatives": 1445,
-          "trueNegatives": 1441,
-          "precision": 0.7,
-          "recall": 0.0048209366391184574
-        },
-        "bearish": {
-          "truePositives": 0,
-          "falsePositives": 0,
-          "falseNegatives": 1444,
-          "trueNegatives": 1452,
-          "precision": null,
-          "recall": 0
-        },
-        "significance": {
-          "n": 10,
-          "wins": 7,
-          "pValue": 0.3437500000000002,
-          "significant": false
-        }
-      }
-    },
-    {
-      "subset": [
-        "positioning",
-        "risk"
-      ],
-      "label": "Positioning Intelligence + Risk Monitor bullish",
-      "holdingPeriod": "7d",
-      "stat": {
-        "n": 10,
-        "winRate": 0.5,
-        "meanReturnPct": 2.7871813527768943,
-        "medianReturnPct": 1.508374409711135,
-        "maxDrawdownPct": 12.116290182062315,
+        "n": 13,
+        "winRate": 0.38461538461538464,
+        "meanReturnPct": -0.08876837301037557,
+        "medianReturnPct": -0.18729973729629024,
+        "maxDrawdownPct": 2.3427759789877656,
         "bullish": {
           "truePositives": 5,
-          "falsePositives": 5,
-          "falseNegatives": 1481,
-          "trueNegatives": 1403,
-          "precision": 0.5,
-          "recall": 0.0033647375504710633
+          "falsePositives": 8,
+          "falseNegatives": 1465,
+          "trueNegatives": 1418,
+          "precision": 0.38461538461538464,
+          "recall": 0.003401360544217687
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1470,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 13,
+          "wins": 5,
+          "pValue": 0.5810546875000004,
+          "significant": false
+        }
+      }
+    },
+    {
+      "subset": [
+        "positioning",
+        "leadingDrivers"
+      ],
+      "label": "Positioning Intelligence + Leading Drivers bullish",
+      "holdingPeriod": "24h",
+      "stat": {
+        "n": 13,
+        "winRate": 0.6923076923076923,
+        "meanReturnPct": 0.49049076015360704,
+        "medianReturnPct": 0.2563319192839877,
+        "maxDrawdownPct": 0.7595988841059498,
+        "bullish": {
+          "truePositives": 9,
+          "falsePositives": 4,
+          "falseNegatives": 1443,
+          "trueNegatives": 1440,
+          "precision": 0.6923076923076923,
+          "recall": 0.006198347107438017
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1452,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 13,
+          "wins": 9,
+          "pValue": 0.26684570312500033,
+          "significant": false
+        }
+      }
+    },
+    {
+      "subset": [
+        "positioning",
+        "leadingDrivers"
+      ],
+      "label": "Positioning Intelligence + Leading Drivers bullish",
+      "holdingPeriod": "7d",
+      "stat": {
+        "n": 13,
+        "winRate": 0.6923076923076923,
+        "meanReturnPct": 1.2849102551284888,
+        "medianReturnPct": 1.053021127708252,
+        "maxDrawdownPct": 5.662743485634998,
+        "bullish": {
+          "truePositives": 9,
+          "falsePositives": 4,
+          "falseNegatives": 1477,
+          "trueNegatives": 1404,
+          "precision": 0.6923076923076923,
+          "recall": 0.006056527590847914
         },
         "bearish": {
           "truePositives": 0,
@@ -2730,9 +2138,9 @@
           "recall": 0
         },
         "significance": {
-          "n": 10,
-          "wins": 5,
-          "pValue": 1,
+          "n": 13,
+          "wins": 9,
+          "pValue": 0.26684570312500033,
           "significant": false
         }
       }
@@ -2740,22 +2148,171 @@
     {
       "subset": [
         "marketStructure",
-        "risk"
+        "leadingDrivers"
       ],
-      "label": "Market Structure + Risk Monitor bullish",
+      "label": "Market Structure + Leading Drivers bullish",
       "holdingPeriod": "1h",
       "stat": {
-        "n": 20,
-        "winRate": 0.6,
-        "meanReturnPct": 0.10675992602936109,
-        "medianReturnPct": 0.05612726276322619,
-        "maxDrawdownPct": 1.539588698651036,
+        "n": 272,
+        "winRate": 0.4852941176470588,
+        "meanReturnPct": 0.01718543100603551,
+        "medianReturnPct": -0.0075399102372902,
+        "maxDrawdownPct": 10.479882143825774,
+        "bullish": {
+          "truePositives": 132,
+          "falsePositives": 140,
+          "falseNegatives": 1313,
+          "trueNegatives": 1311,
+          "precision": 0.4852941176470588,
+          "recall": 0.09134948096885813
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1446,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 272,
+          "wins": 132,
+          "pValue": 0.6713251353711648,
+          "significant": false
+        }
+      }
+    },
+    {
+      "subset": [
+        "marketStructure",
+        "leadingDrivers"
+      ],
+      "label": "Market Structure + Leading Drivers bullish",
+      "holdingPeriod": "4h",
+      "stat": {
+        "n": 272,
+        "winRate": 0.5110294117647058,
+        "meanReturnPct": 0.13605308368721108,
+        "medianReturnPct": 0.01536764182253101,
+        "maxDrawdownPct": 11.915616529858559,
+        "bullish": {
+          "truePositives": 139,
+          "falsePositives": 133,
+          "falseNegatives": 1331,
+          "trueNegatives": 1293,
+          "precision": 0.5110294117647058,
+          "recall": 0.0945578231292517
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1470,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 272,
+          "wins": 139,
+          "pValue": 0.7618253188579484,
+          "significant": false
+        }
+      }
+    },
+    {
+      "subset": [
+        "marketStructure",
+        "leadingDrivers"
+      ],
+      "label": "Market Structure + Leading Drivers bullish",
+      "holdingPeriod": "24h",
+      "stat": {
+        "n": 272,
+        "winRate": 0.5330882352941176,
+        "meanReturnPct": 0.23866709072931738,
+        "medianReturnPct": 0.1280103219246827,
+        "maxDrawdownPct": 32.05504379632142,
+        "bullish": {
+          "truePositives": 145,
+          "falsePositives": 127,
+          "falseNegatives": 1307,
+          "trueNegatives": 1317,
+          "precision": 0.5330882352941176,
+          "recall": 0.09986225895316804
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1452,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 272,
+          "wins": 145,
+          "pValue": 0.30263711948596406,
+          "significant": false
+        }
+      }
+    },
+    {
+      "subset": [
+        "marketStructure",
+        "leadingDrivers"
+      ],
+      "label": "Market Structure + Leading Drivers bullish",
+      "holdingPeriod": "7d",
+      "stat": {
+        "n": 272,
+        "winRate": 0.5036764705882353,
+        "meanReturnPct": 0.3055222426471372,
+        "medianReturnPct": 0.03705204965768206,
+        "maxDrawdownPct": 96.77818029259338,
+        "bullish": {
+          "truePositives": 137,
+          "falsePositives": 135,
+          "falseNegatives": 1349,
+          "trueNegatives": 1273,
+          "precision": 0.5036764705882353,
+          "recall": 0.09219380888290714
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1408,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 272,
+          "wins": 137,
+          "pValue": 0.9516655876679507,
+          "significant": false
+        }
+      }
+    },
+    {
+      "subset": [
+        "positioning",
+        "marketStructure",
+        "leadingDrivers"
+      ],
+      "label": "Positioning Intelligence + Market Structure + Leading Drivers bullish",
+      "holdingPeriod": "1h",
+      "stat": {
+        "n": 29,
+        "winRate": 0.41379310344827586,
+        "meanReturnPct": 0.03830203383376552,
+        "medianReturnPct": -0.020800777125477354,
+        "maxDrawdownPct": 1.9662060345844536,
         "bullish": {
           "truePositives": 12,
-          "falsePositives": 8,
+          "falsePositives": 17,
           "falseNegatives": 1433,
-          "trueNegatives": 1443,
-          "precision": 0.6,
+          "trueNegatives": 1434,
+          "precision": 0.41379310344827586,
           "recall": 0.008304498269896194
         },
         "bearish": {
@@ -2767,9 +2324,452 @@
           "recall": 0
         },
         "significance": {
-          "n": 20,
+          "n": 29,
           "wins": 12,
-          "pValue": 0.5034446716308592,
+          "pValue": 0.4582583196461192,
+          "significant": false
+        }
+      }
+    },
+    {
+      "subset": [
+        "positioning",
+        "marketStructure",
+        "leadingDrivers"
+      ],
+      "label": "Positioning Intelligence + Market Structure + Leading Drivers bullish",
+      "holdingPeriod": "4h",
+      "stat": {
+        "n": 29,
+        "winRate": 0.4827586206896552,
+        "meanReturnPct": 0.3407973441525759,
+        "medianReturnPct": -0.0028719386160045756,
+        "maxDrawdownPct": 1.8960493903601847,
+        "bullish": {
+          "truePositives": 14,
+          "falsePositives": 15,
+          "falseNegatives": 1456,
+          "trueNegatives": 1411,
+          "precision": 0.4827586206896552,
+          "recall": 0.009523809523809525
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1470,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 29,
+          "wins": 14,
+          "pValue": 0.9999999999999976,
+          "significant": false
+        }
+      }
+    },
+    {
+      "subset": [
+        "positioning",
+        "marketStructure",
+        "leadingDrivers"
+      ],
+      "label": "Positioning Intelligence + Market Structure + Leading Drivers bullish",
+      "holdingPeriod": "24h",
+      "stat": {
+        "n": 29,
+        "winRate": 0.6896551724137931,
+        "meanReturnPct": 1.0148998709848043,
+        "medianReturnPct": 0.49373237244099577,
+        "maxDrawdownPct": 5.638273803375203,
+        "bullish": {
+          "truePositives": 20,
+          "falsePositives": 9,
+          "falseNegatives": 1432,
+          "trueNegatives": 1435,
+          "precision": 0.6896551724137931,
+          "recall": 0.013774104683195593
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1452,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 29,
+          "wins": 20,
+          "pValue": 0.06142834573984145,
+          "significant": false
+        }
+      }
+    },
+    {
+      "subset": [
+        "positioning",
+        "marketStructure",
+        "leadingDrivers"
+      ],
+      "label": "Positioning Intelligence + Market Structure + Leading Drivers bullish",
+      "holdingPeriod": "7d",
+      "stat": {
+        "n": 29,
+        "winRate": 0.7241379310344828,
+        "meanReturnPct": 3.2916558403859657,
+        "medianReturnPct": 2.4136913769917743,
+        "maxDrawdownPct": 13.031367341601763,
+        "bullish": {
+          "truePositives": 21,
+          "falsePositives": 8,
+          "falseNegatives": 1465,
+          "trueNegatives": 1400,
+          "precision": 0.7241379310344828,
+          "recall": 0.014131897711978465
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1408,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 29,
+          "wins": 21,
+          "pValue": 0.024119544774293886,
+          "significant": true
+        }
+      }
+    },
+    {
+      "subset": [
+        "risk"
+      ],
+      "label": "Risk Monitor bullish",
+      "holdingPeriod": "1h",
+      "stat": {
+        "n": 406,
+        "winRate": 0.5073891625615764,
+        "meanReturnPct": 0.03907753765769227,
+        "medianReturnPct": 0.0075717010626739755,
+        "maxDrawdownPct": 18.384853216770843,
+        "bullish": {
+          "truePositives": 206,
+          "falsePositives": 200,
+          "falseNegatives": 1239,
+          "trueNegatives": 1251,
+          "precision": 0.5073891625615764,
+          "recall": 0.14256055363321798
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1446,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 406,
+          "wins": 206,
+          "pValue": 0.8040586940509941,
+          "significant": false
+        }
+      }
+    },
+    {
+      "subset": [
+        "risk"
+      ],
+      "label": "Risk Monitor bullish",
+      "holdingPeriod": "4h",
+      "stat": {
+        "n": 406,
+        "winRate": 0.5147783251231527,
+        "meanReturnPct": 0.02500818317196645,
+        "medianReturnPct": 0.021081281357093126,
+        "maxDrawdownPct": 28.93949263636571,
+        "bullish": {
+          "truePositives": 209,
+          "falsePositives": 197,
+          "falseNegatives": 1261,
+          "trueNegatives": 1229,
+          "precision": 0.5147783251231527,
+          "recall": 0.14217687074829932
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1470,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 406,
+          "wins": 209,
+          "pValue": 0.5851747064001539,
+          "significant": false
+        }
+      }
+    },
+    {
+      "subset": [
+        "risk"
+      ],
+      "label": "Risk Monitor bullish",
+      "holdingPeriod": "24h",
+      "stat": {
+        "n": 406,
+        "winRate": 0.5246305418719212,
+        "meanReturnPct": 0.07759983896319406,
+        "medianReturnPct": 0.1426308010784353,
+        "maxDrawdownPct": 70.73038323821483,
+        "bullish": {
+          "truePositives": 213,
+          "falsePositives": 193,
+          "falseNegatives": 1239,
+          "trueNegatives": 1251,
+          "precision": 0.5246305418719212,
+          "recall": 0.14669421487603307
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1452,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 406,
+          "wins": 213,
+          "pValue": 0.345715649341275,
+          "significant": false
+        }
+      }
+    },
+    {
+      "subset": [
+        "risk"
+      ],
+      "label": "Risk Monitor bullish",
+      "holdingPeriod": "7d",
+      "stat": {
+        "n": 406,
+        "winRate": 0.5443349753694581,
+        "meanReturnPct": 0.41557291247037836,
+        "medianReturnPct": 0.6375078217029571,
+        "maxDrawdownPct": 99.50705113733008,
+        "bullish": {
+          "truePositives": 221,
+          "falsePositives": 185,
+          "falseNegatives": 1265,
+          "trueNegatives": 1223,
+          "precision": 0.5443349753694581,
+          "recall": 0.148721399730821
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1408,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 406,
+          "wins": 221,
+          "pValue": 0.08225645396486687,
+          "significant": false
+        }
+      }
+    },
+    {
+      "subset": [
+        "positioning",
+        "risk"
+      ],
+      "label": "Positioning Intelligence + Risk Monitor bullish",
+      "holdingPeriod": "1h",
+      "stat": {
+        "n": 3,
+        "winRate": 0,
+        "meanReturnPct": -0.40586610788073635,
+        "medianReturnPct": -0.4437228776679818,
+        "maxDrawdownPct": 1.2134232324301775,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 3,
+          "falseNegatives": 1445,
+          "trueNegatives": 1448,
+          "precision": 0,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1446,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 3,
+          "wins": 0,
+          "pValue": 0.25000000000000006,
+          "significant": false
+        }
+      }
+    },
+    {
+      "subset": [
+        "positioning",
+        "risk"
+      ],
+      "label": "Positioning Intelligence + Risk Monitor bullish",
+      "holdingPeriod": "4h",
+      "stat": {
+        "n": 3,
+        "winRate": 1,
+        "meanReturnPct": 1.7054080234040967,
+        "medianReturnPct": 0.8745459797311702,
+        "maxDrawdownPct": 0,
+        "bullish": {
+          "truePositives": 3,
+          "falsePositives": 0,
+          "falseNegatives": 1467,
+          "trueNegatives": 1426,
+          "precision": 1,
+          "recall": 0.0020408163265306124
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1470,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 3,
+          "wins": 3,
+          "pValue": 0.24999999999999994,
+          "significant": false
+        }
+      }
+    },
+    {
+      "subset": [
+        "positioning",
+        "risk"
+      ],
+      "label": "Positioning Intelligence + Risk Monitor bullish",
+      "holdingPeriod": "24h",
+      "stat": {
+        "n": 3,
+        "winRate": 0.6666666666666666,
+        "meanReturnPct": 1.7043800304951808,
+        "medianReturnPct": 0.6932451617264738,
+        "maxDrawdownPct": 0.30297663474553316,
+        "bullish": {
+          "truePositives": 2,
+          "falsePositives": 1,
+          "falseNegatives": 1450,
+          "trueNegatives": 1443,
+          "precision": 0.6666666666666666,
+          "recall": 0.0013774104683195593
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1452,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 3,
+          "wins": 2,
+          "pValue": 1,
+          "significant": false
+        }
+      }
+    },
+    {
+      "subset": [
+        "positioning",
+        "risk"
+      ],
+      "label": "Positioning Intelligence + Risk Monitor bullish",
+      "holdingPeriod": "7d",
+      "stat": {
+        "n": 3,
+        "winRate": 0.3333333333333333,
+        "meanReturnPct": -2.176770683522514,
+        "medianReturnPct": -0.6158082021719352,
+        "maxDrawdownPct": 10.104077488257994,
+        "bullish": {
+          "truePositives": 1,
+          "falsePositives": 2,
+          "falseNegatives": 1485,
+          "trueNegatives": 1406,
+          "precision": 0.3333333333333333,
+          "recall": 0.0006729475100942127
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1408,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 3,
+          "wins": 1,
+          "pValue": 1,
+          "significant": false
+        }
+      }
+    },
+    {
+      "subset": [
+        "marketStructure",
+        "risk"
+      ],
+      "label": "Market Structure + Risk Monitor bullish",
+      "holdingPeriod": "1h",
+      "stat": {
+        "n": 20,
+        "winRate": 0.55,
+        "meanReturnPct": 0.08453524883818739,
+        "medianReturnPct": 0.05612726276322619,
+        "maxDrawdownPct": 2.2537653296081595,
+        "bullish": {
+          "truePositives": 11,
+          "falsePositives": 9,
+          "falseNegatives": 1434,
+          "trueNegatives": 1442,
+          "precision": 0.55,
+          "recall": 0.007612456747404845
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1446,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 20,
+          "wins": 11,
+          "pValue": 0.8238029479980467,
           "significant": false
         }
       }
@@ -2784,9 +2784,9 @@
       "stat": {
         "n": 20,
         "winRate": 0.5,
-        "meanReturnPct": -0.025455571623776672,
+        "meanReturnPct": -0.0671840278888841,
         "medianReturnPct": -0.020492889719201473,
-        "maxDrawdownPct": 2.253901823161022,
+        "maxDrawdownPct": 2.269262071396824,
         "bullish": {
           "truePositives": 10,
           "falsePositives": 10,
@@ -2820,17 +2820,17 @@
       "holdingPeriod": "24h",
       "stat": {
         "n": 20,
-        "winRate": 0.55,
-        "meanReturnPct": -0.7415094244853053,
-        "medianReturnPct": 0.1126964742755168,
-        "maxDrawdownPct": 17.54820578803905,
+        "winRate": 0.45,
+        "meanReturnPct": -1.1524603302922076,
+        "medianReturnPct": -1.4512783795338655,
+        "maxDrawdownPct": 25.36921410803649,
         "bullish": {
-          "truePositives": 11,
-          "falsePositives": 9,
-          "falseNegatives": 1441,
-          "trueNegatives": 1435,
-          "precision": 0.55,
-          "recall": 0.007575757575757576
+          "truePositives": 9,
+          "falsePositives": 11,
+          "falseNegatives": 1443,
+          "trueNegatives": 1433,
+          "precision": 0.45,
+          "recall": 0.006198347107438017
         },
         "bearish": {
           "truePositives": 0,
@@ -2842,7 +2842,7 @@
         },
         "significance": {
           "n": 20,
-          "wins": 11,
+          "wins": 9,
           "pValue": 0.8238029479980467,
           "significant": false
         }
@@ -2857,17 +2857,17 @@
       "holdingPeriod": "7d",
       "stat": {
         "n": 20,
-        "winRate": 0.35,
-        "meanReturnPct": 0.6102631070406395,
-        "medianReturnPct": -2.4676633916981072,
-        "maxDrawdownPct": 32.428075663320136,
+        "winRate": 0.5,
+        "meanReturnPct": 0.3773999139439097,
+        "medianReturnPct": 0.09993288869749728,
+        "maxDrawdownPct": 28.037734186908008,
         "bullish": {
-          "truePositives": 7,
-          "falsePositives": 13,
-          "falseNegatives": 1479,
-          "trueNegatives": 1395,
-          "precision": 0.35,
-          "recall": 0.004710632570659489
+          "truePositives": 10,
+          "falsePositives": 10,
+          "falseNegatives": 1476,
+          "trueNegatives": 1398,
+          "precision": 0.5,
+          "recall": 0.006729475100942127
         },
         "bearish": {
           "truePositives": 0,
@@ -2879,8 +2879,8 @@
         },
         "significance": {
           "n": 20,
-          "wins": 7,
-          "pValue": 0.26317596435546875,
+          "wins": 10,
+          "pValue": 1,
           "significant": false
         }
       }
@@ -3045,18 +3045,18 @@
       "label": "Leading Drivers + Risk Monitor bullish",
       "holdingPeriod": "1h",
       "stat": {
-        "n": 116,
-        "winRate": 0.5431034482758621,
-        "meanReturnPct": 0.27612911013181857,
-        "medianReturnPct": 0.07579252233867004,
-        "maxDrawdownPct": 4.7315455273614475,
+        "n": 98,
+        "winRate": 0.5306122448979592,
+        "meanReturnPct": 0.23452147215787775,
+        "medianReturnPct": 0.04893585603056319,
+        "maxDrawdownPct": 4.35054401517905,
         "bullish": {
-          "truePositives": 63,
-          "falsePositives": 53,
-          "falseNegatives": 1382,
-          "trueNegatives": 1398,
-          "precision": 0.5431034482758621,
-          "recall": 0.04359861591695502
+          "truePositives": 52,
+          "falsePositives": 46,
+          "falseNegatives": 1393,
+          "trueNegatives": 1405,
+          "precision": 0.5306122448979592,
+          "recall": 0.035986159169550176
         },
         "bearish": {
           "truePositives": 0,
@@ -3067,9 +3067,9 @@
           "recall": 0
         },
         "significance": {
-          "n": 116,
-          "wins": 63,
-          "pValue": 0.4034696996552999,
+          "n": 98,
+          "wins": 52,
+          "pValue": 0.6137344676301338,
           "significant": false
         }
       }
@@ -3082,18 +3082,18 @@
       "label": "Leading Drivers + Risk Monitor bullish",
       "holdingPeriod": "4h",
       "stat": {
-        "n": 116,
-        "winRate": 0.5775862068965517,
-        "meanReturnPct": 0.1919112021509928,
-        "medianReturnPct": 0.12532105594765658,
-        "maxDrawdownPct": 8.610537932364753,
+        "n": 98,
+        "winRate": 0.6224489795918368,
+        "meanReturnPct": 0.24641778871088724,
+        "medianReturnPct": 0.18432345210773998,
+        "maxDrawdownPct": 5.694450278090837,
         "bullish": {
-          "truePositives": 67,
-          "falsePositives": 49,
-          "falseNegatives": 1403,
-          "trueNegatives": 1377,
-          "precision": 0.5775862068965517,
-          "recall": 0.04557823129251701
+          "truePositives": 61,
+          "falsePositives": 37,
+          "falseNegatives": 1409,
+          "trueNegatives": 1389,
+          "precision": 0.6224489795918368,
+          "recall": 0.04149659863945578
         },
         "bearish": {
           "truePositives": 0,
@@ -3104,10 +3104,10 @@
           "recall": 0
         },
         "significance": {
-          "n": 116,
-          "wins": 67,
-          "pValue": 0.11408316540849993,
-          "significant": false
+          "n": 98,
+          "wins": 61,
+          "pValue": 0.019690184799846834,
+          "significant": true
         }
       }
     },
@@ -3119,18 +3119,18 @@
       "label": "Leading Drivers + Risk Monitor bullish",
       "holdingPeriod": "24h",
       "stat": {
-        "n": 116,
-        "winRate": 0.5517241379310345,
-        "meanReturnPct": 0.8715722463117721,
-        "medianReturnPct": 0.32561841609327613,
-        "maxDrawdownPct": 29.22776690419023,
+        "n": 98,
+        "winRate": 0.5204081632653061,
+        "meanReturnPct": 0.44035932632980923,
+        "medianReturnPct": 0.10748582768106832,
+        "maxDrawdownPct": 29.227766904190233,
         "bullish": {
-          "truePositives": 64,
-          "falsePositives": 52,
-          "falseNegatives": 1388,
-          "trueNegatives": 1392,
-          "precision": 0.5517241379310345,
-          "recall": 0.0440771349862259
+          "truePositives": 51,
+          "falsePositives": 47,
+          "falseNegatives": 1401,
+          "trueNegatives": 1397,
+          "precision": 0.5204081632653061,
+          "recall": 0.03512396694214876
         },
         "bearish": {
           "truePositives": 0,
@@ -3141,9 +3141,9 @@
           "recall": 0
         },
         "significance": {
-          "n": 116,
-          "wins": 64,
-          "pValue": 0.30708966364917484,
+          "n": 98,
+          "wins": 51,
+          "pValue": 0.7620362195292372,
           "significant": false
         }
       }
@@ -3156,18 +3156,18 @@
       "label": "Leading Drivers + Risk Monitor bullish",
       "holdingPeriod": "7d",
       "stat": {
-        "n": 116,
-        "winRate": 0.6551724137931034,
-        "meanReturnPct": 1.573580714763734,
-        "medianReturnPct": 2.0731618940309016,
-        "maxDrawdownPct": 56.63223204640845,
+        "n": 98,
+        "winRate": 0.5714285714285714,
+        "meanReturnPct": 0.46252792293714146,
+        "medianReturnPct": 0.8610735661881972,
+        "maxDrawdownPct": 65.06325644538671,
         "bullish": {
-          "truePositives": 76,
-          "falsePositives": 40,
-          "falseNegatives": 1410,
-          "trueNegatives": 1368,
-          "precision": 0.6551724137931034,
-          "recall": 0.05114401076716016
+          "truePositives": 56,
+          "falsePositives": 42,
+          "falseNegatives": 1430,
+          "trueNegatives": 1366,
+          "precision": 0.5714285714285714,
+          "recall": 0.03768506056527591
         },
         "bearish": {
           "truePositives": 0,
@@ -3178,10 +3178,10 @@
           "recall": 0
         },
         "significance": {
-          "n": 116,
-          "wins": 76,
-          "pValue": 0.0010650742732639096,
-          "significant": true
+          "n": 98,
+          "wins": 56,
+          "pValue": 0.18884671980890222,
+          "significant": false
         }
       }
     },
@@ -3326,18 +3326,18 @@
       "label": "Market Structure + Leading Drivers + Risk Monitor bullish",
       "holdingPeriod": "1h",
       "stat": {
-        "n": 42,
-        "winRate": 0.4523809523809524,
-        "meanReturnPct": -0.08764492368189607,
-        "medianReturnPct": -0.04043551949433569,
-        "maxDrawdownPct": 5.749958876226105,
+        "n": 28,
+        "winRate": 0.5,
+        "meanReturnPct": -0.11936149415385756,
+        "medianReturnPct": -0.0033821616802556407,
+        "maxDrawdownPct": 5.0918388555832435,
         "bullish": {
-          "truePositives": 19,
-          "falsePositives": 23,
-          "falseNegatives": 1426,
-          "trueNegatives": 1428,
-          "precision": 0.4523809523809524,
-          "recall": 0.01314878892733564
+          "truePositives": 14,
+          "falsePositives": 14,
+          "falseNegatives": 1431,
+          "trueNegatives": 1437,
+          "precision": 0.5,
+          "recall": 0.009688581314878892
         },
         "bearish": {
           "truePositives": 0,
@@ -3348,9 +3348,9 @@
           "recall": 0
         },
         "significance": {
-          "n": 42,
-          "wins": 19,
-          "pValue": 0.643968956370372,
+          "n": 28,
+          "wins": 14,
+          "pValue": 1,
           "significant": false
         }
       }
@@ -3364,18 +3364,18 @@
       "label": "Market Structure + Leading Drivers + Risk Monitor bullish",
       "holdingPeriod": "4h",
       "stat": {
-        "n": 42,
-        "winRate": 0.5238095238095238,
-        "meanReturnPct": 0.10108067190153969,
+        "n": 28,
+        "winRate": 0.5357142857142857,
+        "meanReturnPct": 0.15865977782396867,
         "medianReturnPct": 0.03934209490947907,
-        "maxDrawdownPct": 6.7184122178333805,
+        "maxDrawdownPct": 6.2355822716113085,
         "bullish": {
-          "truePositives": 22,
-          "falsePositives": 20,
-          "falseNegatives": 1448,
-          "trueNegatives": 1406,
-          "precision": 0.5238095238095238,
-          "recall": 0.014965986394557823
+          "truePositives": 15,
+          "falsePositives": 13,
+          "falseNegatives": 1455,
+          "trueNegatives": 1413,
+          "precision": 0.5357142857142857,
+          "recall": 0.01020408163265306
         },
         "bearish": {
           "truePositives": 0,
@@ -3386,9 +3386,9 @@
           "recall": 0
         },
         "significance": {
-          "n": 42,
-          "wins": 22,
-          "pValue": 0.8776143287523157,
+          "n": 28,
+          "wins": 15,
+          "pValue": 0.8505540192127238,
           "significant": false
         }
       }
@@ -3402,18 +3402,18 @@
       "label": "Market Structure + Leading Drivers + Risk Monitor bullish",
       "holdingPeriod": "24h",
       "stat": {
-        "n": 42,
-        "winRate": 0.6904761904761905,
-        "meanReturnPct": 0.8253437697459576,
-        "medianReturnPct": 1.0902549395778656,
-        "maxDrawdownPct": 12.638650211245537,
+        "n": 28,
+        "winRate": 0.75,
+        "meanReturnPct": 1.4189377944474992,
+        "medianReturnPct": 1.2123489927174644,
+        "maxDrawdownPct": 3.52234128234757,
         "bullish": {
-          "truePositives": 29,
-          "falsePositives": 13,
-          "falseNegatives": 1423,
-          "trueNegatives": 1431,
-          "precision": 0.6904761904761905,
-          "recall": 0.01997245179063361
+          "truePositives": 21,
+          "falsePositives": 7,
+          "falseNegatives": 1431,
+          "trueNegatives": 1437,
+          "precision": 0.75,
+          "recall": 0.014462809917355372
         },
         "bearish": {
           "truePositives": 0,
@@ -3424,9 +3424,9 @@
           "recall": 0
         },
         "significance": {
-          "n": 42,
-          "wins": 29,
-          "pValue": 0.01952047278246023,
+          "n": 28,
+          "wins": 21,
+          "pValue": 0.012540951371192943,
           "significant": true
         }
       }
@@ -3440,18 +3440,18 @@
       "label": "Market Structure + Leading Drivers + Risk Monitor bullish",
       "holdingPeriod": "7d",
       "stat": {
-        "n": 42,
-        "winRate": 0.6428571428571429,
-        "meanReturnPct": 1.5701683856343702,
-        "medianReturnPct": 0.9846034199802055,
-        "maxDrawdownPct": 18.724489244526875,
+        "n": 28,
+        "winRate": 0.6785714285714286,
+        "meanReturnPct": 2.1007703799982282,
+        "medianReturnPct": 1.9056205821208356,
+        "maxDrawdownPct": 14.749752977601743,
         "bullish": {
-          "truePositives": 27,
-          "falsePositives": 15,
-          "falseNegatives": 1459,
-          "trueNegatives": 1393,
-          "precision": 0.6428571428571429,
-          "recall": 0.01816958277254374
+          "truePositives": 19,
+          "falsePositives": 9,
+          "falseNegatives": 1467,
+          "trueNegatives": 1399,
+          "precision": 0.6785714285714286,
+          "recall": 0.01278600269179004
         },
         "bearish": {
           "truePositives": 0,
@@ -3462,9 +3462,9 @@
           "recall": 0
         },
         "significance": {
-          "n": 42,
-          "wins": 27,
-          "pValue": 0.0884295469877542,
+          "n": 28,
+          "wins": 19,
+          "pValue": 0.08715855330228811,
           "significant": false
         }
       }
@@ -3479,18 +3479,18 @@
       "label": "All bullish",
       "holdingPeriod": "1h",
       "stat": {
-        "n": 12,
-        "winRate": 0.6666666666666666,
-        "meanReturnPct": -0.10916688941259146,
-        "medianReturnPct": 0.11985238165095052,
-        "maxDrawdownPct": 2.082505296936323,
+        "n": 9,
+        "winRate": 0.5555555555555556,
+        "meanReturnPct": -0.2146259833215095,
+        "medianReturnPct": 0.06441197901779784,
+        "maxDrawdownPct": 2.0825052969363282,
         "bullish": {
-          "truePositives": 8,
+          "truePositives": 5,
           "falsePositives": 4,
-          "falseNegatives": 1437,
+          "falseNegatives": 1440,
           "trueNegatives": 1447,
-          "precision": 0.6666666666666666,
-          "recall": 0.005536332179930796
+          "precision": 0.5555555555555556,
+          "recall": 0.0034602076124567475
         },
         "bearish": {
           "truePositives": 0,
@@ -3501,9 +3501,9 @@
           "recall": 0
         },
         "significance": {
-          "n": 12,
-          "wins": 8,
-          "pValue": 0.3876953125000002,
+          "n": 9,
+          "wins": 5,
+          "pValue": 1,
           "significant": false
         }
       }
@@ -3518,18 +3518,18 @@
       "label": "All bullish",
       "holdingPeriod": "4h",
       "stat": {
-        "n": 12,
-        "winRate": 0.5,
-        "meanReturnPct": -0.11343550718248563,
-        "medianReturnPct": 0.03251789191737373,
-        "maxDrawdownPct": 2.237539644231078,
+        "n": 9,
+        "winRate": 0.3333333333333333,
+        "meanReturnPct": -0.3895240972060204,
+        "medianReturnPct": -0.1270937932598339,
+        "maxDrawdownPct": 3.477248718289516,
         "bullish": {
-          "truePositives": 6,
+          "truePositives": 3,
           "falsePositives": 6,
-          "falseNegatives": 1464,
+          "falseNegatives": 1467,
           "trueNegatives": 1420,
-          "precision": 0.5,
-          "recall": 0.004081632653061225
+          "precision": 0.3333333333333333,
+          "recall": 0.0020408163265306124
         },
         "bearish": {
           "truePositives": 0,
@@ -3540,9 +3540,9 @@
           "recall": 0
         },
         "significance": {
-          "n": 12,
-          "wins": 6,
-          "pValue": 1,
+          "n": 9,
+          "wins": 3,
+          "pValue": 0.5078125,
           "significant": false
         }
       }
@@ -3557,18 +3557,18 @@
       "label": "All bullish",
       "holdingPeriod": "24h",
       "stat": {
-        "n": 12,
-        "winRate": 0.8333333333333334,
-        "meanReturnPct": 0.8137213235476889,
-        "medianReturnPct": 0.4338571890902536,
-        "maxDrawdownPct": 2.613405477636541,
+        "n": 9,
+        "winRate": 0.7777777777777778,
+        "meanReturnPct": 0.4966430680920918,
+        "medianReturnPct": 0.3383590342411689,
+        "maxDrawdownPct": 2.613405477636537,
         "bullish": {
-          "truePositives": 10,
+          "truePositives": 7,
           "falsePositives": 2,
-          "falseNegatives": 1442,
+          "falseNegatives": 1445,
           "trueNegatives": 1442,
-          "precision": 0.8333333333333334,
-          "recall": 0.006887052341597796
+          "precision": 0.7777777777777778,
+          "recall": 0.0048209366391184574
         },
         "bearish": {
           "truePositives": 0,
@@ -3579,10 +3579,10 @@
           "recall": 0
         },
         "significance": {
-          "n": 12,
-          "wins": 10,
-          "pValue": 0.038574218750000014,
-          "significant": true
+          "n": 9,
+          "wins": 7,
+          "pValue": 0.1796875,
+          "significant": false
         }
       }
     },
@@ -3596,18 +3596,18 @@
       "label": "All bullish",
       "holdingPeriod": "7d",
       "stat": {
-        "n": 12,
-        "winRate": 0.8333333333333334,
-        "meanReturnPct": 2.864585557357883,
-        "medianReturnPct": 3.8349848158222004,
-        "maxDrawdownPct": 8.372745539389776,
+        "n": 9,
+        "winRate": 0.8888888888888888,
+        "meanReturnPct": 3.4982061351610407,
+        "medianReturnPct": 3.544006747098802,
+        "maxDrawdownPct": 1.7963895844676974,
         "bullish": {
-          "truePositives": 10,
-          "falsePositives": 2,
-          "falseNegatives": 1476,
-          "trueNegatives": 1406,
-          "precision": 0.8333333333333334,
-          "recall": 0.006729475100942127
+          "truePositives": 8,
+          "falsePositives": 1,
+          "falseNegatives": 1478,
+          "trueNegatives": 1407,
+          "precision": 0.8888888888888888,
+          "recall": 0.005383580080753701
         },
         "bearish": {
           "truePositives": 0,
@@ -3618,10 +3618,10 @@
           "recall": 0
         },
         "significance": {
-          "n": 12,
-          "wins": 10,
-          "pValue": 0.038574218750000014,
-          "significant": true
+          "n": 9,
+          "wins": 8,
+          "pValue": 0.03906249999999999,
+          "significant": false
         }
       }
     }

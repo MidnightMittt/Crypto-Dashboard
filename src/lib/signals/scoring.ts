@@ -100,7 +100,31 @@ export function computeWeightedScore(
 
   if (totalWeight <= 0) return null;
 
-  const normalized = weightedSum / totalWeight;
+  /*
+   * SHRINKAGE TOWARD 50 BY EVIDENCE MASS.
+   *
+   * `weightedSum / totalWeight` is the direction the evidence points, on
+   * -1..1. It is a RATIO, so it reaches ±1 whenever the contributing metrics
+   * agree — even if there is only one of them and it is barely confident.
+   * That produced the reading this fixes: SPY's leadingDrivers category
+   * scored 100 off a single 45%-confidence metric, and the composite printed
+   * "STRONGLY BULLISH 92" directly above a sentence admitting the evidence
+   * was thin.
+   *
+   * Neutral metrics were already damping correctly — they add to
+   * `totalWeight` and contribute 0 to `weightedSum`. The missing piece was
+   * that CONFIDENCE only decided how metrics were weighted against each
+   * other, never how extreme their conclusion was allowed to be.
+   *
+   * `evidenceMass` is the confidence-weighted share of the available weight,
+   * arithmetically the mean confidence of the contributors. As a multiplier
+   * it says: a direction is only as extreme as the evidence behind it is
+   * good. Unanimous metrics at 100% confidence still reach 0 or 100; the
+   * same unanimity at 45% reaches 73. No magic constant, nothing clamped —
+   * the two terms are already the two things a score should depend on.
+   */
+  const evidenceMass = confidenceWeightTotal > 0 ? totalWeight / confidenceWeightTotal : 0;
+  const normalized = (weightedSum / totalWeight) * evidenceMass;
   const score = Math.round(50 + normalized * 50);
 
   return {
