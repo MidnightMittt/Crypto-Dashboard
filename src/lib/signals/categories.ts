@@ -109,7 +109,7 @@ const CATEGORY_MAP: Record<string, Category[]> = {
    * scored on a genuinely smaller evidence base rather than on silent zeros.
    */
   equityRelativeStrength: ["marketStructure"],
-  equityMarketStructure: ["marketStructure"],
+  marketStructure: ["marketStructure"], // shared module, both asset classes
   equityBreadth: ["marketStructure"],
   equityTrendQuality: ["marketStructure"],
   equityRiskAppetite: ["leadingDrivers"],

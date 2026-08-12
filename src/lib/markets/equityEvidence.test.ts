@@ -224,7 +224,7 @@ describe("buildEquityEvidence", () => {
     // returns null and the other five modules report. Absence here is the
     // module refusing to read a sequence that does not exist.
     expect(evidence).toHaveLength(5);
-    expect(evidence.map((e) => e.id)).not.toContain("equityMarketStructure");
+    expect(evidence.map((e) => e.id)).not.toContain("marketStructure");
   });
 });
 
