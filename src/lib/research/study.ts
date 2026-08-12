@@ -1,8 +1,16 @@
 import { CapabilityKey, SessionModel } from "./types";
 import { sessionPeriodKey } from "./session";
 import { FeatureVector } from "./features";
-import { detectableDifferenceFromSe, nonOverlappingByTime } from "./overlap";
-import { panelBootstrapProportion, panelDifference, PanelAdjustedProportion, PanelObservation } from "./panelBootstrap";
+import { nonOverlappingByTime } from "./overlap";
+import { PanelObservation } from "./panelBootstrap";
+import {
+  analyzePanel,
+  differenceOfEstimates,
+  detectableDifference,
+  MetricSpec,
+  PanelEstimate,
+  PANEL_STATISTICS,
+} from "./panelStatistics";
 import { benjaminiHochberg } from "./multipleTesting";
 
 /**
@@ -43,6 +51,13 @@ export interface StudyDeclaration {
   /** What must be true for the hypothesis to be wrong. Stating it prevents post-hoc reinterpretation of a null. */
   nullHypothesis: string;
   primaryMetric: string;
+  /**
+   * WHICH statistic the primary metric is, and what value represents no
+   * effect. Naming it here rather than inside the study is what lets the
+   * framework pick the estimator: the author states the endpoint, never the
+   * method. Binary and continuous endpoints are declared identically.
+   */
+  metric: MetricSpec;
   secondaryMetrics: string[];
   requiredCapabilities: CapabilityKey[];
   requiredFeatures: string[];
@@ -74,8 +89,15 @@ export interface StudyObservation {
   instrumentId: string;
   entryT: number;
   exitT: number;
-  /** The binary outcome the primary metric is a rate of. */
-  success: boolean;
+  /**
+   * The measured outcome. Real-valued, always: a win-rate study passes 0/1,
+   * an expectancy study passes the net return, an R-multiple study passes R.
+   *
+   * Deliberately not a boolean. A boolean would force a second, parallel
+   * path for continuous endpoints, and two paths that must agree are two
+   * paths that eventually will not.
+   */
+  value: number;
   /** Which arm this observation belongs to. Two distinct groups triggers a comparison; one group tests against `nullProportion`. */
   group: string;
   features: FeatureVector;
@@ -85,8 +107,6 @@ export interface StudyRunContext {
   /** Identifies the exact code that produced the result. Recorded, never inspected. */
   codeVersion: string;
   datasetVersion: string;
-  /** Null proportion for a single-group study. Ignored when two groups exist. */
-  nullProportion: number;
   /**
    * Session model per instrument, used to normalise observations onto a
    * common trading-session key before cross-sectional clustering.
@@ -106,7 +126,7 @@ export interface StudyRunContext {
 export interface WalkForwardFold {
   index: number;
   n: number;
-  successRate: number;
+  value: number;
 }
 
 export interface StudyStatistics {
@@ -115,7 +135,7 @@ export interface StudyStatistics {
   /** Independent observations after greedy non-overlap selection — the honest count, computed not assumed. */
   independentN: number;
   blockLength: number;
-  groups: Record<string, PanelAdjustedProportion>;
+  groups: Record<string, PanelEstimate>;
   /** Distinct time periods, and mean units observed per period. A width above 1.0 means cross-sectional correction was doing work. */
   periods: number;
   meanUnitsPerPeriod: number;
@@ -125,11 +145,12 @@ export interface StudyStatistics {
   primaryPValue: number;
   detectableEffect: number;
   observedEffect: number;
+  /** The metric evaluated per fold, in the declaration's own units — not a win rate unless that is the declared metric. */
   walkForward: WalkForwardFold[];
   /** Sign-consistency of the folds. A study whose effect changes direction across folds is not reproducible. */
   walkForwardConsistent: boolean;
-  inSample: { n: number; successRate: number } | null;
-  outOfSample: { n: number; successRate: number } | null;
+  inSample: { n: number; value: number } | null;
+  outOfSample: { n: number; value: number } | null;
   /** Do IS and OOS agree in direction relative to the null? */
   outOfSampleConsistent: boolean | null;
 }
@@ -190,8 +211,10 @@ function deriveBlockLength(observations: StudyObservation[], periodOf: (o: Study
   return Math.max(1, Math.min(periodTimes.length, Math.round(hold / spacing) || 1));
 }
 
-function rate(obs: StudyObservation[]): number {
-  return obs.length === 0 ? 0 : obs.filter((o) => o.success).length / obs.length;
+/** The declared statistic over a subset, in the metric's own units. Used for folds and IS/OOS so those agree with the headline by construction. */
+function statisticOver(obs: StudyObservation[], declaration: StudyDeclaration): number {
+  if (obs.length === 0) return declaration.metric.nullValue;
+  return PANEL_STATISTICS[declaration.metric.statistic](obs.map((o) => o.value));
 }
 
 /**
@@ -234,20 +257,23 @@ export function executeStudy(
    * session.ts for the rule.
    */
   const asPanel = (obs: StudyObservation[]): PanelObservation[] =>
-    obs.map((o) => ({ period: periodOf(o), unitId: o.instrumentId, value: o.success ? 1 : 0 }));
+    obs.map((o) => ({ period: periodOf(o), unitId: o.instrumentId, value: o.value }));
 
-  const groups: Record<string, PanelAdjustedProportion> = {};
+  const groups: Record<string, PanelEstimate> = {};
   for (const g of groupNames) {
-    const res = panelBootstrapProportion(
+    // analyzePanel is the ONLY analysis entry point. A study names a metric;
+    // the framework selects binary or continuous treatment and applies the
+    // same dependence corrections either way.
+    const res = analyzePanel(
       asPanel(chronological.filter((o) => o.group === g)),
+      declaration.metric,
       blockLength,
-      context.nullProportion,
       2000,
       declaration.seed
     );
     if (res) groups[g] = res;
   }
-  const wholePanel = panelBootstrapProportion(asPanel(chronological), blockLength, context.nullProportion, 1, declaration.seed);
+  const wholePanel = analyzePanel(asPanel(chronological), declaration.metric, blockLength, 1, declaration.seed);
 
   // 8. Confidence intervals arrive with the bootstrap above; the difference
   // is computed here for the two-group case.
@@ -259,32 +285,56 @@ export function executeStudy(
   if (groupNames.length >= 2 && groups[groupNames[0]] && groups[groupNames[1]]) {
     const a = groups[groupNames[0]];
     const b = groups[groupNames[1]];
-    const d = panelDifference(a, b);
-    difference = { value: d.difference, se: d.se, pValue: d.pValue, lower: d.lower, upper: d.upper };
+    const d = differenceOfEstimates(a, b);
+    difference = { value: d.difference, se: d.standardError, pValue: d.pValue, lower: d.lower, upper: d.upper };
     primaryPValue = d.pValue;
     observedEffect = Math.abs(d.difference);
-    detectableEffect = detectableDifferenceFromSe(d.se);
+    detectableEffect = detectableDifference(d.standardError);
   } else if (groupNames.length === 1 && groups[groupNames[0]]) {
     const only = groups[groupNames[0]];
     primaryPValue = only.pValue;
-    observedEffect = Math.abs(only.point - context.nullProportion);
-    detectableEffect = detectableDifferenceFromSe(only.bootstrapSe);
+    observedEffect = Math.abs(only.point - declaration.metric.nullValue);
+    detectableEffect = detectableDifference(only.standardError);
   }
 
   // 9. Walk-forward: sequential folds over the independent subsample, so a
   // fold cannot borrow information from its neighbours.
+  /*
+   * For a TWO-GROUP study the fold value must be the DIFFERENCE between
+   * arms, not the pooled statistic.
+   *
+   * Pooling is meaningless in a comparison: if group A runs at +0.8 and
+   * group B at -0.8, every pooled fold sits at ~0 regardless of how strong
+   * and stable the effect is, and "consistency" then measures nothing but
+   * rounding noise around the null. The binary path only appeared to work
+   * because a 90%/10% split pools to exactly 0.5, which happens to satisfy
+   * the boundary comparison. This was found by the continuous tests and is a
+   * genuine correction, not a test accommodation.
+   */
+  const twoGroup = groupNames.length >= 2;
+  const foldNull = twoGroup ? 0 : declaration.metric.nullValue;
+  const foldValue = (obs: StudyObservation[]): number => {
+    if (!twoGroup) return statisticOver(obs, declaration);
+    const a = obs.filter((o) => o.group === groupNames[0]);
+    const b = obs.filter((o) => o.group === groupNames[1]);
+    // A fold missing either arm cannot express a difference; excluded rather
+    // than silently scored against an absent comparator.
+    if (a.length === 0 || b.length === 0) return NaN;
+    return statisticOver(a, declaration) - statisticOver(b, declaration);
+  };
+
   const walkForward: WalkForwardFold[] = [];
   if (independent.length >= WALK_FORWARD_FOLDS * 5) {
     const size = Math.floor(independent.length / WALK_FORWARD_FOLDS);
     for (let i = 0; i < WALK_FORWARD_FOLDS; i++) {
       const slice = independent.slice(i * size, i === WALK_FORWARD_FOLDS - 1 ? independent.length : (i + 1) * size);
-      walkForward.push({ index: i + 1, n: slice.length, successRate: rate(slice) });
+      const value = foldValue(slice);
+      if (Number.isFinite(value)) walkForward.push({ index: i + 1, n: slice.length, value });
     }
   }
   const walkForwardConsistent =
     walkForward.length > 0 &&
-    (walkForward.every((f) => f.successRate >= context.nullProportion) ||
-      walkForward.every((f) => f.successRate <= context.nullProportion));
+    (walkForward.every((f) => f.value >= foldNull) || walkForward.every((f) => f.value <= foldNull));
 
   // 10. Chronological IS/OOS split of the independent subsample.
   let inSample: StudyStatistics["inSample"] = null;
@@ -294,11 +344,16 @@ export function executeStudy(
     const cut = Math.floor(independent.length * IS_FRACTION);
     const isPart = independent.slice(0, cut);
     const oosPart = independent.slice(cut);
-    inSample = { n: isPart.length, successRate: rate(isPart) };
-    outOfSample = { n: oosPart.length, successRate: rate(oosPart) };
+    // Same reasoning as the folds: a comparison study splits on the
+    // difference, a single-arm study on the statistic itself.
+    const isValue = foldValue(isPart);
+    const oosValue = foldValue(oosPart);
+    inSample = { n: isPart.length, value: Number.isFinite(isValue) ? isValue : foldNull };
+    outOfSample = { n: oosPart.length, value: Number.isFinite(oosValue) ? oosValue : foldNull };
     outOfSampleConsistent =
-      Math.sign(inSample.successRate - context.nullProportion) ===
-      Math.sign(outOfSample.successRate - context.nullProportion);
+      Number.isFinite(isValue) && Number.isFinite(oosValue)
+        ? Math.sign(inSample.value - foldNull) === Math.sign(outOfSample.value - foldNull)
+        : null;
   }
 
   const statistics: StudyStatistics = {
@@ -382,8 +437,8 @@ export function gradeEvidence(
 
   if (stats.detectableEffect > declaration.detectableEffectTarget) {
     reasons.push(
-      `Overlap invalidation: the smallest effect this sample could detect is ${(100 * stats.detectableEffect).toFixed(1)}pp, ` +
-        `larger than the ${(100 * declaration.detectableEffectTarget).toFixed(1)}pp target declared before running. Any null result here is uninformative.`
+      `Overlap invalidation: the smallest effect this sample could detect is ${stats.detectableEffect.toFixed(4)}, ` +
+        `larger than the ${declaration.detectableEffectTarget.toFixed(4)} target declared before running. Any null result here is uninformative.`
     );
     return {
       grade: "F",
@@ -400,7 +455,7 @@ export function gradeEvidence(
         `on ${stats.independentN} independent observations.`
     );
     reasons.push(
-      `The study WAS adequately powered (detectable ${(100 * stats.detectableEffect).toFixed(1)}pp vs observed ${(100 * stats.observedEffect).toFixed(1)}pp), so this is a genuine negative rather than an inconclusive one.`
+      `The study WAS adequately powered (detectable ${stats.detectableEffect.toFixed(4)} vs observed ${stats.observedEffect.toFixed(4)}), so this is a genuine negative rather than an inconclusive one.`
     );
     return {
       grade: "D",
@@ -410,7 +465,7 @@ export function gradeEvidence(
   }
 
   reasons.push(`Statistically significant after overlap correction: p = ${stats.primaryPValue.toFixed(4)}.`);
-  reasons.push(`Observed effect ${(100 * stats.observedEffect).toFixed(1)}pp against a detectable floor of ${(100 * stats.detectableEffect).toFixed(1)}pp.`);
+  reasons.push(`Observed effect ${stats.observedEffect.toFixed(4)} against a detectable floor of ${stats.detectableEffect.toFixed(4)}.`);
 
   // --- C: significant but not reproducible across time.
   const wfProblem = stats.walkForward.length > 0 && !stats.walkForwardConsistent;
@@ -418,12 +473,12 @@ export function gradeEvidence(
   if (wfProblem || oosProblem) {
     if (wfProblem) {
       reasons.push(
-        `Unstable walk-forward: fold success rates ${stats.walkForward.map((f) => (100 * f.successRate).toFixed(0) + "%").join(" / ")} do not agree in direction.`
+        `Unstable walk-forward: fold values ${stats.walkForward.map((f) => f.value.toFixed(3)).join(" / ")} do not agree in direction relative to the null.`
       );
     }
     if (oosProblem) {
       reasons.push(
-        `Inconsistent out-of-sample: in-sample ${(100 * (stats.inSample?.successRate ?? 0)).toFixed(1)}% versus out-of-sample ${(100 * (stats.outOfSample?.successRate ?? 0)).toFixed(1)}%, on opposite sides of the null.`
+        `Inconsistent out-of-sample: in-sample ${(stats.inSample?.value ?? 0).toFixed(3)} versus out-of-sample ${(stats.outOfSample?.value ?? 0).toFixed(3)}, on opposite sides of the null.`
       );
     }
     return {
@@ -444,7 +499,7 @@ export function gradeEvidence(
   // --- B vs A: practical magnitude.
   if (stats.observedEffect < declaration.detectableEffectTarget) {
     reasons.push(
-      `Effect is statistically real but below the declared practical threshold: ${(100 * stats.observedEffect).toFixed(1)}pp against a ${(100 * declaration.detectableEffectTarget).toFixed(1)}pp target.`
+      `Effect is statistically real but below the declared practical threshold: ${stats.observedEffect.toFixed(4)} against a ${declaration.detectableEffectTarget.toFixed(4)} target.`
     );
     return {
       grade: "B",

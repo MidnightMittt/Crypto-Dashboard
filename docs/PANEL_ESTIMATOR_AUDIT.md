@@ -117,12 +117,19 @@ caught by the test suite during implementation: the original fallback was
 `n`, which claimed *maximum* information from a sample exhibiting none. The
 current fallback is honest but coarse.
 
-### L8 — Only proportions are supported. (Medium — inherited)
+### L8 — Continuous outcomes — CLOSED (was Medium)
 
-`panelBootstrapProportion` handles binary outcomes.
-`panelBlockBootstrap` already returns a distribution of means and would
-support continuous outcomes, but no continuous wrapper exists. A study of
-expectancy rather than win rate cannot yet use the panel path.
+Resolved by `panelStatistics.ts`. Mean, median, profit factor, payoff ratio,
+max drawdown and win rate all run through one estimator; expectancy, R
+multiple, MAE, MFE and holding time are means of their respective series and
+need no separate code. `analyzePanel` is the single entry point and no study
+calls a bootstrap directly.
+
+Validated: coverage simulation at 200 replications recovers the nominal 95%
+rate on IID normal data and holds above 85% under lognormal skew; heavy tails
+(ratio-of-normals, undefined variance) produce finite intervals; the win-rate
+path through the generalised engine reproduces `panelBootstrapProportion` to
+three decimal places on standard error.
 
 ---
 
@@ -204,3 +211,69 @@ how the migration surfaced every affected call site.
   `InMemoryDataSource` necessarily has the complete history in hand. That is
   unavoidable — someone must load the data — but it means enforcement begins
   at the source boundary, not before it.
+
+
+---
+
+## Continuous inference (Phase 9 completion)
+
+### Assumptions now in force
+
+1. **`n_eff = n·(SE_iid/SE_panel)²` is the general effective-size definition.**
+   For the mean of a 0/1 series this reduces algebraically to the previous
+   `p(1-p)/SE²`, so it changes no number the framework already produced.
+   Verified numerically, not just asserted.
+2. **BCa intervals** for every statistic, with a **block jackknife** (leave
+   out one whole period) for the acceleration term. Percentile is the
+   documented fallback when acceleration is undefined.
+3. **The difference of two estimates uses a normal approximation.** Each
+   component interval is BCa, but the difference is not. A fully
+   non-parametric interval for a difference of two independent bootstraps
+   requires a joint resampling scheme the disjoint samples do not share. The
+   approximation is defensible — a difference of two independent statistics
+   is closer to normal than either component — but **it is an assumption and
+   the one place normality re-enters.**
+
+### New limitations
+
+**L9 — Drawdown is order-dependent and the bootstrap reorders. (Medium)**
+`maxDrawdown` is a path statistic. Block resampling preserves ordering
+*within* a block but concatenates blocks in random order, so a bootstrapped
+drawdown distribution reflects "drawdown under reshuffled block order", not
+the realised path. The point estimate is exact; the interval answers a subtly
+different question. **Do not read a drawdown CI as the range of drawdowns
+this strategy could have produced.**
+
+**L10 — Ratio statistics can be non-finite. (Low-Medium)**
+Profit factor is Infinity when a resample contains no losses. Non-finite
+draws are excluded from moments, which is correct but means the effective
+iteration count silently drops for near-degenerate samples. A sample where
+most resamples are infinite will report a tight interval over the few finite
+ones — misleadingly tight.
+
+**L11 — Effective N for non-mean statistics rests on an IID reference.**
+The variance-ratio definition needs an IID bootstrap of the same statistic.
+For a median or a ratio, that reference is itself a bootstrap estimate with
+its own error, so `effectiveN` is noisier for those than for a mean. It
+remains directionally correct but should not be read to two significant
+figures.
+
+**L12 — The p-value has a resolution floor of 1/iterations.** At the default
+2,000 draws nothing below p≈0.0005 is distinguishable. Reported values are
+floored rather than shown as 0, but a study needing finer resolution must
+raise the iteration count.
+
+### A design flaw found while building this
+
+Walk-forward and IS/OOS previously scored the **pooled** statistic in a
+two-group study. If arm A runs at +0.8 and arm B at −0.8, every pooled fold
+sits at ≈0 regardless of how strong or stable the effect is, so
+"consistency" measured nothing but rounding noise around the null. The binary
+path only appeared to work because a 90%/10% split pools to exactly 0.5 and
+satisfied the boundary comparison by luck.
+
+Folds now compare arms — the per-fold **difference**, against a null of zero.
+This was surfaced by the continuous tests and is a correction to previously
+reported grades in principle, though no shipped study used the two-group
+study framework (the Phase 6-7 studies predate it and used the scripts
+directly).

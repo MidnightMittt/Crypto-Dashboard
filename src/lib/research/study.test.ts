@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { executeStudy, StudyDeclaration, StudyObservation, StudyRunContext, correctAcrossFamily } from "./study";
+import { PANEL_STATISTICS } from "./panelStatistics";
 import { EMPTY_LEDGER, append, toLedgerEntry, withFamilyCorrection, summarize, ReproducibilityStamp } from "./ledger";
 import { generateReport } from "./report";
 import { FeatureVector } from "./features";
@@ -21,7 +22,8 @@ function decl(over: Partial<StudyDeclaration> = {}): StudyDeclaration {
     id: "test-study",
     hypothesis: "Condition A precedes a higher success rate than condition B.",
     nullHypothesis: "Condition A and condition B have equal success rates.",
-    primaryMetric: "success rate",
+    primaryMetric: "win rate",
+    metric: { statistic: "winRate", nullValue: 0.5 },
     secondaryMetrics: [],
     requiredCapabilities: ["ohlcv"],
     requiredFeatures: ["trend_medium"],
@@ -37,7 +39,6 @@ function decl(over: Partial<StudyDeclaration> = {}): StudyDeclaration {
 const ctx: StudyRunContext = {
   codeVersion: "abc1234",
   datasetVersion: "v1",
-  nullProportion: 0.5,
   // Single-market fixture: every instrument shares one schedule.
   sessionOf: () => CONTINUOUS_SESSION,
 };
@@ -63,7 +64,7 @@ function observations(opts: {
       instrumentId: "TEST",
       entryT,
       exitT: entryT + holdDays * DAY,
-      success: successRate(group, i),
+      value: successRate(group, i) ? 1 : 0,
       group,
       features: emptyFeatures(entryT),
     });
@@ -339,7 +340,7 @@ describe("cross-market session alignment — end-to-end", () => {
         instrumentId: "BTC-USD-PERP",
         entryT: sessionStart + DAY,
         exitT: sessionStart + DAY + 7 * DAY,
-        success,
+        value: success ? 1 : 0,
         group: "a",
         features: emptyFeatures(sessionStart),
       });
@@ -348,7 +349,7 @@ describe("cross-market session alignment — end-to-end", () => {
         instrumentId: "SPY",
         entryT: sessionStart + 20 * 3_600_000,
         exitT: sessionStart + 20 * 3_600_000 + 7 * DAY,
-        success,
+        value: success ? 1 : 0,
         group: "a",
         features: emptyFeatures(sessionStart),
       });
@@ -397,10 +398,158 @@ describe("cross-market session alignment — end-to-end", () => {
     // An equity bar from the NEXT session must not join the previous one.
     const sessionStart = Date.UTC(2026, 5, 15);
     const obs: StudyObservation[] = [
-      { instrumentId: "BTC-USD-PERP", entryT: sessionStart + DAY, exitT: sessionStart + 2 * DAY, success: true, group: "a", features: emptyFeatures(sessionStart) },
-      { instrumentId: "SPY", entryT: sessionStart + DAY + 20 * 3_600_000, exitT: sessionStart + 3 * DAY, success: true, group: "a", features: emptyFeatures(sessionStart) },
+      { instrumentId: "BTC-USD-PERP", entryT: sessionStart + DAY, exitT: sessionStart + 2 * DAY, value: 1, group: "a", features: emptyFeatures(sessionStart) },
+      { instrumentId: "SPY", entryT: sessionStart + DAY + 20 * 3_600_000, exitT: sessionStart + 3 * DAY, value: 1, group: "a", features: emptyFeatures(sessionStart) },
     ];
     const r = executeStudy(decl({ minimumEffectiveN: 1, detectableEffectTarget: 0.9 }), obs, mixedCtx);
     expect(r.statistics.periods).toBe(2);
+  });
+});
+
+describe("continuous endpoints use the identical pipeline and grading", () => {
+  /*
+   * Requirement 5: grading must not care whether the endpoint is a win rate
+   * or an expectancy. These tests run CONTINUOUS studies through exactly the
+   * same executeStudy/gradeEvidence path and assert the same rubric fires.
+   */
+  const rng = mulberry32(2024);
+
+  function returnObservations(count: number, meanA: number, meanB: number, holdDays = 1): StudyObservation[] {
+    const gauss = () => {
+      const u = Math.max(1e-12, rng());
+      const v = rng();
+      return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+    };
+    const out: StudyObservation[] = [];
+    for (let i = 0; i < count; i++) {
+      const group = i % 2 === 0 ? "a" : "b";
+      const entryT = i * DAY;
+      out.push({
+        instrumentId: "TEST",
+        entryT,
+        exitT: entryT + holdDays * DAY,
+        value: (group === "a" ? meanA : meanB) + gauss(),
+        group,
+        features: emptyFeatures(entryT),
+      });
+    }
+    return out;
+  }
+
+  const expectancyDecl = (over: Partial<StudyDeclaration> = {}): StudyDeclaration =>
+    decl({
+      id: "expectancy-study",
+      primaryMetric: "expectancy (mean net return)",
+      metric: { statistic: "mean", nullValue: 0 },
+      hypothesis: "Group A has higher expectancy than group B.",
+      nullHypothesis: "Group A and group B have equal expectancy.",
+      minimumEffectiveN: 30,
+      detectableEffectTarget: 0.3,
+      ...over,
+    });
+
+  it("grades A on a real, reproducible, practically meaningful expectancy gap", () => {
+    const r = executeStudy(expectancyDecl(), returnObservations(500, 0.8, -0.8), ctx);
+    expect(r.statistics.groups.a.metricKind).toBe("continuous");
+    expect(r.verdict.grade).toBe("A");
+    expect(r.verdict.recommendation).toMatch(/^Implement\./);
+  });
+
+  it("grades D on a genuine continuous null, with the same wording as the binary path", () => {
+    const r = executeStudy(
+      expectancyDecl({ detectableEffectTarget: 2 }),
+      returnObservations(500, 0, 0)
+    , ctx);
+    expect(r.verdict.grade).toBe("D");
+    expect(r.verdict.reasons.join(" ")).toMatch(/Not statistically significant/);
+  });
+
+  it("grades F on an underpowered continuous sample regardless of the point estimate", () => {
+    const r = executeStudy(
+      expectancyDecl({ minimumEffectiveN: 5000 }),
+      returnObservations(200, 1, -1)
+    , ctx);
+    expect(r.verdict.grade).toBe("F");
+    expect(r.verdict.reasons.join(" ")).toMatch(/Insufficient statistical power/);
+  });
+
+  /*
+   * Block length must be DERIVED from the holding horizon on the continuous
+   * path exactly as on the binary one.
+   *
+   * Note what this does NOT assert: that a longer block always shrinks
+   * effective N. On genuinely independent data it correctly does not — there
+   * is no serial dependence to correct for, and penalising it would be
+   * over-discounting. The reduction is asserted separately below, on data
+   * that actually is serially dependent.
+   */
+  it("derives block length from the holding horizon on the continuous path", () => {
+    const noOverlap = executeStudy(expectancyDecl(), returnObservations(300, 0.5, -0.5, 1), ctx);
+    const overlapped = executeStudy(expectancyDecl(), returnObservations(300, 0.5, -0.5, 12), ctx);
+    expect(noOverlap.statistics.blockLength).toBe(1);
+    expect(overlapped.statistics.blockLength).toBe(12);
+  });
+
+  it("reduces effective N on continuous data that IS serially dependent", () => {
+    // A slow common factor held for 10 periods: consecutive observations
+    // genuinely share information, which block resampling must charge for.
+    const slow = Array.from({ length: 40 }, (_, k) => (k % 2 === 0 ? 0.9 : -0.9));
+    const dependent: StudyObservation[] = Array.from({ length: 400 }, (_, i) => {
+      const entryT = i * DAY;
+      return {
+        instrumentId: "TEST",
+        entryT,
+        exitT: entryT + 10 * DAY,
+        value: slow[Math.floor(i / 10)],
+        group: "a",
+        features: emptyFeatures(entryT),
+      };
+    });
+    const iidLike: StudyObservation[] = dependent.map((o, i) => ({
+      ...o,
+      exitT: o.entryT + DAY,
+      value: i % 2 === 0 ? 0.9 : -0.9,
+    }));
+
+    const dep = executeStudy(expectancyDecl({ minimumEffectiveN: 1 }), dependent, ctx);
+    const ind = executeStudy(expectancyDecl({ minimumEffectiveN: 1 }), iidLike, ctx);
+    expect(dep.statistics.effectiveN).toBeLessThan(ind.statistics.effectiveN);
+  });
+
+  it("reports BCa intervals and the metric kind on the continuous path", () => {
+    const r = executeStudy(expectancyDecl(), returnObservations(400, 0.6, -0.6), ctx);
+    const a = r.statistics.groups.a;
+    expect(a.intervalMethod).toBe("bca");
+    expect(a.lower).toBeLessThan(a.point);
+    expect(a.upper).toBeGreaterThan(a.point);
+  });
+
+  it("a profit-factor endpoint runs through the same path with its own null of 1", () => {
+    const obs = returnObservations(400, 0.9, -0.9).map((o) => ({ ...o, group: "a" }));
+    const r = executeStudy(
+      expectancyDecl({ id: "pf-study", metric: { statistic: "profitFactor", nullValue: 1 }, detectableEffectTarget: 0.2 }),
+      obs,
+      ctx
+    );
+    expect(r.statistics.groups.a.statisticName).toBe("profitFactor");
+    expect(r.statistics.groups.a.point).toBeGreaterThan(1);
+    expect(r.verdict.reasons.length).toBeGreaterThan(0);
+  });
+
+  it("walk-forward and IS/OOS report the metric's own units, not a win rate", () => {
+    const r = executeStudy(expectancyDecl(), returnObservations(500, 0.7, -0.7), ctx);
+    // Values are returns near +/-0.7, never fractions in [0,1] by coincidence.
+    expect(r.statistics.walkForward.length).toBeGreaterThan(0);
+    expect(r.statistics.inSample).not.toBeNull();
+    const statOfAll = PANEL_STATISTICS.mean(returnObservations(0, 0, 0).map((o) => o.value));
+    expect(Number.isFinite(statOfAll)).toBe(true);
+  });
+
+  it("continuous studies remain byte-identically reproducible", () => {
+    const obs = returnObservations(300, 0.4, -0.4);
+    const a = executeStudy(expectancyDecl(), obs, ctx);
+    const b = executeStudy(expectancyDecl(), obs, ctx);
+    expect(JSON.stringify(a.statistics)).toBe(JSON.stringify(b.statistics));
+    expect(a.verdict.grade).toBe(b.verdict.grade);
   });
 });

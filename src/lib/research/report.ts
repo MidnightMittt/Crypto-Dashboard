@@ -63,7 +63,7 @@ function deriveNextResearch(result: StudyResult, entry: LedgerEntry): string[] {
   if (s.effectiveN < result.declaration.minimumEffectiveN || s.detectableEffect > result.declaration.detectableEffectTarget) {
     const needed = Math.ceil(2 * 0.5 * (2.802 / result.declaration.detectableEffectTarget) ** 2);
     out.push(
-      `Increase independent observations to roughly ${needed} before retesting — that is what the declared ${pp(result.declaration.detectableEffectTarget)} target requires. Widening the asset universe across low-correlation classes achieves this far faster than lengthening the crypto sample.`
+      `Increase independent observations to roughly ${needed} before retesting — that is what the declared ${result.declaration.detectableEffectTarget} target requires. Widening the asset universe across low-correlation classes achieves this far faster than lengthening the crypto sample.`
     );
   }
   if (s.walkForward.length > 0 && !s.walkForwardConsistent) {
@@ -99,7 +99,7 @@ export function generateReport(result: StudyResult, entry: LedgerEntry, ledger: 
   say(`**Primary metric.** ${d.primaryMetric}`);
   if (d.secondaryMetrics.length > 0) say(`**Secondary metrics.** ${d.secondaryMetrics.join(", ")}`);
   say("");
-  say(`**Declared before running:** minimum effective N ${d.minimumEffectiveN}, target detectable effect ${pp(d.detectableEffectTarget)}.`);
+  say(`**Declared before running:** metric \`${d.metric.statistic}\` against a null of ${d.metric.nullValue}, minimum effective N ${d.minimumEffectiveN}, minimum practically meaningful effect ${d.detectableEffectTarget}.`);
   say("");
   say(`**Success criteria.** ${d.successCriteria}`);
   say("");
@@ -123,17 +123,17 @@ export function generateReport(result: StudyResult, entry: LedgerEntry, ledger: 
 
   say("## Result");
   say("");
-  say("| Group | N | Success rate | 95% CI |");
-  say("|---|---|---|---|");
+  say("| Group | N | Estimate | 95% CI | Method |");
+  say("|---|---|---|---|---|");
   for (const [name, g] of Object.entries(s.groups)) {
-    say(`| ${name} | ${g.n} | ${pct(g.point)} | ${pct(g.lower)}–${pct(g.upper)} |`);
+    say(`| ${name} | ${g.n} | ${g.point.toFixed(4)} | ${g.lower.toFixed(4)} to ${g.upper.toFixed(4)} | ${g.intervalMethod.toUpperCase()} |`);
   }
   say("");
   if (s.difference) {
-    say(`**Difference:** ${pp(s.difference.value)} (95% CI ${pp(s.difference.lower)} to ${pp(s.difference.upper)}).`);
+    say(`**Difference:** ${s.difference.value.toFixed(4)} (95% CI ${s.difference.lower.toFixed(4)} to ${s.difference.upper.toFixed(4)}).`);
     say("");
   }
-  say(`**Observed effect** ${pp(s.observedEffect)} against a **detectable floor** of ${pp(s.detectableEffect)}.`);
+  say(`**Observed effect** ${s.observedEffect.toFixed(4)} against a **detectable floor** of ${s.detectableEffect.toFixed(4)} (metric: ${d.metric.statistic}, null ${d.metric.nullValue}).`);
   say("");
   say(`**Overlap-corrected p-value:** ${s.primaryPValue.toFixed(4)}.`);
   if (entry.familyCorrectedSignificant !== null) {
@@ -150,9 +150,9 @@ export function generateReport(result: StudyResult, entry: LedgerEntry, ledger: 
   if (s.walkForward.length === 0) {
     say("Not evaluated — insufficient independent observations to form folds.");
   } else {
-    say("| Fold | N | Success rate |");
+    say("| Fold | N | Metric value |");
     say("|---|---|---|");
-    for (const f of s.walkForward) say(`| ${f.index} | ${f.n} | ${pct(f.successRate)} |`);
+    for (const f of s.walkForward) say(`| ${f.index} | ${f.n} | ${f.value.toFixed(4)} |`);
     say("");
     say(s.walkForwardConsistent ? "Folds agree in direction." : "**Folds disagree in direction** — the effect is not temporally stable.");
   }
@@ -163,9 +163,9 @@ export function generateReport(result: StudyResult, entry: LedgerEntry, ledger: 
   if (!s.inSample || !s.outOfSample) {
     say("Not evaluated — insufficient independent observations to split.");
   } else {
-    say(`In-sample (first 70%): ${pct(s.inSample.successRate)} on N=${s.inSample.n}.`);
+    say(`In-sample (first 70%): ${s.inSample.value.toFixed(4)} on N=${s.inSample.n}.`);
     say("");
-    say(`Out-of-sample (last 30%): ${pct(s.outOfSample.successRate)} on N=${s.outOfSample.n}.`);
+    say(`Out-of-sample (last 30%): ${s.outOfSample.value.toFixed(4)} on N=${s.outOfSample.n}.`);
     say("");
     say(s.outOfSampleConsistent ? "Consistent in direction." : "**Inconsistent in direction.**");
   }
