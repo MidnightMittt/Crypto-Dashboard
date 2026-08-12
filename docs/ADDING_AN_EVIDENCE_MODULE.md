@@ -4,18 +4,21 @@ The integration pattern for every future evidence source — earnings,
 valuation, macro, options flow, insider buying, analyst revisions, on-chain.
 
 Reference implementation: `evaluateMarketStructure` in
-`src/lib/markets/equityEvidence.ts`. Design rationale:
-`docs/EVIDENCE_MODULE_CONTRACT.md`.
+`src/lib/signals/marketStructureEvidence.ts` — moved out of
+`markets/equityEvidence.ts` once crypto adopted it, because the reference for
+an asset-agnostic contract should not be filed under one asset class. Design
+rationale: `docs/EVIDENCE_MODULE_CONTRACT.md`.
 
 ---
 
 ## The whole pattern
 
 ```
-extract  →  emit MetricVerdict  →  register the id  →  done
+extract → emit MetricVerdict → register the id → declare the hypothesis → test
 ```
 
-Four steps. Step 3 is the one that silently breaks everything if skipped.
+Five steps. Step 3 silently breaks everything if skipped; step 4 used to
+silently break the reporting, and now fails loudly instead.
 
 ---
 
@@ -65,7 +68,7 @@ engine score an equity on six modules and a crypto asset on eighteen.
 
 If your measure has no established band, derive it from **the measure's own
 trailing distribution** rather than picking a round number. See
-`percentileOf` in `equityEvidence.ts`. "Unusual for this series" is a claim
+`percentileOf` in `src/lib/markets/equityEvidence.ts`. "Unusual for this series" is a claim
 the data supports; "above 3%" usually is not.
 
 Watch the tie case: a value equal to its whole distribution must land at the
@@ -94,7 +97,40 @@ modules were right and the engine was right; the registration was missing.
 Optionally add a weight to `METRIC_WEIGHTS` in `scoring.ts`. Omitting it gives
 the 0.05 default, which is a reasonable starting point for a new source.
 
-## 4. Test against constructed fixtures
+## 4. Declare the hypothesis — the report will fail without it
+
+```ts
+// src/lib/signals/hypothesis.ts
+hypothesis({
+  id: "earningsSurprise",          // same id as step 3
+  label: "Earnings Surprise",
+  bullishCondition: "...",         // read back from the module, never restated
+  bearishCondition: "...",
+  neutralCondition: "...",
+  hasHistoricalSource: true,       // false if the replay has no data for it
+}),
+```
+
+The per-metric report iterates `SIGNAL_HYPOTHESES`, not the replay output.
+That is deliberate — a metric earns a row by having a stated, falsifiable
+contract, not merely by existing — but it means a metric the engine really
+scores can be **absent from the entire report while every number in it stays
+correct**.
+
+That happened. `marketStructure` was promoted to a first-class crypto metric,
+changed the trade count, and never appeared in `backtestMetricStats.json`,
+which is read as a census of signal performance. Nothing failed; the file just
+quietly stopped being a census while still reading like one.
+
+`scripts/backtest/report.ts` now diffs the replay's metric ids against the
+declared ones and **exits non-zero** on any it cannot explain. The fix for
+that failure is always to write the hypothesis. Never to skip the check.
+
+Write the conditions by reading them back from the module's own constants
+where you can — the file's whole purpose is that it cannot silently drift
+from the logic it describes.
+
+## 5. Test against constructed fixtures
 
 Hand-reason each expected value before asserting it. The house standard is
 `metrics.test.ts` and `equityEvidence.test.ts`.
@@ -163,8 +199,9 @@ export function evaluateEarningsSurprise(
   };
 }
 
-// 3. register — src/lib/signals/categories.ts
+// 3. register  — src/lib/signals/categories.ts
 //    earningsSurprise: ["leadingDrivers"],
+// 4. declare   — src/lib/signals/hypothesis.ts, or the report exits non-zero
 ```
 
 Nothing else. No engine change, no scoring change, no UI change — the metric
