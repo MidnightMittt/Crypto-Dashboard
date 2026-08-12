@@ -32,6 +32,8 @@ function composite(asset: string, score: number, confidence: number, verdict: Ve
     setup: null,
     reasonsFor: [],
     reasonsAgainst: [],
+    changes: [],
+    isFirstReading: false,
   };
 }
 

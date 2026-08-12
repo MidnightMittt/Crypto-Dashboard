@@ -9,6 +9,7 @@ import {
   ACTIONABLE_OPPORTUNITY,
 } from "@/lib/signals/opportunityRanking";
 import { TopOpportunity } from "@/components/scanner/TopOpportunity";
+import { WhatChanged } from "@/components/scanner/WhatChanged";
 import { getAssetComposites } from "@/lib/exchanges/assetComposites";
 import { MarketBias } from "@/lib/signals/types";
 import { TradePlan } from "@/lib/signals/tradePlan";
@@ -111,6 +112,14 @@ export default async function ScannerPage() {
     setup: equitySetup(d),
     reasonsFor: reasonsOf(d.bias, "for"),
     reasonsAgainst: reasonsOf(d.bias, "against"),
+    /*
+     * Equity rows are rebuilt from a daily-close snapshot with no stored
+     * predecessor, so `bias.changes` is structurally empty for them. Marked
+     * as a first reading rather than shown as "nothing moved" — the two are
+     * different claims and only one is true.
+     */
+    changes: [],
+    isFirstReading: true,
   }));
 
   const ranked = rankOpportunities([...cryptoRows, ...equityRows]);
@@ -168,6 +177,8 @@ export default async function ScannerPage() {
             />
           </div>
         )}
+
+        {ranked.length > 0 && <WhatChanged rows={ranked} />}
 
         <Card>
           <CardContent className="py-5">

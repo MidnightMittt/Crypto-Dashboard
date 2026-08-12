@@ -1,5 +1,5 @@
 import { AssetSymbol } from "@/types/market";
-import { Verdict, RiskLevel } from "./types";
+import { Verdict, RiskLevel, BiasChange } from "./types";
 import { SetupSummary } from "./opportunityRanking";
 
 /**
@@ -45,6 +45,17 @@ export interface AssetComposite {
    */
   reasonsFor: string[];
   reasonsAgainst: string[];
+  /**
+   * Which individual metrics FLIPPED since the last stored reading, straight
+   * off `bias.changes`. Already computed on every poll and never surfaced
+   * outside the single-asset page.
+   *
+   * This is the one thing a scanner can show that no chart can: not where a
+   * market is, but what the engine changed its mind about.
+   */
+  changes: BiasChange[];
+  /** True when there is no prior snapshot to diff against — an empty `changes` then means "unknown", not "nothing moved". */
+  isFirstReading: boolean;
 }
 
 /**

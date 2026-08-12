@@ -75,6 +75,8 @@ export interface ScannableMarket {
   /** The engine's own top explanations, agreeing and opposing. Verbatim. */
   reasonsFor?: string[];
   reasonsAgainst?: string[];
+  changes?: Array<{ label: string; from: string; to: string }>;
+  isFirstReading?: boolean;
 }
 
 export interface RankedOpportunity {
@@ -86,6 +88,8 @@ export interface RankedOpportunity {
   setup?: SetupSummary | null;
   reasonsFor?: string[];
   reasonsAgainst?: string[];
+  changes?: Array<{ label: string; from: string; to: string }>;
+  isFirstReading?: boolean;
   /** 0-100, the engine's directional score. Passed through untouched. */
   score: number;
   verdict: string;
@@ -126,6 +130,8 @@ export function rankOpportunities(composites: ScannableMarket[]): RankedOpportun
         setup: c.setup,
         reasonsFor: c.reasonsFor,
         reasonsAgainst: c.reasonsAgainst,
+        changes: c.changes,
+        isFirstReading: c.isFirstReading,
         score: c.score,
         verdict: c.verdict,
         confidence: c.confidence,

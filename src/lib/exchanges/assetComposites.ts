@@ -56,6 +56,8 @@ async function getAssetComposite(
         setup: summariseSetup(agg),
         reasonsFor: sideReasons(agg.marketBias, "for"),
         reasonsAgainst: sideReasons(agg.marketBias, "against"),
+        changes: agg.marketBias.changes,
+        isFirstReading: agg.marketBias.isFirstReading,
       };
       return composite;
     },
