@@ -1,5 +1,5 @@
 import { CapabilityKey, ResearchContext, Bar, Timeframe } from "./types";
-import { Resolution } from "./execution";
+import { TradeResolution } from "./tradeExecution";
 
 /**
  * FEATURE VECTORS — the shift from "does indicator X work?" to "which
@@ -98,7 +98,7 @@ export interface TradeResearchRecord {
   entryT: number;
   entryPrice: number;
   features: FeatureVector;
-  outcome: Resolution;
+  outcome: TradeResolution;
 }
 
 // ── Universal feature library ───────────────────────────────────────────

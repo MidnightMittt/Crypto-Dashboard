@@ -19,7 +19,8 @@ import {
 import { buildTradeRecommendation } from "../../src/lib/signals/tradeRecommendation";
 import { buildEntryQuality } from "../../src/lib/signals/entryQuality";
 import { technicalAgreement } from "../../src/lib/sentiment/technicals";
-import { resolveTrade, HourBar } from "./execution";
+import { resolveTrade, HourBar } from "../../src/lib/research/tradeExecution";
+import { CONTINUOUS_SESSION } from "../../src/lib/research/types";
 import {
   applyDailyClose,
   applyTick,
@@ -876,7 +877,16 @@ export function replayAsset(
           entryT: t,
         },
         futuresKlines as HourBar[],
-        MAX_HOLD_MS
+        MAX_HOLD_MS,
+        /*
+         * This replay covers BTC and ETH perpetuals, which trade
+         * continuously and therefore cannot gap: stops resolve intrabar,
+         * exactly as they always have. Declared explicitly rather than
+         * defaulted so that pointing this replay at a session market is a
+         * deliberate act with a visible one-line change, not a silent
+         * inheritance of crypto semantics.
+         */
+        CONTINUOUS_SESSION
       );
 
     const costed = resolution ? applyCosts(resolution.grossReturnPct, side, t, resolution.exitT, fundingRate, DEFAULT_COST_CONFIG) : null;
