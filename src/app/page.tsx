@@ -3,7 +3,7 @@
 import { AlertTriangle } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { AiMarketSummary } from "@/components/dashboard/AiMarketSummary";
-import { AssetCompositeSection } from "@/components/dashboard/AssetCompositeSection";
+import { OpportunityScanner } from "@/components/dashboard/OpportunityScanner";
 import { CategoryCard } from "@/components/dashboard/CategoryCard";
 import { LiquidityMapCard } from "@/components/dashboard/LiquidityMapCard";
 import { SignalBreakdown } from "@/components/dashboard/SignalBreakdown";
@@ -132,29 +132,12 @@ export default function DashboardPage() {
             </div>
 
             {/*
-              ── EXECUTIVE SUMMARY ─────────────────────────────────────────
-              The single answer to "what's the highest-probability direction
-              right now, and why, and what would change that" — thesis,
-              confidence, top reasons, technical confirmation, biggest
-              opportunity/risk, invalidation, and (expandable) today's
-              trajectory. Everything below either feeds this or audits it.
+              The BTC/ETH/Altcoins composite strip used to sit here. The
+              scanner above supersedes it: it says the same thing for all
+              ten tracked assets instead of three, ranks them, and links to
+              each. Keeping both would have been two widgets answering one
+              question, which is the duplication this phase exists to remove.
             */}
-            <AiMarketSummary
-              aggregate={aggregate}
-              bias={aggregate.marketBias}
-              thesis={aggregate.marketThesis}
-              technicals={aggregate.technicals}
-              technicals4h={aggregate.technicals4h}
-              timeline={aggregate.biasTimeline}
-            />
-
-            {/*
-              Entry Quality and the whole execution plan now live INSIDE the
-              decision surface above, directly under the action — they used
-              to be a separate card here, which split one trade across two
-              places. Only the cross-asset composites remain at this level.
-            */}
-            <AssetCompositeSection data={assetComposites} selectedAsset={asset} />
 
             {/*
               ── LEADING DRIVERS / MARKET STRUCTURE / POSITIONING / RISK ────
