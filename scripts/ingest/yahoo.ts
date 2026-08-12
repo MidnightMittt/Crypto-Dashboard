@@ -47,13 +47,38 @@ interface YahooResponse {
  */
 const FALLBACK_SESSION_MS = 6.5 * 3_600_000;
 
+/**
+ * Retries transient failures; never retries a validation refusal.
+ *
+ * Measured need, not defensive habit: a 112-instrument run saw 6 transient
+ * fetch failures that all succeeded on immediate retry — at that base rate an
+ * unretried daily cron would be red most days, and a pipeline that is always
+ * red alerts nobody. Three attempts with a growing pause; the validator
+ * downstream still refuses bad DATA loudly, because a refusal is a finding
+ * and a network blip is not.
+ */
+async function fetchWithRetry(url: string, symbol: string): Promise<Response> {
+  const delays = [0, 2_000, 8_000];
+  let lastErr: unknown;
+  for (const delay of delays) {
+    if (delay > 0) await new Promise((r) => setTimeout(r, delay));
+    try {
+      const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+      if (res.ok) return res;
+      lastErr = new Error(`[yahoo] ${symbol}: HTTP ${res.status}`);
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  throw lastErr;
+}
+
 async function fetchDaily(config: InstrumentConfig): Promise<Bar[]> {
   const url =
     `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(config.source.symbol)}` +
     `?period1=0&period2=${Math.floor(Date.now() / 1000)}&interval=1d&events=div%2Csplit`;
 
-  const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
-  if (!res.ok) throw new Error(`[yahoo] ${config.source.symbol}: HTTP ${res.status}`);
+  const res = await fetchWithRetry(url, config.source.symbol);
   const json = (await res.json()) as YahooResponse;
 
   const result = json.chart.result?.[0];
@@ -149,7 +174,19 @@ async function main() {
   const industry = industryUniverse()
     .filter((sym) => !research.some((c) => c.meta.displaySymbol === sym))
     .map((sym) => usListing(sym, sym));
-  const configs = [...research, ...industry];
+
+  /*
+   * --only-us: the DAILY pipeline's scope. The snapshots (intelligence,
+   * markets, history ledger) read exclusively .US series; the FX pairs are
+   * research-universe members with long-standing validation findings that are
+   * a research problem, not a daily-freshness problem. Without this filter a
+   * known-bad FX series would fail the cron every day, and a pipeline that is
+   * always red alerts nobody. The full run (no flag) remains the default for
+   * research work, refusals and all.
+   */
+  const onlyUs = process.argv.includes("--only-us");
+  const all = [...research, ...industry];
+  const configs = onlyUs ? all.filter((c) => c.meta.id.endsWith(".US")) : all;
   console.log(`[ingest] ${research.length} research + ${industry.length} industry-layer instruments from yahoo\n`);
 
   let failures = 0;

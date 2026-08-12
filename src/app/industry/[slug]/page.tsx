@@ -8,6 +8,7 @@ import {
 } from "@/lib/markets/industryIntelligence";
 import { ROTATION_STATE_LABEL, ROTATION_STATE_MEANING, RotationState } from "@/lib/markets/rotation";
 import { RegimeRead } from "@/lib/markets/riskRegime";
+import { FreshnessBanner } from "@/components/intelligence/FreshnessBanner";
 import snapshot from "@/data/marketIntelligence.json";
 
 /**
@@ -77,6 +78,8 @@ export default async function IndustryPage({ params }: { params: Promise<{ slug:
             </Link>
           </nav>
         </div>
+
+        <FreshnessBanner generatedAt={data.generatedAt} />
 
         {/* ── THE INHERITANCE CHAIN, top-down ────────────────────────────── */}
         <section className="rounded-xl border border-hairline bg-panel/60 px-5 py-4 shadow-glass backdrop-blur-xs sm:px-6">

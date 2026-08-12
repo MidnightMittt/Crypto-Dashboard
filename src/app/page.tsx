@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { RotationBoard } from "@/components/intelligence/RotationBoard";
+import { FreshnessBanner } from "@/components/intelligence/FreshnessBanner";
 import { EvidenceModuleDetail } from "@/components/evidence/EvidenceModuleDetail";
 import { Collapsible } from "@/components/ui/Collapsible";
 import { RegimeRead } from "@/lib/markets/riskRegime";
@@ -72,6 +73,8 @@ export default function MarketIntelligencePage() {
             </Link>
           </nav>
         </div>
+
+        <FreshnessBanner generatedAt={data.generatedAt} />
 
         {/* ── LEVEL 1: THE REGIME ────────────────────────────────────────── */}
         {regime && style ? (

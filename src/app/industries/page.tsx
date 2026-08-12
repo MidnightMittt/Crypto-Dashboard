@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { IndustryRead, breadthDivergence } from "@/lib/markets/industryIntelligence";
+import { FreshnessBanner } from "@/components/intelligence/FreshnessBanner";
 import { ROTATION_STATE_LABEL, RotationState } from "@/lib/markets/rotation";
 import snapshot from "@/data/marketIntelligence.json";
 
@@ -51,6 +52,8 @@ export default function IndustriesPage() {
             </Link>
           </nav>
         </div>
+
+        <FreshnessBanner generatedAt={data.generatedAt} />
 
         {industries.length === 0 ? (
           <p className="rounded-xl border border-hairline bg-panel/60 px-5 py-6 text-[13px] leading-relaxed text-ink">
