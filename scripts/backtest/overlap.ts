@@ -188,6 +188,75 @@ export interface OverlapAdjustedProportion {
   nullProportion: number;
 }
 
+export interface ProportionDifference {
+  difference: number;
+  se: number;
+  pValue: number;
+  lower: number;
+  upper: number;
+}
+
+/**
+ * Difference between two overlap-corrected proportions measured on DISJOINT
+ * samples — the statistic an interaction test actually needs ("does this
+ * signal behave differently in regime A than in regime B?"), as opposed to
+ * two separate against-a-coin-flip tests, which cannot answer it.
+ *
+ * Because the two samples share no observations, their sampling errors are
+ * independent and the variances add: se_diff = sqrt(se_a^2 + se_b^2). Each
+ * input se is already the block-bootstrap one, so the dependence WITHIN each
+ * sample is carried through.
+ *
+ * Callers must not pass overlapping samples (e.g. a bucket and its own
+ * superset) — the independence assumption is what makes this valid.
+ */
+export function differenceOfProportions(
+  a: OverlapAdjustedProportion,
+  b: OverlapAdjustedProportion
+): ProportionDifference {
+  const difference = a.point - b.point;
+  const se = Math.sqrt(a.bootstrapSe ** 2 + b.bootstrapSe ** 2);
+  return {
+    difference,
+    se,
+    pValue: se > 0 ? twoSidedNormalP(difference / se) : 1,
+    lower: difference - 1.96 * se,
+    upper: difference + 1.96 * se,
+  };
+}
+
+/** (z_{alpha/2} + z_beta) for 80% power at a two-sided alpha of 0.05: 1.960 + 0.842. */
+const POWER_Z = 2.802;
+
+/**
+ * Smallest difference in proportions detectable at 80% power, given the
+ * ACTUAL standard error of the difference.
+ *
+ * Take the SE from `differenceOfProportions` (which is built from the block
+ * bootstrap) rather than deriving one from a nominal sample size. The two
+ * are not interchangeable and mixing them produces nonsense: `effectiveN`
+ * is the deliberately pessimistic n/blockLength bound, which assumes every
+ * observation inside a block is perfectly redundant, while the bootstrap SE
+ * measures how redundant they ACTUALLY are. Feeding the pessimistic N into
+ * a power formula and comparing the answer to a p-value computed from the
+ * empirical SE can report a result as significant and "undetectable" at the
+ * same time — which is how this function was originally written, and wrong.
+ */
+export function detectableDifferenceFromSe(seOfDifference: number): number {
+  return POWER_Z * seOfDifference;
+}
+
+/**
+ * A-priori version: smallest detectable difference from a planned sample
+ * size alone, for study DESIGN before any data exists. Assumes p near 0.5
+ * and equal arms. Do not use it to interpret a completed test — use
+ * `detectableDifferenceFromSe` for that.
+ */
+export function detectableDifference(effectiveNPerArm: number): number {
+  if (effectiveNPerArm <= 0) return 1;
+  return POWER_Z * Math.sqrt((2 * 0.25) / effectiveNPerArm);
+}
+
 /** Standard normal two-sided tail, via the Abramowitz-Stegun 7.1.26 erf approximation (|error| < 1.5e-7 — far below any precision this report quotes). */
 function twoSidedNormalP(z: number): number {
   const x = Math.abs(z) / Math.SQRT2;

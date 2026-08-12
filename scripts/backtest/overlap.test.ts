@@ -6,6 +6,8 @@ import {
   allOffsetSubsamples,
   movingBlockBootstrap,
   blockBootstrapProportion,
+  differenceOfProportions,
+  detectableDifference,
 } from "./overlap";
 
 /** Deterministic 0/1 series with no serial dependence — the IID reference case the analytic formulas actually apply to. */
@@ -180,6 +182,36 @@ describe("blockBootstrapProportion — the reference cases that prove the correc
 
   it("returns null on an empty sample instead of NaN", () => {
     expect(blockBootstrapProportion([], 5)).toBeNull();
+  });
+
+  it("differenceOfProportions adds variances and finds a real gap between disjoint samples", () => {
+    // Two independent IID samples, 70% vs 40% — a 30pp gap at n=400 each is
+    // enormous and must register.
+    const high = blockBootstrapProportion(independentSeries(400, 0.7, 101), 1, 0.5, 2000, 5)!;
+    const low = blockBootstrapProportion(independentSeries(400, 0.4, 202), 1, 0.5, 2000, 5)!;
+    const diff = differenceOfProportions(high, low);
+
+    expect(diff.difference).toBeGreaterThan(0.2);
+    // Variances add: hand-checkable against the two inputs.
+    expect(diff.se).toBeCloseTo(Math.sqrt(high.bootstrapSe ** 2 + low.bootstrapSe ** 2), 12);
+    expect(diff.pValue).toBeLessThan(0.001);
+    expect(diff.lower).toBeGreaterThan(0); // CI excludes zero
+  });
+
+  it("differenceOfProportions reports no difference between two samples drawn the same way", () => {
+    const a = blockBootstrapProportion(independentSeries(400, 0.5, 303), 1, 0.5, 2000, 5)!;
+    const b = blockBootstrapProportion(independentSeries(400, 0.5, 404), 1, 0.5, 2000, 5)!;
+    const diff = differenceOfProportions(a, b);
+    expect(Math.abs(diff.difference)).toBeLessThan(0.1);
+    expect(diff.pValue).toBeGreaterThan(0.05);
+  });
+
+  it("detectableDifference shrinks with sample size and is hand-checkable", () => {
+    // 2.802 * sqrt(0.5/100) = 2.802 * 0.070710 = 0.19813
+    expect(detectableDifference(100)).toBeCloseTo(0.19813, 4);
+    expect(detectableDifference(400)).toBeCloseTo(0.09907, 4);
+    expect(detectableDifference(400)).toBeLessThan(detectableDifference(100));
+    expect(detectableDifference(0)).toBe(1);
   });
 
   it("is reproducible: identical inputs and seed give an identical p-value", () => {
