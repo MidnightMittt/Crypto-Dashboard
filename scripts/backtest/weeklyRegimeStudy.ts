@@ -5,7 +5,7 @@ import { DayRecord, RawAssetData } from "./run";
 import { ema } from "../../src/lib/technicals/indicators";
 import { computeTradeStats, TradeRecord } from "./tradeStats";
 import { wilsonInterval, signTestPValue } from "./metrics";
-import { benjaminiHochberg } from "./multipleTesting";
+import { benjaminiHochberg } from "../../src/lib/research/multipleTesting";
 import { MIN_SAMPLE_N } from "../../src/lib/sentiment/backtestStats";
 
 /**

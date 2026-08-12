@@ -10,8 +10,8 @@ import {
   detectableDifferenceFromSe,
   movingBlockBootstrap,
   nonOverlappingByTime,
-} from "./overlap";
-import { benjaminiHochberg } from "./multipleTesting";
+} from "../../src/lib/research/overlap";
+import { benjaminiHochberg } from "../../src/lib/research/multipleTesting";
 
 /**
  * PHASE 7 — Does a market regime layer change how existing signals should

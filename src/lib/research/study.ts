@@ -1,13 +1,8 @@
 import { CapabilityKey } from "./types";
 import { FeatureVector } from "./features";
-import {
-  blockBootstrapProportion,
-  detectableDifferenceFromSe,
-  differenceOfProportions,
-  nonOverlappingByTime,
-  OverlapAdjustedProportion,
-} from "../../../scripts/backtest/overlap";
-import { benjaminiHochberg } from "../../../scripts/backtest/multipleTesting";
+import { detectableDifferenceFromSe, nonOverlappingByTime } from "./overlap";
+import { panelBootstrapProportion, panelDifference, PanelAdjustedProportion, PanelObservation } from "./panelBootstrap";
+import { benjaminiHochberg } from "./multipleTesting";
 
 /**
  * THE RESEARCH FRAMEWORK — the only approved path for quantitative study.
@@ -107,7 +102,10 @@ export interface StudyStatistics {
   /** Independent observations after greedy non-overlap selection — the honest count, computed not assumed. */
   independentN: number;
   blockLength: number;
-  groups: Record<string, OverlapAdjustedProportion>;
+  groups: Record<string, PanelAdjustedProportion>;
+  /** Distinct time periods, and mean units observed per period. A width above 1.0 means cross-sectional correction was doing work. */
+  periods: number;
+  meanUnitsPerPeriod: number;
   /** Present only for a two-group study. */
   difference: { value: number; se: number; pValue: number; lower: number; upper: number } | null;
   /** The primary p-value: the difference for a two-group study, else the single group against the null. */
@@ -149,18 +147,25 @@ const WALK_FORWARD_FOLDS = 4;
 const IS_FRACTION = 0.7;
 
 /**
- * Block length in observations, derived from the data rather than declared.
+ * Block length in PERIODS, derived from the data rather than declared.
  *
- * Uses the median holding span measured against the median inter-entry
- * spacing: if observations are opened every day and held ten days, each
- * overlaps roughly ten neighbours. Deriving it removes a number the author
- * could otherwise choose favourably.
+ * Counting periods rather than observations is what prevents
+ * double-discounting. Cross-sectional dependence is handled entirely by the
+ * panel estimator keeping each period's observations together; inflating the
+ * block length for a wider universe as well would charge for the same
+ * dependence twice. Earlier hand-written scripts did exactly that (block =
+ * 2 x horizon for two assets) and this replaces it.
+ *
+ * Derived as median hold divided by median spacing BETWEEN DISTINCT PERIODS,
+ * so an author cannot choose a flattering value.
  */
 function deriveBlockLength(observations: StudyObservation[]): number {
   if (observations.length < 3) return 1;
   const sorted = [...observations].sort((a, b) => a.entryT - b.entryT);
+  const periodTimes = [...new Set(sorted.map((o) => o.entryT))].sort((a, b) => a - b);
   const spacings: number[] = [];
-  for (let i = 1; i < sorted.length; i++) spacings.push(sorted[i].entryT - sorted[i - 1].entryT);
+  for (let i = 1; i < periodTimes.length; i++) spacings.push(periodTimes[i] - periodTimes[i - 1]);
+  if (spacings.length === 0) return 1;
   const holds = sorted.map((o) => Math.max(0, o.exitT - o.entryT));
   const median = (xs: number[]) => {
     const s = [...xs].sort((a, b) => a - b);
@@ -169,7 +174,7 @@ function deriveBlockLength(observations: StudyObservation[]): number {
   const spacing = median(spacings);
   const hold = median(holds);
   if (spacing <= 0) return 1;
-  return Math.max(1, Math.min(observations.length, Math.round(hold / spacing) || 1));
+  return Math.max(1, Math.min(periodTimes.length, Math.round(hold / spacing) || 1));
 }
 
 function rate(obs: StudyObservation[]): number {
@@ -201,12 +206,27 @@ export function executeStudy(
   const independent = nonOverlappingByTime(chronological, (o) => o.entryT, (o) => o.exitT);
 
   const groupNames = [...new Set(chronological.map((o) => o.group))].sort();
-  const groups: Record<string, OverlapAdjustedProportion> = {};
+  /*
+   * `entryT` doubles as the period key. Observations from different
+   * instruments sampled at the same close share a timestamp, so grouping by
+   * it is exactly the cross-sectional clustering the panel estimator needs —
+   * no extra field, and no way for a caller to forget to populate one.
+   */
+  const asPanel = (obs: StudyObservation[]): PanelObservation[] =>
+    obs.map((o) => ({ period: o.entryT, unitId: o.instrumentId, value: o.success ? 1 : 0 }));
+
+  const groups: Record<string, PanelAdjustedProportion> = {};
   for (const g of groupNames) {
-    const series = chronological.filter((o) => o.group === g).map((o) => (o.success ? 1 : 0));
-    const res = blockBootstrapProportion(series, blockLength, context.nullProportion, 2000, declaration.seed);
+    const res = panelBootstrapProportion(
+      asPanel(chronological.filter((o) => o.group === g)),
+      blockLength,
+      context.nullProportion,
+      2000,
+      declaration.seed
+    );
     if (res) groups[g] = res;
   }
+  const wholePanel = panelBootstrapProportion(asPanel(chronological), blockLength, context.nullProportion, 1, declaration.seed);
 
   // 8. Confidence intervals arrive with the bootstrap above; the difference
   // is computed here for the two-group case.
@@ -218,7 +238,7 @@ export function executeStudy(
   if (groupNames.length >= 2 && groups[groupNames[0]] && groups[groupNames[1]]) {
     const a = groups[groupNames[0]];
     const b = groups[groupNames[1]];
-    const d = differenceOfProportions(a, b);
+    const d = panelDifference(a, b);
     difference = { value: d.difference, se: d.se, pValue: d.pValue, lower: d.lower, upper: d.upper };
     primaryPValue = d.pValue;
     observedEffect = Math.abs(d.difference);
@@ -262,7 +282,15 @@ export function executeStudy(
 
   const statistics: StudyStatistics = {
     n: chronological.length,
-    effectiveN: chronological.length / Math.max(1, blockLength),
+    /*
+     * Derived from the realised bootstrap variance rather than composed from
+     * separate temporal and cross-sectional factors — composition is exactly
+     * where a double discount would hide. Falls back to the raw count only
+     * when the panel is degenerate and carries no variance to invert.
+     */
+    effectiveN: Object.values(groups).reduce((a, g) => a + g.effectiveN, 0) || chronological.length,
+    periods: wholePanel?.periods ?? 0,
+    meanUnitsPerPeriod: wholePanel?.panel.meanUnitsPerPeriod ?? 0,
     independentN: independent.length,
     blockLength,
     groups,

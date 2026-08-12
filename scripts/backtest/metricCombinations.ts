@@ -1,7 +1,7 @@
 import { SIGNAL_HYPOTHESES, HOLDING_PERIODS, HoldingPeriod } from "../../src/lib/signals/hypothesis";
 import { MIN_SAMPLE_N } from "../../src/lib/sentiment/backtestStats";
 import { summarizeOccurrences, Occurrence, OccurrenceSummary } from "./metrics";
-import { benjaminiHochberg } from "./multipleTesting";
+import { benjaminiHochberg } from "../../src/lib/research/multipleTesting";
 
 /**
  * Metric-level combination testing (plan Part 7) — structurally parallel to

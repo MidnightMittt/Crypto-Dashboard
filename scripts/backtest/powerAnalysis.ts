@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { DayRecord } from "./run";
-import { detectableDifference, nonOverlappingByTime } from "./overlap";
+import { detectableDifference, nonOverlappingByTime } from "../../src/lib/research/overlap";
 
 /**
  * CROSS-ASSET RESEARCH ENGINE — how large a universe is actually required

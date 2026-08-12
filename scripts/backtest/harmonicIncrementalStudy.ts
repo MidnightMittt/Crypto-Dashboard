@@ -3,7 +3,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { DayRecord } from "./run";
 import { summarizeOccurrences, Occurrence } from "./metrics";
-import { blockBootstrapProportion } from "./overlap";
+import { blockBootstrapProportion } from "../../src/lib/research/overlap";
 import { MIN_SAMPLE_N } from "../../src/lib/sentiment/backtestStats";
 
 /**

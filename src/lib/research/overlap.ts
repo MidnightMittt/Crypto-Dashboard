@@ -39,22 +39,10 @@
 
 // ── Deterministic RNG ───────────────────────────────────────────────────
 
-/**
- * mulberry32 — a small, well-distributed seeded PRNG. Seeded (not
- * Math.random) so a bootstrap p-value is reproducible: two runs of the same
- * report must produce byte-identical output, the same replayability rule
- * the rest of the backtest holds itself to.
- */
-export function mulberry32(seed: number): () => number {
-  let a = seed >>> 0;
-  return function () {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+import { mulberry32 } from "./random";
+
+/** Re-exported so existing callers keep working; the implementation now lives in random.ts, shared with the panel estimator. */
+export { mulberry32 } from "./random";
 
 // ── Effective sample size ───────────────────────────────────────────────
 

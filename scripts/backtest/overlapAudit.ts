@@ -4,7 +4,7 @@ import { fileURLToPath } from "url";
 import { DayRecord } from "./run";
 import { SIGNAL_HYPOTHESES, HOLDING_PERIODS, HoldingPeriod } from "../../src/lib/signals/hypothesis";
 import { signTestPValue } from "./metrics";
-import { blockBootstrapProportion } from "./overlap";
+import { blockBootstrapProportion } from "../../src/lib/research/overlap";
 import { deriveSampleSizeLabel, MIN_SAMPLE_N } from "../../src/lib/sentiment/backtestStats";
 
 /**
