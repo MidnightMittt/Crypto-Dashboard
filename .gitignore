@@ -13,3 +13,4 @@ scripts/backtest/data
 scripts/backtest/report.md
 .env*
 scripts/backtest/executionReport.md
+scripts/ingest/data
