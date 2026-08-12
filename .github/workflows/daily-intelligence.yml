@@ -1,0 +1,80 @@
+# THE DAILY SPINE — Roadmap Phase 0.
+#
+# Ingest -> validate -> rebuild snapshots -> append the signal ledger ->
+# commit -> push. The push triggers Vercel, so a green run IS a deployed
+# site with today's close in it.
+#
+# Design decisions, stated so nobody has to reverse-engineer them:
+#
+#  - `--only-us`: this job's scope is exactly what the snapshots read. The FX
+#    pairs carry long-standing validation findings that are a research
+#    problem; letting them fail the DAILY job would make it permanently red,
+#    and a pipeline that is always red alerts nobody. Within the US set,
+#    refusals still fail the job loudly — that is the validator doing its job
+#    and the right response is a human looking at it, not a retry.
+#
+#  - No secrets. The equity ingest and both snapshot builders are entirely
+#    public-endpoint. The crypto research fetch (Coinalyze/FRED keys) is a
+#    separate, deliberately manual concern — the crypto surfaces are LIVE at
+#    request time and do not depend on this job.
+#
+#  - Commits use the data's as-of date and [skip ci] is deliberately absent:
+#    the Vercel rebuild is the point.
+#
+#  - 22:15 UTC weekdays: after the US close in both DST regimes, before the
+#    provider's daily bar could plausibly still be settling.
+name: daily-intelligence
+
+on:
+  schedule:
+    - cron: "15 22 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-intelligence
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Pull before push below; a same-day human commit must not be clobbered.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Ingest US daily bars (validate-or-refuse)
+        run: npx tsx scripts/ingest/yahoo.ts --only-us
+
+      - name: Rebuild intelligence snapshot
+        run: npx tsx scripts/ingest/buildIntelligence.ts
+
+      - name: Rebuild markets snapshot
+        run: npx tsx scripts/ingest/buildMarketsSnapshot.ts
+
+      - name: Append signal history ledger
+        run: npx tsx scripts/ingest/appendHistory.ts
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/data/marketIntelligence.json src/data/equityMarkets.json src/data/signalLedger.json
+          if git diff --cached --quiet; then
+            echo "No data changes (holiday or re-run on identical bars) — nothing to deploy."
+            exit 0
+          fi
+          git commit -m "data: daily intelligence refresh $(date -u +%F)"
+          git pull --rebase origin main
+          git push origin main
