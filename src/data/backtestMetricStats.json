@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1786528744365,
+  "generatedAt": 1786530059655,
   "coverageStart": "2022-08-13",
   "coverageEnd": "2026-07-30",
   "metrics": {
@@ -402,6 +402,34 @@
       "worstHoldingPeriod": {
         "holdingPeriod": "4h",
         "winRate": 0.4948936170212766
+      },
+      "sampleSizeLabel": "Large",
+      "confidenceLabel": "Medium",
+      "stableAcrossWindows": null
+    },
+    "marketStructure": {
+      "metricId": "marketStructure",
+      "label": "Market Structure",
+      "hasHistoricalSource": true,
+      "n24h": 1762,
+      "winRate24h": 0.49148694665153236,
+      "winRate7d": 0.4554230550823396,
+      "significant24h": false,
+      "bestRegime": {
+        "tag": "bear",
+        "winRate": 0.5365853658536586
+      },
+      "worstRegime": {
+        "tag": "neutral",
+        "winRate": 0.4530663329161452
+      },
+      "bestHoldingPeriod": {
+        "holdingPeriod": "4h",
+        "winRate": 0.5011350737797957
+      },
+      "worstHoldingPeriod": {
+        "holdingPeriod": "7d",
+        "winRate": 0.4554230550823396
       },
       "sampleSizeLabel": "Large",
       "confidenceLabel": "Medium",

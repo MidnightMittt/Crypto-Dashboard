@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1786528744360,
+  "generatedAt": 1786530059649,
   "coverageStart": "2022-08-13",
   "coverageEnd": "2026-07-30",
   "hypotheses": {
@@ -1277,6 +1277,122 @@
         "wins": 1194,
         "pValue": 0.4209114061108493,
         "significant": false
+      }
+    },
+    "marketStructure:1h": {
+      "n": 1762,
+      "winRate": 0.4875141884222474,
+      "meanReturnPct": -0.015174745982986772,
+      "medianReturnPct": -0.007750137719409366,
+      "maxDrawdownPct": 40.90830898337498,
+      "bullish": {
+        "truePositives": 475,
+        "falsePositives": 516,
+        "falseNegatives": 970,
+        "trueNegatives": 935,
+        "precision": 0.479313824419778,
+        "recall": 0.328719723183391
+      },
+      "bearish": {
+        "truePositives": 384,
+        "falsePositives": 387,
+        "falseNegatives": 1066,
+        "trueNegatives": 1059,
+        "precision": 0.4980544747081712,
+        "recall": 0.26482758620689656
+      },
+      "significance": {
+        "n": 1762,
+        "wins": 859,
+        "pValue": 0.3056497975173071,
+        "significant": false
+      }
+    },
+    "marketStructure:4h": {
+      "n": 1762,
+      "winRate": 0.5011350737797957,
+      "meanReturnPct": 0.018976064026497506,
+      "medianReturnPct": 0.0048394355330445785,
+      "maxDrawdownPct": 39.925717205952296,
+      "bullish": {
+        "truePositives": 500,
+        "falsePositives": 491,
+        "falseNegatives": 970,
+        "trueNegatives": 935,
+        "precision": 0.5045408678102926,
+        "recall": 0.3401360544217687
+      },
+      "bearish": {
+        "truePositives": 383,
+        "falsePositives": 388,
+        "falseNegatives": 1043,
+        "trueNegatives": 1082,
+        "precision": 0.496757457846952,
+        "recall": 0.26858345021037866
+      },
+      "significance": {
+        "n": 1762,
+        "wins": 883,
+        "pValue": 0.9430270961442835,
+        "significant": false
+      }
+    },
+    "marketStructure:24h": {
+      "n": 1762,
+      "winRate": 0.49148694665153236,
+      "meanReturnPct": 0.08739360666067333,
+      "medianReturnPct": 0.010537491054117495,
+      "maxDrawdownPct": 79.84840884259773,
+      "bullish": {
+        "truePositives": 489,
+        "falsePositives": 502,
+        "falseNegatives": 963,
+        "trueNegatives": 942,
+        "precision": 0.4934409687184662,
+        "recall": 0.3367768595041322
+      },
+      "bearish": {
+        "truePositives": 377,
+        "falsePositives": 394,
+        "falseNegatives": 1067,
+        "trueNegatives": 1058,
+        "precision": 0.4889753566796368,
+        "recall": 0.2610803324099723
+      },
+      "significance": {
+        "n": 1762,
+        "wins": 866,
+        "pValue": 0.4896592798029056,
+        "significant": false
+      }
+    },
+    "marketStructure:7d": {
+      "n": 1761,
+      "winRate": 0.4554230550823396,
+      "meanReturnPct": 0.5575243473701651,
+      "medianReturnPct": 0.28420659843209783,
+      "maxDrawdownPct": 99.99468597320391,
+      "bullish": {
+        "truePositives": 471,
+        "falsePositives": 519,
+        "falseNegatives": 1015,
+        "trueNegatives": 889,
+        "precision": 0.47575757575757577,
+        "recall": 0.31695827725437414
+      },
+      "bearish": {
+        "truePositives": 331,
+        "falsePositives": 440,
+        "falseNegatives": 1077,
+        "trueNegatives": 1046,
+        "precision": 0.4293125810635538,
+        "recall": 0.23508522727272727
+      },
+      "significance": {
+        "n": 1761,
+        "wins": 802,
+        "pValue": 0.0001994519014268511,
+        "significant": true
       }
     }
   },
@@ -12636,6 +12752,818 @@
         "pValue": 0.282611950446243,
         "significant": false
       }
+    },
+    "marketStructure:bull:1h": {
+      "n": 553,
+      "winRate": 0.4810126582278481,
+      "meanReturnPct": 0.017389223275608746,
+      "medianReturnPct": 0.014658127367863651,
+      "maxDrawdownPct": 11.850775639195133,
+      "bullish": {
+        "truePositives": 237,
+        "falsePositives": 241,
+        "falseNegatives": 176,
+        "trueNegatives": 159,
+        "precision": 0.49581589958158995,
+        "recall": 0.5738498789346247
+      },
+      "bearish": {
+        "truePositives": 29,
+        "falsePositives": 46,
+        "falseNegatives": 370,
+        "trueNegatives": 368,
+        "precision": 0.38666666666666666,
+        "recall": 0.07268170426065163
+      },
+      "significance": {
+        "n": 553,
+        "wins": 266,
+        "pValue": 0.39507454425249555,
+        "significant": false
+      }
+    },
+    "marketStructure:bull:4h": {
+      "n": 553,
+      "winRate": 0.5280289330922242,
+      "meanReturnPct": 0.166101555719236,
+      "medianReturnPct": 0.08387058741564879,
+      "maxDrawdownPct": 10.924262769479004,
+      "bullish": {
+        "truePositives": 258,
+        "falsePositives": 220,
+        "falseNegatives": 183,
+        "trueNegatives": 152,
+        "precision": 0.5397489539748954,
+        "recall": 0.5850340136054422
+      },
+      "bearish": {
+        "truePositives": 34,
+        "falsePositives": 41,
+        "falseNegatives": 338,
+        "trueNegatives": 400,
+        "precision": 0.4533333333333333,
+        "recall": 0.0913978494623656
+      },
+      "significance": {
+        "n": 553,
+        "wins": 292,
+        "pValue": 0.20200851386909768,
+        "significant": false
+      }
+    },
+    "marketStructure:bull:24h": {
+      "n": 553,
+      "winRate": 0.5135623869801085,
+      "meanReturnPct": 0.7285604881834121,
+      "medianReturnPct": 0.2510749866225194,
+      "maxDrawdownPct": 17.475885683050528,
+      "bullish": {
+        "truePositives": 257,
+        "falsePositives": 221,
+        "falseNegatives": 205,
+        "trueNegatives": 130,
+        "precision": 0.5376569037656904,
+        "recall": 0.5562770562770563
+      },
+      "bearish": {
+        "truePositives": 27,
+        "falsePositives": 48,
+        "falseNegatives": 324,
+        "trueNegatives": 414,
+        "precision": 0.36,
+        "recall": 0.07692307692307693
+      },
+      "significance": {
+        "n": 553,
+        "wins": 284,
+        "pValue": 0.5516547157815486,
+        "significant": false
+      }
+    },
+    "marketStructure:bull:7d": {
+      "n": 553,
+      "winRate": 0.5045207956600362,
+      "meanReturnPct": 0.9854623089547668,
+      "medianReturnPct": 0.6029120977889655,
+      "maxDrawdownPct": 98.49962953494104,
+      "bullish": {
+        "truePositives": 252,
+        "falsePositives": 226,
+        "falseNegatives": 201,
+        "trueNegatives": 134,
+        "precision": 0.5271966527196653,
+        "recall": 0.5562913907284768
+      },
+      "bearish": {
+        "truePositives": 27,
+        "falsePositives": 48,
+        "falseNegatives": 333,
+        "trueNegatives": 405,
+        "precision": 0.36,
+        "recall": 0.075
+      },
+      "significance": {
+        "n": 553,
+        "wins": 279,
+        "pValue": 0.8649532420995063,
+        "significant": false
+      }
+    },
+    "marketStructure:bear:1h": {
+      "n": 410,
+      "winRate": 0.4975609756097561,
+      "meanReturnPct": -0.024203009013023122,
+      "medianReturnPct": -0.012080325547063278,
+      "maxDrawdownPct": 34.476789499877064,
+      "bullish": {
+        "truePositives": 33,
+        "falsePositives": 37,
+        "falseNegatives": 295,
+        "trueNegatives": 285,
+        "precision": 0.4714285714285714,
+        "recall": 0.10060975609756098
+      },
+      "bearish": {
+        "truePositives": 171,
+        "falsePositives": 169,
+        "falseNegatives": 151,
+        "trueNegatives": 159,
+        "precision": 0.5029411764705882,
+        "recall": 0.531055900621118
+      },
+      "significance": {
+        "n": 410,
+        "wins": 204,
+        "pValue": 0.9606193101438235,
+        "significant": false
+      }
+    },
+    "marketStructure:bear:4h": {
+      "n": 410,
+      "winRate": 0.5146341463414634,
+      "meanReturnPct": -0.11895581238845541,
+      "medianReturnPct": -0.014963452100591225,
+      "maxDrawdownPct": 50.47343658740891,
+      "bullish": {
+        "truePositives": 37,
+        "falsePositives": 33,
+        "falseNegatives": 286,
+        "trueNegatives": 294,
+        "precision": 0.5285714285714286,
+        "recall": 0.11455108359133127
+      },
+      "bearish": {
+        "truePositives": 174,
+        "falsePositives": 166,
+        "falseNegatives": 153,
+        "trueNegatives": 157,
+        "precision": 0.5117647058823529,
+        "recall": 0.5321100917431193
+      },
+      "significance": {
+        "n": 410,
+        "wins": 211,
+        "pValue": 0.5870106575330828,
+        "significant": false
+      }
+    },
+    "marketStructure:bear:24h": {
+      "n": 410,
+      "winRate": 0.5365853658536586,
+      "meanReturnPct": -0.6755213870136558,
+      "medianReturnPct": -0.31886023305248,
+      "maxDrawdownPct": 96.2624404011739,
+      "bullish": {
+        "truePositives": 28,
+        "falsePositives": 42,
+        "falseNegatives": 248,
+        "trueNegatives": 332,
+        "precision": 0.4,
+        "recall": 0.10144927536231885
+      },
+      "bearish": {
+        "truePositives": 192,
+        "falsePositives": 148,
+        "falseNegatives": 182,
+        "trueNegatives": 128,
+        "precision": 0.5647058823529412,
+        "recall": 0.5133689839572193
+      },
+      "significance": {
+        "n": 410,
+        "wins": 220,
+        "pValue": 0.1519968771638139,
+        "significant": false
+      }
+    },
+    "marketStructure:bear:7d": {
+      "n": 410,
+      "winRate": 0.45121951219512196,
+      "meanReturnPct": 0.12841297298915924,
+      "medianReturnPct": 0.32810478253633435,
+      "maxDrawdownPct": 99.9205365549016,
+      "bullish": {
+        "truePositives": 28,
+        "falsePositives": 42,
+        "falseNegatives": 283,
+        "trueNegatives": 297,
+        "precision": 0.4,
+        "recall": 0.09003215434083602
+      },
+      "bearish": {
+        "truePositives": 157,
+        "falsePositives": 183,
+        "falseNegatives": 182,
+        "trueNegatives": 128,
+        "precision": 0.46176470588235297,
+        "recall": 0.4631268436578171
+      },
+      "significance": {
+        "n": 410,
+        "wins": 185,
+        "pValue": 0.05396267689635545,
+        "significant": false
+      }
+    },
+    "marketStructure:neutral:1h": {
+      "n": 799,
+      "winRate": 0.48685857321652065,
+      "meanReturnPct": -0.03307998648071948,
+      "medianReturnPct": -0.024791788959496616,
+      "maxDrawdownPct": 29.546870203882108,
+      "bullish": {
+        "truePositives": 205,
+        "falsePositives": 238,
+        "falseNegatives": 499,
+        "trueNegatives": 491,
+        "precision": 0.46275395033860045,
+        "recall": 0.2911931818181818
+      },
+      "bearish": {
+        "truePositives": 184,
+        "falsePositives": 172,
+        "falseNegatives": 545,
+        "trueNegatives": 532,
+        "precision": 0.5168539325842697,
+        "recall": 0.252400548696845
+      },
+      "significance": {
+        "n": 799,
+        "wins": 389,
+        "pValue": 0.47924826359686845,
+        "significant": false
+      }
+    },
+    "marketStructure:neutral:4h": {
+      "n": 799,
+      "winRate": 0.4755944931163955,
+      "meanReturnPct": -0.012073156969689764,
+      "medianReturnPct": -0.022202622353766105,
+      "maxDrawdownPct": 27.1038085230016,
+      "bullish": {
+        "truePositives": 205,
+        "falsePositives": 238,
+        "falseNegatives": 501,
+        "trueNegatives": 489,
+        "precision": 0.46275395033860045,
+        "recall": 0.29036827195467424
+      },
+      "bearish": {
+        "truePositives": 175,
+        "falsePositives": 181,
+        "falseNegatives": 552,
+        "trueNegatives": 525,
+        "precision": 0.49157303370786515,
+        "recall": 0.2407152682255846
+      },
+      "significance": {
+        "n": 799,
+        "wins": 380,
+        "pValue": 0.1788008368424762,
+        "significant": false
+      }
+    },
+    "marketStructure:neutral:24h": {
+      "n": 799,
+      "winRate": 0.4530663329161452,
+      "meanReturnPct": 0.03511558654102456,
+      "medianReturnPct": 0.019210127579259786,
+      "maxDrawdownPct": 45.3777972378656,
+      "bullish": {
+        "truePositives": 204,
+        "falsePositives": 239,
+        "falseNegatives": 510,
+        "trueNegatives": 480,
+        "precision": 0.4604966139954853,
+        "recall": 0.2857142857142857
+      },
+      "bearish": {
+        "truePositives": 158,
+        "falsePositives": 198,
+        "falseNegatives": 561,
+        "trueNegatives": 516,
+        "precision": 0.4438202247191011,
+        "recall": 0.21974965229485396
+      },
+      "significance": {
+        "n": 799,
+        "wins": 362,
+        "pValue": 0.008804978342378545,
+        "significant": true
+      }
+    },
+    "marketStructure:neutral:7d": {
+      "n": 798,
+      "winRate": 0.42355889724310775,
+      "meanReturnPct": 0.48144160393648877,
+      "medianReturnPct": 0.01743237356360116,
+      "maxDrawdownPct": 91.04842026980934,
+      "bullish": {
+        "truePositives": 191,
+        "falsePositives": 251,
+        "falseNegatives": 531,
+        "trueNegatives": 458,
+        "precision": 0.4321266968325792,
+        "recall": 0.26454293628808867
+      },
+      "bearish": {
+        "truePositives": 147,
+        "falsePositives": 209,
+        "falseNegatives": 562,
+        "trueNegatives": 513,
+        "precision": 0.41292134831460675,
+        "recall": 0.2073342736248237
+      },
+      "significance": {
+        "n": 798,
+        "wins": 338,
+        "pValue": 0.000017772767397140955,
+        "significant": true
+      }
+    },
+    "marketStructure:high-vol:1h": {
+      "n": 575,
+      "winRate": 0.47130434782608693,
+      "meanReturnPct": 0.04860111598540134,
+      "medianReturnPct": 0.03528994041844697,
+      "maxDrawdownPct": 19.005214090996585,
+      "bullish": {
+        "truePositives": 151,
+        "falsePositives": 156,
+        "falseNegatives": 311,
+        "trueNegatives": 253,
+        "precision": 0.49185667752442996,
+        "recall": 0.3268398268398268
+      },
+      "bearish": {
+        "truePositives": 120,
+        "falsePositives": 148,
+        "falseNegatives": 289,
+        "trueNegatives": 314,
+        "precision": 0.44776119402985076,
+        "recall": 0.293398533007335
+      },
+      "significance": {
+        "n": 575,
+        "wins": 271,
+        "pValue": 0.18199320556772663,
+        "significant": false
+      }
+    },
+    "marketStructure:high-vol:4h": {
+      "n": 575,
+      "winRate": 0.48695652173913045,
+      "meanReturnPct": 0.08892097052905341,
+      "medianReturnPct": 0.08283858108671702,
+      "maxDrawdownPct": 29.269898666056342,
+      "bullish": {
+        "truePositives": 161,
+        "falsePositives": 146,
+        "falseNegatives": 316,
+        "trueNegatives": 248,
+        "precision": 0.5244299674267101,
+        "recall": 0.33752620545073375
+      },
+      "bearish": {
+        "truePositives": 119,
+        "falsePositives": 149,
+        "falseNegatives": 275,
+        "trueNegatives": 328,
+        "precision": 0.44402985074626866,
+        "recall": 0.3020304568527919
+      },
+      "significance": {
+        "n": 575,
+        "wins": 280,
+        "pValue": 0.5593653938565436,
+        "significant": false
+      }
+    },
+    "marketStructure:high-vol:24h": {
+      "n": 575,
+      "winRate": 0.5043478260869565,
+      "meanReturnPct": 0.16227425605328893,
+      "medianReturnPct": -0.03798399924032002,
+      "maxDrawdownPct": 71.56270798290781,
+      "bullish": {
+        "truePositives": 152,
+        "falsePositives": 155,
+        "falseNegatives": 282,
+        "trueNegatives": 282,
+        "precision": 0.495114006514658,
+        "recall": 0.35023041474654376
+      },
+      "bearish": {
+        "truePositives": 138,
+        "falsePositives": 130,
+        "falseNegatives": 299,
+        "trueNegatives": 304,
+        "precision": 0.5149253731343284,
+        "recall": 0.3157894736842105
+      },
+      "significance": {
+        "n": 575,
+        "wins": 290,
+        "pValue": 0.8675368860252449,
+        "significant": false
+      }
+    },
+    "marketStructure:high-vol:7d": {
+      "n": 575,
+      "winRate": 0.4608695652173913,
+      "meanReturnPct": 0.6362090878207989,
+      "medianReturnPct": 0.4189274178934187,
+      "maxDrawdownPct": 99.37367223109914,
+      "bullish": {
+        "truePositives": 148,
+        "falsePositives": 159,
+        "falseNegatives": 295,
+        "trueNegatives": 269,
+        "precision": 0.4820846905537459,
+        "recall": 0.3340857787810384
+      },
+      "bearish": {
+        "truePositives": 117,
+        "falsePositives": 151,
+        "falseNegatives": 311,
+        "trueNegatives": 292,
+        "precision": 0.43656716417910446,
+        "recall": 0.2733644859813084
+      },
+      "significance": {
+        "n": 575,
+        "wins": 265,
+        "pValue": 0.06642317960557322,
+        "significant": false
+      }
+    },
+    "marketStructure:low-vol:1h": {
+      "n": 663,
+      "winRate": 0.4796380090497738,
+      "meanReturnPct": -0.031093797678069166,
+      "medianReturnPct": -0.01812332925558706,
+      "maxDrawdownPct": 24.814358496402743,
+      "bullish": {
+        "truePositives": 184,
+        "falsePositives": 221,
+        "falseNegatives": 378,
+        "trueNegatives": 382,
+        "precision": 0.454320987654321,
+        "recall": 0.3274021352313167
+      },
+      "bearish": {
+        "truePositives": 134,
+        "falsePositives": 124,
+        "falseNegatives": 468,
+        "trueNegatives": 439,
+        "precision": 0.5193798449612403,
+        "recall": 0.22259136212624583
+      },
+      "significance": {
+        "n": 663,
+        "wins": 318,
+        "pValue": 0.31261097383370284,
+        "significant": false
+      }
+    },
+    "marketStructure:low-vol:4h": {
+      "n": 663,
+      "winRate": 0.5113122171945701,
+      "meanReturnPct": 0.010381352113585244,
+      "medianReturnPct": -0.007913270554731061,
+      "maxDrawdownPct": 16.627922552212336,
+      "bullish": {
+        "truePositives": 204,
+        "falsePositives": 201,
+        "falseNegatives": 374,
+        "trueNegatives": 386,
+        "precision": 0.5037037037037037,
+        "recall": 0.35294117647058826
+      },
+      "bearish": {
+        "truePositives": 135,
+        "falsePositives": 123,
+        "falseNegatives": 452,
+        "trueNegatives": 455,
+        "precision": 0.5232558139534884,
+        "recall": 0.22998296422487224
+      },
+      "significance": {
+        "n": 663,
+        "wins": 339,
+        "pValue": 0.5866708802035119,
+        "significant": false
+      }
+    },
+    "marketStructure:low-vol:24h": {
+      "n": 663,
+      "winRate": 0.4962292609351433,
+      "meanReturnPct": 0.07197859801574392,
+      "medianReturnPct": -0.02409356564119862,
+      "maxDrawdownPct": 44.54704364845107,
+      "bullish": {
+        "truePositives": 200,
+        "falsePositives": 205,
+        "falseNegatives": 381,
+        "trueNegatives": 379,
+        "precision": 0.49382716049382713,
+        "recall": 0.3442340791738382
+      },
+      "bearish": {
+        "truePositives": 129,
+        "falsePositives": 129,
+        "falseNegatives": 455,
+        "trueNegatives": 452,
+        "precision": 0.5,
+        "recall": 0.2208904109589041
+      },
+      "significance": {
+        "n": 663,
+        "wins": 329,
+        "pValue": 0.8765627184007421,
+        "significant": false
+      }
+    },
+    "marketStructure:low-vol:7d": {
+      "n": 662,
+      "winRate": 0.5151057401812689,
+      "meanReturnPct": -0.13125968374121683,
+      "medianReturnPct": -0.07306443455027062,
+      "maxDrawdownPct": 99.5608995362173,
+      "bullish": {
+        "truePositives": 205,
+        "falsePositives": 199,
+        "falseNegatives": 388,
+        "trueNegatives": 371,
+        "precision": 0.5074257425742574,
+        "recall": 0.3456998313659359
+      },
+      "bearish": {
+        "truePositives": 136,
+        "falsePositives": 122,
+        "falseNegatives": 434,
+        "trueNegatives": 471,
+        "precision": 0.5271317829457365,
+        "recall": 0.23859649122807017
+      },
+      "significance": {
+        "n": 662,
+        "wins": 341,
+        "pValue": 0.4602632126297776,
+        "significant": false
+      }
+    },
+    "marketStructure:normal-vol:1h": {
+      "n": 524,
+      "winRate": 0.5152671755725191,
+      "meanReturnPct": -0.0650159470478409,
+      "medianReturnPct": -0.010459146824482065,
+      "maxDrawdownPct": 30.45154901282252,
+      "bullish": {
+        "truePositives": 140,
+        "falsePositives": 139,
+        "falseNegatives": 281,
+        "trueNegatives": 300,
+        "precision": 0.5017921146953405,
+        "recall": 0.332541567695962
+      },
+      "bearish": {
+        "truePositives": 130,
+        "falsePositives": 115,
+        "falseNegatives": 309,
+        "trueNegatives": 306,
+        "precision": 0.5306122448979592,
+        "recall": 0.296127562642369
+      },
+      "significance": {
+        "n": 524,
+        "wins": 270,
+        "pValue": 0.5123272210962209,
+        "significant": false
+      }
+    },
+    "marketStructure:normal-vol:4h": {
+      "n": 524,
+      "winRate": 0.5038167938931297,
+      "meanReturnPct": -0.046901850555007875,
+      "medianReturnPct": -0.02180041289808318,
+      "maxDrawdownPct": 35.67197215581675,
+      "bullish": {
+        "truePositives": 135,
+        "falsePositives": 144,
+        "falseNegatives": 280,
+        "trueNegatives": 301,
+        "precision": 0.4838709677419355,
+        "recall": 0.3253012048192771
+      },
+      "bearish": {
+        "truePositives": 129,
+        "falsePositives": 116,
+        "falseNegatives": 316,
+        "trueNegatives": 299,
+        "precision": 0.5265306122448979,
+        "recall": 0.2898876404494382
+      },
+      "significance": {
+        "n": 524,
+        "wins": 264,
+        "pValue": 0.8957475666942218,
+        "significant": false
+      }
+    },
+    "marketStructure:normal-vol:24h": {
+      "n": 524,
+      "winRate": 0.4713740458015267,
+      "meanReturnPct": 0.024729059582113133,
+      "medianReturnPct": 0.08024805016886039,
+      "maxDrawdownPct": 54.10201377008544,
+      "bullish": {
+        "truePositives": 137,
+        "falsePositives": 142,
+        "falseNegatives": 300,
+        "trueNegatives": 281,
+        "precision": 0.4910394265232975,
+        "recall": 0.3135011441647597
+      },
+      "bearish": {
+        "truePositives": 110,
+        "falsePositives": 135,
+        "falseNegatives": 313,
+        "trueNegatives": 302,
+        "precision": 0.4489795918367347,
+        "recall": 0.26004728132387706
+      },
+      "significance": {
+        "n": 524,
+        "wins": 247,
+        "pValue": 0.20515799723842468,
+        "significant": false
+      }
+    },
+    "marketStructure:normal-vol:7d": {
+      "n": 524,
+      "winRate": 0.37404580152671757,
+      "meanReturnPct": 1.3413627115621862,
+      "medianReturnPct": 0.5875770901277104,
+      "maxDrawdownPct": 88.74108205778855,
+      "bullish": {
+        "truePositives": 118,
+        "falsePositives": 161,
+        "falseNegatives": 332,
+        "trueNegatives": 249,
+        "precision": 0.4229390681003584,
+        "recall": 0.26222222222222225
+      },
+      "bearish": {
+        "truePositives": 78,
+        "falsePositives": 167,
+        "falseNegatives": 332,
+        "trueNegatives": 283,
+        "precision": 0.3183673469387755,
+        "recall": 0.1902439024390244
+      },
+      "significance": {
+        "n": 524,
+        "wins": 196,
+        "pValue": 8.802122194777217e-9,
+        "significant": true
+      }
+    },
+    "marketStructure:range-bound:1h": {
+      "n": 622,
+      "winRate": 0.4903536977491961,
+      "meanReturnPct": -0.03381917296119374,
+      "medianReturnPct": -0.017520337966619677,
+      "maxDrawdownPct": 22.554783843503902,
+      "bullish": {
+        "truePositives": 173,
+        "falsePositives": 202,
+        "falseNegatives": 328,
+        "trueNegatives": 362,
+        "precision": 0.4613333333333333,
+        "recall": 0.34530938123752497
+      },
+      "bearish": {
+        "truePositives": 132,
+        "falsePositives": 115,
+        "falseNegatives": 431,
+        "trueNegatives": 387,
+        "precision": 0.5344129554655871,
+        "recall": 0.2344582593250444
+      },
+      "significance": {
+        "n": 622,
+        "wins": 305,
+        "pValue": 0.6592042500804739,
+        "significant": false
+      }
+    },
+    "marketStructure:range-bound:4h": {
+      "n": 622,
+      "winRate": 0.4887459807073955,
+      "meanReturnPct": -0.0005356541464938466,
+      "medianReturnPct": -0.022210181524402697,
+      "maxDrawdownPct": 22.60019583769051,
+      "bullish": {
+        "truePositives": 176,
+        "falsePositives": 199,
+        "falseNegatives": 337,
+        "trueNegatives": 353,
+        "precision": 0.4693333333333333,
+        "recall": 0.34307992202729043
+      },
+      "bearish": {
+        "truePositives": 128,
+        "falsePositives": 119,
+        "falseNegatives": 424,
+        "trueNegatives": 394,
+        "precision": 0.5182186234817814,
+        "recall": 0.2318840579710145
+      },
+      "significance": {
+        "n": 622,
+        "wins": 304,
+        "pValue": 0.6022264192169365,
+        "significant": false
+      }
+    },
+    "marketStructure:range-bound:24h": {
+      "n": 622,
+      "winRate": 0.4790996784565916,
+      "meanReturnPct": 0.019643966244680285,
+      "medianReturnPct": -0.01598524989504499,
+      "maxDrawdownPct": 37.89260343436952,
+      "bullish": {
+        "truePositives": 180,
+        "falsePositives": 195,
+        "falseNegatives": 352,
+        "trueNegatives": 338,
+        "precision": 0.48,
+        "recall": 0.3383458646616541
+      },
+      "bearish": {
+        "truePositives": 118,
+        "falsePositives": 129,
+        "falseNegatives": 415,
+        "trueNegatives": 403,
+        "precision": 0.4777327935222672,
+        "recall": 0.22138836772983114
+      },
+      "significance": {
+        "n": 622,
+        "wins": 298,
+        "pValue": 0.31614607687293583,
+        "significant": false
+      }
+    },
+    "marketStructure:range-bound:7d": {
+      "n": 621,
+      "winRate": 0.4863123993558776,
+      "meanReturnPct": 0.12149744406041982,
+      "medianReturnPct": -0.11553225161421425,
+      "maxDrawdownPct": 97.83670156402492,
+      "bullish": {
+        "truePositives": 179,
+        "falsePositives": 195,
+        "falseNegatives": 349,
+        "trueNegatives": 340,
+        "precision": 0.4786096256684492,
+        "recall": 0.3390151515151515
+      },
+      "bearish": {
+        "truePositives": 123,
+        "falsePositives": 124,
+        "falseNegatives": 412,
+        "trueNegatives": 404,
+        "precision": 0.4979757085020243,
+        "recall": 0.22990654205607478
+      },
+      "significance": {
+        "n": 621,
+        "wins": 302,
+        "pValue": 0.5208686123309857,
+        "significant": false
+      }
     }
   },
   "rollingWindows": {
@@ -14064,6 +14992,102 @@
           "significance": null
         },
         "macroLiquidity:7d": {
+          "n": 0,
+          "winRate": null,
+          "meanReturnPct": null,
+          "medianReturnPct": null,
+          "maxDrawdownPct": null,
+          "bullish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "bearish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "significance": null
+        },
+        "marketStructure:1h": {
+          "n": 0,
+          "winRate": null,
+          "meanReturnPct": null,
+          "medianReturnPct": null,
+          "maxDrawdownPct": null,
+          "bullish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "bearish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "significance": null
+        },
+        "marketStructure:4h": {
+          "n": 0,
+          "winRate": null,
+          "meanReturnPct": null,
+          "medianReturnPct": null,
+          "maxDrawdownPct": null,
+          "bullish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "bearish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "significance": null
+        },
+        "marketStructure:24h": {
+          "n": 0,
+          "winRate": null,
+          "meanReturnPct": null,
+          "medianReturnPct": null,
+          "maxDrawdownPct": null,
+          "bullish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "bearish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "significance": null
+        },
+        "marketStructure:7d": {
           "n": 0,
           "winRate": null,
           "meanReturnPct": null,
@@ -15536,6 +16560,102 @@
             "recall": null
           },
           "significance": null
+        },
+        "marketStructure:1h": {
+          "n": 0,
+          "winRate": null,
+          "meanReturnPct": null,
+          "medianReturnPct": null,
+          "maxDrawdownPct": null,
+          "bullish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "bearish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "significance": null
+        },
+        "marketStructure:4h": {
+          "n": 0,
+          "winRate": null,
+          "meanReturnPct": null,
+          "medianReturnPct": null,
+          "maxDrawdownPct": null,
+          "bullish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "bearish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "significance": null
+        },
+        "marketStructure:24h": {
+          "n": 0,
+          "winRate": null,
+          "meanReturnPct": null,
+          "medianReturnPct": null,
+          "maxDrawdownPct": null,
+          "bullish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "bearish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "significance": null
+        },
+        "marketStructure:7d": {
+          "n": 0,
+          "winRate": null,
+          "meanReturnPct": null,
+          "medianReturnPct": null,
+          "maxDrawdownPct": null,
+          "bullish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "bearish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "significance": null
         }
       }
     },
@@ -16956,6 +18076,102 @@
           "significance": null
         },
         "macroLiquidity:7d": {
+          "n": 0,
+          "winRate": null,
+          "meanReturnPct": null,
+          "medianReturnPct": null,
+          "maxDrawdownPct": null,
+          "bullish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "bearish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "significance": null
+        },
+        "marketStructure:1h": {
+          "n": 0,
+          "winRate": null,
+          "meanReturnPct": null,
+          "medianReturnPct": null,
+          "maxDrawdownPct": null,
+          "bullish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "bearish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "significance": null
+        },
+        "marketStructure:4h": {
+          "n": 0,
+          "winRate": null,
+          "meanReturnPct": null,
+          "medianReturnPct": null,
+          "maxDrawdownPct": null,
+          "bullish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "bearish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "significance": null
+        },
+        "marketStructure:24h": {
+          "n": 0,
+          "winRate": null,
+          "meanReturnPct": null,
+          "medianReturnPct": null,
+          "maxDrawdownPct": null,
+          "bullish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "bearish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "significance": null
+        },
+        "marketStructure:7d": {
           "n": 0,
           "winRate": null,
           "meanReturnPct": null,
@@ -18448,6 +19664,102 @@
             "recall": null
           },
           "significance": null
+        },
+        "marketStructure:1h": {
+          "n": 0,
+          "winRate": null,
+          "meanReturnPct": null,
+          "medianReturnPct": null,
+          "maxDrawdownPct": null,
+          "bullish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "bearish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "significance": null
+        },
+        "marketStructure:4h": {
+          "n": 0,
+          "winRate": null,
+          "meanReturnPct": null,
+          "medianReturnPct": null,
+          "maxDrawdownPct": null,
+          "bullish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "bearish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "significance": null
+        },
+        "marketStructure:24h": {
+          "n": 0,
+          "winRate": null,
+          "meanReturnPct": null,
+          "medianReturnPct": null,
+          "maxDrawdownPct": null,
+          "bullish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "bearish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "significance": null
+        },
+        "marketStructure:7d": {
+          "n": 0,
+          "winRate": null,
+          "meanReturnPct": null,
+          "medianReturnPct": null,
+          "maxDrawdownPct": null,
+          "bullish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "bearish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "significance": null
         }
       }
     },
@@ -19896,6 +21208,102 @@
           "significance": null
         },
         "macroLiquidity:7d": {
+          "n": 0,
+          "winRate": null,
+          "meanReturnPct": null,
+          "medianReturnPct": null,
+          "maxDrawdownPct": null,
+          "bullish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "bearish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "significance": null
+        },
+        "marketStructure:1h": {
+          "n": 0,
+          "winRate": null,
+          "meanReturnPct": null,
+          "medianReturnPct": null,
+          "maxDrawdownPct": null,
+          "bullish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "bearish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "significance": null
+        },
+        "marketStructure:4h": {
+          "n": 0,
+          "winRate": null,
+          "meanReturnPct": null,
+          "medianReturnPct": null,
+          "maxDrawdownPct": null,
+          "bullish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "bearish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "significance": null
+        },
+        "marketStructure:24h": {
+          "n": 0,
+          "winRate": null,
+          "meanReturnPct": null,
+          "medianReturnPct": null,
+          "maxDrawdownPct": null,
+          "bullish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "bearish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "significance": null
+        },
+        "marketStructure:7d": {
           "n": 0,
           "winRate": null,
           "meanReturnPct": null,
@@ -21368,6 +22776,102 @@
             "recall": null
           },
           "significance": null
+        },
+        "marketStructure:1h": {
+          "n": 0,
+          "winRate": null,
+          "meanReturnPct": null,
+          "medianReturnPct": null,
+          "maxDrawdownPct": null,
+          "bullish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "bearish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "significance": null
+        },
+        "marketStructure:4h": {
+          "n": 0,
+          "winRate": null,
+          "meanReturnPct": null,
+          "medianReturnPct": null,
+          "maxDrawdownPct": null,
+          "bullish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "bearish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "significance": null
+        },
+        "marketStructure:24h": {
+          "n": 0,
+          "winRate": null,
+          "meanReturnPct": null,
+          "medianReturnPct": null,
+          "maxDrawdownPct": null,
+          "bullish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "bearish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "significance": null
+        },
+        "marketStructure:7d": {
+          "n": 0,
+          "winRate": null,
+          "meanReturnPct": null,
+          "medianReturnPct": null,
+          "maxDrawdownPct": null,
+          "bullish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "bearish": {
+            "truePositives": 0,
+            "falsePositives": 0,
+            "falseNegatives": 0,
+            "trueNegatives": 0,
+            "precision": null,
+            "recall": null
+          },
+          "significance": null
         }
       }
     }
@@ -22467,7 +23971,7 @@
         }
       },
       "fdr": {
-        "rank": 41,
+        "rank": 52,
         "significant": false
       }
     },
@@ -22542,7 +24046,7 @@
         }
       },
       "fdr": {
-        "rank": 25,
+        "rank": 35,
         "significant": false
       }
     },
@@ -22584,7 +24088,7 @@
         }
       },
       "fdr": {
-        "rank": 42,
+        "rank": 53,
         "significant": false
       }
     },
@@ -22692,7 +24196,7 @@
         }
       },
       "fdr": {
-        "rank": 43,
+        "rank": 54,
         "significant": false
       }
     },
@@ -22767,7 +24271,7 @@
         }
       },
       "fdr": {
-        "rank": 44,
+        "rank": 55,
         "significant": false
       }
     },
@@ -22908,7 +24412,7 @@
         }
       },
       "fdr": {
-        "rank": 45,
+        "rank": 56,
         "significant": false
       }
     },
@@ -23012,6 +24516,48 @@
       }
     },
     {
+      "label": "Funding Rate + Market Structure",
+      "metricIds": [
+        "funding",
+        "marketStructure"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 18,
+        "winRate": 0.3333333333333333,
+        "meanReturnPct": -0.15212826590364015,
+        "medianReturnPct": -0.20862669857720553,
+        "maxDrawdownPct": 3.0444744669076056,
+        "bullish": {
+          "truePositives": 6,
+          "falsePositives": 12,
+          "falseNegatives": 1439,
+          "trueNegatives": 1439,
+          "precision": 0.3333333333333333,
+          "recall": 0.004152249134948097
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1446,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 18,
+          "wins": 6,
+          "pValue": 0.23788452148437472,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 6,
+        "significant": false
+      }
+    },
+    {
       "label": "Funding Rate + Liquidations",
       "metricIds": [
         "funding",
@@ -23082,7 +24628,7 @@
         }
       },
       "fdr": {
-        "rank": 19,
+        "rank": 25,
         "significant": false
       }
     },
@@ -23124,7 +24670,7 @@
         }
       },
       "fdr": {
-        "rank": 27,
+        "rank": 38,
         "significant": false
       }
     },
@@ -23166,7 +24712,7 @@
         }
       },
       "fdr": {
-        "rank": 16,
+        "rank": 21,
         "significant": false
       }
     },
@@ -23274,7 +24820,7 @@
         }
       },
       "fdr": {
-        "rank": 37,
+        "rank": 48,
         "significant": false
       }
     },
@@ -23316,7 +24862,7 @@
         }
       },
       "fdr": {
-        "rank": 34,
+        "rank": 45,
         "significant": false
       }
     },
@@ -23358,7 +24904,7 @@
         }
       },
       "fdr": {
-        "rank": 38,
+        "rank": 49,
         "significant": false
       }
     },
@@ -23499,7 +25045,7 @@
         }
       },
       "fdr": {
-        "rank": 14,
+        "rank": 19,
         "significant": false
       }
     },
@@ -23541,7 +25087,7 @@
         }
       },
       "fdr": {
-        "rank": 24,
+        "rank": 33,
         "significant": false
       }
     },
@@ -23616,7 +25162,49 @@
         }
       },
       "fdr": {
-        "rank": 21,
+        "rank": 29,
+        "significant": false
+      }
+    },
+    {
+      "label": "Open Interest + Market Structure",
+      "metricIds": [
+        "openInterest",
+        "marketStructure"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 118,
+        "winRate": 0.4745762711864407,
+        "meanReturnPct": -0.010051971369749377,
+        "medianReturnPct": -0.019646025024314957,
+        "maxDrawdownPct": 3.922794329915947,
+        "bullish": {
+          "truePositives": 56,
+          "falsePositives": 62,
+          "falseNegatives": 1389,
+          "trueNegatives": 1389,
+          "precision": 0.4745762711864407,
+          "recall": 0.03875432525951557
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1446,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 118,
+          "wins": 56,
+          "pValue": 0.6454967635578368,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 23,
         "significant": false
       }
     },
@@ -23823,7 +25411,7 @@
         }
       },
       "fdr": {
-        "rank": 20,
+        "rank": 26,
         "significant": false
       }
     },
@@ -23865,7 +25453,7 @@
         }
       },
       "fdr": {
-        "rank": 30,
+        "rank": 41,
         "significant": false
       }
     },
@@ -23907,7 +25495,7 @@
         }
       },
       "fdr": {
-        "rank": 13,
+        "rank": 18,
         "significant": false
       }
     },
@@ -24048,7 +25636,7 @@
         }
       },
       "fdr": {
-        "rank": 26,
+        "rank": 36,
         "significant": false
       }
     },
@@ -24090,7 +25678,7 @@
         }
       },
       "fdr": {
-        "rank": 46,
+        "rank": 57,
         "significant": false
       }
     },
@@ -24165,7 +25753,49 @@
         }
       },
       "fdr": {
-        "rank": 22,
+        "rank": 31,
+        "significant": false
+      }
+    },
+    {
+      "label": "Squeeze Setup + Market Structure",
+      "metricIds": [
+        "squeezeRisk",
+        "marketStructure"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 61,
+        "winRate": 0.4098360655737705,
+        "meanReturnPct": -0.06053413706506429,
+        "medianReturnPct": -0.023213652655621905,
+        "maxDrawdownPct": 5.462500211878768,
+        "bullish": {
+          "truePositives": 25,
+          "falsePositives": 36,
+          "falseNegatives": 1420,
+          "trueNegatives": 1415,
+          "precision": 0.4098360655737705,
+          "recall": 0.01730103806228374
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1446,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 61,
+          "wins": 25,
+          "pValue": 0.2000313685131025,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 4,
         "significant": false
       }
     },
@@ -24240,7 +25870,7 @@
         }
       },
       "fdr": {
-        "rank": 29,
+        "rank": 40,
         "significant": false
       }
     },
@@ -24348,7 +25978,7 @@
         }
       },
       "fdr": {
-        "rank": 18,
+        "rank": 24,
         "significant": false
       }
     },
@@ -24390,7 +26020,7 @@
         }
       },
       "fdr": {
-        "rank": 7,
+        "rank": 9,
         "significant": false
       }
     },
@@ -24432,7 +26062,7 @@
         }
       },
       "fdr": {
-        "rank": 6,
+        "rank": 8,
         "significant": false
       }
     },
@@ -24573,7 +26203,7 @@
         }
       },
       "fdr": {
-        "rank": 11,
+        "rank": 16,
         "significant": false
       }
     },
@@ -24615,7 +26245,7 @@
         }
       },
       "fdr": {
-        "rank": 4,
+        "rank": 5,
         "significant": false
       }
     },
@@ -24690,7 +26320,49 @@
         }
       },
       "fdr": {
-        "rank": 32,
+        "rank": 43,
+        "significant": false
+      }
+    },
+    {
+      "label": "Long/Short Positioning + Market Structure",
+      "metricIds": [
+        "longShort",
+        "marketStructure"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 358,
+        "winRate": 0.4776536312849162,
+        "meanReturnPct": -0.07390566566019872,
+        "medianReturnPct": -0.01863660586620411,
+        "maxDrawdownPct": 27.77834977247518,
+        "bullish": {
+          "truePositives": 171,
+          "falsePositives": 187,
+          "falseNegatives": 1274,
+          "trueNegatives": 1264,
+          "precision": 0.4776536312849162,
+          "recall": 0.11833910034602076
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1446,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 358,
+          "wins": 171,
+          "pValue": 0.42794951903002676,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 14,
         "significant": false
       }
     },
@@ -24831,7 +26503,7 @@
         }
       },
       "fdr": {
-        "rank": 36,
+        "rank": 47,
         "significant": false
       }
     },
@@ -24906,7 +26578,7 @@
         }
       },
       "fdr": {
-        "rank": 23,
+        "rank": 32,
         "significant": false
       }
     },
@@ -25047,7 +26719,7 @@
         }
       },
       "fdr": {
-        "rank": 35,
+        "rank": 46,
         "significant": false
       }
     },
@@ -25155,7 +26827,49 @@
         }
       },
       "fdr": {
-        "rank": 12,
+        "rank": 17,
+        "significant": false
+      }
+    },
+    {
+      "label": "Basis vs Spot + Market Structure",
+      "metricIds": [
+        "basis",
+        "marketStructure"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 197,
+        "winRate": 0.48223350253807107,
+        "meanReturnPct": -0.04273827892987177,
+        "medianReturnPct": -0.01850048685492255,
+        "maxDrawdownPct": 12.72287581103364,
+        "bullish": {
+          "truePositives": 95,
+          "falsePositives": 102,
+          "falseNegatives": 1350,
+          "trueNegatives": 1349,
+          "precision": 0.48223350253807107,
+          "recall": 0.0657439446366782
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1446,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 197,
+          "wins": 95,
+          "pValue": 0.6691366685528721,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 27,
         "significant": false
       }
     },
@@ -25556,6 +27270,39 @@
       }
     },
     {
+      "label": "Order Flow + Market Structure",
+      "metricIds": [
+        "orderFlow",
+        "marketStructure"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1445,
+          "trueNegatives": 1451,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1446,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Order Flow + Liquidations",
       "metricIds": [
         "orderFlow",
@@ -25919,6 +27666,39 @@
       }
     },
     {
+      "label": "Spot CVD + Market Structure",
+      "metricIds": [
+        "spotCvd",
+        "marketStructure"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1445,
+          "trueNegatives": 1451,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1446,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Spot CVD + Liquidations",
       "metricIds": [
         "spotCvd",
@@ -25989,7 +27769,7 @@
         }
       },
       "fdr": {
-        "rank": 8,
+        "rank": 11,
         "significant": false
       }
     },
@@ -26031,7 +27811,7 @@
         }
       },
       "fdr": {
-        "rank": 15,
+        "rank": 20,
         "significant": false
       }
     },
@@ -26172,7 +27952,7 @@
         }
       },
       "fdr": {
-        "rank": 17,
+        "rank": 22,
         "significant": false
       }
     },
@@ -26214,7 +27994,7 @@
         }
       },
       "fdr": {
-        "rank": 31,
+        "rank": 42,
         "significant": false
       }
     },
@@ -26294,6 +28074,48 @@
       }
     },
     {
+      "label": "Price Action + Market Structure",
+      "metricIds": [
+        "technicals",
+        "marketStructure"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 567,
+        "winRate": 0.47795414462081126,
+        "meanReturnPct": -0.018208692092907364,
+        "medianReturnPct": -0.009578140384887992,
+        "maxDrawdownPct": 17.414393299817295,
+        "bullish": {
+          "truePositives": 271,
+          "falsePositives": 296,
+          "falseNegatives": 1174,
+          "trueNegatives": 1155,
+          "precision": 0.47795414462081126,
+          "recall": 0.1875432525951557
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1446,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 567,
+          "wins": 271,
+          "pValue": 0.3134989789542865,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 10,
+        "significant": false
+      }
+    },
+    {
       "label": "Price Action + Liquidations",
       "metricIds": [
         "technicals",
@@ -26364,7 +28186,7 @@
         }
       },
       "fdr": {
-        "rank": 5,
+        "rank": 7,
         "significant": false
       }
     },
@@ -26505,7 +28327,7 @@
         }
       },
       "fdr": {
-        "rank": 33,
+        "rank": 44,
         "significant": false
       }
     },
@@ -26547,7 +28369,7 @@
         }
       },
       "fdr": {
-        "rank": 47,
+        "rank": 58,
         "significant": false
       }
     },
@@ -26618,6 +28440,48 @@
           "n": 107,
           "wins": 52,
           "pValue": 0.8468020751891847,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 39,
+        "significant": false
+      }
+    },
+    {
+      "label": "ETF Flows + Market Structure",
+      "metricIds": [
+        "etfFlows",
+        "marketStructure"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 107,
+        "winRate": 0.4766355140186916,
+        "meanReturnPct": 0.022743991717548154,
+        "medianReturnPct": -0.0034208864533928638,
+        "maxDrawdownPct": 3.4950794032429093,
+        "bullish": {
+          "truePositives": 51,
+          "falsePositives": 56,
+          "falseNegatives": 1394,
+          "trueNegatives": 1395,
+          "precision": 0.4766355140186916,
+          "recall": 0.03529411764705882
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1446,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 107,
+          "wins": 51,
+          "pValue": 0.6991749840078645,
           "significant": false
         }
       },
@@ -26796,7 +28660,7 @@
         }
       },
       "fdr": {
-        "rank": 10,
+        "rank": 13,
         "significant": false
       }
     },
@@ -26913,7 +28777,49 @@
         }
       },
       "fdr": {
-        "rank": 40,
+        "rank": 51,
+        "significant": false
+      }
+    },
+    {
+      "label": "Spot vs Perp Volume + Market Structure",
+      "metricIds": [
+        "spotPerpVolume",
+        "marketStructure"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 505,
+        "winRate": 0.5069306930693069,
+        "meanReturnPct": -0.01164673051306337,
+        "medianReturnPct": 0.012829559304626217,
+        "maxDrawdownPct": 17.960197762889653,
+        "bullish": {
+          "truePositives": 256,
+          "falsePositives": 249,
+          "falseNegatives": 1189,
+          "trueNegatives": 1202,
+          "precision": 0.5069306930693069,
+          "recall": 0.17716262975778546
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1446,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 505,
+          "wins": 256,
+          "pValue": 0.789503460679572,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 34,
         "significant": false
       }
     },
@@ -27149,6 +29055,39 @@
       }
     },
     {
+      "label": "Exchange Netflow + Market Structure",
+      "metricIds": [
+        "exchangeFlow",
+        "marketStructure"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1445,
+          "trueNegatives": 1451,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1446,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Exchange Netflow + Liquidations",
       "metricIds": [
         "exchangeFlow",
@@ -27347,6 +29286,39 @@
       }
     },
     {
+      "label": "Options Put/Call + Market Structure",
+      "metricIds": [
+        "options",
+        "marketStructure"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1445,
+          "trueNegatives": 1451,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1446,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Options Put/Call + Liquidations",
       "metricIds": [
         "options",
@@ -27512,6 +29484,39 @@
       }
     },
     {
+      "label": "Coinbase Premium + Market Structure",
+      "metricIds": [
+        "coinbasePremium",
+        "marketStructure"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1445,
+          "trueNegatives": 1451,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1446,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Coinbase Premium + Liquidations",
       "metricIds": [
         "coinbasePremium",
@@ -27582,7 +29587,7 @@
         }
       },
       "fdr": {
-        "rank": 9,
+        "rank": 12,
         "significant": false
       }
     },
@@ -27657,7 +29662,49 @@
         }
       },
       "fdr": {
-        "rank": 39,
+        "rank": 50,
+        "significant": false
+      }
+    },
+    {
+      "label": "Stablecoin Supply + Market Structure",
+      "metricIds": [
+        "stablecoins",
+        "marketStructure"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 526,
+        "winRate": 0.49429657794676807,
+        "meanReturnPct": -0.019488078253703477,
+        "medianReturnPct": -0.0034328142426327986,
+        "maxDrawdownPct": 19.10821027859383,
+        "bullish": {
+          "truePositives": 260,
+          "falsePositives": 266,
+          "falseNegatives": 1185,
+          "trueNegatives": 1185,
+          "precision": 0.49429657794676807,
+          "recall": 0.17993079584775087
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1446,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 526,
+          "wins": 260,
+          "pValue": 0.827446744782094,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 37,
         "significant": false
       }
     },
@@ -27770,6 +29817,48 @@
       }
     },
     {
+      "label": "Fear & Greed + Market Structure",
+      "metricIds": [
+        "fearGreed",
+        "marketStructure"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 123,
+        "winRate": 0.5203252032520326,
+        "meanReturnPct": -0.021345880295340628,
+        "medianReturnPct": 0.017730241562556166,
+        "maxDrawdownPct": 10.254557830738259,
+        "bullish": {
+          "truePositives": 64,
+          "falsePositives": 59,
+          "falseNegatives": 1381,
+          "trueNegatives": 1392,
+          "precision": 0.5203252032520326,
+          "recall": 0.044290657439446365
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1446,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 123,
+          "wins": 64,
+          "pValue": 0.7185088365549561,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 30,
+        "significant": false
+      }
+    },
+    {
       "label": "Fear & Greed + Liquidations",
       "metricIds": [
         "fearGreed",
@@ -27836,6 +29925,39 @@
       }
     },
     {
+      "label": "Sector Breadth + Market Structure",
+      "metricIds": [
+        "sectorBreadth",
+        "marketStructure"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1445,
+          "trueNegatives": 1451,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1446,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Sector Breadth + Liquidations",
       "metricIds": [
         "sectorBreadth",
@@ -27869,9 +29991,84 @@
       }
     },
     {
+      "label": "Macro Liquidity + Market Structure",
+      "metricIds": [
+        "macroLiquidity",
+        "marketStructure"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 208,
+        "winRate": 0.47115384615384615,
+        "meanReturnPct": -0.002392745542455301,
+        "medianReturnPct": -0.01426904462888507,
+        "maxDrawdownPct": 6.772691345374736,
+        "bullish": {
+          "truePositives": 98,
+          "falsePositives": 110,
+          "falseNegatives": 1347,
+          "trueNegatives": 1341,
+          "precision": 0.47115384615384615,
+          "recall": 0.06782006920415225
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1446,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 208,
+          "wins": 98,
+          "pValue": 0.44571222099285573,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 15,
+        "significant": false
+      }
+    },
+    {
       "label": "Macro Liquidity + Liquidations",
       "metricIds": [
         "macroLiquidity",
+        "liquidations"
+      ],
+      "holdingPeriod": "1h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1445,
+          "trueNegatives": 1451,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1450,
+          "trueNegatives": 1446,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Market Structure + Liquidations",
+      "metricIds": [
+        "marketStructure",
         "liquidations"
       ],
       "holdingPeriod": "1h",
@@ -27939,7 +30136,7 @@
         }
       },
       "fdr": {
-        "rank": 22,
+        "rank": 26,
         "significant": false
       }
     },
@@ -28014,7 +30211,7 @@
         }
       },
       "fdr": {
-        "rank": 3,
+        "rank": 4,
         "significant": false
       }
     },
@@ -28056,7 +30253,7 @@
         }
       },
       "fdr": {
-        "rank": 12,
+        "rank": 14,
         "significant": false
       }
     },
@@ -28164,7 +30361,7 @@
         }
       },
       "fdr": {
-        "rank": 27,
+        "rank": 31,
         "significant": false
       }
     },
@@ -28239,7 +30436,7 @@
         }
       },
       "fdr": {
-        "rank": 20,
+        "rank": 23,
         "significant": false
       }
     },
@@ -28380,7 +30577,7 @@
         }
       },
       "fdr": {
-        "rank": 28,
+        "rank": 32,
         "significant": false
       }
     },
@@ -28484,6 +30681,48 @@
       }
     },
     {
+      "label": "Funding Rate + Market Structure",
+      "metricIds": [
+        "funding",
+        "marketStructure"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 18,
+        "winRate": 0.16666666666666666,
+        "meanReturnPct": -0.4849577421937405,
+        "medianReturnPct": -0.1832190657086919,
+        "maxDrawdownPct": 9.08766596726349,
+        "bullish": {
+          "truePositives": 3,
+          "falsePositives": 15,
+          "falseNegatives": 1467,
+          "trueNegatives": 1411,
+          "precision": 0.16666666666666666,
+          "recall": 0.0020408163265306124
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1470,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 18,
+          "wins": 3,
+          "pValue": 0.007537841796875,
+          "significant": true
+        }
+      },
+      "fdr": {
+        "rank": 2,
+        "significant": false
+      }
+    },
+    {
       "label": "Funding Rate + Liquidations",
       "metricIds": [
         "funding",
@@ -28554,7 +30793,7 @@
         }
       },
       "fdr": {
-        "rank": 23,
+        "rank": 27,
         "significant": false
       }
     },
@@ -28596,7 +30835,7 @@
         }
       },
       "fdr": {
-        "rank": 31,
+        "rank": 37,
         "significant": false
       }
     },
@@ -28638,7 +30877,7 @@
         }
       },
       "fdr": {
-        "rank": 26,
+        "rank": 30,
         "significant": false
       }
     },
@@ -28788,7 +31027,7 @@
         }
       },
       "fdr": {
-        "rank": 13,
+        "rank": 15,
         "significant": false
       }
     },
@@ -28830,7 +31069,7 @@
         }
       },
       "fdr": {
-        "rank": 5,
+        "rank": 6,
         "significant": false
       }
     },
@@ -28971,7 +31210,7 @@
         }
       },
       "fdr": {
-        "rank": 2,
+        "rank": 3,
         "significant": false
       }
     },
@@ -29013,7 +31252,7 @@
         }
       },
       "fdr": {
-        "rank": 6,
+        "rank": 7,
         "significant": false
       }
     },
@@ -29088,7 +31327,49 @@
         }
       },
       "fdr": {
-        "rank": 17,
+        "rank": 19,
+        "significant": false
+      }
+    },
+    {
+      "label": "Open Interest + Market Structure",
+      "metricIds": [
+        "openInterest",
+        "marketStructure"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 118,
+        "winRate": 0.5847457627118644,
+        "meanReturnPct": 0.3671790504311374,
+        "medianReturnPct": 0.22382542331552674,
+        "maxDrawdownPct": 3.476399772995838,
+        "bullish": {
+          "truePositives": 69,
+          "falsePositives": 49,
+          "falseNegatives": 1401,
+          "trueNegatives": 1377,
+          "precision": 0.5847457627118644,
+          "recall": 0.04693877551020408
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1470,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 118,
+          "wins": 69,
+          "pValue": 0.07983431282820123,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 8,
         "significant": false
       }
     },
@@ -29295,7 +31576,7 @@
         }
       },
       "fdr": {
-        "rank": 8,
+        "rank": 10,
         "significant": false
       }
     },
@@ -29337,7 +31618,7 @@
         }
       },
       "fdr": {
-        "rank": 14,
+        "rank": 16,
         "significant": false
       }
     },
@@ -29379,7 +31660,7 @@
         }
       },
       "fdr": {
-        "rank": 7,
+        "rank": 9,
         "significant": false
       }
     },
@@ -29520,7 +31801,7 @@
         }
       },
       "fdr": {
-        "rank": 4,
+        "rank": 5,
         "significant": false
       }
     },
@@ -29562,7 +31843,7 @@
         }
       },
       "fdr": {
-        "rank": 43,
+        "rank": 53,
         "significant": false
       }
     },
@@ -29637,7 +31918,49 @@
         }
       },
       "fdr": {
-        "rank": 10,
+        "rank": 12,
+        "significant": false
+      }
+    },
+    {
+      "label": "Squeeze Setup + Market Structure",
+      "metricIds": [
+        "squeezeRisk",
+        "marketStructure"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 61,
+        "winRate": 0.4262295081967213,
+        "meanReturnPct": -0.07696228855681114,
+        "medianReturnPct": -0.08156833952227482,
+        "maxDrawdownPct": 7.3261340728249635,
+        "bullish": {
+          "truePositives": 26,
+          "falsePositives": 35,
+          "falseNegatives": 1444,
+          "trueNegatives": 1391,
+          "precision": 0.4262295081967213,
+          "recall": 0.017687074829931974
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1470,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 61,
+          "wins": 26,
+          "pValue": 0.3056774198631172,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 22,
         "significant": false
       }
     },
@@ -29712,7 +32035,7 @@
         }
       },
       "fdr": {
-        "rank": 24,
+        "rank": 28,
         "significant": false
       }
     },
@@ -29820,7 +32143,7 @@
         }
       },
       "fdr": {
-        "rank": 19,
+        "rank": 21,
         "significant": false
       }
     },
@@ -29862,7 +32185,7 @@
         }
       },
       "fdr": {
-        "rank": 34,
+        "rank": 40,
         "significant": false
       }
     },
@@ -29904,7 +32227,7 @@
         }
       },
       "fdr": {
-        "rank": 39,
+        "rank": 45,
         "significant": false
       }
     },
@@ -30045,7 +32368,7 @@
         }
       },
       "fdr": {
-        "rank": 9,
+        "rank": 11,
         "significant": false
       }
     },
@@ -30087,7 +32410,7 @@
         }
       },
       "fdr": {
-        "rank": 21,
+        "rank": 24,
         "significant": false
       }
     },
@@ -30162,7 +32485,49 @@
         }
       },
       "fdr": {
-        "rank": 36,
+        "rank": 42,
+        "significant": false
+      }
+    },
+    {
+      "label": "Long/Short Positioning + Market Structure",
+      "metricIds": [
+        "longShort",
+        "marketStructure"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 358,
+        "winRate": 0.5251396648044693,
+        "meanReturnPct": 0.010223378878386858,
+        "medianReturnPct": 0.04641118457758403,
+        "maxDrawdownPct": 21.604849004949916,
+        "bullish": {
+          "truePositives": 188,
+          "falsePositives": 170,
+          "falseNegatives": 1282,
+          "trueNegatives": 1256,
+          "precision": 0.5251396648044693,
+          "recall": 0.12789115646258503
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1470,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 358,
+          "wins": 188,
+          "pValue": 0.3689527238500203,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 25,
         "significant": false
       }
     },
@@ -30303,7 +32668,7 @@
         }
       },
       "fdr": {
-        "rank": 16,
+        "rank": 18,
         "significant": false
       }
     },
@@ -30378,7 +32743,7 @@
         }
       },
       "fdr": {
-        "rank": 29,
+        "rank": 34,
         "significant": false
       }
     },
@@ -30519,7 +32884,7 @@
         }
       },
       "fdr": {
-        "rank": 15,
+        "rank": 17,
         "significant": false
       }
     },
@@ -30627,7 +32992,49 @@
         }
       },
       "fdr": {
-        "rank": 44,
+        "rank": 54,
+        "significant": false
+      }
+    },
+    {
+      "label": "Basis vs Spot + Market Structure",
+      "metricIds": [
+        "basis",
+        "marketStructure"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 197,
+        "winRate": 0.5025380710659898,
+        "meanReturnPct": -0.02797713513626202,
+        "medianReturnPct": 0.004546642872564832,
+        "maxDrawdownPct": 17.077303047925856,
+        "bullish": {
+          "truePositives": 99,
+          "falsePositives": 98,
+          "falseNegatives": 1371,
+          "trueNegatives": 1328,
+          "precision": 0.5025380710659898,
+          "recall": 0.0673469387755102
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1470,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 197,
+          "wins": 99,
+          "pValue": 1,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 55,
         "significant": false
       }
     },
@@ -31028,6 +33435,39 @@
       }
     },
     {
+      "label": "Order Flow + Market Structure",
+      "metricIds": [
+        "orderFlow",
+        "marketStructure"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1470,
+          "trueNegatives": 1426,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1470,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Order Flow + Liquidations",
       "metricIds": [
         "orderFlow",
@@ -31391,6 +33831,39 @@
       }
     },
     {
+      "label": "Spot CVD + Market Structure",
+      "metricIds": [
+        "spotCvd",
+        "marketStructure"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1470,
+          "trueNegatives": 1426,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1470,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Spot CVD + Liquidations",
       "metricIds": [
         "spotCvd",
@@ -31461,7 +33934,7 @@
         }
       },
       "fdr": {
-        "rank": 37,
+        "rank": 43,
         "significant": false
       }
     },
@@ -31503,7 +33976,7 @@
         }
       },
       "fdr": {
-        "rank": 30,
+        "rank": 35,
         "significant": false
       }
     },
@@ -31644,7 +34117,7 @@
         }
       },
       "fdr": {
-        "rank": 41,
+        "rank": 48,
         "significant": false
       }
     },
@@ -31686,7 +34159,7 @@
         }
       },
       "fdr": {
-        "rank": 45,
+        "rank": 56,
         "significant": false
       }
     },
@@ -31761,7 +34234,49 @@
         }
       },
       "fdr": {
-        "rank": 18,
+        "rank": 20,
+        "significant": false
+      }
+    },
+    {
+      "label": "Price Action + Market Structure",
+      "metricIds": [
+        "technicals",
+        "marketStructure"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 567,
+        "winRate": 0.49382716049382713,
+        "meanReturnPct": 0.025809680973818607,
+        "medianReturnPct": -0.00504380545034305,
+        "maxDrawdownPct": 20.00473324787388,
+        "bullish": {
+          "truePositives": 280,
+          "falsePositives": 287,
+          "falseNegatives": 1190,
+          "trueNegatives": 1139,
+          "precision": 0.49382716049382713,
+          "recall": 0.19047619047619047
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1470,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 567,
+          "wins": 280,
+          "pValue": 0.8010862512674416,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 47,
         "significant": false
       }
     },
@@ -31836,7 +34351,7 @@
         }
       },
       "fdr": {
-        "rank": 46,
+        "rank": 57,
         "significant": false
       }
     },
@@ -31977,7 +34492,7 @@
         }
       },
       "fdr": {
-        "rank": 33,
+        "rank": 39,
         "significant": false
       }
     },
@@ -32019,7 +34534,7 @@
         }
       },
       "fdr": {
-        "rank": 25,
+        "rank": 29,
         "significant": false
       }
     },
@@ -32094,7 +34609,49 @@
         }
       },
       "fdr": {
-        "rank": 32,
+        "rank": 38,
+        "significant": false
+      }
+    },
+    {
+      "label": "ETF Flows + Market Structure",
+      "metricIds": [
+        "etfFlows",
+        "marketStructure"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 107,
+        "winRate": 0.5046728971962616,
+        "meanReturnPct": 0.18518365814270393,
+        "medianReturnPct": 0.004494858475566976,
+        "maxDrawdownPct": 4.377643052994296,
+        "bullish": {
+          "truePositives": 54,
+          "falsePositives": 53,
+          "falseNegatives": 1416,
+          "trueNegatives": 1373,
+          "precision": 0.5046728971962616,
+          "recall": 0.036734693877551024
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1470,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 107,
+          "wins": 54,
+          "pValue": 0.9999999999999889,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 52,
         "significant": false
       }
     },
@@ -32268,7 +34825,7 @@
         }
       },
       "fdr": {
-        "rank": 40,
+        "rank": 46,
         "significant": false
       }
     },
@@ -32310,7 +34867,7 @@
         }
       },
       "fdr": {
-        "rank": 47,
+        "rank": 58,
         "significant": false
       }
     },
@@ -32385,7 +34942,49 @@
         }
       },
       "fdr": {
-        "rank": 42,
+        "rank": 51,
+        "significant": false
+      }
+    },
+    {
+      "label": "Spot vs Perp Volume + Market Structure",
+      "metricIds": [
+        "spotPerpVolume",
+        "marketStructure"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 505,
+        "winRate": 0.502970297029703,
+        "meanReturnPct": 0.03453527703900147,
+        "medianReturnPct": 0.002968173756902527,
+        "maxDrawdownPct": 31.86984661880431,
+        "bullish": {
+          "truePositives": 254,
+          "falsePositives": 251,
+          "falseNegatives": 1216,
+          "trueNegatives": 1175,
+          "precision": 0.502970297029703,
+          "recall": 0.1727891156462585
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1470,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 505,
+          "wins": 254,
+          "pValue": 0.9290944505892045,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 50,
         "significant": false
       }
     },
@@ -32621,6 +35220,39 @@
       }
     },
     {
+      "label": "Exchange Netflow + Market Structure",
+      "metricIds": [
+        "exchangeFlow",
+        "marketStructure"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1470,
+          "trueNegatives": 1426,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1470,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Exchange Netflow + Liquidations",
       "metricIds": [
         "exchangeFlow",
@@ -32819,6 +35451,39 @@
       }
     },
     {
+      "label": "Options Put/Call + Market Structure",
+      "metricIds": [
+        "options",
+        "marketStructure"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1470,
+          "trueNegatives": 1426,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1470,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Options Put/Call + Liquidations",
       "metricIds": [
         "options",
@@ -32984,6 +35649,39 @@
       }
     },
     {
+      "label": "Coinbase Premium + Market Structure",
+      "metricIds": [
+        "coinbasePremium",
+        "marketStructure"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1470,
+          "trueNegatives": 1426,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1470,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Coinbase Premium + Liquidations",
       "metricIds": [
         "coinbasePremium",
@@ -33054,7 +35752,7 @@
         }
       },
       "fdr": {
-        "rank": 11,
+        "rank": 13,
         "significant": false
       }
     },
@@ -33129,7 +35827,49 @@
         }
       },
       "fdr": {
-        "rank": 38,
+        "rank": 44,
+        "significant": false
+      }
+    },
+    {
+      "label": "Stablecoin Supply + Market Structure",
+      "metricIds": [
+        "stablecoins",
+        "marketStructure"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 526,
+        "winRate": 0.5152091254752852,
+        "meanReturnPct": 0.05187325014658444,
+        "medianReturnPct": 0.01386466974643422,
+        "maxDrawdownPct": 27.30161560600536,
+        "bullish": {
+          "truePositives": 271,
+          "falsePositives": 255,
+          "falseNegatives": 1199,
+          "trueNegatives": 1171,
+          "precision": 0.5152091254752852,
+          "recall": 0.18435374149659864
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1470,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 526,
+          "wins": 271,
+          "pValue": 0.5131301681329867,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 36,
         "significant": false
       }
     },
@@ -33237,7 +35977,49 @@
         }
       },
       "fdr": {
-        "rank": 35,
+        "rank": 41,
+        "significant": false
+      }
+    },
+    {
+      "label": "Fear & Greed + Market Structure",
+      "metricIds": [
+        "fearGreed",
+        "marketStructure"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 123,
+        "winRate": 0.5121951219512195,
+        "meanReturnPct": 0.04525433290545694,
+        "medianReturnPct": 0.017334896515213853,
+        "maxDrawdownPct": 17.30912914350371,
+        "bullish": {
+          "truePositives": 63,
+          "falsePositives": 60,
+          "falseNegatives": 1407,
+          "trueNegatives": 1366,
+          "precision": 0.5121951219512195,
+          "recall": 0.04285714285714286
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1470,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 123,
+          "wins": 63,
+          "pValue": 0.8569843282496905,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 49,
         "significant": false
       }
     },
@@ -33308,6 +36090,39 @@
       }
     },
     {
+      "label": "Sector Breadth + Market Structure",
+      "metricIds": [
+        "sectorBreadth",
+        "marketStructure"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1470,
+          "trueNegatives": 1426,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1470,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Sector Breadth + Liquidations",
       "metricIds": [
         "sectorBreadth",
@@ -33341,9 +36156,84 @@
       }
     },
     {
+      "label": "Macro Liquidity + Market Structure",
+      "metricIds": [
+        "macroLiquidity",
+        "marketStructure"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 208,
+        "winRate": 0.5288461538461539,
+        "meanReturnPct": 0.12389078465875006,
+        "medianReturnPct": 0.04695234744394734,
+        "maxDrawdownPct": 9.671638949820782,
+        "bullish": {
+          "truePositives": 110,
+          "falsePositives": 98,
+          "falseNegatives": 1360,
+          "trueNegatives": 1328,
+          "precision": 0.5288461538461539,
+          "recall": 0.07482993197278912
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1470,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 208,
+          "wins": 110,
+          "pValue": 0.44571222099285557,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 33,
+        "significant": false
+      }
+    },
+    {
       "label": "Macro Liquidity + Liquidations",
       "metricIds": [
         "macroLiquidity",
+        "liquidations"
+      ],
+      "holdingPeriod": "4h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1470,
+          "trueNegatives": 1426,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1426,
+          "trueNegatives": 1470,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Market Structure + Liquidations",
+      "metricIds": [
+        "marketStructure",
         "liquidations"
       ],
       "holdingPeriod": "4h",
@@ -33411,7 +36301,7 @@
         }
       },
       "fdr": {
-        "rank": 47,
+        "rank": 58,
         "significant": false
       }
     },
@@ -33486,7 +36376,7 @@
         }
       },
       "fdr": {
-        "rank": 17,
+        "rank": 20,
         "significant": false
       }
     },
@@ -33528,7 +36418,7 @@
         }
       },
       "fdr": {
-        "rank": 20,
+        "rank": 23,
         "significant": false
       }
     },
@@ -33636,7 +36526,7 @@
         }
       },
       "fdr": {
-        "rank": 21,
+        "rank": 24,
         "significant": false
       }
     },
@@ -33711,7 +36601,7 @@
         }
       },
       "fdr": {
-        "rank": 18,
+        "rank": 21,
         "significant": false
       }
     },
@@ -33852,7 +36742,7 @@
         }
       },
       "fdr": {
-        "rank": 22,
+        "rank": 25,
         "significant": false
       }
     },
@@ -33956,6 +36846,48 @@
       }
     },
     {
+      "label": "Funding Rate + Market Structure",
+      "metricIds": [
+        "funding",
+        "marketStructure"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 18,
+        "winRate": 0.2222222222222222,
+        "meanReturnPct": -0.6017464406793636,
+        "medianReturnPct": -0.8289882822707251,
+        "maxDrawdownPct": 11.19405387158329,
+        "bullish": {
+          "truePositives": 4,
+          "falsePositives": 14,
+          "falseNegatives": 1448,
+          "trueNegatives": 1430,
+          "precision": 0.2222222222222222,
+          "recall": 0.0027548209366391185
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1452,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 18,
+          "wins": 4,
+          "pValue": 0.030883789062499986,
+          "significant": true
+        }
+      },
+      "fdr": {
+        "rank": 17,
+        "significant": false
+      }
+    },
+    {
       "label": "Funding Rate + Liquidations",
       "metricIds": [
         "funding",
@@ -34026,7 +36958,7 @@
         }
       },
       "fdr": {
-        "rank": 10,
+        "rank": 11,
         "significant": true
       }
     },
@@ -34068,7 +37000,7 @@
         }
       },
       "fdr": {
-        "rank": 5,
+        "rank": 6,
         "significant": true
       }
     },
@@ -34110,7 +37042,7 @@
         }
       },
       "fdr": {
-        "rank": 8,
+        "rank": 9,
         "significant": true
       }
     },
@@ -34260,7 +37192,7 @@
         }
       },
       "fdr": {
-        "rank": 6,
+        "rank": 7,
         "significant": true
       }
     },
@@ -34485,7 +37417,7 @@
         }
       },
       "fdr": {
-        "rank": 7,
+        "rank": 8,
         "significant": true
       }
     },
@@ -34561,6 +37493,48 @@
       },
       "fdr": {
         "rank": 4,
+        "significant": true
+      }
+    },
+    {
+      "label": "Open Interest + Market Structure",
+      "metricIds": [
+        "openInterest",
+        "marketStructure"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 118,
+        "winRate": 0.7966101694915254,
+        "meanReturnPct": 2.247784420238265,
+        "medianReturnPct": 1.689273937800649,
+        "maxDrawdownPct": 2.791617723475713,
+        "bullish": {
+          "truePositives": 94,
+          "falsePositives": 24,
+          "falseNegatives": 1358,
+          "trueNegatives": 1420,
+          "precision": 0.7966101694915254,
+          "recall": 0.06473829201101929
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1452,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 118,
+          "wins": 94,
+          "pValue": 5.56043296400393e-11,
+          "significant": true
+        }
+      },
+      "fdr": {
+        "rank": 5,
         "significant": true
       }
     },
@@ -34767,7 +37741,7 @@
         }
       },
       "fdr": {
-        "rank": 33,
+        "rank": 38,
         "significant": false
       }
     },
@@ -34809,7 +37783,7 @@
         }
       },
       "fdr": {
-        "rank": 16,
+        "rank": 19,
         "significant": false
       }
     },
@@ -34851,7 +37825,7 @@
         }
       },
       "fdr": {
-        "rank": 25,
+        "rank": 29,
         "significant": false
       }
     },
@@ -34992,7 +37966,7 @@
         }
       },
       "fdr": {
-        "rank": 29,
+        "rank": 34,
         "significant": false
       }
     },
@@ -35034,7 +38008,7 @@
         }
       },
       "fdr": {
-        "rank": 32,
+        "rank": 37,
         "significant": false
       }
     },
@@ -35109,7 +38083,49 @@
         }
       },
       "fdr": {
-        "rank": 37,
+        "rank": 43,
+        "significant": false
+      }
+    },
+    {
+      "label": "Squeeze Setup + Market Structure",
+      "metricIds": [
+        "squeezeRisk",
+        "marketStructure"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 61,
+        "winRate": 0.5245901639344263,
+        "meanReturnPct": 0.4227189878004611,
+        "medianReturnPct": 0.023951940754558945,
+        "maxDrawdownPct": 7.471128140283237,
+        "bullish": {
+          "truePositives": 32,
+          "falsePositives": 29,
+          "falseNegatives": 1420,
+          "trueNegatives": 1415,
+          "precision": 0.5245901639344263,
+          "recall": 0.02203856749311295
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1452,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 61,
+          "wins": 32,
+          "pValue": 0.7981526273057126,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 53,
         "significant": false
       }
     },
@@ -35184,7 +38200,7 @@
         }
       },
       "fdr": {
-        "rank": 43,
+        "rank": 50,
         "significant": false
       }
     },
@@ -35292,7 +38308,7 @@
         }
       },
       "fdr": {
-        "rank": 45,
+        "rank": 55,
         "significant": false
       }
     },
@@ -35334,7 +38350,7 @@
         }
       },
       "fdr": {
-        "rank": 11,
+        "rank": 12,
         "significant": true
       }
     },
@@ -35376,7 +38392,7 @@
         }
       },
       "fdr": {
-        "rank": 46,
+        "rank": 57,
         "significant": false
       }
     },
@@ -35517,7 +38533,7 @@
         }
       },
       "fdr": {
-        "rank": 30,
+        "rank": 35,
         "significant": false
       }
     },
@@ -35559,7 +38575,7 @@
         }
       },
       "fdr": {
-        "rank": 41,
+        "rank": 47,
         "significant": false
       }
     },
@@ -35634,7 +38650,49 @@
         }
       },
       "fdr": {
-        "rank": 35,
+        "rank": 40,
+        "significant": false
+      }
+    },
+    {
+      "label": "Long/Short Positioning + Market Structure",
+      "metricIds": [
+        "longShort",
+        "marketStructure"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 358,
+        "winRate": 0.505586592178771,
+        "meanReturnPct": 0.0873426067431759,
+        "medianReturnPct": 0.05267511704827629,
+        "maxDrawdownPct": 36.270998854433124,
+        "bullish": {
+          "truePositives": 181,
+          "falsePositives": 177,
+          "falseNegatives": 1271,
+          "trueNegatives": 1267,
+          "precision": 0.505586592178771,
+          "recall": 0.1246556473829201
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1452,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 358,
+          "wins": 181,
+          "pValue": 0.8740480078965519,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 54,
         "significant": false
       }
     },
@@ -35775,7 +38833,7 @@
         }
       },
       "fdr": {
-        "rank": 28,
+        "rank": 32,
         "significant": false
       }
     },
@@ -35850,7 +38908,7 @@
         }
       },
       "fdr": {
-        "rank": 19,
+        "rank": 22,
         "significant": false
       }
     },
@@ -35991,7 +39049,7 @@
         }
       },
       "fdr": {
-        "rank": 36,
+        "rank": 41,
         "significant": false
       }
     },
@@ -36099,7 +39157,49 @@
         }
       },
       "fdr": {
-        "rank": 38,
+        "rank": 44,
+        "significant": false
+      }
+    },
+    {
+      "label": "Basis vs Spot + Market Structure",
+      "metricIds": [
+        "basis",
+        "marketStructure"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 197,
+        "winRate": 0.467005076142132,
+        "meanReturnPct": 0.13301578722338406,
+        "medianReturnPct": -0.0877330856612048,
+        "maxDrawdownPct": 25.070529055961355,
+        "bullish": {
+          "truePositives": 92,
+          "falsePositives": 105,
+          "falseNegatives": 1360,
+          "trueNegatives": 1339,
+          "precision": 0.467005076142132,
+          "recall": 0.06336088154269973
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1452,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 197,
+          "wins": 92,
+          "pValue": 0.3926260446804819,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 42,
         "significant": false
       }
     },
@@ -36500,6 +39600,39 @@
       }
     },
     {
+      "label": "Order Flow + Market Structure",
+      "metricIds": [
+        "orderFlow",
+        "marketStructure"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1452,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1452,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Order Flow + Liquidations",
       "metricIds": [
         "orderFlow",
@@ -36863,6 +39996,39 @@
       }
     },
     {
+      "label": "Spot CVD + Market Structure",
+      "metricIds": [
+        "spotCvd",
+        "marketStructure"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1452,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1452,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Spot CVD + Liquidations",
       "metricIds": [
         "spotCvd",
@@ -36933,7 +40099,7 @@
         }
       },
       "fdr": {
-        "rank": 14,
+        "rank": 16,
         "significant": false
       }
     },
@@ -36975,7 +40141,7 @@
         }
       },
       "fdr": {
-        "rank": 34,
+        "rank": 39,
         "significant": false
       }
     },
@@ -37116,7 +40282,7 @@
         }
       },
       "fdr": {
-        "rank": 42,
+        "rank": 49,
         "significant": false
       }
     },
@@ -37158,7 +40324,7 @@
         }
       },
       "fdr": {
-        "rank": 15,
+        "rank": 18,
         "significant": false
       }
     },
@@ -37233,7 +40399,49 @@
         }
       },
       "fdr": {
-        "rank": 39,
+        "rank": 45,
+        "significant": false
+      }
+    },
+    {
+      "label": "Price Action + Market Structure",
+      "metricIds": [
+        "technicals",
+        "marketStructure"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 567,
+        "winRate": 0.48677248677248675,
+        "meanReturnPct": 0.037881823762362064,
+        "medianReturnPct": -0.057878744031250616,
+        "maxDrawdownPct": 53.87559376713078,
+        "bullish": {
+          "truePositives": 276,
+          "falsePositives": 291,
+          "falseNegatives": 1176,
+          "trueNegatives": 1153,
+          "precision": 0.48677248677248675,
+          "recall": 0.19008264462809918
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1452,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 567,
+          "wins": 276,
+          "pValue": 0.5566074903946168,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 48,
         "significant": false
       }
     },
@@ -37308,7 +40516,7 @@
         }
       },
       "fdr": {
-        "rank": 31,
+        "rank": 36,
         "significant": false
       }
     },
@@ -37449,7 +40657,7 @@
         }
       },
       "fdr": {
-        "rank": 13,
+        "rank": 15,
         "significant": true
       }
     },
@@ -37491,7 +40699,7 @@
         }
       },
       "fdr": {
-        "rank": 9,
+        "rank": 10,
         "significant": true
       }
     },
@@ -37566,7 +40774,49 @@
         }
       },
       "fdr": {
-        "rank": 12,
+        "rank": 14,
+        "significant": true
+      }
+    },
+    {
+      "label": "ETF Flows + Market Structure",
+      "metricIds": [
+        "etfFlows",
+        "marketStructure"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 107,
+        "winRate": 0.6635514018691588,
+        "meanReturnPct": 1.0242242116695754,
+        "medianReturnPct": 0.5799516259070123,
+        "maxDrawdownPct": 10.059958239735604,
+        "bullish": {
+          "truePositives": 71,
+          "falsePositives": 36,
+          "falseNegatives": 1381,
+          "trueNegatives": 1408,
+          "precision": 0.6635514018691588,
+          "recall": 0.048898071625344354
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1452,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 107,
+          "wins": 71,
+          "pValue": 0.0009231579958033393,
+          "significant": true
+        }
+      },
+      "fdr": {
+        "rank": 13,
         "significant": true
       }
     },
@@ -37740,7 +40990,7 @@
         }
       },
       "fdr": {
-        "rank": 44,
+        "rank": 51,
         "significant": false
       }
     },
@@ -37782,7 +41032,7 @@
         }
       },
       "fdr": {
-        "rank": 24,
+        "rank": 28,
         "significant": false
       }
     },
@@ -37857,7 +41107,49 @@
         }
       },
       "fdr": {
-        "rank": 27,
+        "rank": 31,
+        "significant": false
+      }
+    },
+    {
+      "label": "Spot vs Perp Volume + Market Structure",
+      "metricIds": [
+        "spotPerpVolume",
+        "marketStructure"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 505,
+        "winRate": 0.497029702970297,
+        "meanReturnPct": 0.03163237971288024,
+        "medianReturnPct": -0.01679416649687989,
+        "maxDrawdownPct": 55.35539686126866,
+        "bullish": {
+          "truePositives": 251,
+          "falsePositives": 254,
+          "falseNegatives": 1201,
+          "trueNegatives": 1190,
+          "precision": 0.497029702970297,
+          "recall": 0.17286501377410468
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1452,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 505,
+          "wins": 251,
+          "pValue": 0.929094450589204,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 56,
         "significant": false
       }
     },
@@ -38093,6 +41385,39 @@
       }
     },
     {
+      "label": "Exchange Netflow + Market Structure",
+      "metricIds": [
+        "exchangeFlow",
+        "marketStructure"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1452,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1452,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Exchange Netflow + Liquidations",
       "metricIds": [
         "exchangeFlow",
@@ -38291,6 +41616,39 @@
       }
     },
     {
+      "label": "Options Put/Call + Market Structure",
+      "metricIds": [
+        "options",
+        "marketStructure"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1452,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1452,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Options Put/Call + Liquidations",
       "metricIds": [
         "options",
@@ -38456,6 +41814,39 @@
       }
     },
     {
+      "label": "Coinbase Premium + Market Structure",
+      "metricIds": [
+        "coinbasePremium",
+        "marketStructure"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1452,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1452,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Coinbase Premium + Liquidations",
       "metricIds": [
         "coinbasePremium",
@@ -38526,7 +41917,7 @@
         }
       },
       "fdr": {
-        "rank": 26,
+        "rank": 30,
         "significant": false
       }
     },
@@ -38601,7 +41992,49 @@
         }
       },
       "fdr": {
-        "rank": 40,
+        "rank": 46,
+        "significant": false
+      }
+    },
+    {
+      "label": "Stablecoin Supply + Market Structure",
+      "metricIds": [
+        "stablecoins",
+        "marketStructure"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 526,
+        "winRate": 0.5076045627376425,
+        "meanReturnPct": 0.09780725398718788,
+        "medianReturnPct": 0.027140387478297424,
+        "maxDrawdownPct": 49.904028060927594,
+        "bullish": {
+          "truePositives": 267,
+          "falsePositives": 259,
+          "falseNegatives": 1185,
+          "trueNegatives": 1185,
+          "precision": 0.5076045627376425,
+          "recall": 0.18388429752066116
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1452,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 526,
+          "wins": 267,
+          "pValue": 0.7602362827111555,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 52,
         "significant": false
       }
     },
@@ -38709,7 +42142,49 @@
         }
       },
       "fdr": {
-        "rank": 23,
+        "rank": 27,
+        "significant": false
+      }
+    },
+    {
+      "label": "Fear & Greed + Market Structure",
+      "metricIds": [
+        "fearGreed",
+        "marketStructure"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 123,
+        "winRate": 0.5691056910569106,
+        "meanReturnPct": 0.40234735576544883,
+        "medianReturnPct": 0.2042491773756668,
+        "maxDrawdownPct": 15.01412590650605,
+        "bullish": {
+          "truePositives": 70,
+          "falsePositives": 53,
+          "falseNegatives": 1382,
+          "trueNegatives": 1391,
+          "precision": 0.5691056910569106,
+          "recall": 0.048209366391184574
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1452,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 123,
+          "wins": 70,
+          "pValue": 0.14881624623838308,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 33,
         "significant": false
       }
     },
@@ -38780,6 +42255,39 @@
       }
     },
     {
+      "label": "Sector Breadth + Market Structure",
+      "metricIds": [
+        "sectorBreadth",
+        "marketStructure"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1452,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1452,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Sector Breadth + Liquidations",
       "metricIds": [
         "sectorBreadth",
@@ -38813,9 +42321,84 @@
       }
     },
     {
+      "label": "Macro Liquidity + Market Structure",
+      "metricIds": [
+        "macroLiquidity",
+        "marketStructure"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 208,
+        "winRate": 0.5576923076923077,
+        "meanReturnPct": 0.33119657741375835,
+        "medianReturnPct": 0.16665058611788885,
+        "maxDrawdownPct": 29.480162195957526,
+        "bullish": {
+          "truePositives": 116,
+          "falsePositives": 92,
+          "falseNegatives": 1336,
+          "trueNegatives": 1352,
+          "precision": 0.5576923076923077,
+          "recall": 0.07988980716253444
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1452,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 208,
+          "wins": 116,
+          "pValue": 0.11054461951096374,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 26,
+        "significant": false
+      }
+    },
+    {
       "label": "Macro Liquidity + Liquidations",
       "metricIds": [
         "macroLiquidity",
+        "liquidations"
+      ],
+      "holdingPeriod": "24h",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1452,
+          "trueNegatives": 1444,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1444,
+          "trueNegatives": 1452,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Market Structure + Liquidations",
+      "metricIds": [
+        "marketStructure",
         "liquidations"
       ],
       "holdingPeriod": "24h",
@@ -38883,7 +42466,7 @@
         }
       },
       "fdr": {
-        "rank": 40,
+        "rank": 43,
         "significant": false
       }
     },
@@ -38958,7 +42541,7 @@
         }
       },
       "fdr": {
-        "rank": 47,
+        "rank": 58,
         "significant": false
       }
     },
@@ -39000,7 +42583,7 @@
         }
       },
       "fdr": {
-        "rank": 39,
+        "rank": 42,
         "significant": false
       }
     },
@@ -39108,7 +42691,7 @@
         }
       },
       "fdr": {
-        "rank": 34,
+        "rank": 37,
         "significant": false
       }
     },
@@ -39183,7 +42766,7 @@
         }
       },
       "fdr": {
-        "rank": 38,
+        "rank": 41,
         "significant": false
       }
     },
@@ -39324,7 +42907,7 @@
         }
       },
       "fdr": {
-        "rank": 41,
+        "rank": 46,
         "significant": false
       }
     },
@@ -39428,6 +43011,48 @@
       }
     },
     {
+      "label": "Funding Rate + Market Structure",
+      "metricIds": [
+        "funding",
+        "marketStructure"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 18,
+        "winRate": 0.5555555555555556,
+        "meanReturnPct": 1.231877156139649,
+        "medianReturnPct": 3.6042235665379776,
+        "maxDrawdownPct": 46.65975149836058,
+        "bullish": {
+          "truePositives": 10,
+          "falsePositives": 8,
+          "falseNegatives": 1476,
+          "trueNegatives": 1400,
+          "precision": 0.5555555555555556,
+          "recall": 0.006729475100942127
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1408,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 18,
+          "wins": 10,
+          "pValue": 0.814529418945311,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 54,
+        "significant": false
+      }
+    },
+    {
       "label": "Funding Rate + Liquidations",
       "metricIds": [
         "funding",
@@ -39498,7 +43123,7 @@
         }
       },
       "fdr": {
-        "rank": 27,
+        "rank": 30,
         "significant": false
       }
     },
@@ -39540,7 +43165,7 @@
         }
       },
       "fdr": {
-        "rank": 35,
+        "rank": 38,
         "significant": false
       }
     },
@@ -39582,7 +43207,7 @@
         }
       },
       "fdr": {
-        "rank": 17,
+        "rank": 18,
         "significant": true
       }
     },
@@ -39957,7 +43582,7 @@
         }
       },
       "fdr": {
-        "rank": 45,
+        "rank": 51,
         "significant": false
       }
     },
@@ -40034,6 +43659,48 @@
       "fdr": {
         "rank": 8,
         "significant": true
+      }
+    },
+    {
+      "label": "Open Interest + Market Structure",
+      "metricIds": [
+        "openInterest",
+        "marketStructure"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 118,
+        "winRate": 0.6016949152542372,
+        "meanReturnPct": 2.78582306175759,
+        "medianReturnPct": 2.453543505563653,
+        "maxDrawdownPct": 52.67346596289555,
+        "bullish": {
+          "truePositives": 71,
+          "falsePositives": 47,
+          "falseNegatives": 1415,
+          "trueNegatives": 1361,
+          "precision": 0.6016949152542372,
+          "recall": 0.0477792732166891
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1408,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 118,
+          "wins": 71,
+          "pValue": 0.03378817547182654,
+          "significant": true
+        }
+      },
+      "fdr": {
+        "rank": 20,
+        "significant": false
       }
     },
     {
@@ -40506,7 +44173,7 @@
         }
       },
       "fdr": {
-        "rank": 36,
+        "rank": 39,
         "significant": false
       }
     },
@@ -40581,8 +44248,50 @@
         }
       },
       "fdr": {
-        "rank": 31,
+        "rank": 34,
         "significant": false
+      }
+    },
+    {
+      "label": "Squeeze Setup + Market Structure",
+      "metricIds": [
+        "squeezeRisk",
+        "marketStructure"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 61,
+        "winRate": 0.6721311475409836,
+        "meanReturnPct": 1.582813987804925,
+        "medianReturnPct": 1.7194365719092175,
+        "maxDrawdownPct": 43.54139529246607,
+        "bullish": {
+          "truePositives": 41,
+          "falsePositives": 20,
+          "falseNegatives": 1445,
+          "trueNegatives": 1388,
+          "precision": 0.6721311475409836,
+          "recall": 0.02759084791386272
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1408,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 61,
+          "wins": 41,
+          "pValue": 0.009853448195259237,
+          "significant": true
+        }
+      },
+      "fdr": {
+        "rank": 15,
+        "significant": true
       }
     },
     {
@@ -40656,7 +44365,7 @@
         }
       },
       "fdr": {
-        "rank": 37,
+        "rank": 40,
         "significant": false
       }
     },
@@ -40764,7 +44473,7 @@
         }
       },
       "fdr": {
-        "rank": 42,
+        "rank": 48,
         "significant": false
       }
     },
@@ -40848,7 +44557,7 @@
         }
       },
       "fdr": {
-        "rank": 16,
+        "rank": 17,
         "significant": true
       }
     },
@@ -40989,7 +44698,7 @@
         }
       },
       "fdr": {
-        "rank": 21,
+        "rank": 24,
         "significant": false
       }
     },
@@ -41031,7 +44740,7 @@
         }
       },
       "fdr": {
-        "rank": 28,
+        "rank": 31,
         "significant": false
       }
     },
@@ -41106,7 +44815,49 @@
         }
       },
       "fdr": {
-        "rank": 32,
+        "rank": 35,
+        "significant": false
+      }
+    },
+    {
+      "label": "Long/Short Positioning + Market Structure",
+      "metricIds": [
+        "longShort",
+        "marketStructure"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 357,
+        "winRate": 0.47619047619047616,
+        "meanReturnPct": -0.06716693735001149,
+        "medianReturnPct": -0.33820308818229555,
+        "maxDrawdownPct": 97.02712406608943,
+        "bullish": {
+          "truePositives": 170,
+          "falsePositives": 187,
+          "falseNegatives": 1316,
+          "trueNegatives": 1221,
+          "precision": 0.47619047619047616,
+          "recall": 0.11440107671601615
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1408,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 357,
+          "wins": 170,
+          "pValue": 0.39713275730194264,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 44,
         "significant": false
       }
     },
@@ -41247,7 +44998,7 @@
         }
       },
       "fdr": {
-        "rank": 20,
+        "rank": 23,
         "significant": false
       }
     },
@@ -41322,7 +45073,7 @@
         }
       },
       "fdr": {
-        "rank": 26,
+        "rank": 29,
         "significant": false
       }
     },
@@ -41463,7 +45214,7 @@
         }
       },
       "fdr": {
-        "rank": 22,
+        "rank": 25,
         "significant": false
       }
     },
@@ -41571,8 +45322,50 @@
         }
       },
       "fdr": {
-        "rank": 15,
+        "rank": 16,
         "significant": true
+      }
+    },
+    {
+      "label": "Basis vs Spot + Market Structure",
+      "metricIds": [
+        "basis",
+        "marketStructure"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 197,
+        "winRate": 0.5736040609137056,
+        "meanReturnPct": 1.9805184218673773,
+        "medianReturnPct": 1.5223314773131154,
+        "maxDrawdownPct": 65.87612188391225,
+        "bullish": {
+          "truePositives": 113,
+          "falsePositives": 84,
+          "falseNegatives": 1373,
+          "trueNegatives": 1324,
+          "precision": 0.5736040609137056,
+          "recall": 0.07604306864064603
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1408,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 197,
+          "wins": 113,
+          "pValue": 0.045776732641465326,
+          "significant": true
+        }
+      },
+      "fdr": {
+        "rank": 22,
+        "significant": false
       }
     },
     {
@@ -41972,6 +45765,39 @@
       }
     },
     {
+      "label": "Order Flow + Market Structure",
+      "metricIds": [
+        "orderFlow",
+        "marketStructure"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1486,
+          "trueNegatives": 1408,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1408,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Order Flow + Liquidations",
       "metricIds": [
         "orderFlow",
@@ -42335,6 +46161,39 @@
       }
     },
     {
+      "label": "Spot CVD + Market Structure",
+      "metricIds": [
+        "spotCvd",
+        "marketStructure"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1486,
+          "trueNegatives": 1408,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1408,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Spot CVD + Liquidations",
       "metricIds": [
         "spotCvd",
@@ -42405,7 +46264,7 @@
         }
       },
       "fdr": {
-        "rank": 46,
+        "rank": 53,
         "significant": false
       }
     },
@@ -42447,7 +46306,7 @@
         }
       },
       "fdr": {
-        "rank": 44,
+        "rank": 50,
         "significant": false
       }
     },
@@ -42588,7 +46447,7 @@
         }
       },
       "fdr": {
-        "rank": 29,
+        "rank": 32,
         "significant": false
       }
     },
@@ -42630,7 +46489,7 @@
         }
       },
       "fdr": {
-        "rank": 23,
+        "rank": 26,
         "significant": false
       }
     },
@@ -42705,7 +46564,49 @@
         }
       },
       "fdr": {
-        "rank": 30,
+        "rank": 33,
+        "significant": false
+      }
+    },
+    {
+      "label": "Price Action + Market Structure",
+      "metricIds": [
+        "technicals",
+        "marketStructure"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 566,
+        "winRate": 0.48939929328621906,
+        "meanReturnPct": -0.010763246345020924,
+        "medianReturnPct": -0.20020120238605962,
+        "maxDrawdownPct": 99.53640898433672,
+        "bullish": {
+          "truePositives": 277,
+          "falsePositives": 289,
+          "falseNegatives": 1209,
+          "trueNegatives": 1119,
+          "precision": 0.48939929328621906,
+          "recall": 0.1864064602960969
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1408,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 566,
+          "wins": 277,
+          "pValue": 0.6438584631699235,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 52,
         "significant": false
       }
     },
@@ -42780,7 +46681,7 @@
         }
       },
       "fdr": {
-        "rank": 43,
+        "rank": 49,
         "significant": false
       }
     },
@@ -42921,7 +46822,7 @@
         }
       },
       "fdr": {
-        "rank": 25,
+        "rank": 28,
         "significant": false
       }
     },
@@ -43038,7 +46939,49 @@
         }
       },
       "fdr": {
-        "rank": 18,
+        "rank": 19,
+        "significant": false
+      }
+    },
+    {
+      "label": "ETF Flows + Market Structure",
+      "metricIds": [
+        "etfFlows",
+        "marketStructure"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 107,
+        "winRate": 0.5420560747663551,
+        "meanReturnPct": 1.8122789963693136,
+        "medianReturnPct": 0.18839966407735698,
+        "maxDrawdownPct": 69.70613007227756,
+        "bullish": {
+          "truePositives": 58,
+          "falsePositives": 49,
+          "falseNegatives": 1428,
+          "trueNegatives": 1359,
+          "precision": 0.5420560747663551,
+          "recall": 0.039030955585464336
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1408,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 107,
+          "wins": 58,
+          "pValue": 0.4394401017790773,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 47,
         "significant": false
       }
     },
@@ -43212,7 +47155,7 @@
         }
       },
       "fdr": {
-        "rank": 19,
+        "rank": 21,
         "significant": false
       }
     },
@@ -43254,7 +47197,7 @@
         }
       },
       "fdr": {
-        "rank": 33,
+        "rank": 36,
         "significant": false
       }
     },
@@ -43329,7 +47272,49 @@
         }
       },
       "fdr": {
-        "rank": 24,
+        "rank": 27,
+        "significant": false
+      }
+    },
+    {
+      "label": "Spot vs Perp Volume + Market Structure",
+      "metricIds": [
+        "spotPerpVolume",
+        "marketStructure"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 505,
+        "winRate": 0.49504950495049505,
+        "meanReturnPct": -0.009916702289418747,
+        "medianReturnPct": -0.15596864854917852,
+        "maxDrawdownPct": 99.09065239467513,
+        "bullish": {
+          "truePositives": 250,
+          "falsePositives": 255,
+          "falseNegatives": 1236,
+          "trueNegatives": 1153,
+          "precision": 0.49504950495049505,
+          "recall": 0.16823687752355315
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1408,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 505,
+          "wins": 250,
+          "pValue": 0.8587472125912661,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 56,
         "significant": false
       }
     },
@@ -43565,6 +47550,39 @@
       }
     },
     {
+      "label": "Exchange Netflow + Market Structure",
+      "metricIds": [
+        "exchangeFlow",
+        "marketStructure"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1486,
+          "trueNegatives": 1408,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1408,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Exchange Netflow + Liquidations",
       "metricIds": [
         "exchangeFlow",
@@ -43763,6 +47781,39 @@
       }
     },
     {
+      "label": "Options Put/Call + Market Structure",
+      "metricIds": [
+        "options",
+        "marketStructure"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1486,
+          "trueNegatives": 1408,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1408,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Options Put/Call + Liquidations",
       "metricIds": [
         "options",
@@ -43899,6 +47950,39 @@
       "metricIds": [
         "coinbasePremium",
         "macroLiquidity"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1486,
+          "trueNegatives": 1408,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1408,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Coinbase Premium + Market Structure",
+      "metricIds": [
+        "coinbasePremium",
+        "marketStructure"
       ],
       "holdingPeriod": "7d",
       "isNamed": false,
@@ -44078,6 +48162,48 @@
       }
     },
     {
+      "label": "Stablecoin Supply + Market Structure",
+      "metricIds": [
+        "stablecoins",
+        "marketStructure"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 526,
+        "winRate": 0.5190114068441065,
+        "meanReturnPct": 1.3184304453703357,
+        "medianReturnPct": 0.29310321328113376,
+        "maxDrawdownPct": 94.73021950428932,
+        "bullish": {
+          "truePositives": 273,
+          "falsePositives": 253,
+          "falseNegatives": 1213,
+          "trueNegatives": 1155,
+          "precision": 0.5190114068441065,
+          "recall": 0.18371467025572005
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1408,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 526,
+          "wins": 273,
+          "pValue": 0.4074452273039082,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 45,
+        "significant": false
+      }
+    },
+    {
       "label": "Stablecoin Supply + Liquidations",
       "metricIds": [
         "stablecoins",
@@ -44186,6 +48312,48 @@
       }
     },
     {
+      "label": "Fear & Greed + Market Structure",
+      "metricIds": [
+        "fearGreed",
+        "marketStructure"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 123,
+        "winRate": 0.4878048780487805,
+        "meanReturnPct": -0.3387176922604998,
+        "medianReturnPct": -0.1818494453331464,
+        "maxDrawdownPct": 71.66416711909774,
+        "bullish": {
+          "truePositives": 60,
+          "falsePositives": 63,
+          "falseNegatives": 1426,
+          "trueNegatives": 1345,
+          "precision": 0.4878048780487805,
+          "recall": 0.040376850605652756
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1408,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 123,
+          "wins": 60,
+          "pValue": 0.8569843282496877,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 55,
+        "significant": false
+      }
+    },
+    {
       "label": "Fear & Greed + Liquidations",
       "metricIds": [
         "fearGreed",
@@ -44252,6 +48420,39 @@
       }
     },
     {
+      "label": "Sector Breadth + Market Structure",
+      "metricIds": [
+        "sectorBreadth",
+        "marketStructure"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1486,
+          "trueNegatives": 1408,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1408,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
       "label": "Sector Breadth + Liquidations",
       "metricIds": [
         "sectorBreadth",
@@ -44285,9 +48486,84 @@
       }
     },
     {
+      "label": "Macro Liquidity + Market Structure",
+      "metricIds": [
+        "macroLiquidity",
+        "marketStructure"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 208,
+        "winRate": 0.4951923076923077,
+        "meanReturnPct": 0.6318264968190059,
+        "medianReturnPct": -0.016867514071026043,
+        "maxDrawdownPct": 83.87423321521493,
+        "bullish": {
+          "truePositives": 103,
+          "falsePositives": 105,
+          "falseNegatives": 1383,
+          "trueNegatives": 1303,
+          "precision": 0.4951923076923077,
+          "recall": 0.0693135935397039
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1408,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": {
+          "n": 208,
+          "wins": 103,
+          "pValue": 0.9447431138937047,
+          "significant": false
+        }
+      },
+      "fdr": {
+        "rank": 57,
+        "significant": false
+      }
+    },
+    {
       "label": "Macro Liquidity + Liquidations",
       "metricIds": [
         "macroLiquidity",
+        "liquidations"
+      ],
+      "holdingPeriod": "7d",
+      "isNamed": false,
+      "stat": {
+        "n": 0,
+        "winRate": null,
+        "meanReturnPct": null,
+        "medianReturnPct": null,
+        "maxDrawdownPct": null,
+        "bullish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1486,
+          "trueNegatives": 1408,
+          "precision": null,
+          "recall": 0
+        },
+        "bearish": {
+          "truePositives": 0,
+          "falsePositives": 0,
+          "falseNegatives": 1408,
+          "trueNegatives": 1486,
+          "precision": null,
+          "recall": 0
+        },
+        "significance": null
+      }
+    },
+    {
+      "label": "Market Structure + Liquidations",
+      "metricIds": [
+        "marketStructure",
         "liquidations"
       ],
       "holdingPeriod": "7d",
@@ -44782,26 +49058,26 @@
           }
         },
         {
-          "label": "Open Interest + Long/Short Positioning",
+          "label": "Open Interest + Market Structure",
           "metricIds": [
             "openInterest",
-            "longShort"
+            "marketStructure"
           ],
           "holdingPeriod": "24h",
           "isNamed": false,
           "stat": {
-            "n": 101,
-            "winRate": 0.801980198019802,
-            "meanReturnPct": 2.1035324792079693,
-            "medianReturnPct": 2.1084494881419733,
-            "maxDrawdownPct": 6.735289061253696,
+            "n": 118,
+            "winRate": 0.7966101694915254,
+            "meanReturnPct": 2.247784420238265,
+            "medianReturnPct": 1.689273937800649,
+            "maxDrawdownPct": 2.791617723475713,
             "bullish": {
-              "truePositives": 81,
-              "falsePositives": 20,
-              "falseNegatives": 1371,
-              "trueNegatives": 1424,
-              "precision": 0.801980198019802,
-              "recall": 0.05578512396694215
+              "truePositives": 94,
+              "falsePositives": 24,
+              "falseNegatives": 1358,
+              "trueNegatives": 1420,
+              "precision": 0.7966101694915254,
+              "recall": 0.06473829201101929
             },
             "bearish": {
               "truePositives": 0,
@@ -44812,9 +49088,9 @@
               "recall": 0
             },
             "significance": {
-              "n": 101,
-              "wins": 81,
-              "pValue": 6.930925789650231e-10,
+              "n": 118,
+              "wins": 94,
+              "pValue": 5.56043296400393e-11,
               "significant": true
             }
           },
@@ -44913,7 +49189,7 @@
             }
           },
           "fdr": {
-            "rank": 10,
+            "rank": 11,
             "significant": true
           }
         }
@@ -45007,7 +49283,7 @@
             }
           },
           "fdr": {
-            "rank": 5,
+            "rank": 6,
             "significant": true
           }
         },
@@ -45049,7 +49325,7 @@
             }
           },
           "fdr": {
-            "rank": 11,
+            "rank": 12,
             "significant": true
           }
         }
@@ -45143,7 +49419,7 @@
             }
           },
           "fdr": {
-            "rank": 8,
+            "rank": 9,
             "significant": true
           }
         }
@@ -45430,7 +49706,7 @@
             }
           },
           "fdr": {
-            "rank": 6,
+            "rank": 7,
             "significant": true
           }
         },
@@ -45472,7 +49748,7 @@
             }
           },
           "fdr": {
-            "rank": 9,
+            "rank": 10,
             "significant": true
           }
         },
@@ -45514,7 +49790,49 @@
             }
           },
           "fdr": {
-            "rank": 11,
+            "rank": 12,
+            "significant": true
+          }
+        },
+        {
+          "label": "ETF Flows + Market Structure",
+          "metricIds": [
+            "etfFlows",
+            "marketStructure"
+          ],
+          "holdingPeriod": "24h",
+          "isNamed": false,
+          "stat": {
+            "n": 107,
+            "winRate": 0.6635514018691588,
+            "meanReturnPct": 1.0242242116695754,
+            "medianReturnPct": 0.5799516259070123,
+            "maxDrawdownPct": 10.059958239735604,
+            "bullish": {
+              "truePositives": 71,
+              "falsePositives": 36,
+              "falseNegatives": 1381,
+              "trueNegatives": 1408,
+              "precision": 0.6635514018691588,
+              "recall": 0.048898071625344354
+            },
+            "bearish": {
+              "truePositives": 0,
+              "falsePositives": 0,
+              "falseNegatives": 1444,
+              "trueNegatives": 1452,
+              "precision": null,
+              "recall": 0
+            },
+            "significance": {
+              "n": 107,
+              "wins": 71,
+              "pValue": 0.0009231579958033393,
+              "significant": true
+            }
+          },
+          "fdr": {
+            "rank": 13,
             "significant": true
           }
         },
@@ -45556,49 +49874,7 @@
             }
           },
           "fdr": {
-            "rank": 12,
-            "significant": true
-          }
-        },
-        {
-          "label": "ETF Flows + Stablecoin Supply",
-          "metricIds": [
-            "etfFlows",
-            "stablecoins"
-          ],
-          "holdingPeriod": "24h",
-          "isNamed": false,
-          "stat": {
-            "n": 203,
-            "winRate": 0.5960591133004927,
-            "meanReturnPct": 0.7417544441602886,
-            "medianReturnPct": 0.49373237244099577,
-            "maxDrawdownPct": 18.445115678160114,
-            "bullish": {
-              "truePositives": 121,
-              "falsePositives": 82,
-              "falseNegatives": 1331,
-              "trueNegatives": 1362,
-              "precision": 0.5960591133004927,
-              "recall": 0.08333333333333333
-            },
-            "bearish": {
-              "truePositives": 0,
-              "falsePositives": 0,
-              "falseNegatives": 1444,
-              "trueNegatives": 1452,
-              "precision": null,
-              "recall": 0
-            },
-            "significance": {
-              "n": 203,
-              "wins": 121,
-              "pValue": 0.007498534453206745,
-              "significant": true
-            }
-          },
-          "fdr": {
-            "rank": 13,
+            "rank": 14,
             "significant": true
           }
         }
@@ -45934,7 +50210,7 @@
             }
           },
           "fdr": {
-            "rank": 13,
+            "rank": 15,
             "significant": true
           }
         },
@@ -46105,7 +50381,7 @@
             }
           },
           "fdr": {
-            "rank": 7,
+            "rank": 8,
             "significant": true
           }
         },
@@ -46147,7 +50423,7 @@
             }
           },
           "fdr": {
-            "rank": 9,
+            "rank": 10,
             "significant": true
           }
         }
@@ -46294,7 +50570,143 @@
             }
           },
           "fdr": {
-            "rank": 12,
+            "rank": 14,
+            "significant": true
+          }
+        }
+      ]
+    },
+    "marketStructure": {
+      "metricId": "marketStructure",
+      "label": "Market Structure",
+      "hasHistoricalSource": true,
+      "headline": {
+        "n": 1762,
+        "winRate": 0.49148694665153236,
+        "meanReturnPct": 0.08739360666067333,
+        "medianReturnPct": 0.010537491054117495,
+        "maxDrawdownPct": 79.84840884259773,
+        "bullish": {
+          "truePositives": 489,
+          "falsePositives": 502,
+          "falseNegatives": 963,
+          "trueNegatives": 942,
+          "precision": 0.4934409687184662,
+          "recall": 0.3367768595041322
+        },
+        "bearish": {
+          "truePositives": 377,
+          "falsePositives": 394,
+          "falseNegatives": 1067,
+          "trueNegatives": 1058,
+          "precision": 0.4889753566796368,
+          "recall": 0.2610803324099723
+        },
+        "significance": {
+          "n": 1762,
+          "wins": 866,
+          "pValue": 0.4896592798029056,
+          "significant": false
+        }
+      },
+      "bestHoldingPeriod": {
+        "holdingPeriod": "4h",
+        "winRate": 0.5011350737797957
+      },
+      "worstHoldingPeriod": {
+        "holdingPeriod": "7d",
+        "winRate": 0.4554230550823396
+      },
+      "bestRegime": {
+        "tag": "bear",
+        "winRate": 0.5365853658536586
+      },
+      "worstRegime": {
+        "tag": "neutral",
+        "winRate": 0.4530663329161452
+      },
+      "interactions": [
+        {
+          "label": "Open Interest + Market Structure",
+          "metricIds": [
+            "openInterest",
+            "marketStructure"
+          ],
+          "holdingPeriod": "24h",
+          "isNamed": false,
+          "stat": {
+            "n": 118,
+            "winRate": 0.7966101694915254,
+            "meanReturnPct": 2.247784420238265,
+            "medianReturnPct": 1.689273937800649,
+            "maxDrawdownPct": 2.791617723475713,
+            "bullish": {
+              "truePositives": 94,
+              "falsePositives": 24,
+              "falseNegatives": 1358,
+              "trueNegatives": 1420,
+              "precision": 0.7966101694915254,
+              "recall": 0.06473829201101929
+            },
+            "bearish": {
+              "truePositives": 0,
+              "falsePositives": 0,
+              "falseNegatives": 1444,
+              "trueNegatives": 1452,
+              "precision": null,
+              "recall": 0
+            },
+            "significance": {
+              "n": 118,
+              "wins": 94,
+              "pValue": 5.56043296400393e-11,
+              "significant": true
+            }
+          },
+          "fdr": {
+            "rank": 5,
+            "significant": true
+          }
+        },
+        {
+          "label": "ETF Flows + Market Structure",
+          "metricIds": [
+            "etfFlows",
+            "marketStructure"
+          ],
+          "holdingPeriod": "24h",
+          "isNamed": false,
+          "stat": {
+            "n": 107,
+            "winRate": 0.6635514018691588,
+            "meanReturnPct": 1.0242242116695754,
+            "medianReturnPct": 0.5799516259070123,
+            "maxDrawdownPct": 10.059958239735604,
+            "bullish": {
+              "truePositives": 71,
+              "falsePositives": 36,
+              "falseNegatives": 1381,
+              "trueNegatives": 1408,
+              "precision": 0.6635514018691588,
+              "recall": 0.048898071625344354
+            },
+            "bearish": {
+              "truePositives": 0,
+              "falsePositives": 0,
+              "falseNegatives": 1444,
+              "trueNegatives": 1452,
+              "precision": null,
+              "recall": 0
+            },
+            "significance": {
+              "n": 107,
+              "wins": 71,
+              "pValue": 0.0009231579958033393,
+              "significant": true
+            }
+          },
+          "fdr": {
+            "rank": 13,
             "significant": true
           }
         }

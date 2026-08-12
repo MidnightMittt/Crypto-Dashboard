@@ -219,6 +219,57 @@ function holdingPeriodField(hp: HoldingPeriod): "forwardReturn1h" | "forwardRetu
   }
 }
 
+/*
+ * Derived, never typed by hand. The report prose used to read "10 of 15" and
+ * "C(15,2)=105"; both were wrong by the time anyone read them, for the same
+ * reason the census was — a count written as a literal describes the codebase
+ * on the day it was written.
+ */
+const DECLARED_COUNT = SIGNAL_HYPOTHESES.length;
+const SOURCED_COUNT = SIGNAL_HYPOTHESES.filter((h) => h.hasHistoricalSource).length;
+
+/**
+ * Every per-metric section below iterates SIGNAL_HYPOTHESES, not the replay
+ * output. That is deliberate — a metric needs a stated, falsifiable contract
+ * before it gets a row — but it means a metric the engine really scores can be
+ * absent from the entire report while every number in it stays correct.
+ *
+ * That happened. `marketStructure` was promoted to a first-class crypto metric,
+ * changed the trade count, and never appeared in backtestMetricStats.json,
+ * because the census was a fixed list that predated it. Nothing failed; the
+ * file just quietly stopped being a census while still reading like one.
+ *
+ * So: diff the replay's actual metric ids against the declared ones and FAIL.
+ * A report that silently under-reports is worse than no report, because it is
+ * read as complete. The fix for the failure is always to write the hypothesis —
+ * never to skip the check.
+ */
+function assertEveryReplayedMetricIsDeclared(records: DayRecord[]): void {
+  const declared = new Set(SIGNAL_HYPOTHESES.map((h) => h.id));
+  const replayed = new Set<string>();
+  for (const r of records) for (const m of r.metrics) replayed.add(m.id);
+
+  const undeclared = [...replayed].filter((id) => !declared.has(id)).sort();
+  if (undeclared.length > 0) {
+    console.error(
+      `\nThe replay scored ${undeclared.length} metric(s) with no hypothesis: ${undeclared.join(", ")}.\n` +
+        `Every metric in the engine needs an entry in src/lib/signals/hypothesis.ts before it can\n` +
+        `be reported on. Without one it is invisible here while still moving the composite —\n` +
+        `see docs/ADDING_AN_EVIDENCE_MODULE.md.\n`
+    );
+    process.exit(1);
+  }
+
+  // The reverse direction is informational, not fatal: a declared metric can be
+  // legitimately absent from a given replay (no historical source, or an asset
+  // that does not carry it). Worth printing so nobody reads a missing row as a
+  // zero-signal result.
+  const silent = [...declared].filter((id) => !replayed.has(id)).sort();
+  if (silent.length > 0) {
+    console.log(`Declared but not present in this replay: ${silent.join(", ")}.`);
+  }
+}
+
 function occurrencesFor(records: DayRecord[], metricId: string, hp: HoldingPeriod): Occurrence[] {
   const field = holdingPeriodField(hp);
   const occurrences: Occurrence[] = [];
@@ -644,6 +695,8 @@ function main() {
   const coverageStart = dates[0];
   const coverageEnd = dates[dates.length - 1];
 
+  assertEveryReplayedMetricIsDeclared(records);
+
   const squeeze = squeezeSection(records);
   const thesis = thesisSection(records);
   const categories = categoriesSection(records);
@@ -714,8 +767,9 @@ ${biasVerdict.markdown}
 
 ## Hypothesis Testing — Per-Metric, Per-Holding-Period
 
-Every metric with a real historical source (10 of 15 — see src/lib/signals/hypothesis.ts for the
-full contract, including the 5 with no source yet), tested as an explicit hypothesis: entry =
+Every metric with a real historical source (${SOURCED_COUNT} of ${DECLARED_COUNT} — see
+src/lib/signals/hypothesis.ts for the full contract, including the ${DECLARED_COUNT - SOURCED_COUNT}
+with no source yet), tested as an explicit hypothesis: entry =
 verdict fires bullish/bearish, exit = time-based only (no stop-loss/take-profit), success/failure
 = sign-only match with the forward return. Rows below N=${MIN_SAMPLE_N} report "insufficient
 data" rather than a number, matching this app's standing rule that a thin sample is hidden, not
@@ -757,7 +811,8 @@ ${
 ## Metric Combinations
 
 Named, pre-registered combinations (specified before this file was written, exempt from multiple-
-testing correction), plus a bounded automatic scan of all C(15,2)=105 metric pairs with a real
+testing correction), plus a bounded automatic scan of all
+C(${DECLARED_COUNT},2)=${(DECLARED_COUNT * (DECLARED_COUNT - 1)) / 2} metric pairs with a real
 Benjamini-Hochberg FDR correction — see scripts/backtest/metricCombinations.ts for exactly why
 these two tiers are treated differently.
 
@@ -775,7 +830,7 @@ ${signalResearch.markdown}
 
 ## Agreement Validation
 
-Does \`bias.agreement\` (how much the 15 metrics concur, NOT the same axis as confidence — see
+Does \`bias.agreement\` (how much the ${DECLARED_COUNT} metrics concur, NOT the same axis as confidence — see
 marketBias.ts) historically correlate with a better hit rate? Every historical day bucketed into
 an agreement quartile; within each bucket, does the overall bias verdict's direction match the
 next day's return sign more often than chance. Same sign-test machinery every other section here

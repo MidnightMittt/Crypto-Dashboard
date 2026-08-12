@@ -26,18 +26,18 @@ Point estimates are NOT affected by overlap; it inflates confidence, not the est
 | Basis vs Spot | 4h | 2706 | 1353 | 50.0% | 0.9847 | 0.9734 | no change |
 | Basis vs Spot | 24h | 2706 | 1353 | 49.6% | 0.7149 | 0.7461 | no change |
 | Basis vs Spot | 7d | 2704 | 193 | 50.1% | 0.8929 | 0.9472 | no change |
-| Price Action | 1h | 2277 | 1139 | 49.0% | 0.3565 | 0.4032 | no change |
-| Price Action | 4h | 2277 | 1139 | 49.4% | 0.5859 | 0.6056 | no change |
-| Price Action | 24h | 2277 | 1139 | 48.2% | 0.0857 | 0.1071 | no change |
-| Price Action | 7d | 2276 | 163 | 48.4% | 0.1367 | 0.4782 | no change |
+| Price Action | 1h | 2196 | 1098 | 48.9% | 0.2957 | 0.3460 | no change |
+| Price Action | 4h | 2196 | 1098 | 49.2% | 0.4551 | 0.4880 | no change |
+| Price Action | 24h | 2196 | 1098 | 48.0% | 0.0697 | 0.1092 | no change |
+| Price Action | 7d | 2195 | 157 | 48.6% | 0.2003 | 0.5401 | no change |
 | ETF Flows | 1h | 541 | 271 | 51.8% | 0.4390 | 0.4587 | no change |
 | ETF Flows | 4h | 541 | 271 | 52.3% | 0.3021 | 0.3163 | no change |
 | ETF Flows | 24h | 541 | 271 | 65.6% | 0.0000 | 0.0000 | no change |
 | ETF Flows | 7d | 540 | 39 | 57.0% | 0.0012 | 0.0637 | **LOST significance** |
-| Spot vs Perp Volume | 1h | 2070 | 1035 | 51.0% | 0.3675 | 0.3944 | no change |
-| Spot vs Perp Volume | 4h | 2070 | 1035 | 49.2% | 0.4957 | 0.5146 | no change |
-| Spot vs Perp Volume | 24h | 2070 | 1035 | 47.6% | 0.0330 | 0.0473 | no change |
-| Spot vs Perp Volume | 7d | 2069 | 148 | 49.3% | 0.5096 | 0.7285 | no change |
+| Spot vs Perp Volume | 1h | 2066 | 1033 | 50.7% | 0.5525 | 0.5631 | no change |
+| Spot vs Perp Volume | 4h | 2066 | 1033 | 49.3% | 0.5525 | 0.5740 | no change |
+| Spot vs Perp Volume | 24h | 2066 | 1033 | 48.2% | 0.0989 | 0.1250 | no change |
+| Spot vs Perp Volume | 7d | 2065 | 148 | 49.8% | 0.8950 | 0.9359 | no change |
 | Stablecoin Supply | 1h | 2262 | 1131 | 51.2% | 0.2475 | 0.3149 | no change |
 | Stablecoin Supply | 4h | 2262 | 1131 | 52.3% | 0.0272 | 0.0505 | **LOST significance** |
 | Stablecoin Supply | 24h | 2262 | 1131 | 50.1% | 0.9497 | 0.9404 | no change |
@@ -50,10 +50,14 @@ Point estimates are NOT affected by overlap; it inflates confidence, not the est
 | Macro Liquidity | 4h | 2350 | 1175 | 49.5% | 0.6352 | 0.6627 | no change |
 | Macro Liquidity | 24h | 2350 | 1175 | 50.6% | 0.5497 | 0.5945 | no change |
 | Macro Liquidity | 7d | 2348 | 168 | 50.9% | 0.4209 | 0.7250 | no change |
+| Market Structure | 1h | 1762 | 881 | 48.8% | 0.3056 | 0.3341 | no change |
+| Market Structure | 4h | 1762 | 881 | 50.1% | 0.9430 | 0.9288 | no change |
+| Market Structure | 24h | 1762 | 881 | 49.1% | 0.4897 | 0.4880 | no change |
+| Market Structure | 7d | 1761 | 126 | 45.5% | 0.0002 | 0.0541 | **LOST significance** |
 
-**5 of 44** metric x holding-period cells lose significance under correction.
+**6 of 48** metric x holding-period cells lose significance under correction.
 
-Cells that were significant and are not: `ETF Flows @ 7d`, `Stablecoin Supply @ 4h`, `Stablecoin Supply @ 7d`, `Fear & Greed @ 24h`, `Fear & Greed @ 7d`.
+Cells that were significant and are not: `ETF Flows @ 7d`, `Stablecoin Supply @ 4h`, `Stablecoin Supply @ 7d`, `Fear & Greed @ 24h`, `Fear & Greed @ 7d`, `Market Structure @ 7d`.
 
 ## Does any of this reach a user?
 
@@ -79,14 +83,15 @@ The label is derived from the 24h occurrence count against cut points of 200 and
 | Squeeze Setup | 2340 | Large | 1170 | Large | no |
 | Long/Short Positioning | 1271 | Large | 636 | Medium | **yes** |
 | Basis vs Spot | 2706 | Large | 1353 | Large | no |
-| Price Action | 2277 | Large | 1139 | Large | no |
+| Price Action | 2196 | Large | 1098 | Large | no |
 | ETF Flows | 541 | Medium | 271 | Medium | no |
-| Spot vs Perp Volume | 2070 | Large | 1035 | Large | no |
+| Spot vs Perp Volume | 2066 | Large | 1033 | Large | no |
 | Stablecoin Supply | 2262 | Large | 1131 | Large | no |
 | Fear & Greed | 806 | Medium | 403 | Medium | no |
 | Macro Liquidity | 2350 | Large | 1175 | Large | no |
+| Market Structure | 1762 | Large | 881 | Medium | **yes** |
 
-**1** metric labels would change tier if computed on the effective sample.
+**2** metric labels would change tier if computed on the effective sample.
 
 ## Conclusion
 

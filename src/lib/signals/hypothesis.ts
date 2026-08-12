@@ -236,6 +236,16 @@ export const SIGNAL_HYPOTHESES: SignalHypothesis[] = [
     hasHistoricalSource: true, // FRED has real multi-year history for all 5 underlying series — genuinely backtestable, unlike sectorBreadth
   }),
   hypothesis({
+    id: "marketStructure",
+    label: "Market Structure",
+    bullishCondition:
+      "The last two swing highs are ascending AND the last two swing lows are ascending, over a 120-session window with 3-bar fractal pivots (mirrors evaluateMarketStructure in marketStructureEvidence.ts). Both legs must agree.",
+    bearishCondition: "Both the last two swing highs and the last two swing lows are descending.",
+    neutralCondition:
+      "The legs disagree — higher highs with lower lows (a broadening range) or lower highs with higher lows (a coil). Reported neutral at confidence 0, since an expanding or compressing range has no direction until it resolves.",
+    hasHistoricalSource: true, // daily OHLCV, the one input every replay asset already has
+  }),
+  hypothesis({
     id: "liquidations",
     label: "Liquidations",
     bullishCondition: "Never fires. Liquidations describe positions already forced out, not a lean on what happens next — evaluateLiquidations always returns neutral by design (see its own doc comment in evaluators.ts), and marketThesis.ts gives it weight 0 for the same reason.",
