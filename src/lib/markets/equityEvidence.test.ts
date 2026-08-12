@@ -5,6 +5,7 @@ import {
   evaluateRiskAppetite,
   evaluateVolatilityRegime,
   evaluateTrendQuality,
+  evaluateMarketStructure,
   buildEquityEvidence,
   EquityInstrumentInput,
 } from "./equityEvidence";
@@ -207,7 +208,7 @@ describe("buildEquityEvidence", () => {
     expect(first.confidence).toBeLessThanOrEqual(100);
   });
 
-  it("produces all three modules when the full capability set is available", () => {
+  it("omits market structure on a series with no swing sequence, rather than guessing", () => {
     const inst = flatThenMove("QQQ", 600, 60, 25);
     const bench = series("SPY", 600, 0);
     const evidence = buildEquityEvidence({
@@ -218,7 +219,11 @@ describe("buildEquityEvidence", () => {
       duration: series("TLT", 600, 0),
       asOf: ASOF,
     });
+    // A flat-then-ramp path has no pivots, so market structure correctly
+    // returns null and the other five modules report. Absence here is the
+    // module refusing to read a sequence that does not exist.
     expect(evidence).toHaveLength(5);
+    expect(evidence.map((e) => e.id)).not.toContain("equityMarketStructure");
   });
 });
 
@@ -291,5 +296,81 @@ describe("evaluateTrendQuality", () => {
     const clean = evaluateTrendQuality(series("A", 200, 0.05), ASOF)!;   // small but perfectly efficient
     const choppy = evaluateTrendQuality(noisy("B", 200, 0.05, 1.5), ASOF)!; // larger swings, poor path
     expect(clean.confidence).toBeGreaterThan(choppy.confidence);
+  });
+});
+
+/**
+ * Builds a series from explicit pivot values so the swing sequence under test
+ * is stated in the fixture rather than emerging from noise. Each pivot is
+ * separated by enough filler for the centered fractal detector to see it.
+ */
+// gap 20 keeps every fixture above the module's 60-bar minimum: the first
+// draft used 8, produced 56 bars, and every case returned null.
+function withPivots(symbol: string, pivots: number[], gap = 20): EquityInstrumentInput {
+  const closes: number[] = [];
+  for (let p = 0; p < pivots.length; p++) {
+    const from = p === 0 ? pivots[0] : pivots[p - 1];
+    for (let k = 1; k <= gap; k++) closes.push(from + ((pivots[p] - from) * k) / gap);
+  }
+  /*
+   * The tail must REVERSE toward the previous pivot, not simply drift down.
+   * A descending tail never brackets a final swing LOW, so the detector
+   * silently loses it — which is what made the broadening-range and coil
+   * cases fail on the first draft.
+   */
+  const last = pivots[pivots.length - 1];
+  const prior = pivots.length > 1 ? pivots[pivots.length - 2] : last;
+  for (let k = 1; k <= gap; k++) closes.push(last + ((prior - last) * k) / (gap * 2));
+
+  const bars: Bar[] = closes.map((c, i) => ({
+    t: T0 + i * DAY, open: c, high: c + 0.5, low: c - 0.5, close: c, volume: 1000,
+  }));
+  return { symbol, bars };
+}
+
+describe("evaluateMarketStructure", () => {
+  it("returns null without enough pivots to form a sequence", () => {
+    // One high and one low is a location, not a direction.
+    expect(evaluateMarketStructure(withPivots("SPY", [100, 120]), ASOF)).toBeNull();
+  });
+
+  it("reads bullish on higher highs AND higher lows", () => {
+    const v = evaluateMarketStructure(withPivots("SPY", [100, 130, 110, 150, 125, 170]), ASOF)!;
+    expect(v.verdict).toBe("bullish");
+    expect(v.explanation).toMatch(/higher highs and higher lows/);
+    expect(v.confidence).toBeGreaterThan(0);
+  });
+
+  it("reads bearish on lower highs AND lower lows", () => {
+    const v = evaluateMarketStructure(withPivots("IWM", [170, 125, 150, 110, 130, 90]), ASOF)!;
+    expect(v.verdict).toBe("bearish");
+    expect(v.explanation).toMatch(/lower highs and lower lows/);
+  });
+
+  it("refuses a direction on a broadening range, and names it", () => {
+    // Higher highs with LOWER lows: volatility expanding, no trend. Calling
+    // this bullish because one leg rose is the half-read the module refuses.
+    const v = evaluateMarketStructure(withPivots("QQQ", [100, 140, 90, 160, 70]), ASOF)!;
+    expect(v.verdict).toBe("neutral");
+    expect(v.confidence).toBe(0);
+    expect(v.conflicts.length).toBeGreaterThan(0);
+    expect(v.explanation).toMatch(/broadening range/);
+  });
+
+  it("refuses a direction on a coil, and says it resolves on the break", () => {
+    const v = evaluateMarketStructure(withPivots("DIA", [70, 160, 90, 140, 100, 130]), ASOF)!;
+    expect(v.verdict).toBe("neutral");
+    expect(v.explanation).toMatch(/coil/);
+    expect(v.nextTrigger).toMatch(/resolves on a close outside/);
+  });
+
+  it("names the level that would break the structure", () => {
+    const v = evaluateMarketStructure(withPivots("SPY", [100, 130, 110, 150, 125, 170]), ASOF)!;
+    expect(v.nextTrigger).toMatch(/breaks down below the last swing low/);
+  });
+
+  it("caps confidence at 75 — a two-pivot sequence is real but short", () => {
+    const v = evaluateMarketStructure(withPivots("SPY", [10, 200, 20, 400, 30, 600]), ASOF)!;
+    expect(v.confidence).toBeLessThanOrEqual(75);
   });
 });
