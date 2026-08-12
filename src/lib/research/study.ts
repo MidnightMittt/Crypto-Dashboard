@@ -1,4 +1,5 @@
-import { CapabilityKey } from "./types";
+import { CapabilityKey, SessionModel } from "./types";
+import { sessionPeriodKey } from "./session";
 import { FeatureVector } from "./features";
 import { detectableDifferenceFromSe, nonOverlappingByTime } from "./overlap";
 import { panelBootstrapProportion, panelDifference, PanelAdjustedProportion, PanelObservation } from "./panelBootstrap";
@@ -86,6 +87,18 @@ export interface StudyRunContext {
   datasetVersion: string;
   /** Null proportion for a single-group study. Ignored when two groups exist. */
   nullProportion: number;
+  /**
+   * Session model per instrument, used to normalise observations onto a
+   * common trading-session key before cross-sectional clustering.
+   *
+   * REQUIRED, deliberately. Defaulting it would reintroduce the silent
+   * failure it exists to prevent: instruments closing at different instants
+   * would land in different periods, be treated as independent, and inflate
+   * the effective sample. A single-market study passes `() => THAT_SESSION`,
+   * which is a one-line but conscious declaration that every instrument
+   * shares a schedule.
+   */
+  sessionOf: (instrumentId: string) => SessionModel;
 }
 
 // ── Results ─────────────────────────────────────────────────────────────
@@ -159,10 +172,10 @@ const IS_FRACTION = 0.7;
  * Derived as median hold divided by median spacing BETWEEN DISTINCT PERIODS,
  * so an author cannot choose a flattering value.
  */
-function deriveBlockLength(observations: StudyObservation[]): number {
+function deriveBlockLength(observations: StudyObservation[], periodOf: (o: StudyObservation) => number): number {
   if (observations.length < 3) return 1;
   const sorted = [...observations].sort((a, b) => a.entryT - b.entryT);
-  const periodTimes = [...new Set(sorted.map((o) => o.entryT))].sort((a, b) => a - b);
+  const periodTimes = [...new Set(sorted.map(periodOf))].sort((a, b) => a - b);
   const spacings: number[] = [];
   for (let i = 1; i < periodTimes.length; i++) spacings.push(periodTimes[i] - periodTimes[i - 1]);
   if (spacings.length === 0) return 1;
@@ -202,18 +215,26 @@ export function executeStudy(
   }
 
   // 5-6. Effective sample size and overlap correction.
-  const blockLength = deriveBlockLength(chronological);
+  /*
+   * Normalise every observation onto its trading-session key BEFORE any
+   * statistic is computed. This is the single point at which a multi-market
+   * panel becomes correctly clustered; doing it here rather than in each
+   * study is what makes it impossible for a study to get wrong.
+   */
+  const periodOf = (o: StudyObservation) => sessionPeriodKey(o.entryT, context.sessionOf(o.instrumentId));
+  const blockLength = deriveBlockLength(chronological, periodOf);
   const independent = nonOverlappingByTime(chronological, (o) => o.entryT, (o) => o.exitT);
 
   const groupNames = [...new Set(chronological.map((o) => o.group))].sort();
   /*
-   * `entryT` doubles as the period key. Observations from different
-   * instruments sampled at the same close share a timestamp, so grouping by
-   * it is exactly the cross-sectional clustering the panel estimator needs —
-   * no extra field, and no way for a caller to forget to populate one.
+   * Observations are keyed by SESSION, not by raw timestamp. A crypto bar
+   * closing Tuesday 00:00 UTC and a US equity bar closing Monday 16:00 ET
+   * both cover Monday and must cluster together; keying on the timestamp
+   * would split them and silently inflate the effective sample. See
+   * session.ts for the rule.
    */
   const asPanel = (obs: StudyObservation[]): PanelObservation[] =>
-    obs.map((o) => ({ period: o.entryT, unitId: o.instrumentId, value: o.success ? 1 : 0 }));
+    obs.map((o) => ({ period: periodOf(o), unitId: o.instrumentId, value: o.success ? 1 : 0 }));
 
   const groups: Record<string, PanelAdjustedProportion> = {};
   for (const g of groupNames) {

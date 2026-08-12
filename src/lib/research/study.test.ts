@@ -3,6 +3,8 @@ import { executeStudy, StudyDeclaration, StudyObservation, StudyRunContext, corr
 import { EMPTY_LEDGER, append, toLedgerEntry, withFamilyCorrection, summarize, ReproducibilityStamp } from "./ledger";
 import { generateReport } from "./report";
 import { FeatureVector } from "./features";
+import { CONTINUOUS_SESSION, US_EQUITY_SESSION } from "./types";
+import { mulberry32 } from "./random";
 
 const DAY = 86_400_000;
 
@@ -32,7 +34,13 @@ function decl(over: Partial<StudyDeclaration> = {}): StudyDeclaration {
   };
 }
 
-const ctx: StudyRunContext = { codeVersion: "abc1234", datasetVersion: "v1", nullProportion: 0.5 };
+const ctx: StudyRunContext = {
+  codeVersion: "abc1234",
+  datasetVersion: "v1",
+  nullProportion: 0.5,
+  // Single-market fixture: every instrument shares one schedule.
+  sessionOf: () => CONTINUOUS_SESSION,
+};
 
 /**
  * Builds observations with a controlled success pattern.
@@ -299,5 +307,100 @@ describe("report generation", () => {
     });
     const md = generateReport(r, entry, append(EMPTY_LEDGER, entry));
     expect(md).toMatch(/Narrow asset universe/);
+  });
+});
+
+describe("cross-market session alignment — end-to-end", () => {
+  /*
+   * The scenario the whole session-normalisation layer exists for.
+   *
+   * A crypto perp daily bar closes at 00:00 UTC; a US equity closes at 16:00
+   * ET (20:00 UTC). Both cover the SAME trading day, but their timestamps
+   * differ by four hours AND fall on different calendar dates. Their
+   * outcomes here are perfectly correlated — one market event, two
+   * recordings — so the framework must count them once, not twice.
+   *
+   * Keying on the raw timestamp (the pre-fix behaviour) would place them in
+   * separate periods, treat them as independent, and roughly double the
+   * effective sample. That is a silent overstatement of confidence.
+   */
+  function mixedMarketObservations(days: number): StudyObservation[] {
+    const out: StudyObservation[] = [];
+    // Seeded random rather than a periodic pattern: a periodic sequence makes
+    // every resampled block contain the same ratio, collapsing the bootstrap
+    // variance and masking whatever the estimator is actually doing.
+    const rng = mulberry32(4242);
+    for (let d = 0; d < days; d++) {
+      // Session date = 15 Jun 2026 + d (a Monday, mid-DST so ET is UTC-4).
+      const sessionStart = Date.UTC(2026, 5, 15) + d * DAY;
+      const success = rng() < 0.5; // ONE shared outcome, recorded by both instruments
+      // Crypto bar closes at the FOLLOWING midnight UTC — it covers this session.
+      out.push({
+        instrumentId: "BTC-USD-PERP",
+        entryT: sessionStart + DAY,
+        exitT: sessionStart + DAY + 7 * DAY,
+        success,
+        group: "a",
+        features: emptyFeatures(sessionStart),
+      });
+      // Equity bar closes 16:00 EDT the same session day = 20:00 UTC.
+      out.push({
+        instrumentId: "SPY",
+        entryT: sessionStart + 20 * 3_600_000,
+        exitT: sessionStart + 20 * 3_600_000 + 7 * DAY,
+        success,
+        group: "a",
+        features: emptyFeatures(sessionStart),
+      });
+    }
+    return out;
+  }
+
+  const mixedCtx: StudyRunContext = {
+    ...ctx,
+    sessionOf: (id) => (id === "SPY" ? US_EQUITY_SESSION : CONTINUOUS_SESSION),
+  };
+
+  it("clusters differently-scheduled instruments onto one session, counting a shared event once", () => {
+    const obs = mixedMarketObservations(200);
+    const r = executeStudy(decl({ minimumEffectiveN: 1, detectableEffectTarget: 0.9 }), obs, mixedCtx);
+
+    expect(r.statistics.n).toBe(400);
+    // 200 sessions, not 400 timestamps — the normalisation worked.
+    expect(r.statistics.periods).toBe(200);
+    expect(r.statistics.meanUnitsPerPeriod).toBeCloseTo(2, 6);
+    // Perfectly correlated pairs: effective N must be near the session count.
+    expect(r.statistics.effectiveN).toBeLessThan(320);
+  });
+
+  /*
+   * Demonstrates the ACTUAL pre-fix failure, which is subtler than it first
+   * appears. Converting 16:00 ET to UTC lands on the SAME calendar date
+   * (20:00-21:00 UTC), so timezone conversion alone changes nothing for US
+   * equities. What does the work is the midnight rule: a crypto bar closing
+   * Tuesday 00:00 UTC covers Monday, and keying on its raw timestamp files
+   * it under Tuesday — one session split across two keys.
+   */
+  it("raw-timestamp keying would have doubled the period count; session keying does not", () => {
+    const obs = mixedMarketObservations(200);
+    const rawKeys = new Set(obs.map((o) => o.entryT)).size;
+    const r = executeStudy(decl({ minimumEffectiveN: 1, detectableEffectTarget: 0.9 }), obs, mixedCtx);
+
+    // The old key: every instrument has its own close time, so 400 "periods".
+    expect(rawKeys).toBe(400);
+    // The session key: 200 real trading sessions.
+    expect(r.statistics.periods).toBe(200);
+    expect(r.statistics.periods * 2).toBe(rawKeys);
+  });
+
+  it("instruments on genuinely different sessions are not force-merged", () => {
+    // An equity bar from the NEXT session must not join the previous one.
+    const sessionStart = Date.UTC(2026, 5, 15);
+    const obs: StudyObservation[] = [
+      { instrumentId: "BTC-USD-PERP", entryT: sessionStart + DAY, exitT: sessionStart + 2 * DAY, success: true, group: "a", features: emptyFeatures(sessionStart) },
+      { instrumentId: "SPY", entryT: sessionStart + DAY + 20 * 3_600_000, exitT: sessionStart + 3 * DAY, success: true, group: "a", features: emptyFeatures(sessionStart) },
+    ];
+    const r = executeStudy(decl({ minimumEffectiveN: 1, detectableEffectTarget: 0.9 }), obs, mixedCtx);
+    expect(r.statistics.periods).toBe(2);
   });
 });

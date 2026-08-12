@@ -38,7 +38,36 @@ which is the correct direction for an error of this kind to run.
 
 ## Limitations
 
-### L1 — Period granularity is a caller choice, and it is load-bearing. (High)
+### L1 — Period granularity — CLOSED (was High)
+
+**Resolved by `session.ts`.** Observations are normalised onto a canonical
+trading-session key before any statistic is computed, and `sessionOf` is a
+REQUIRED field on `StudyRunContext` so it cannot be forgotten — a
+single-market study must explicitly declare `() => THAT_SESSION`.
+
+The rule: a bar belongs to the calendar date, in its own session timezone, of
+the instant immediately before its close. One rule covers every case.
+
+Worth recording what the real failure was, because it was not what this audit
+originally described. Converting 16:00 ET to UTC lands on the *same* calendar
+date (20:00–21:00 UTC), so timezone conversion alone changes nothing for US
+equities. **The load-bearing part is the one-millisecond step back at
+midnight**: a crypto bar closing Tuesday 00:00 UTC covers Monday, and keying
+on its raw timestamp files it under Tuesday — splitting one session across
+two keys. The timezone machinery matters for markets whose session genuinely
+crosses UTC midnight and for correctness under DST, but the midnight rule is
+what fixes the crypto-plus-equity case.
+
+Verified end-to-end: a 200-session mixed BTC/SPY panel yields 200 periods
+where raw-timestamp keying yields 400, and perfectly correlated cross-market
+pairs are counted once.
+
+*Residual:* the caller still chooses the session model per instrument. A
+wrong `SessionModel` produces a wrong key. This is now an explicit, typed,
+required declaration rather than an invisible default, which is the most that
+can be enforced without the framework owning instrument metadata.
+
+### L1-original — Period granularity is a caller choice, and it is load-bearing. (superseded)
 
 The estimator clusters on whatever `period` the caller supplies. In
 `executeStudy` that is `entryT`, which works because contemporaneous
@@ -141,8 +170,10 @@ path, so no study can opt out.
 **Not closed.** Three things could still produce an overstated result, none
 of which are estimator problems:
 
-1. **A wrong period key (L1).** The most likely future error, and it fails
-   silently.
+1. **A wrong `SessionModel` declaration.** No longer silent-by-default — it
+   is a required, typed field — but a caller who declares the wrong schedule
+   still gets a wrong key. Reduced from "most likely error" to "possible
+   misconfiguration".
 2. **Survivorship in the universe.** The framework cannot detect a universe
    assembled from currently-listed instruments.
 3. **A study that does not use the framework.** Nothing prevents calling the
