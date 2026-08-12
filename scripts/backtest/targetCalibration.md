@@ -1,6 +1,6 @@
 # Target Calibration Study
 
-Generated 2026-08-11T21:26:32.998Z · research only, no production target changed.
+Generated 2026-08-12T07:59:54.999Z · research only, no production target changed.
 
 Every plan resolved with its **production entry and production stop but no target**, held to the stop or 30 days. The maximum favourable excursion in R is then the complete answer to what any target could have achieved: `P(target at X R hits) = P(maxR ≥ X)`. No methodology can beat that curve — each is only a rule for choosing X — so there is nothing here to overfit.
 

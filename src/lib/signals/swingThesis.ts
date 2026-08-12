@@ -298,9 +298,29 @@ function statusForPrice(state: SwingThesisState, price: number, high: number, lo
   const { plan, direction } = state;
   const isLong = direction === "long";
 
-  // A stop is a stop: an intrabar breach ends the thesis, matching the
-  // pessimistic intrabar resolution `scripts/backtest/execution.ts` already
-  // applies, so live and replay can't disagree about the same bar.
+  /*
+   * A stop is a stop: an intrabar breach ends the thesis, matching the
+   * pessimistic intrabar resolution `research/tradeExecution.ts` applies, so
+   * live and replay can't disagree about the same bar.
+   *
+   * DELIBERATE EXCEPTION to the "one execution rule" consolidation. Every
+   * other stop test in the platform now routes through `levelReached`; this
+   * one does not, for two reasons:
+   *
+   *  - It answers a different question. This is a LIFECYCLE label for a
+   *    displayed thesis, not a fill. It has no exit price, no return and no
+   *    excursion, and it is driven by a live streaming price rather than by
+   *    a closed bar — there is no `open` to consult.
+   *  - Routing it would mean threading a SessionModel through the production
+   *    decision engine to change nothing, since this path is crypto-only and
+   *    crypto cannot gap.
+   *
+   * The condition that forces the change: the moment a thesis is built for a
+   * session-based instrument, this becomes wrong in the FLATTERING direction
+   * — it would report a stop honoured at the level when the market actually
+   * reopened past it. Route it through `levelReached` before extending the
+   * swing layer beyond crypto.
+   */
   if (isLong ? low <= plan.stopPrice : high >= plan.stopPrice) return "invalidated";
   if (isLong ? high >= plan.target1Price : low <= plan.target1Price) return "completed";
 

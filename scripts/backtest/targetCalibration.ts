@@ -2,6 +2,8 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { replayAsset, RawAssetData, MarketWideData, DayRecord } from "./run";
+import { levelReached, HourBar } from "../../src/lib/research/tradeExecution";
+import { CONTINUOUS_SESSION } from "../../src/lib/research/types";
 
 /**
  * Target calibration study — RESEARCH ONLY. Changes no production target.
@@ -42,7 +44,8 @@ const HORIZON_DAYS = [1, 3, 7, 14, 21, 30];
 /** R multiples tested as candidate targets. */
 const R_LEVELS = [0.5, 1, 1.5, 2, 2.5, 3, 4, 5];
 
-interface Bar { t: number; high: number; low: number; close: number }
+/** `open` is carried so the shared level primitive can detect a gap. Crypto never gaps, but the type must not lie. */
+interface Bar { t: number; open: number; high: number; low: number; close: number }
 type Plan = NonNullable<DayRecord["swingPlan"]>;
 
 const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
@@ -120,8 +123,11 @@ function excursionOf(plan: Plan, bars: Bar[], fromT: number, horizonDays: number
     }
 
     // Stop checked after recording the bar's favourable extreme, and the loop
-    // ends here: the same pessimistic intrabar convention execution.ts uses.
-    if (isLong ? b.low <= plan.stopPrice : b.high >= plan.stopPrice) {
+    // ends here: the same pessimistic intrabar convention resolveTrade uses.
+    // Routed through the SHARED level primitive rather than re-deriving the
+    // comparison, so this study cannot drift from the canonical exit rule and
+    // is gap-safe if it is ever pointed at a session market.
+    if (levelReached(b as HourBar, plan.stopPrice, isLong ? "at-or-below" : "at-or-above", CONTINUOUS_SESSION)) {
       stopped = true;
       hoursToStop = heldH;
       break;

@@ -12,6 +12,8 @@ import type { TechnicalAgreement } from "../../src/lib/sentiment/technicals";
 import type { Verdict } from "../../src/lib/signals/types";
 import type { SupportResistanceZone } from "../../src/lib/technicals/marketStructure";
 import { buildTradePlan, DEFAULT_TRADE_PLAN_CONFIG, TradePlan } from "../../src/lib/signals/tradePlan";
+import { resolveTrade, HourBar } from "../../src/lib/research/tradeExecution";
+import { CONTINUOUS_SESSION, SessionModel } from "../../src/lib/research/types";
 
 /**
  * Swing activation calibration study. Derives the swing layer's thresholds
@@ -326,19 +328,27 @@ interface PlanOutcome {
   hoursHeld: number | null;
 }
 
-interface Bar { t: number; high: number; low: number; close: number }
+/** `open` is required so exit resolution can detect a gap; futuresKlines already carries it. */
+interface Bar { t: number; open: number; high: number; low: number; close: number }
 
 function resolveSwingPlan(
   plan: NonNullable<DayRecord["swingPlan"]>,
   bars: Bar[],
   fromT: number,
   fillWindowDays: number,
-  maxHoldDays: number
+  maxHoldDays: number,
+  session: SessionModel
 ): PlanOutcome {
   const DAY = 86_400_000;
   const isLong = plan.direction === "long";
   const forward = bars.filter((b) => b.t > fromT);
 
+  /*
+   * ENTRY FILL — the genuinely plan-specific half, and the only reason this
+   * function exists rather than calling resolveTrade directly. A swing plan
+   * is a PULLBACK entry that price may never reach, so "expired unfilled" is
+   * a real outcome rather than a loss, and no exit engine can express it.
+   */
   let fillIdx = -1;
   for (let i = 0; i < forward.length; i++) {
     const b = forward[i];
@@ -352,38 +362,67 @@ function resolveSwingPlan(
 
   const fillBar = forward[fillIdx];
   const hoursToFill = (fillBar.t - fromT) / 3_600_000;
-  const entry = plan.entryRef;
-  const signed = (px: number) => ((isLong ? px - entry : entry - px) / entry) * 100;
 
-  let mfe = 0;
-  let mae = 0;
-  let tp2 = false;
+  /*
+   * EXIT — delegated to the one canonical resolver.
+   *
+   * This previously duplicated the stop-before-target rule, MFE/MAE
+   * tracking and timeout handling inline. Two implementations of "what
+   * became of this trade" is exactly what the execution-unification phase
+   * exists to remove: they were free to drift, and this copy was NOT
+   * gap-aware, so pointing it at a session market would have silently
+   * overstated results the same way the legacy replay did.
+   *
+   * `entryT` is set one millisecond BEFORE the fill bar so that resolveTrade's
+   * `t > entryT` window still INCLUDES it. That preserves the pessimistic
+   * reading this function always had: if a bar both entered the zone and
+   * touched the stop, OHLC cannot order the two, and we assume the fill
+   * happened and was then stopped.
+   */
+  const resolution = resolveTrade(
+    {
+      side: isLong ? "long" : "short",
+      entryPrice: plan.entryRef,
+      stopPrice: plan.stopPrice,
+      targetPrice: plan.target1Price,
+      target2Price: plan.target2Price,
+      entryT: fillBar.t - 1,
+    },
+    forward.slice(fillIdx) as unknown as HourBar[],
+    /*
+     * The `+ 1` cancels the 1ms entryT offset above, so the window still ends
+     * exactly `maxHoldDays` after the FILL BAR rather than one millisecond
+     * short of it. Without it a daily bar landing precisely on the boundary
+     * — which, with daily data, is every trade that runs the full hold — would
+     * be silently excluded, shortening every timeout by a day.
+     */
+    maxHoldDays * DAY + 1,
+    session
+  );
 
-  for (let i = fillIdx; i < forward.length; i++) {
-    const b = forward[i];
-    const held = (b.t - fillBar.t) / 3_600_000;
-    if (held > maxHoldDays * 24) {
-      return { filled: true, hoursToFill, outcome: "timeout", returnPct: signed(forward[i - 1]?.close ?? b.close), mfePct: mfe, maePct: mae, hoursHeld: held };
-    }
-    mfe = Math.max(mfe, signed(isLong ? b.high : b.low));
-    mae = Math.min(mae, signed(isLong ? b.low : b.high));
-    if (isLong ? b.high >= plan.target2Price : b.low <= plan.target2Price) tp2 = true;
-
-    // Stop checked FIRST within the bar — same pessimism execution.ts applies.
-    const stopHit = isLong ? b.low <= plan.stopPrice : b.high >= plan.stopPrice;
-    const tpHit = isLong ? b.high >= plan.target1Price : b.low <= plan.target1Price;
-    if (stopHit) return { filled: true, hoursToFill, outcome: "stop", returnPct: signed(plan.stopPrice), mfePct: mfe, maePct: mae, hoursHeld: held };
-    if (tpHit) return { filled: true, hoursToFill, outcome: tp2 ? "tp2" : "target", returnPct: signed(plan.target1Price), mfePct: mfe, maePct: mae, hoursHeld: held };
+  if (!resolution) {
+    return { filled: true, hoursToFill, outcome: "timeout", returnPct: null, mfePct: null, maePct: null, hoursHeld: null };
   }
-  const last = forward[forward.length - 1];
+
+  /*
+   * "tp2" is this study's own label for a winner that also ran to the second
+   * target, so it is derived from the resolver's flag rather than tracked
+   * separately. Slight semantic shift, recorded rather than hidden: the
+   * resolver scans the whole window for TP2-before-stop, whereas the old
+   * inline version only counted TP2 touched before the exit bar.
+   */
+  const outcome: PlanOutcome["outcome"] =
+    resolution.outcome === "target" ? (resolution.tp2ReachedBeforeStop ? "tp2" : "target") : resolution.outcome;
+
   return {
     filled: true,
     hoursToFill,
-    outcome: "timeout",
-    returnPct: last ? signed(last.close) : null,
-    mfePct: mfe,
-    maePct: mae,
-    hoursHeld: last ? (last.t - fillBar.t) / 3_600_000 : null,
+    outcome,
+    returnPct: resolution.grossReturnPct,
+    mfePct: resolution.mfePct,
+    maePct: resolution.maePct,
+    // Measured from the fill bar, undoing the 1ms offset used for the window.
+    hoursHeld: (resolution.exitT - fillBar.t) / 3_600_000,
   };
 }
 
@@ -398,7 +437,7 @@ function swingPlanStats(records: DayRecord[], barsByAsset: Map<string, Bar[]>) {
     if (!d.swingPlan) continue;
     const bars = barsByAsset.get(d.asset);
     if (!bars) continue;
-    outcomes.push(resolveSwingPlan(d.swingPlan, bars, d.t, FILL_WINDOW_DAYS, MAX_HOLD_DAYS));
+    outcomes.push(resolveSwingPlan(d.swingPlan, bars, d.t, FILL_WINDOW_DAYS, MAX_HOLD_DAYS, CONTINUOUS_SESSION));
   }
   if (!outcomes.length) return null;
   const filled = outcomes.filter((o) => o.filled);
@@ -551,7 +590,7 @@ function evaluateMethodology(m: Methodology, records: DayRecord[], barsByAsset: 
         { direction: sp.direction, entryLow: p.entryLow, entryHigh: p.entryHigh, entryRef: p.entryRef,
           stopPrice: p.stopPrice, target1Price: p.target1Price, target2Price: p.target2Price,
           riskRewardRatio: p.riskRewardRatio, anchorPrice: sp.anchorPrice, atrAbs: sp.atrAbs, zones: [] },
-        bars, d.t, FILL_WINDOW_DAYS, MAX_HOLD_DAYS
+        bars, d.t, FILL_WINDOW_DAYS, MAX_HOLD_DAYS, CONTINUOUS_SESSION
       ),
       direction: sp.direction,
       standoffAtr: built.standoffAtr,

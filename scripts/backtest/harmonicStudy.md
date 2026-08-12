@@ -1,6 +1,6 @@
 # Harmonic Pattern Study
 
-Generated 2026-08-11T21:41:51.314Z · research only, nothing wired to production.
+Generated 2026-08-12T08:00:09.766Z · research only, nothing wired to production.
 
 ## 1. Detection census
 

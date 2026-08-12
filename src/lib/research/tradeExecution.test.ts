@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { resolveTrade, HourBar, TradePlan } from "./tradeExecution";
+import { resolveTrade, levelReached, approachesFor, HourBar, TradePlan } from "./tradeExecution";
 import { CONTINUOUS_SESSION, US_EQUITY_SESSION } from "./types";
 
 /**
@@ -286,5 +286,45 @@ describe("crypto behaviour is unchanged by the migration", () => {
     expect(r.outcome).toBe("stop");
     expect(r.exitPrice).toBe(95);
     expect(r.ambiguousBar).toBe(true);
+  });
+});
+
+/**
+ * The shared level primitive. These pin it directly rather than only through
+ * resolveTrade, because it is now the single definition every stop test in
+ * the platform routes through — including two research scripts that used to
+ * hand-write the comparison gap-blindly.
+ */
+describe("levelReached — the one definition of a level touch", () => {
+  const b = (open: number, high: number, low: number): HourBar => ({ t: 0, open, high, low, close: (high + low) / 2 });
+
+  it("reports no touch when the bar never reaches the level", () => {
+    expect(levelReached(b(100, 105, 98), 95, "at-or-below", CONTINUOUS_SESSION)).toBeNull();
+    expect(levelReached(b(100, 105, 98), 110, "at-or-above", CONTINUOUS_SESSION)).toBeNull();
+  });
+
+  it("fills AT the level when price trades through it intrabar", () => {
+    expect(levelReached(b(100, 105, 94), 95, "at-or-below", CONTINUOUS_SESSION)).toEqual({ fillPrice: 95, gapped: false });
+    expect(levelReached(b(100, 112, 98), 110, "at-or-above", CONTINUOUS_SESSION)).toEqual({ fillPrice: 110, gapped: false });
+  });
+
+  it("touching the level exactly counts — the boundary is inclusive", () => {
+    expect(levelReached(b(100, 105, 95), 95, "at-or-below", CONTINUOUS_SESSION)).toEqual({ fillPrice: 95, gapped: false });
+  });
+
+  it("fills at the OPEN when a session market reopens beyond the level", () => {
+    // Opens at 90, already through a 95 stop: the level was never available.
+    expect(levelReached(b(90, 96, 88), 95, "at-or-below", US_EQUITY_SESSION)).toEqual({ fillPrice: 90, gapped: true });
+  });
+
+  it("is gap-BLIND on a continuous market — same bar, same level, fills at the level", () => {
+    // The identical bar under a continuous session takes the intrabar path.
+    // This is what guarantees every published crypto number is untouched.
+    expect(levelReached(b(90, 96, 88), 95, "at-or-below", CONTINUOUS_SESSION)).toEqual({ fillPrice: 95, gapped: false });
+  });
+
+  it("approachesFor puts the long/short flip in exactly one place", () => {
+    expect(approachesFor("long")).toEqual({ stop: "at-or-below", target: "at-or-above" });
+    expect(approachesFor("short")).toEqual({ stop: "at-or-above", target: "at-or-below" });
   });
 });

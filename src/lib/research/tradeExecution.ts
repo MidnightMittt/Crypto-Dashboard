@@ -111,6 +111,60 @@ function directionalPct(side: TradeSide, entryPrice: number, price: number): num
   return side === "long" ? raw : -raw;
 }
 
+/** Which way price must move to reach the level. A long's stop is "at-or-below", its target "at-or-above". */
+export type LevelApproach = "at-or-below" | "at-or-above";
+
+export interface LevelTouch {
+  /** Where the order would actually have filled — the level, or the OPEN when the market reopened past it. */
+  fillPrice: number;
+  gapped: boolean;
+}
+
+/**
+ * THE single definition of "did price reach this level on this bar, and at
+ * what price would that have filled."
+ *
+ * Every stop test, target test and excursion scan in the platform routes
+ * through this one function. That is the whole point: the rule was previously
+ * written out by hand in five places — twice inside this very file — and the
+ * hand-written copies were uniformly gap-BLIND, so any of them pointed at a
+ * session market would have booked fills at levels the market never offered.
+ * A shared primitive makes that class of error unrepresentable rather than
+ * merely absent today.
+ *
+ * Returns null when the bar never reached the level.
+ */
+export function levelReached(
+  bar: HourBar,
+  level: number,
+  approach: LevelApproach,
+  session: SessionModel
+): LevelTouch | null {
+  const below = approach === "at-or-below";
+
+  /*
+   * A gap is checked FIRST and reported separately, because it changes the
+   * fill price rather than merely the fact of the touch. If the market
+   * reopened already past the level, the order filled at the open; the
+   * bar's high/low cannot distinguish "gapped through" from "traded
+   * through", which is exactly why `open` is required on HourBar.
+   */
+  if (session.gapsPossible && (below ? bar.open <= level : bar.open >= level)) {
+    return { fillPrice: bar.open, gapped: true };
+  }
+  if (below ? bar.low <= level : bar.high >= level) {
+    return { fillPrice: level, gapped: false };
+  }
+  return null;
+}
+
+/** The approach a given side's stop and target require. Keeps the long/short flip in one place. */
+export function approachesFor(side: TradeSide): { stop: LevelApproach; target: LevelApproach } {
+  return side === "long"
+    ? { stop: "at-or-below", target: "at-or-above" }
+    : { stop: "at-or-above", target: "at-or-below" };
+}
+
 /**
  * Did price reach TP2 before ever touching the stop, anywhere in the hold
  * window? A deliberately separate scan rather than a flag set inside the
@@ -126,18 +180,18 @@ function directionalPct(side: TradeSide, entryPrice: number, price: number): num
  * while the headline exit was correctly pessimistic.
  */
 function reachedTp2BeforeStop(plan: TradePlan, window: HourBar[], session: SessionModel): boolean {
-  const isLong = plan.side === "long";
+  const { stop, target } = approachesFor(plan.side);
   for (const bar of window) {
-    if (session.gapsPossible) {
-      const gappedStop = isLong ? bar.open <= plan.stopPrice : bar.open >= plan.stopPrice;
-      if (gappedStop) return false;
-      const gappedTp2 = isLong ? bar.open >= plan.target2Price : bar.open <= plan.target2Price;
-      if (gappedTp2) return true;
-    }
-    const stopTouched = isLong ? bar.low <= plan.stopPrice : bar.high >= plan.stopPrice;
-    const tp2Touched = isLong ? bar.high >= plan.target2Price : bar.low <= plan.target2Price;
-    if (stopTouched) return false;
-    if (tp2Touched) return true;
+    const stopTouch = levelReached(bar, plan.stopPrice, stop, session);
+    const tp2Touch = levelReached(bar, plan.target2Price, target, session);
+
+    // Gapped exits settle at the open, so they precede anything intrabar.
+    // Stop wins ties at every level of precedence — same pessimism as the
+    // exit rule, which is what keeps the two scans consistent.
+    if (stopTouch?.gapped) return false;
+    if (tp2Touch?.gapped) return true;
+    if (stopTouch) return false;
+    if (tp2Touch) return true;
   }
   return false;
 }
@@ -196,7 +250,7 @@ export function resolveTrade(
   if (window.length === 0) return null;
 
   const isLong = side === "long";
-  const hit = (bar: HourBar, level: number, above: boolean) => (above ? bar.high >= level : bar.low <= level);
+  const approach = approachesFor(side);
 
   let mfePct = -Infinity;
   let maePct = Infinity;
@@ -213,8 +267,11 @@ export function resolveTrade(
   for (const bar of window) {
     const hours = (bar.t - entryT) / HOUR_MS;
 
+    const stopTouch = levelReached(bar, stopPrice, approach.stop, session);
+    const targetTouch = levelReached(bar, targetPrice, approach.target, session);
+
     /*
-     * GAP HANDLING, checked before any intrabar test.
+     * GAP EXITS take precedence over anything intrabar.
      *
      * If a session market reopens beyond a resting level, the position left
      * at the OPEN — nothing later in that bar can undo it, and booking the
@@ -222,32 +279,31 @@ export function resolveTrade(
      * error is one-directional (it always flatters the result) so it does
      * not average out across trades; it accumulates.
      *
-     * Guarded by `gapsPossible`, so a continuous market takes the identical
-     * path it always has and every existing crypto result is unchanged.
+     * `levelReached` only ever reports `gapped` when `session.gapsPossible`,
+     * so a continuous market takes the identical path it always has and every
+     * existing crypto result is unchanged.
      */
-    if (session.gapsPossible) {
-      const gapThroughStop = isLong ? bar.open <= stopPrice : bar.open >= stopPrice;
-      const gapThroughTarget = isLong ? bar.open >= targetPrice : bar.open <= targetPrice;
+    const gapExit = stopTouch?.gapped ? stopTouch : targetTouch?.gapped ? targetTouch : null;
+    if (gapExit) {
+      // Excursions are updated with the OPEN alone: the position closed
+      // there, so the rest of the bar's range never happened to it.
+      mfePct = Math.max(mfePct, directionalPct(side, entryPrice, bar.open));
+      maePct = Math.min(maePct, directionalPct(side, entryPrice, bar.open));
 
-      if (gapThroughStop || gapThroughTarget) {
-        // Excursions are updated with the OPEN alone: the position closed
-        // there, so the rest of the bar's range never happened to it.
-        mfePct = Math.max(mfePct, directionalPct(side, entryPrice, bar.open));
-        maePct = Math.min(maePct, directionalPct(side, entryPrice, bar.open));
+      // Stop before target: if the reopen cleared both, the adverse level
+      // is the pessimistic and correct reading.
+      const viaStop = Boolean(stopTouch?.gapped);
+      outcome = viaStop ? "stop" : "target";
+      if (viaStop) hoursToStop = hours;
+      else hoursToTarget = hours;
 
-        // Stop before target: if the reopen cleared both, the adverse level
-        // is the pessimistic and correct reading.
-        const level = gapThroughStop ? stopPrice : targetPrice;
-        outcome = gapThroughStop ? "stop" : "target";
-        if (gapThroughStop) hoursToStop = hours;
-        else hoursToTarget = hours;
-
-        exitPrice = bar.open;
-        exitT = bar.t;
-        gapped = true;
-        gapSlippagePct = directionalPct(side, entryPrice, bar.open) - directionalPct(side, entryPrice, level);
-        break;
-      }
+      exitPrice = gapExit.fillPrice;
+      exitT = bar.t;
+      gapped = true;
+      gapSlippagePct =
+        directionalPct(side, entryPrice, gapExit.fillPrice) -
+        directionalPct(side, entryPrice, viaStop ? stopPrice : targetPrice);
+      break;
     }
 
     // Excursions use the bar's extremes, not its close — a wick through the
@@ -255,22 +311,19 @@ export function resolveTrade(
     mfePct = Math.max(mfePct, directionalPct(side, entryPrice, isLong ? bar.high : bar.low));
     maePct = Math.min(maePct, directionalPct(side, entryPrice, isLong ? bar.low : bar.high));
 
-    const stopTouched = hit(bar, stopPrice, !isLong);
-    const targetTouched = hit(bar, targetPrice, isLong);
+    if (stopTouch && targetTouch) ambiguousBar = true;
 
-    if (stopTouched && targetTouched) ambiguousBar = true;
-
-    if (stopTouched) {
+    if (stopTouch) {
       hoursToStop = hours;
       outcome = "stop";
-      exitPrice = stopPrice;
+      exitPrice = stopTouch.fillPrice;
       exitT = bar.t;
       break;
     }
-    if (targetTouched) {
+    if (targetTouch) {
       hoursToTarget = hours;
       outcome = "target";
-      exitPrice = targetPrice;
+      exitPrice = targetTouch.fillPrice;
       exitT = bar.t;
       break;
     }

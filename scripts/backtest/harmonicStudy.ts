@@ -3,6 +3,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { replayAsset, RawAssetData, MarketWideData, DayRecord } from "./run";
 import { detectHarmonics, HarmonicPattern, Candle } from "./harmonics";
+import { levelReached, HourBar } from "../../src/lib/research/tradeExecution";
+import { CONTINUOUS_SESSION } from "../../src/lib/research/types";
 
 /**
  * Harmonic pattern study — RESEARCH ONLY, nothing wired to production.
@@ -21,7 +23,8 @@ const DAY = 86_400_000;
 const HORIZONS = [1, 3, 7, 14, 21, 30];
 const R_LEVELS = [0.5, 1, 1.5, 2, 3];
 
-interface Bar { t: number; high: number; low: number; close: number }
+/** `open` is carried so the shared level primitive can detect a gap. Crypto never gaps, but the type must not lie. */
+interface Bar { t: number; open: number; high: number; low: number; close: number }
 
 const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
 const median = (xs: number[]) => (xs.length ? [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)] : NaN);
@@ -90,7 +93,8 @@ function outcomeFrom(bars: Bar[], fromT: number, entry: number, stopPrice: numbe
     for (const h of HORIZONS) {
       if (heldD <= h) fwd[h] = ((bullish ? b.close - entry : entry - b.close) / entry) * 100;
     }
-    if (bullish ? b.low <= stopPrice : b.high >= stopPrice) { stopped = true; break; }
+    // Shared level primitive, not a hand-written comparison — see targetCalibration.
+    if (levelReached(b as HourBar, stopPrice, bullish ? "at-or-below" : "at-or-above", CONTINUOUS_SESSION)) { stopped = true; break; }
   }
   return { fwd, maxR, minR, stopped };
 }

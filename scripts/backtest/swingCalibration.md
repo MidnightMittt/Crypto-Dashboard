@@ -1,6 +1,6 @@
 # Swing Activation Calibration Study
 
-Generated 2026-08-11T20:09:14.189Z · research only, no production threshold changed.
+Generated 2026-08-12T07:54:08.606Z · research only, no production threshold changed.
 
 ## 1. Baseline (shipped configuration)
 
@@ -68,11 +68,11 @@ Days passing EVERY gate but short of consecutive confirmation: **435** (18.1% of
 
 | Group | Plans | Fill rate | Med hrs to fill | Filled n | Win rate | 95% CI | Expectancy | MFE | MAE | TP1 | TP2 | Stopped | Timeout |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| all | 81 | 82.7% | 36.0h | 67 | 29.9% | 20.2–41.7% | -0.85% | 7.80% | -6.12% | 11.9% | 0.0% | 58.2% | 29.9% |
+| all | 81 | 82.7% | 36.0h | 67 | 29.9% | 20.2–41.7% | -0.85% | 7.80% | -6.12% | 11.9% | 3.0% | 58.2% | 29.9% |
 | long | 15 | 80.0% | 42.0h | 12 | 41.7% | 19.3–68.0% | +0.81% | 9.52% | -4.94% | 16.7% | 0.0% | 33.3% | 50.0% |
-| short | 66 | 83.3% | 36.0h | 55 | 27.3% | 17.3–40.2% | -1.22% | 7.42% | -6.38% | 10.9% | 0.0% | 63.6% | 25.5% |
+| short | 66 | 83.3% | 36.0h | 55 | 27.3% | 17.3–40.2% | -1.22% | 7.42% | -6.38% | 10.9% | 3.6% | 63.6% | 25.5% |
 | BTC | 37 | 83.8% | 36.0h | 31 | 32.3% | 18.6–49.9% | -0.56% | 7.17% | -4.65% | 6.5% | 0.0% | 54.8% | 38.7% |
-| ETH | 44 | 81.8% | 40.0h | 36 | 27.8% | 15.8–44.0% | -1.11% | 8.34% | -7.38% | 16.7% | 0.0% | 61.1% | 22.2% |
+| ETH | 44 | 81.8% | 40.0h | 36 | 27.8% | 15.8–44.0% | -1.11% | 8.34% | -7.38% | 16.7% | 5.6% | 61.1% | 22.2% |
 
 ## 5. Candidate sweep — in-sample vs out-of-sample
 
@@ -129,7 +129,7 @@ Activation set held FIXED — only the choice of entry zone varies. Every method
 
 | Methodology | Plans | Med standoff | Med R:R | Fill% | Med hrs to fill | n | Win | 95% CI | Expectancy | MFE | MAE | TP1 | TP2 | Stop | Med days held |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| A control (production, unfiltered) | 81 | 0.53 ATR | 3.13 | 82.7% | 36.0h | 67 | 29.9% | 20.2–41.7% | -0.85% | 7.80% | -6.12% | 11.9% | 0.0% | 58.2% | 9.3d |
+| A control (production, unfiltered) | 81 | 0.53 ATR | 3.13 | 82.7% | 36.0h | 67 | 29.9% | 20.2–41.7% | -0.85% | 7.80% | -6.12% | 11.9% | 3.0% | 58.2% | 9.3d |
 | B strongest zone | 51 | 0.62 ATR | 2.50 | 78.4% | 31.5h | 40 | 37.5% | 24.2–53.0% | -0.66% | 8.56% | -6.93% | 12.5% | 0.0% | 50.0% | 13.4d |
 | C daily-dominant | 48 | 0.61 ATR | 2.49 | 79.2% | 35.0h | 38 | 39.5% | 25.6–55.3% | -0.40% | 8.91% | -6.99% | 13.2% | 0.0% | 47.4% | 13.8d |
 | D daily+4H confluence | 48 | 0.61 ATR | 2.49 | 79.2% | 35.0h | 38 | 39.5% | 25.6–55.3% | -0.40% | 8.91% | -6.99% | 13.2% | 0.0% | 47.4% | 13.8d |
@@ -167,7 +167,7 @@ Everything in R, so target distance and realized excursion are directly comparab
 
 | Methodology | TP1 dist | TP2 dist | MFE median | MFE p90 | MFE max | TP2 within MFE p90? | TP1 hit% | TP2 hit% |
 |---|---|---|---|---|---|---|---|---|
-| A control (production, unfiltered) | 3.13R | 5.56R | 0.82R | 2.61R | 5.18R | **no** | 11.9% | 0.0% |
+| A control (production, unfiltered) | 3.13R | 5.56R | 0.82R | 2.61R | 5.18R | **no** | 11.9% | 3.0% |
 | B strongest zone | 2.39R | 4.21R | 0.78R | 2.50R | 5.18R | **no** | 12.5% | 0.0% |
 | C daily-dominant | 2.39R | 4.05R | 0.82R | 2.50R | 5.18R | **no** | 13.2% | 0.0% |
 | D daily+4H confluence | 2.39R | 4.05R | 0.82R | 2.50R | 5.18R | **no** | 13.2% | 0.0% |
