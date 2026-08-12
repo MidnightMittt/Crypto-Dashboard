@@ -349,4 +349,47 @@ describe("buildSupportResistanceZones — end to end", () => {
     const lows = zones.map((z) => z.priceLow);
     expect(lows).toEqual([...lows].sort((a, b) => a - b));
   });
+
+  /*
+   * REGRESSION: ancient history must not produce levels.
+   *
+   * This function used to cluster whatever series it was handed, which was
+   * harmless while every caller was bounded by OKX's 300-candle cap — and
+   * badly wrong the first time it was handed 8,440 bars of SPY back to 1993.
+   * The clustering tolerance is a fraction of CURRENT ATR, which is enormous
+   * relative to 1990s prices, so decades of levels collapsed into one "zone"
+   * spanning several hundred percent of its own low.
+   *
+   * The fixture reproduces exactly that shape: a long-ago era around 20, a
+   * recent era around 1000. If the window is ever removed, the era-20 pivots
+   * come back and this fails.
+   */
+  it("ignores bars beyond the 300-session window — a level from a different price era is not a level", () => {
+    const pivotAt = (i: number, base: number) => {
+      const isHigh = i % 20 === 5;
+      const isLow = i % 20 === 15;
+      const close = isHigh ? base * 1.1 : isLow ? base * 0.9 : base;
+      return {
+        t: i,
+        open: close,
+        high: isHigh ? close + base * 0.02 : close + base * 0.005,
+        low: isLow ? close - base * 0.02 : close - base * 0.005,
+        close,
+        volumeUsd: 100,
+      };
+    };
+    // 400 ancient bars around 20, then 300 recent bars around 1000.
+    const candles: Candle[] = [
+      ...Array.from({ length: 400 }, (_, i) => pivotAt(i, 20)),
+      ...Array.from({ length: 300 }, (_, i) => pivotAt(400 + i, 1000)),
+    ];
+
+    const zones = buildSupportResistanceZones(candles, null);
+
+    expect(zones.length).toBeGreaterThan(0);
+    // Nothing from the era the window excludes.
+    expect(zones.every((z) => z.priceLow > 100)).toBe(true);
+    // And no single zone spans the two eras, which is how the bug presented.
+    expect(zones.every((z) => z.priceHigh / z.priceLow < 2)).toBe(true);
+  });
 });

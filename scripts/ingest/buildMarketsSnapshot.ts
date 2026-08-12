@@ -4,8 +4,12 @@ import { fileURLToPath } from "url";
 import { buildEquityEvidence, EquityInstrumentInput } from "../../src/lib/markets/equityEvidence";
 import { buildMarketBias } from "../../src/lib/signals/marketBias";
 import { MarketBias } from "../../src/lib/signals/types";
-import { buildTradePlan, TradePlan } from "../../src/lib/signals/tradePlan";
-import { buildSupportResistanceZones, SupportResistanceZone } from "../../src/lib/technicals/marketStructure";
+import { buildTradePlanOutcome, TradePlan, TradePlanRefusal } from "../../src/lib/signals/tradePlan";
+import {
+  buildSupportResistanceZones,
+  buildVolumeProfile,
+  SupportResistanceZone,
+} from "../../src/lib/technicals/marketStructure";
 import { atr } from "../../src/lib/technicals/indicators";
 
 /**
@@ -57,6 +61,14 @@ export interface MarketDecision {
   asOf: number;
   /** Null when the engine has no directional read — a plan for a neutral verdict would be invented. */
   plan: TradePlan | null;
+  /**
+   * WHY there is no plan, when the verdict WAS directional and the geometry
+   * still refused. Null when a plan exists, and null when the verdict is
+   * neutral — in that case the absence is explained by the verdict itself and
+   * a geometric refusal would be a second, competing reason for the same
+   * silence.
+   */
+  planRefusal: TradePlanRefusal | null;
   zones: SupportResistanceZone[];
   atrPct: number | null;
 }
@@ -109,14 +121,26 @@ function main() {
      *    manufacturing one from a 52 score is exactly the false precision the
      *    engine is supposed to refuse.
      */
-    const zones = buildSupportResistanceZones(bars as never, null, "1D");
+    /*
+     * Same two calls the crypto aggregator makes, in the same order. The
+     * volume profile was previously passed as null here, which silently cost
+     * equities the point-of-control and value-area-edge confluence tags that
+     * crypto levels carry — the ingested bars have had a volume field all
+     * along. Levels confirmed by two independent methods score higher, so
+     * omitting it was not neutral; it flattened the ranking.
+     *
+     * Both functions window their own input (90 bars for the profile, 300 for
+     * the zones), so handing them the full ingested history is safe.
+     */
+    const volumeProfile = buildVolumeProfile(bars as never);
+    const zones = buildSupportResistanceZones(bars as never, volumeProfile, "1D");
     const atrAbs = atr(bars as never);
     const lastClose = bars[bars.length - 1].close;
     const atrPct = atrAbs !== null && lastClose > 0 ? (atrAbs / lastClose) * 100 : null;
 
     const direction = bias.verdict === "bullish" ? "long" : bias.verdict === "bearish" ? "short" : null;
-    const plan = direction
-      ? buildTradePlan({
+    const outcome = direction
+      ? buildTradePlanOutcome({
           direction,
           anchorPrice: lastClose,
           atrPct,
@@ -138,13 +162,18 @@ function main() {
       lastClose: bars[bars.length - 1].close,
       change24hPct: prev > 0 ? ((bars[bars.length - 1].close - prev) / prev) * 100 : 0,
       asOf,
-      plan,
+      plan: outcome?.plan ?? null,
+      planRefusal: outcome?.refusal ?? null,
       zones,
       atrPct,
     });
     console.log(
       `  ${symbol}: ${bias.verdict} ${bias.score} (conf ${bias.confidence}) from ${metrics.length} metrics` +
-        `${plan ? ` · plan ${plan.riskRewardRatio.toFixed(2)}R` : " · no plan (neutral)"}`
+        `${
+          outcome?.plan
+            ? ` · plan ${outcome.plan.riskRewardRatio.toFixed(2)}R`
+            : ` · no plan (${outcome?.refusal ?? "neutral verdict"})`
+        }`
     );
   }
 

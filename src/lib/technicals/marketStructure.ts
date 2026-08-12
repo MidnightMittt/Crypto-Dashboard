@@ -155,6 +155,14 @@ const STRENGTH_TOUCH_SATURATION = 4;
 const STRENGTH_CONFLUENCE_SATURATION = 2;
 /** Recency window for the strength score's decay term — reuses VOLUME_PROFILE_WINDOW's own 90-day horizon rather than inventing a second constant for the same "how far back still counts" question. */
 const STRENGTH_RECENCY_WINDOW_BARS = VOLUME_PROFILE_WINDOW;
+/**
+ * How much history a level can be built from. Matches OKX's own 300-candle
+ * cap, which is what every crypto caller was already bounded by — see the
+ * long note in `buildSupportResistanceZones`. Roughly 14 months of dailies:
+ * long enough to hold several full swings, short enough that the clustering
+ * tolerance (a fraction of CURRENT ATR) stays meaningful across the range.
+ */
+const STRUCTURE_WINDOW_BARS = 300;
 const STATUS_LOOKBACK_BARS = 5;
 /** How close (in ATRs) price must be to count as "at" a zone for testing/breaking/reclaiming purposes. */
 const STATUS_PROXIMITY_ATR_MULT = 0.25;
@@ -342,10 +350,36 @@ export function classifyZoneStatus(
  * directly and more richly.
  */
 export function buildSupportResistanceZones(
-  candles: Candle[],
+  allCandles: Candle[],
   profile: VolumeProfileResult | null,
   timeframe: ZoneTimeframe = "1D"
 ): SupportResistanceZone[] {
+  /*
+   * WINDOWED HERE, not left to the caller.
+   *
+   * This function used to cluster whatever series it was handed. For crypto
+   * that was harmless — OKX caps its candle endpoint at 300 with no
+   * pagination, so the input was bounded by the API — and the replay sliced
+   * to the same 300 to match. Nothing documented the dependency, because
+   * nothing had violated it.
+   *
+   * Then equities arrived with 8,440 daily bars of SPY going back to 1993,
+   * and the result was not a longer list of levels, it was WRONG levels: the
+   * clustering tolerance is a fraction of CURRENT ATR (~$9 on a $770 index),
+   * which is enormous relative to 1990s prices, so every level under $135
+   * collapsed into one "zone" spanning 470% of its own low. Fifty-seven zones
+   * came back, the widest of them meaningless, and they fed trade planning
+   * and entry quality as well as the display.
+   *
+   * A function whose correctness depends on an undocumented caller invariant
+   * is a trap, and this one has now been sprung. So the window lives here.
+   * `buildVolumeProfile` already windows its own input the same way.
+   *
+   * 300 is a strict no-op for both existing callers — the OKX cap and the
+   * replay's LIVE_CANDLE_LIMIT are both already 300 — so this changes no
+   * crypto behaviour and no published statistic.
+   */
+  const candles = allCandles.slice(-STRUCTURE_WINDOW_BARS);
   const atrValue = atr(candles);
   if (atrValue === null || atrValue <= 0) return [];
   const price = candles.length ? candles[candles.length - 1].close : null;

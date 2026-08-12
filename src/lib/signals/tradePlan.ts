@@ -155,18 +155,70 @@ export interface TradePlanInputs {
 }
 
 /**
+ * Why no plan exists. Every refusal in `buildTradePlanOutcome` names itself,
+ * so a surface can tell a reader WHICH condition failed instead of the
+ * uninformative "no setup".
+ *
+ * These are refusals, not errors. Each one is a case where the geometry does
+ * not support an honest plan, and the engine declining to invent one is the
+ * correct behaviour — the reader should come away understanding that, not
+ * suspecting something broke.
+ */
+export type TradePlanRefusal =
+  | "no-volatility"
+  | "no-structure"
+  | "no-pullback-entry"
+  | "stop-at-entry"
+  | "stop-inside-noise"
+  | "reward-too-small";
+
+export const TRADE_PLAN_REFUSAL_TEXT: Record<TradePlanRefusal, string> = {
+  "no-volatility":
+    "No usable volatility reading. Every level in a plan is sized in ATRs, so without one there is no principled distance to place a stop or a target at.",
+  "no-structure":
+    "No support/resistance structure to anchor to. A stop needs a level it represents — placed on volatility alone it is an arbitrary distance, and a target without structure is a guess.",
+  "no-pullback-entry":
+    "The only available entry is at market, and this setup requires a retest. Waiting for a level price has not offered is the whole premise; entering at market instead would be a different trade wearing this one's risk/reward.",
+  "stop-at-entry":
+    "The structural stop resolves to the entry price itself, leaving no risk distance to measure a reward against.",
+  "stop-inside-noise":
+    "The structural stop sits closer than the market's own daily noise. It would be taken out by ordinary movement rather than by the thesis being wrong, so the plan is refused rather than the stop widened — widening it would detach it from the level it represents.",
+  "reward-too-small":
+    "Reward-to-risk falls below the engine's minimum once measured from the real entry, not from the anchor price. The direction may still be right; the geometry does not pay enough for the risk it requires.",
+};
+
+/** A plan, or a named reason there is none. Never a degraded plan. */
+export type TradePlanOutcome =
+  | { plan: TradePlan; refusal: null }
+  | { plan: null; refusal: TradePlanRefusal };
+
+/**
  * Builds the plan, or returns null when no honest one exists.
  *
- * Returns null — rather than a degraded plan — when there is no ATR, no
+ * Thin wrapper over `buildTradePlanOutcome`, kept because most callers only
+ * need "plan or not". Surfaces that must EXPLAIN the absence call the outcome
+ * form directly. One implementation either way — a second copy that computed
+ * the reason separately could disagree with the plan about whether one exists.
+ */
+export function buildTradePlan(inputs: TradePlanInputs): TradePlan | null {
+  return buildTradePlanOutcome(inputs).plan;
+}
+
+/**
+ * The same construction, with the refusal named.
+ *
+ * Returns a refusal — rather than a degraded plan — when there is no ATR, no
  * placeable stop, a stop so tight it sits inside the noise, or a
  * reward/risk below the module's own minimum once measured from the real
  * entry. A plan the geometry doesn't support is worse than no plan.
  */
-export function buildTradePlan(inputs: TradePlanInputs): TradePlan | null {
+export function buildTradePlanOutcome(inputs: TradePlanInputs): TradePlanOutcome {
   const { direction, anchorPrice, atrPct, zones, quality } = inputs;
   const config = inputs.config ?? DEFAULT_TRADE_PLAN_CONFIG;
 
-  if (atrPct === null || atrPct <= 0 || anchorPrice <= 0) return null;
+  if (atrPct === null || atrPct <= 0 || anchorPrice <= 0) {
+    return { plan: null, refusal: "no-volatility" };
+  }
 
   const eq = buildEntryQuality({
     ...quality,
@@ -175,13 +227,15 @@ export function buildTradePlan(inputs: TradePlanInputs): TradePlan | null {
     atrPct,
     supportResistance: zones,
   });
-  if (!eq) return null;
+  if (!eq) return { plan: null, refusal: "no-structure" };
 
   const isLong = direction === "long";
   const atrAbs = (atrPct / 100) * anchorPrice;
   const protectiveZone = isLong ? eq.nearestSupport : eq.nearestResistance;
   const entry = buildEntryZone(direction, anchorPrice, atrAbs, protectiveZone, config);
-  if (inputs.requirePullbackEntry && entry.kind !== "pullback") return null;
+  if (inputs.requirePullbackEntry && entry.kind !== "pullback") {
+    return { plan: null, refusal: "no-pullback-entry" };
+  }
 
   /*
    * `buildEntryQuality` places its stop assuming entry AT the anchor price
@@ -221,7 +275,7 @@ export function buildTradePlan(inputs: TradePlanInputs): TradePlan | null {
   }
 
   const riskDistance = Math.abs(entryRef - stopPrice);
-  if (riskDistance <= 0) return null;
+  if (riskDistance <= 0) return { plan: null, refusal: "stop-at-entry" };
 
   /*
    * The stop stays where structure puts it; what gets rejected is the PLAN.
@@ -231,13 +285,15 @@ export function buildTradePlan(inputs: TradePlanInputs): TradePlan | null {
    * plan. Threshold reused from entryQuality's own answer to "how close is
    * too close for a stop".
    */
-  if (riskDistance < STRUCTURAL_STOP_MIN_ATR * atrAbs) return null;
+  if (riskDistance < STRUCTURAL_STOP_MIN_ATR * atrAbs) {
+    return { plan: null, refusal: "stop-inside-noise" };
+  }
 
   const riskRewardRatio = Math.abs(eq.targetPrice - entryRef) / riskDistance;
   const riskRewardRatio2 = Math.abs(eq.target2Price - entryRef) / riskDistance;
-  if (riskRewardRatio < MIN_RR) return null;
+  if (riskRewardRatio < MIN_RR) return { plan: null, refusal: "reward-too-small" };
 
-  return {
+  const plan: TradePlan = {
     entryLow: entry.entryLow,
     entryHigh: entry.entryHigh,
     entryBasis: entry.entryBasis,
@@ -258,4 +314,5 @@ export function buildTradePlan(inputs: TradePlanInputs): TradePlan | null {
     supportZone: eq.nearestSupport,
     resistanceZone: eq.nearestResistance,
   };
+  return { plan, refusal: null };
 }

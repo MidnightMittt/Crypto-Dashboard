@@ -299,8 +299,8 @@ function Decision({
           layer exists to draw.
         */}
         {swing.tactical && (
-          <p className="rounded-md border border-warn/20 bg-warn/[0.04] px-3 py-2 text-[12px] leading-relaxed text-ink-muted">
-            <span className="font-semibold uppercase tracking-[0.12em] text-warn">Tactical</span> · {swing.tactical}
+          <p className="rounded-md border border-amber/20 bg-amber/[0.04] px-3 py-2 text-[12px] leading-relaxed text-ink-muted">
+            <span className="font-semibold uppercase tracking-[0.12em] text-amber">Tactical</span> · {swing.tactical}
           </p>
         )}
 
@@ -637,8 +637,8 @@ const LEAN_LABEL: Record<NonNullable<Lean> | "unavailable", string> = {
 const HARMONIC_STATUS_TEXT: Record<HarmonicEvidence["status"], string> = {
   "prz-projected": "text-ink-faint",
   approaching: "text-ink-muted",
-  "inside-prz": "text-warning",
-  "confirmation-pending": "text-warning",
+  "inside-prz": "text-amber",
+  "confirmation-pending": "text-amber",
   confirmed: "text-ink",
   tradeable: "text-ink",
   invalidated: "text-ink-faint",
@@ -699,7 +699,7 @@ function TechnicalConfirmation({
         swing timeframes is the single most decision-relevant thing this
         section can say, so it is never a footnote.
       */}
-      <p className={`mt-1.5 text-xs ${alignment.aligned ? "text-ink-muted" : "text-warning"}`}>{alignment.sentence}</p>
+      <p className={`mt-1.5 text-xs ${alignment.aligned ? "text-ink-muted" : "text-amber"}`}>{alignment.sentence}</p>
 
       {/*
         One line, only when a pattern currently qualifies. Says WHERE (the

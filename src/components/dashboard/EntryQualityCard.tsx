@@ -405,7 +405,7 @@ function PriceStat({
  */
 const SETUP_STATUS: Record<SetupStatus, { label: string; text: string }> = {
   "at-entry": { label: "AT ENTRY", text: "text-success" },
-  approaching: { label: "APPROACHING", text: "text-warning" },
+  approaching: { label: "APPROACHING", text: "text-amber" },
   waiting: { label: "WAITING", text: "text-ink-muted" },
   invalidated: { label: "LEVEL BROKEN", text: "text-ink-faint" },
 };
