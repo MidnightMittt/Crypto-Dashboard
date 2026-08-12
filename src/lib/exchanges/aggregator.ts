@@ -117,6 +117,7 @@ import { readSwingThesis, writeSwingThesis } from "../history/swingThesisStore";
 import type { MarketBias, Verdict, MetricVerdict } from "../signals/types";
 import type { SwingThesisSnapshot } from "@/types/market";
 import { applyDailyClose, applyTick, swingReasons } from "../signals/swingThesis";
+import { CONTINUOUS_SESSION } from "../research/types";
 import { buildHarmonicEvidence, selectBestHarmonic, HarmonicEvidence } from "../signals/harmonicEvidence";
 import { buildPlannedSetups } from "../signals/plannedSetup";
 import { lookupTradeStatsBySide, ExecutionStatsSnapshot } from "../sentiment/backtestStats";
@@ -1312,7 +1313,13 @@ async function buildSwingThesis(
     };
   }
 
-  next = applyTick(next, { t: now, price });
+  /*
+   * CONTINUOUS_SESSION, declared rather than defaulted: this path is crypto,
+   * and crypto cannot gap. No `open` either — a live poll is a spot quote,
+   * not a closed bar, so there is no gap information to pass and inventing
+   * one would be worse than the honest absence. See `TickEvidence.open`.
+   */
+  next = applyTick(next, { t: now, price }, CONTINUOUS_SESSION);
 
   if (next !== store) {
     // Awaited: the very next poll reads this back, and a lost write would

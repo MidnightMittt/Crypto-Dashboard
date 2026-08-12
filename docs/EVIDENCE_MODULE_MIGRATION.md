@@ -24,7 +24,7 @@ markets *and* is measured from inputs both markets supply.
 | **Divergence** (RSI/MACD vs price) | **Universal** | OHLCV only. Portable, but inherits the momentum caveat. |
 | **Technical read** (composite vote) | **Universal** | Aggregates the above. Portable once its inputs are. |
 | **Regime** (trend/vol/range tags) | **Universal** | OHLCV only. |
-| **Swing thesis** (state machine) | **Needs adaptation** | Logic is asset-agnostic, but `statusForPrice` is **not gap-aware** — documented exception in `swingThesis.ts`. Must route through `levelReached` before serving a session market, or it will report stops honoured at levels the market never offered. **Blocking.** |
+| **Swing thesis** (state machine) | **Universal** | Was blocked on `statusForPrice` being gap-blind. **Fixed:** it routes through `levelReached` and `applyTick` takes a required `SessionModel`, so a session market resolves a gapped bar the way `resolveTrade` does. Crypto output verified byte-identical. |
 | **Harmonics** | **Universal — but see §2** | Geometry is pure price. Portable. Evidence for its value is weak. |
 | **Breadth** | **Equity-native** | Shipped as `equityBreadth`. A crypto analogue exists (sector breadth) and already runs. |
 | **Relative strength** | **Equity-native** | Shipped. Needs a benchmark; crypto's analogue is BTC-dominance, which exists separately. |
@@ -37,8 +37,7 @@ markets *and* is measured from inputs both markets supply.
 | **On-chain** (exchange flows, network health) | **Crypto-only** | No analogue. |
 | **Coinbase premium** | **Crypto-only** | Venue-specific. |
 
-**Totals:** 11 universal, 3 equity-native (shipped), 7 crypto-only, 1 blocked
-on adaptation.
+**Totals:** 12 universal, 3 equity-native (shipped), 7 crypto-only, 0 blocked.
 
 ---
 
@@ -66,13 +65,19 @@ the universal set, and should be labelled with its grade wherever it appears.
 Both are live on the Markets pages. Listing them as items 3 and 7 of Phase 3
 would schedule work that has shipped.
 
-### Swing geometry is blocked, not merely pending
+### Swing geometry WAS blocked; it no longer is
 
-`swingThesis.statusForPrice` is gap-blind by documented exception. On a
-session market it would report a stop honoured at the level when the market
-actually reopened past it — an error that flatters results in one direction
-and does not average out. This is a correctness prerequisite, not a porting
-task, and it must be fixed before any swing state is shown for an equity.
+`swingThesis.statusForPrice` was gap-blind by documented exception. It now
+routes through `levelReached`, and `applyTick` takes a required
+`SessionModel` rather than defaulting to continuous.
+
+Worth recording what the real defect turned out to be, because the original
+framing was imprecise. The stop label was never wrong — a market that reopens
+below a long's stop is invalidated either way, and the status carries no fill
+price to overstate. What was wrong was PRECEDENCE on a bar that touched both
+levels: a session reopening above the target and then selling off to the stop
+was reported invalidated, when the target had been exceeded before a trade
+printed. That is the wrong outcome, not a flattering one.
 
 ### Momentum and divergence are low marginal value
 
@@ -95,9 +100,12 @@ Ordered by decision value per unit of risk, given the above.
    volatility into one directional statement with a confirms/contradicts
    relationship to the composite — the element the crypto page has and the
    equity page visibly lacks.
-3. **Fix `statusForPrice` gap-awareness.** Correctness prerequisite. Small,
-   bounded, and unblocks everything swing-related for session markets.
-4. **Swing thesis for equities.** Only after 3.
+3. ~~**Fix `statusForPrice` gap-awareness.**~~ **DONE.** Routed through
+   `levelReached`; `applyTick` now requires a `SessionModel`. The full crypto
+   replay regenerates byte-identical apart from `generatedAt`, and the trade
+   count is unchanged at 944.
+4. **Swing thesis for equities.** Now unblocked — the reducer is
+   asset-agnostic and the session is a caller's declaration.
 5. **Entry quality's missing input.** Either run the execution replay over
    equity bars to produce a real `historicalWinRatePct`, or keep it null and
    keep saying so. The former is a genuine research task; the latter is the

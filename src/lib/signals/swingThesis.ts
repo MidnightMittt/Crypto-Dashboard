@@ -42,6 +42,8 @@ import { EntryQualityInputs } from "./entryQuality";
 import { TradePlan, TradePlanConfig, buildTradePlan } from "./tradePlan";
 import type { PlannedSetupsFrozen } from "./plannedSetup";
 import { TechnicalAgreement } from "@/lib/sentiment/technicals";
+import { levelReached, approachesFor, HourBar } from "@/lib/research/tradeExecution";
+import { SessionModel, CONTINUOUS_SESSION } from "@/lib/research/types";
 
 export type { TradePlan } from "./tradePlan";
 export { buildEntryZone } from "./tradePlan";
@@ -252,6 +254,23 @@ export interface TickEvidence {
    */
   high?: number;
   low?: number;
+  /**
+   * The bar's OPEN, when this tick represents a closed bar rather than a
+   * streaming quote.
+   *
+   * Only the open reveals a gap: a bar that reopened past a level has a high
+   * and low both already beyond it, so no intrabar test can tell "traded
+   * through" from "gapped through". The replay has a real open and supplies
+   * it; the live path has a spot quote and does not.
+   *
+   * ABSENT MEANS "no gap information", not "no gap". `statusForPrice`
+   * evaluates an open-less tick under continuous rules whatever the
+   * instrument is, because inferring a gap from a quote alone would be
+   * inventing one. For a session market this makes live marginally slower to
+   * recognise a gap-through than the replay — the same one-directional
+   * conservatism `high`/`low` already carry, and never the reverse.
+   */
+  open?: number;
 }
 
 function directionOf(verdict: Verdict): SwingDirection | null {
@@ -294,35 +313,59 @@ function withEvent(events: ThesisEvent[], event: ThesisEvent): ThesisEvent[] {
  * seconds converge on the same status for the same price, with no
  * dependence on how often either was called.
  */
-function statusForPrice(state: SwingThesisState, price: number, high: number, low: number): PlanStatus {
+function statusForPrice(
+  state: SwingThesisState,
+  price: number,
+  high: number,
+  low: number,
+  session: SessionModel,
+  /** The bar's open, when the caller has one. Null on a live streaming tick — see `TickEvidence.open`. */
+  open: number | null
+): PlanStatus {
   const { plan, direction } = state;
   const isLong = direction === "long";
 
   /*
-   * A stop is a stop: an intrabar breach ends the thesis, matching the
-   * pessimistic intrabar resolution `research/tradeExecution.ts` applies, so
-   * live and replay can't disagree about the same bar.
+   * ROUTED THROUGH `levelReached`, the one primitive that answers "did price
+   * reach this level" — the same one `resolveTrade` uses.
    *
-   * DELIBERATE EXCEPTION to the "one execution rule" consolidation. Every
-   * other stop test in the platform now routes through `levelReached`; this
-   * one does not, for two reasons:
+   * This used to be a hand-written intrabar test, carried as a documented
+   * exception on the grounds that the swing layer was crypto-only and crypto
+   * cannot gap. That was true, and it is no longer the condition the
+   * exception was waiting on: extending the swing layer to session markets is
+   * the next step, and the note said to fix this first.
    *
-   *  - It answers a different question. This is a LIFECYCLE label for a
-   *    displayed thesis, not a fill. It has no exit price, no return and no
-   *    excursion, and it is driven by a live streaming price rather than by
-   *    a closed bar — there is no `open` to consult.
-   *  - Routing it would mean threading a SessionModel through the production
-   *    decision engine to change nothing, since this path is crypto-only and
-   *    crypto cannot gap.
+   * WHAT THE GAP BRANCH ACTUALLY CHANGES. Not the stop case — a market that
+   * reopens below a long's stop is invalidated either way, and the label
+   * carries no fill price to be wrong about. What changes is PRECEDENCE when
+   * one bar touches both levels. Consider a long stopped at 91.25, targeting
+   * 110, on a session that reopens at 112 and then sells off to 91: the
+   * intrabar test sees `low <= stop` and reports the thesis invalidated, when
+   * the target had already been exceeded before a single trade printed. That
+   * is not a rounding error, it is the wrong outcome.
    *
-   * The condition that forces the change: the moment a thesis is built for a
-   * session-based instrument, this becomes wrong in the FLATTERING direction
-   * — it would report a stop honoured at the level when the market actually
-   * reopened past it. Route it through `levelReached` before extending the
-   * swing layer beyond crypto.
+   * The precedence rule is `resolveTrade`'s: a gap resolves the bar ahead of
+   * anything intrabar, and if the reopen cleared both levels the adverse one
+   * wins. Stated once here and derived from the same `gapped` flags rather
+   * than reimplemented, because duplicating the RULE while sharing the
+   * primitive would be most of the way to a second execution model.
+   *
+   * `levelReached` only reports `gapped` when `session.gapsPossible`, so
+   * crypto takes a path identical to the previous code and no existing
+   * behaviour, stored thesis, or published statistic changes.
    */
-  if (isLong ? low <= plan.stopPrice : high >= plan.stopPrice) return "invalidated";
-  if (isLong ? high >= plan.target1Price : low <= plan.target1Price) return "completed";
+  const approach = approachesFor(direction);
+  const effectiveSession = open === null ? CONTINUOUS_SESSION : session;
+  const bar: HourBar = { t: 0, open: open ?? price, high, low, close: price };
+
+  const stopTouch = levelReached(bar, plan.stopPrice, approach.stop, effectiveSession);
+  const targetTouch = levelReached(bar, plan.target1Price, approach.target, effectiveSession);
+
+  if (stopTouch?.gapped || targetTouch?.gapped) {
+    return stopTouch?.gapped ? "invalidated" : "completed";
+  }
+  if (stopTouch) return "invalidated";
+  if (targetTouch) return "completed";
 
   if (price >= plan.entryLow && price <= plan.entryHigh) return "entry-available";
 
@@ -343,13 +386,26 @@ function statusForPrice(state: SwingThesisState, price: number, high: number, lo
  * Folds price into the plan's status. Never touches direction, levels, or
  * the thesis itself — that is exclusively `applyDailyClose`'s job.
  */
-export function applyTick(store: SwingThesisStore, ev: TickEvidence): SwingThesisStore {
+export function applyTick(
+  store: SwingThesisStore,
+  ev: TickEvidence,
+  /**
+   * REQUIRED, deliberately un-defaulted — the same stance `resolveTrade`
+   * takes, for the same reason.
+   *
+   * Defaulting to continuous would let a session-market caller silently
+   * inherit crypto semantics and report a thesis outcome the market never
+   * offered. Crypto callers pass CONTINUOUS_SESSION explicitly, which is a
+   * one-word declaration that the instrument cannot gap.
+   */
+  session: SessionModel
+): SwingThesisStore {
   const state = store.active;
   if (!state || isTerminal(state.status)) return store;
 
   const high = ev.high ?? ev.price;
   const low = ev.low ?? ev.price;
-  const next = statusForPrice(state, ev.price, high, low);
+  const next = statusForPrice(state, ev.price, high, low, session, ev.open ?? null);
   if (next === state.status) return store;
 
   const events =
@@ -531,7 +587,14 @@ function activate(
   // seed is impossible for a freshly built plan (stop and target both sit
   // beyond the close by construction), but clamp anyway rather than let a
   // degenerate plan activate straight into a dead state.
-  const seeded = statusForPrice(state, ev.closePrice, ev.closePrice, ev.closePrice);
+  /*
+   * Seeded from a single close price, so there is no bar and no gap to detect
+   * by construction — hence CONTINUOUS_SESSION and a null open. Not an
+   * asset-class assumption: one price cannot gap against itself whatever the
+   * instrument, and passing the real session here would imply a gap test with
+   * nothing to test.
+   */
+  const seeded = statusForPrice(state, ev.closePrice, ev.closePrice, ev.closePrice, CONTINUOUS_SESSION, null);
 
   return {
     ...store,

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CONTINUOUS_SESSION, US_EQUITY_SESSION } from "@/lib/research/types";
 import {
   applyDailyClose,
   applyTick,
@@ -158,7 +159,7 @@ describe("§32.1-4 — intraday movement never changes the thesis", () => {
 
     let after = store;
     for (const price of [100.4, 99.6, 100.9, 98.7, 101.2, 99.1]) {
-      after = applyTick(after, { t: 3 * DAY, price });
+      after = applyTick(after, { t: 3 * DAY, price }, CONTINUOUS_SESSION);
     }
 
     expect(after.active!.direction).toBe(before.direction);
@@ -172,7 +173,7 @@ describe("§32.1-4 — intraday movement never changes the thesis", () => {
     // carries price and nothing else, so this is structural, not a
     // threshold that could be tuned wrong.
     const store = activateLong();
-    const ticked = applyTick(store, { t: 2 * DAY + 3600_000, price: 100.2 });
+    const ticked = applyTick(store, { t: 2 * DAY + 3600_000, price: 100.2 }, CONTINUOUS_SESSION);
     expect(ticked.active).toEqual(store.active);
   });
 
@@ -303,7 +304,7 @@ describe("§32.8-9 — price-driven lifecycle", () => {
     const store = activateLong();
     // An intrabar wick through the stop counts, matching execution.ts's
     // pessimistic resolution — the close back at 93 does not save it.
-    const after = applyTick(store, { t: 2 * DAY + 3600_000, price: 93, low: 91 });
+    const after = applyTick(store, { t: 2 * DAY + 3600_000, price: 93, low: 91 }, CONTINUOUS_SESSION);
 
     expect(after.active!.status).toBe("invalidated");
     const event = after.events.at(-1)!;
@@ -312,19 +313,19 @@ describe("§32.8-9 — price-driven lifecycle", () => {
   });
 
   it("8. an invalidated thesis latches — later ticks cannot revive it", () => {
-    let store = applyTick(activateLong(), { t: 2 * DAY + 1, price: 91 });
+    let store = applyTick(activateLong(), { t: 2 * DAY + 1, price: 91 }, CONTINUOUS_SESSION);
     expect(store.active!.status).toBe("invalidated");
-    store = applyTick(store, { t: 2 * DAY + 2, price: 105 });
+    store = applyTick(store, { t: 2 * DAY + 2, price: 105 }, CONTINUOUS_SESSION);
     expect(store.active!.status).toBe("invalidated");
   });
 
   it("9. reaching the first target completes the plan", () => {
-    const store = applyTick(activateLong(), { t: 3 * DAY, price: 109, high: 110.5 });
+    const store = applyTick(activateLong(), { t: 3 * DAY, price: 109, high: 110.5 }, CONTINUOUS_SESSION);
     expect(store.active!.status).toBe("completed");
   });
 
   it("9. a completed thesis is cleared at the next daily close so a new plan can form", () => {
-    let store = applyTick(activateLong(), { t: 3 * DAY, price: 111, high: 111 });
+    let store = applyTick(activateLong(), { t: 3 * DAY, price: 111, high: 111 }, CONTINUOUS_SESSION);
     expect(store.active!.status).toBe("completed");
 
     store = applyDailyClose(store, bullishClose(4 * DAY));
@@ -336,17 +337,17 @@ describe("§32.8-9 — price-driven lifecycle", () => {
 
   it("reads ENTRY AVAILABLE inside the zone and MISSED once price runs away", () => {
     const store = activateLong();
-    expect(applyTick(store, { t: 3 * DAY, price: 94 }).active!.status).toBe("entry-available");
+    expect(applyTick(store, { t: 3 * DAY, price: 94 }, CONTINUOUS_SESSION).active!.status).toBe("entry-available");
 
     // activationPrice 100 + missedDistance (1 ATR = 3) => beyond 103 is a chase.
-    expect(applyTick(store, { t: 3 * DAY, price: 102 }).active!.status).toBe("active");
-    expect(applyTick(store, { t: 3 * DAY, price: 104 }).active!.status).toBe("missed");
+    expect(applyTick(store, { t: 3 * DAY, price: 102 }, CONTINUOUS_SESSION).active!.status).toBe("active");
+    expect(applyTick(store, { t: 3 * DAY, price: 104 }, CONTINUOUS_SESSION).active!.status).toBe("missed");
   });
 
   it("retires a plan that stayed missed, so a fresh one can be priced", () => {
     let store = activateLong();
     for (let i = 0; i < DEFAULT_SWING_CONFIG.maxMissedCloses; i++) {
-      store = applyTick(store, { t: (3 + i) * DAY - 1, price: 104 });
+      store = applyTick(store, { t: (3 + i) * DAY - 1, price: 104 }, CONTINUOUS_SESSION);
       expect(store.active!.status).toBe("missed");
       store = applyDailyClose(store, bullishClose((3 + i) * DAY));
     }
@@ -359,9 +360,9 @@ describe("§32.8-9 — price-driven lifecycle", () => {
   });
 
   it("a missed setup becomes actionable again if price returns to the zone", () => {
-    let store = applyTick(activateLong(), { t: 3 * DAY, price: 104 });
+    let store = applyTick(activateLong(), { t: 3 * DAY, price: 104 }, CONTINUOUS_SESSION);
     expect(store.active!.status).toBe("missed");
-    store = applyTick(store, { t: 3 * DAY + 1, price: 94 });
+    store = applyTick(store, { t: 3 * DAY + 1, price: 94 }, CONTINUOUS_SESSION);
     expect(store.active!.status).toBe("entry-available");
   });
 });
@@ -411,10 +412,10 @@ describe("§32.11-12 — replay safety and multi-day persistence", () => {
     // thousands of times a day, the replay ticks hourly, and both must land
     // in the same place.
     const base = activateLong();
-    const once = applyTick(base, { t: 3 * DAY, price: 101 });
+    const once = applyTick(base, { t: 3 * DAY, price: 101 }, CONTINUOUS_SESSION);
 
     let many = base;
-    for (let i = 0; i < 200; i++) many = applyTick(many, { t: 3 * DAY, price: 101 });
+    for (let i = 0; i < 200; i++) many = applyTick(many, { t: 3 * DAY, price: 101 }, CONTINUOUS_SESSION);
 
     expect(many.active).toEqual(once.active);
   });
@@ -429,7 +430,7 @@ describe("§32.11-12 — replay safety and multi-day persistence", () => {
       // produce ENTER LONG -> WAIT -> ENTER LONG.
       const score = [58, 61, 56, 59, 63, 57, 60][day % 7];
       store = applyDailyClose(store, bullishClose(day * DAY, { biasScore: score }));
-      store = applyTick(store, { t: day * DAY + 3600_000, price: 99 + (day % 3) });
+      store = applyTick(store, { t: day * DAY + 3600_000, price: 99 + (day % 3) }, CONTINUOUS_SESSION);
     }
 
     const state = store.active!;
@@ -466,5 +467,74 @@ describe("entry zone derivation", () => {
   it("mirrors correctly for shorts", () => {
     const result = buildEntryZone("short", 100, 3, zone("resistance", 104, 105), DEFAULT_SWING_CONFIG);
     expect(result).toMatchObject({ entryLow: 104, entryHigh: 105 });
+  });
+});
+
+/**
+ * GAP AWARENESS. `statusForPrice` used to hand-roll its intrabar test and
+ * carried a documented exception saying to route it through `levelReached`
+ * before the swing layer served a session market. These pin what that
+ * routing actually changed — and, just as importantly, what it did not.
+ *
+ * The activated long plan: entry 92-96, stop 91.25, target 110, anchor 100.
+ */
+describe("gap-aware lifecycle", () => {
+  const bothLevelsTouched = { t: 3 * DAY, price: 95, high: 112, low: 91 };
+
+  it("crypto is unchanged: a bar touching both levels resolves to the stop", () => {
+    // The pessimistic intrabar convention, identical to the pre-fix code and
+    // to resolveTrade. A continuous market has no open to gap from.
+    const after = applyTick(activateLong(), { ...bothLevelsTouched, open: 100 }, CONTINUOUS_SESSION);
+    expect(after.active!.status).toBe("invalidated");
+  });
+
+  it("a session market that REOPENS above the target completes, and does not report a stop", () => {
+    /*
+     * THE BUG THIS FIXES. The market gapped to 112 — already past the 110
+     * target — before a single trade printed, then sold off to 91. The
+     * intrabar test sees `low <= 91.25` and calls the thesis invalidated,
+     * when the target had been exceeded at the open. Not a rounding error;
+     * the wrong outcome.
+     */
+    const after = applyTick(activateLong(), { ...bothLevelsTouched, open: 112 }, US_EQUITY_SESSION);
+    expect(after.active!.status).toBe("completed");
+    expect(after.events.at(-1)!.kind).toBe("completed");
+  });
+
+  it("a session market that REOPENS below the stop invalidates, as it always did", () => {
+    // Same bar shape, gapped the other way. The label was already right here;
+    // this pins that the fix did not invert it while making the other case work.
+    const after = applyTick(
+      activateLong(),
+      { t: 3 * DAY, price: 111, open: 90, high: 112, low: 89 },
+      US_EQUITY_SESSION
+    );
+    expect(after.active!.status).toBe("invalidated");
+  });
+
+  it("a session market that does NOT gap uses the same pessimistic rule as crypto", () => {
+    // Opening between the levels means the bar traded through them in some
+    // order nobody can recover, so the adverse one wins — on both sessions.
+    const opened = { ...bothLevelsTouched, open: 100 };
+    expect(applyTick(activateLong(), opened, US_EQUITY_SESSION).active!.status).toBe("invalidated");
+    expect(applyTick(activateLong(), opened, CONTINUOUS_SESSION).active!.status).toBe("invalidated");
+  });
+
+  it("no open means no gap is INFERRED, even on a session market", () => {
+    /*
+     * A live poll is a spot quote, not a closed bar. Treating the quote as an
+     * open would manufacture a gap out of ordinary intrabar movement, so an
+     * open-less tick is evaluated under continuous rules whatever the
+     * instrument — the conservative direction, and the honest one.
+     */
+    const noOpen = bothLevelsTouched;
+    expect(applyTick(activateLong(), noOpen, US_EQUITY_SESSION).active!.status).toBe("invalidated");
+    expect(applyTick(activateLong(), noOpen, CONTINUOUS_SESSION).active!.status).toBe("invalidated");
+  });
+
+  it("is still a pure function of price: session choice alone moves nothing on an ordinary bar", () => {
+    const ordinary = { t: 3 * DAY, price: 94, open: 95, high: 96, low: 93 };
+    expect(applyTick(activateLong(), ordinary, US_EQUITY_SESSION).active!.status).toBe("entry-available");
+    expect(applyTick(activateLong(), ordinary, CONTINUOUS_SESSION).active!.status).toBe("entry-available");
   });
 });

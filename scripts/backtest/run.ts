@@ -947,7 +947,17 @@ export function replayAsset(
     // day so each evaluation day advances the machine exactly once.
     for (const bar of futuresKlines) {
       if (bar.t < t || bar.t >= t + DAY_MS) continue;
-      swingStore = applyTick(swingStore, { t: bar.t, price: bar.close, high: bar.high, low: bar.low });
+      /*
+       * `open` IS supplied here even though this replay is crypto-only and
+       * CONTINUOUS_SESSION makes the gap branch unreachable. The replay has a
+       * real open; withholding it would mean the day an equity replay arrives,
+       * the fix would be in a different file from the one being changed.
+       */
+      swingStore = applyTick(
+        swingStore,
+        { t: bar.t, price: bar.close, open: bar.open, high: bar.high, low: bar.low },
+        CONTINUOUS_SESSION
+      );
     }
 
     records.push({

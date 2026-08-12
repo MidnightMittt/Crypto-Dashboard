@@ -144,9 +144,9 @@ doesn't. That distinction is worth naming explicitly in the architecture:
 
 **Should Swing Thesis consume Market Structure rather than recompute it?**
 Yes. It currently derives its own structural view. But it is **blocked**:
-`swingThesis.statusForPrice` is gap-blind by documented exception and would
-misreport stops on any session market. Fix that first; it is a correctness
-prerequisite, not a refactor.
+~~`swingThesis.statusForPrice` is gap-blind by documented exception.~~ Fixed:
+it routes through `levelReached` and `applyTick` requires a `SessionModel`.
+The prerequisite is cleared, so this refactor is now unblocked.
 
 **Duplicated logic identified.**
 - Structure computed twice — `technicalDimensions` (crypto) and
