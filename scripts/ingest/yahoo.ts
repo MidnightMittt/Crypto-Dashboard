@@ -63,6 +63,22 @@ async function fetchDaily(config: InstrumentConfig): Promise<Bar[]> {
   const regular = result.meta.currentTradingPeriod?.regular;
   const sessionMs = regular && regular.end > regular.start ? (regular.end - regular.start) * 1000 : FALLBACK_SESSION_MS;
 
+  /*
+   * The still-forming bar must be excluded.
+   *
+   * Our Bar contract defines `t` as the CLOSE timestamp, so a bar whose
+   * close lies in the future has not closed and its OHLC is a snapshot
+   * mid-session — which is why crypto's newest bar arrives with a close
+   * outside its own high/low range. Including it would also inject an
+   * unclosed price into every point-in-time read.
+   *
+   * The rule is asset-agnostic by construction: "has this bar's close
+   * happened yet". It needs no market calendar and no per-class branch, and
+   * it is the same discipline okxCandles.ts already applies by dropping
+   * rows whose `confirm` flag is 0.
+   */
+  const now = Date.now();
+
   const bars: Bar[] = [];
   for (let i = 0; i < result.timestamp.length; i++) {
     const o = quote.open[i];
@@ -85,6 +101,7 @@ async function fetchDaily(config: InstrumentConfig): Promise<Bar[]> {
      * close. Converting here is what keeps that invariant true for equities.
      */
     const t = result.timestamp[i] * 1000 + sessionMs;
+    if (t > now) continue; // unclosed
 
     /*
      * Adjust the whole bar by the close's adjustment factor, not just the
@@ -103,7 +120,18 @@ async function fetchDaily(config: InstrumentConfig): Promise<Bar[]> {
       volume: v ?? null,
     });
   }
-  return bars;
+  /*
+   * Yahoo reports 0 volume for instruments that have no consolidated tape —
+   * spot FX most notably. Zero is a lie a volume filter could act on, so it
+   * is normalised to null, which the feature layer reports as UNAVAILABLE
+   * rather than computing against a fabricated value.
+   *
+   * This is a provider convention, which is exactly the kind of knowledge an
+   * adapter is allowed to hold. It is applied by observation (every volume
+   * is zero) rather than by asset class, so no market assumption leaks in.
+   */
+  const allZeroVolume = bars.length > 0 && bars.every((b) => b.volume === 0 || b.volume === null);
+  return allZeroVolume ? bars.map((b) => ({ ...b, volume: null })) : bars;
 }
 
 async function main() {

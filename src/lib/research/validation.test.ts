@@ -277,8 +277,35 @@ describe("universe registry — configuration, not implementation", () => {
   });
 
   it("groups by provider so a new data source is a new ingest script, not an engine change", () => {
-    expect(instrumentsByProvider("yahoo")).toHaveLength(5);
-    expect(instrumentsByProvider("okx")).toHaveLength(2);
+    const yahoo = instrumentsByProvider("yahoo");
+    const okx = instrumentsByProvider("okx");
+    // Assert the PARTITION rather than a literal count: the registry is
+    // expected to grow, and a test that pins its size just breaks on every
+    // addition without checking anything meaningful.
+    expect(yahoo.length + okx.length).toBe(UNIVERSE.length);
+    expect(yahoo.every((c) => c.source.provider === "yahoo")).toBe(true);
+    expect(okx.every((c) => c.source.provider === "okx")).toBe(true);
+    expect(okx.map((c) => c.meta.displaySymbol).sort()).toEqual(["BTC", "ETH"]);
+  });
+
+  it("spans multiple asset classes, which is the whole point of the expansion", () => {
+    const classes = new Set(UNIVERSE.map((c) => c.meta.assetClass));
+    for (const k of ["crypto", "equity-etf", "bond", "commodity", "fx"]) expect(classes).toContain(k);
+  });
+
+  it("assigns FX the session model that models its weekend gap", () => {
+    const eur = findInstrument("EURUSD.FX")!;
+    expect(eur.meta.sessionModel.gapsPossible).toBe(true);
+    expect(eur.meta.quoteCurrency).toBe("USD");
+    // No corporate actions on a currency pair; "none" is accurate here.
+    expect(eur.meta.adjustment).toBe("none");
+  });
+
+  it("does not demand price adjustment from instruments that have no corporate actions", () => {
+    // FX and crypto legitimately declare "none"; flagging them would be a
+    // false positive that trains people to ignore the check.
+    const problems = validateUniverse();
+    expect(problems).toEqual([]);
   });
 
   it("liveAt honours the listing window at both ends", () => {
@@ -299,8 +326,8 @@ describe("universe registry — configuration, not implementation", () => {
     expect(problems.some((p) => /Duplicate instrument id/.test(p))).toBe(true);
   });
 
-  it("flags a non-crypto instrument declaring unadjusted prices", () => {
+  it("flags an exchange-traded fund declaring unadjusted prices", () => {
     const bad = [{ ...findInstrument("SPY.US")!, meta: { ...findInstrument("SPY.US")!.meta, adjustment: "none" as const } }];
-    expect(validateUniverse(bad as typeof UNIVERSE).some((p) => /unadjusted equity prices/.test(p))).toBe(true);
+    expect(validateUniverse(bad as typeof UNIVERSE).some((p) => /unadjusted prices corrupt returns/.test(p))).toBe(true);
   });
 });

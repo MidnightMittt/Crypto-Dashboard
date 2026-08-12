@@ -1,4 +1,4 @@
-import { CapabilityKey, InstrumentMeta, CONTINUOUS_SESSION, US_EQUITY_SESSION } from "./types";
+import { CapabilityKey, InstrumentMeta, CONTINUOUS_SESSION, US_EQUITY_SESSION, FX_SESSION } from "./types";
 
 /**
  * THE INSTRUMENT UNIVERSE — configuration, not implementation.
@@ -47,12 +47,14 @@ export interface InstrumentConfig {
   capabilities: CapabilityKey[];
 }
 
-/** Common metadata for a US-listed ETF. Factored out so a new ETF is one line rather than twelve. */
+/** Common metadata for a US-listed exchange-traded product. Factored out so a new fund is one line rather than twelve. */
 function usEtf(opts: {
   symbol: string;
   name: string;
   inception: string;
   delisted?: string;
+  /** Defaults to equity-etf; bond and commodity funds declare their own so correlation grouping is meaningful. */
+  assetClass?: InstrumentMeta["assetClass"];
 }): InstrumentConfig {
   return {
     meta: {
@@ -61,7 +63,7 @@ function usEtf(opts: {
       // eventually splice two unrelated histories together.
       id: `${opts.symbol}.US`,
       displaySymbol: opts.symbol,
-      assetClass: "equity-etf",
+      assetClass: opts.assetClass ?? "equity-etf",
       sessionModel: US_EQUITY_SESSION,
       // Yahoo's adjusted close accounts for splits and distributions. An
       // unadjusted ETF series would silently corrupt every return computed
@@ -72,6 +74,50 @@ function usEtf(opts: {
       quoteCurrency: "USD",
     },
     source: { provider: "yahoo", symbol: opts.symbol },
+    capabilities: ["ohlcv"],
+  };
+}
+
+/**
+ * Spot FX major. Yahoo quotes these as `EURUSD=X`.
+ *
+ * Classified session-based rather than continuous: FX is quoted around the
+ * clock on weekdays but closes for the weekend, and it is the weekend gap —
+ * not the intraweek continuity — that execution has to model.
+ */
+function fxPair(opts: { pair: string; inception: string }): InstrumentConfig {
+  return {
+    meta: {
+      id: `${opts.pair}.FX`,
+      displaySymbol: opts.pair,
+      assetClass: "fx",
+      sessionModel: FX_SESSION,
+      // A currency pair has no corporate actions to adjust for. "none" is
+      // accurate here rather than a missing declaration.
+      adjustment: "none",
+      inceptionT: Date.parse(opts.inception),
+      delistedT: null,
+      quoteCurrency: opts.pair.slice(3),
+    },
+    source: { provider: "yahoo", symbol: `${opts.pair}=X` },
+    capabilities: ["ohlcv"],
+  };
+}
+
+/** Crypto spot, quoted by Yahoo. Distinct instruments from the OKX perpetuals, and deliberately given distinct ids. */
+function cryptoSpot(opts: { symbol: string; inception: string }): InstrumentConfig {
+  return {
+    meta: {
+      id: `${opts.symbol}-USD.SPOT`,
+      displaySymbol: opts.symbol,
+      assetClass: "crypto",
+      sessionModel: CONTINUOUS_SESSION,
+      adjustment: "none",
+      inceptionT: Date.parse(opts.inception),
+      delistedT: null,
+      quoteCurrency: "USD",
+    },
+    source: { provider: "yahoo", symbol: `${opts.symbol}-USD` },
     capabilities: ["ohlcv"],
   };
 }
@@ -107,13 +153,53 @@ function cryptoPerp(opts: { symbol: string; inception: string }): InstrumentConf
  * Deliberately NOT expanded further until this foundation is validated.
  */
 export const UNIVERSE: InstrumentConfig[] = [
+  // ── Existing crypto perpetuals (production dashboard) ────────────────
   cryptoPerp({ symbol: "BTC", inception: "2019-01-01T00:00:00Z" }),
   cryptoPerp({ symbol: "ETH", inception: "2019-01-01T00:00:00Z" }),
 
+  // ── 1. Major US indices ──────────────────────────────────────────────
   usEtf({ symbol: "SPY", name: "SPDR S&P 500", inception: "1993-01-22T00:00:00Z" }),
   usEtf({ symbol: "QQQ", name: "Invesco QQQ", inception: "1999-03-10T00:00:00Z" }),
   usEtf({ symbol: "DIA", name: "SPDR Dow Jones Industrial Average", inception: "1998-01-14T00:00:00Z" }),
   usEtf({ symbol: "IWM", name: "iShares Russell 2000", inception: "2000-05-22T00:00:00Z" }),
+  usEtf({ symbol: "VTI", name: "Vanguard Total Stock Market", inception: "2001-05-24T00:00:00Z" }),
+
+  // ── 2. US Treasuries ─────────────────────────────────────────────────
+  // The genuine diversifiers: duration risk is a different factor from
+  // equity beta, and frequently anti-correlated with it.
+  usEtf({ symbol: "TLT", name: "iShares 20+ Year Treasury", inception: "2002-07-22T00:00:00Z", assetClass: "bond" }),
+  usEtf({ symbol: "IEF", name: "iShares 7-10 Year Treasury", inception: "2002-07-22T00:00:00Z", assetClass: "bond" }),
+  usEtf({ symbol: "SHY", name: "iShares 1-3 Year Treasury", inception: "2002-07-22T00:00:00Z", assetClass: "bond" }),
+  usEtf({ symbol: "TIP", name: "iShares TIPS Bond", inception: "2003-12-04T00:00:00Z", assetClass: "bond" }),
+
+  // ── 3. Corporate credit ──────────────────────────────────────────────
+  usEtf({ symbol: "LQD", name: "iShares Investment Grade Corporate", inception: "2002-07-22T00:00:00Z", assetClass: "bond" }),
+  usEtf({ symbol: "HYG", name: "iShares High Yield Corporate", inception: "2007-04-04T00:00:00Z", assetClass: "bond" }),
+
+  // ── 4. Commodities ───────────────────────────────────────────────────
+  usEtf({ symbol: "GLD", name: "SPDR Gold Shares", inception: "2004-11-18T00:00:00Z", assetClass: "commodity" }),
+  usEtf({ symbol: "SLV", name: "iShares Silver Trust", inception: "2006-04-21T00:00:00Z", assetClass: "commodity" }),
+  usEtf({ symbol: "USO", name: "United States Oil Fund", inception: "2006-04-10T00:00:00Z", assetClass: "commodity" }),
+  usEtf({ symbol: "DBA", name: "Invesco DB Agriculture", inception: "2007-01-05T00:00:00Z", assetClass: "commodity" }),
+
+  // ── 5. FX majors ─────────────────────────────────────────────────────
+  fxPair({ pair: "EURUSD", inception: "2003-12-01T00:00:00Z" }),
+  fxPair({ pair: "USDJPY", inception: "2003-12-01T00:00:00Z" }),
+  fxPair({ pair: "GBPUSD", inception: "2003-12-01T00:00:00Z" }),
+  fxPair({ pair: "AUDUSD", inception: "2003-12-01T00:00:00Z" }),
+  fxPair({ pair: "USDCAD", inception: "2003-12-01T00:00:00Z" }),
+  fxPair({ pair: "USDCHF", inception: "2003-12-01T00:00:00Z" }),
+
+  // ── 6. Crypto spot ───────────────────────────────────────────────────
+  cryptoSpot({ symbol: "SOL", inception: "2020-04-10T00:00:00Z" }),
+  cryptoSpot({ symbol: "BNB", inception: "2017-07-25T00:00:00Z" }),
+  cryptoSpot({ symbol: "XRP", inception: "2014-08-04T00:00:00Z" }),
+
+  // ── Sector funds: deliberately NOT expanded ──────────────────────────
+  // XLF is retained from the proving run. The remaining sector SPDRs are
+  // withheld on evidence: five index ETFs already measured at 1.17x the
+  // effective sample of one, so more US equity beta is close to free of
+  // information. Revisit only if the correlation report below says otherwise.
   usEtf({ symbol: "XLF", name: "Financial Select Sector SPDR", inception: "1998-12-16T00:00:00Z" }),
 ];
 
@@ -145,8 +231,13 @@ export function validateUniverse(configs: InstrumentConfig[] = UNIVERSE): string
       problems.push(`${c.meta.id}: delistedT is not after inceptionT.`);
     }
     if (!c.capabilities.includes("ohlcv")) problems.push(`${c.meta.id}: every instrument must declare "ohlcv".`);
-    if (c.meta.assetClass !== "crypto" && c.meta.adjustment === "none") {
-      problems.push(`${c.meta.id}: a non-crypto instrument declaring adjustment "none" is almost certainly wrong — unadjusted equity prices corrupt returns.`);
+    // Only exchange-traded EQUITY products have corporate actions. FX pairs
+    // and crypto genuinely have nothing to adjust for, so "none" is accurate
+    // there rather than a missing declaration.
+    const needsAdjustment = c.meta.assetClass === "equity" || c.meta.assetClass === "equity-etf" ||
+      c.meta.assetClass === "bond" || c.meta.assetClass === "commodity" || c.meta.assetClass === "index";
+    if (needsAdjustment && c.meta.adjustment === "none") {
+      problems.push(`${c.meta.id}: an exchange-traded fund declaring adjustment "none" is almost certainly wrong — unadjusted prices corrupt returns through distributions and splits.`);
     }
   }
   return problems;
