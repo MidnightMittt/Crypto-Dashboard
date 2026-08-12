@@ -56,6 +56,12 @@ export function Header({ venueCount, updatedAt }: { venueCount?: number; updated
             Intelligence
           </Link>
           <Link
+            href="/industries"
+            className="hidden text-[11px] uppercase tracking-widest text-ink-faint transition-colors hover:text-ink sm:inline"
+          >
+            Industries
+          </Link>
+          <Link
             href="/scanner"
             className="hidden text-[11px] uppercase tracking-widest text-ink-faint transition-colors hover:text-ink sm:inline"
           >

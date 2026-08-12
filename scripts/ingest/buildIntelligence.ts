@@ -4,6 +4,8 @@ import { fileURLToPath } from "url";
 import { Bar } from "../../src/lib/research/types";
 import { buildRotation, RotationInput, RotationRead, describeRotation } from "../../src/lib/markets/rotation";
 import { REGIME_PAIRS, evaluateRegimePair, buildRegime, RegimeRead } from "../../src/lib/markets/riskRegime";
+import { INDUSTRIES } from "../../src/lib/markets/industries";
+import { IndustryRead, buildIndustries } from "../../src/lib/markets/industryIntelligence";
 
 /**
  * Builds the MARKET INTELLIGENCE snapshot — the top three levels of the
@@ -60,6 +62,8 @@ export interface IntelligenceSnapshot {
   regime: RegimeRead | null;
   rotation: RotationRead | null;
   rotationNarrative: string | null;
+  /** Level 3 of the hierarchy: industries, each with its own constituents. */
+  industries: IndustryRead[];
 }
 
 function main() {
@@ -108,11 +112,24 @@ function main() {
     }
   }
 
+  // ── Industries and their constituents ────────────────────────────────
+  const industries = buildIndustries(INDUSTRIES, load, benchBars, rotation);
+  console.log(`\n  industries: ${industries.length} of ${INDUSTRIES.length} built`);
+  for (const i of industries) {
+    console.log(
+      `    ${i.etf.padEnd(5)} ${i.name.padEnd(24)} ${i.rotation.state.padEnd(10)} ` +
+        `1m ${i.rotation.shortRelPct >= 0 ? "+" : ""}${i.rotation.shortRelPct.toFixed(1)}pp  ` +
+        `breadth ${i.breadthPct === null ? "n/a" : i.breadthPct + "%"}  ` +
+        `${i.constituents.length} names`
+    );
+  }
+
   const out: IntelligenceSnapshot = {
     generatedAt: Date.now(),
     regime,
     rotation,
     rotationNarrative: rotation ? describeRotation(rotation) : null,
+    industries,
   };
 
   const outPath = path.join(__dirname, "..", "..", "src", "data", "marketIntelligence.json");

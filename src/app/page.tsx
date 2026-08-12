@@ -58,6 +58,9 @@ export default function MarketIntelligencePage() {
             </p>
           </div>
           <nav className="flex gap-4 text-[11px] uppercase tracking-[0.16em] text-ink-muted">
+            <Link href="/industries" className="hover:text-ink">
+              Industries
+            </Link>
             <Link href="/scanner" className="hover:text-ink">
               Scanner
             </Link>
@@ -150,7 +153,28 @@ export default function MarketIntelligencePage() {
           </section>
         )}
 
-        {/* ── LEVEL 3: DOWN TO INSTRUMENTS ───────────────────────────────── */}
+        {/* ── LEVEL 3: INDUSTRIES ────────────────────────────────────────── */}
+        <Link
+          href="/industries"
+          className="group flex flex-wrap items-center justify-between gap-3 rounded-xl border border-hairline bg-panel/60 px-5 py-4 shadow-glass backdrop-blur-xs transition-colors hover:border-cyan/40 sm:px-6"
+        >
+          <div>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-muted">
+              Next level down
+            </span>
+            <p className="mt-1 text-[14px] leading-relaxed text-ink">
+              Industries, with breadth —{" "}
+              <span className="text-ink-muted">
+                whether a sector&apos;s move is the whole group or three names carrying it.
+              </span>
+            </p>
+          </div>
+          <span className="text-[11px] uppercase tracking-[0.16em] text-cyan group-hover:underline">
+            Open industries →
+          </span>
+        </Link>
+
+        {/* ── LEVEL 4: DOWN TO INSTRUMENTS ───────────────────────────────── */}
         <Link
           href="/scanner"
           className="group flex flex-wrap items-center justify-between gap-3 rounded-xl border border-hairline bg-panel/60 px-5 py-4 shadow-glass backdrop-blur-xs transition-colors hover:border-cyan/40 sm:px-6"

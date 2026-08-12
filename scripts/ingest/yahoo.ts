@@ -2,7 +2,8 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { Bar } from "../../src/lib/research/types";
-import { InstrumentConfig, instrumentsByProvider } from "../../src/lib/research/universe";
+import { InstrumentConfig, instrumentsByProvider, usListing } from "../../src/lib/research/universe";
+import { industryUniverse } from "../../src/lib/markets/industries";
 import { validateBars, summarizeReport } from "../../src/lib/research/validation";
 
 /**
@@ -136,8 +137,20 @@ async function fetchDaily(config: InstrumentConfig): Promise<Bar[]> {
 
 async function main() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
-  const configs = instrumentsByProvider("yahoo");
-  console.log(`[ingest] ${configs.length} instruments from yahoo\n`);
+  /*
+   * Two sources, one adapter. The research universe is an evidence decision
+   * documented in universe.ts; the industry layer is a membership list in
+   * industries.ts. They are kept separate because they answer different
+   * questions — but both go through the identical fetch, validate and refuse
+   * path below, so an industry constituent is held to the same standard as a
+   * backtested instrument.
+   */
+  const research = instrumentsByProvider("yahoo");
+  const industry = industryUniverse()
+    .filter((sym) => !research.some((c) => c.meta.displaySymbol === sym))
+    .map((sym) => usListing(sym, sym));
+  const configs = [...research, ...industry];
+  console.log(`[ingest] ${research.length} research + ${industry.length} industry-layer instruments from yahoo\n`);
 
   let failures = 0;
   for (const config of configs) {

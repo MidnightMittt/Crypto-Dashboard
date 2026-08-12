@@ -48,6 +48,30 @@ export interface InstrumentConfig {
 }
 
 /** Common metadata for a US-listed exchange-traded product. Factored out so a new fund is one line rather than twelve. */
+/**
+ * An intelligence-layer US listing — industry ETF proxy or constituent.
+ *
+ * DELIBERATELY NOT ADDED TO `UNIVERSE`. That list is the RESEARCH universe:
+ * every member is a candidate for backtests and correlation studies, and its
+ * composition is an evidence decision documented in this file. The industry
+ * layer needs price series for eighty-odd names to measure relative strength,
+ * which is a different job — none of them are backtested, none enter a
+ * replay, and dropping them into the research universe would silently change
+ * what "the universe" means in every study that reads it.
+ *
+ * Inception is declared as a FLOOR rather than a precise listing date, and
+ * the floor is deliberately generous. The validator asserts only that no bar
+ * precedes the declaration; 1962 predates every daily series this provider
+ * serves, so it is an honest "listed at or after the start of the record".
+ *
+ * A tighter guess was tried first and the validator refused it — several of
+ * these names list in the 1970s. That refusal was correct, and the fix is a
+ * declaration that claims less, never a looser check.
+ */
+export function usListing(symbol: string, name: string): InstrumentConfig {
+  return usEtf({ symbol, name, inception: "1962-01-01T00:00:00Z" });
+}
+
 function usEtf(opts: {
   symbol: string;
   name: string;
