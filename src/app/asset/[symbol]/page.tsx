@@ -2,7 +2,11 @@
 
 import { useEffect } from "react";
 import { notFound, useParams } from "next/navigation";
-import DashboardPage from "@/app/page";
+// The crypto dashboard, which moved to /crypto when Market Intelligence took
+// over the root. This import is why the route move needed a production build to
+// verify: dev tolerated the stale path, and the page silently rendered the
+// wrong surface.
+import DashboardPage from "@/app/crypto/page";
 import { useDashboardStore } from "@/lib/store/dashboardStore";
 import { ALL_ASSETS } from "@/lib/exchanges/registry";
 import { AssetSymbol } from "@/types/market";
