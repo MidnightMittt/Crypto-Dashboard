@@ -195,12 +195,41 @@ export const UNIVERSE: InstrumentConfig[] = [
   cryptoSpot({ symbol: "BNB", inception: "2017-07-25T00:00:00Z" }),
   cryptoSpot({ symbol: "XRP", inception: "2014-08-04T00:00:00Z" }),
 
-  // ── Sector funds: deliberately NOT expanded ──────────────────────────
-  // XLF is retained from the proving run. The remaining sector SPDRs are
-  // withheld on evidence: five index ETFs already measured at 1.17x the
-  // effective sample of one, so more US equity beta is close to free of
-  // information. Revisit only if the correlation report below says otherwise.
+  /* ── Sector funds ───────────────────────────────────────────────────
+   *
+   * These were previously withheld, on the finding that five index ETFs
+   * already measured at 1.17x the effective sample of one — more US equity
+   * beta buys almost no independent evidence. That finding stands and is
+   * not being reversed.
+   *
+   * It answers a different question from the one these serve. It is about
+   * STATISTICAL POWER: how many independent observations a backtest has.
+   * Rotation is about DISPERSION: which sectors are outperforming the index
+   * and each other. The common market factor that makes them redundant as
+   * extra samples is exactly the thing that cancels when you measure one
+   * against another, and what is left over IS the rotation signal.
+   *
+   * So: still worth nothing as additional evidence for a market-direction
+   * backtest, and load-bearing for measuring where capital is going. Both
+   * are true, and neither is a reason to disturb the other. Nothing here is
+   * added to any backtest replay.
+   */
   usEtf({ symbol: "XLF", name: "Financial Select Sector SPDR", inception: "1998-12-16T00:00:00Z" }),
+  usEtf({ symbol: "XLK", name: "Technology Select Sector SPDR", inception: "1998-12-16T00:00:00Z" }),
+  usEtf({ symbol: "XLV", name: "Health Care Select Sector SPDR", inception: "1998-12-16T00:00:00Z" }),
+  usEtf({ symbol: "XLI", name: "Industrial Select Sector SPDR", inception: "1998-12-16T00:00:00Z" }),
+  usEtf({ symbol: "XLY", name: "Consumer Discretionary Select Sector SPDR", inception: "1998-12-16T00:00:00Z" }),
+  usEtf({ symbol: "XLP", name: "Consumer Staples Select Sector SPDR", inception: "1998-12-16T00:00:00Z" }),
+  usEtf({ symbol: "XLE", name: "Energy Select Sector SPDR", inception: "1998-12-16T00:00:00Z" }),
+  usEtf({ symbol: "XLU", name: "Utilities Select Sector SPDR", inception: "1998-12-16T00:00:00Z" }),
+  usEtf({ symbol: "XLB", name: "Materials Select Sector SPDR", inception: "1998-12-16T00:00:00Z" }),
+  usEtf({ symbol: "XLRE", name: "Real Estate Select Sector SPDR", inception: "2015-10-08T00:00:00Z" }),
+  usEtf({ symbol: "XLC", name: "Communication Services Select Sector SPDR", inception: "2018-06-19T00:00:00Z" }),
+  /* First bar the provider actually serves is 2000-06-05 (the pre-VanEck
+     HOLDRS lineage), not the 2011 VanEck relaunch. Declared to match the
+     data rather than the fund history — the validator refused the mismatch,
+     correctly. */
+  usEtf({ symbol: "SMH", name: "Semiconductors", inception: "2000-06-05T00:00:00Z" }),
 ];
 
 export function findInstrument(id: string): InstrumentConfig | null {

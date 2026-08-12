@@ -1,197 +1,180 @@
 import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/Card";
-import { ScannerTable } from "@/components/scanner/ScannerTable";
-import {
-  rankOpportunities,
-  explainRanking,
-  ScannableMarket,
-  SetupSummary,
-  ACTIONABLE_OPPORTUNITY,
-} from "@/lib/signals/opportunityRanking";
-import { TopOpportunity } from "@/components/scanner/TopOpportunity";
-import { WhatChanged } from "@/components/scanner/WhatChanged";
-import { getAssetComposites } from "@/lib/exchanges/assetComposites";
-import { MarketBias } from "@/lib/signals/types";
-import { TradePlan } from "@/lib/signals/tradePlan";
-import snapshot from "@/data/equityMarkets.json";
+import { RotationBoard } from "@/components/intelligence/RotationBoard";
+import { EvidenceModuleDetail } from "@/components/evidence/EvidenceModuleDetail";
+import { Collapsible } from "@/components/ui/Collapsible";
+import { RegimeRead } from "@/lib/markets/riskRegime";
+import { RotationRead } from "@/lib/markets/rotation";
+import snapshot from "@/data/marketIntelligence.json";
 
 /**
- * THE MARKET SCANNER — one ranked view of every market the engine covers.
+ * MARKET INTELLIGENCE — the top of the hierarchy, and now the front door.
  *
- * This is the answer to the question the single-asset surfaces cannot answer:
- * a swing thesis is active on roughly a quarter of days, so most visits to a
- * given asset end in "no setup", and the honest reply to that is not a longer
- * explanation — it is naming the market that DOES have one.
+ * The reading order is the hierarchy itself: what regime are we in, where is
+ * capital moving inside it, and only then which individual instruments are
+ * worth acting on. Each level is context for the one below, which is why the
+ * scanner now sits a level DOWN rather than being the landing page — a ranked
+ * list of setups read without knowing the regime is a list of setups you
+ * cannot size.
  *
- * ── One engine, two universes, no second opinion ───────────────────────
+ * ── What this page is not ─────────────────────────────────────────────
  *
- * Crypto rows come from `getAssetComposites`, which wraps the same
- * `getAggregateForAsset` the live asset page reads. Equity rows come from the
- * build-time snapshot, which is the same `buildMarketBias` output the Markets
- * pages render. Both are mapped onto `ScannableMarket` by field selection
- * alone — no adapter computes anything — and both then pass through the one
- * `rankOpportunities`.
+ * Not a second engine. The regime pairs emit ordinary `MetricVerdict`s under
+ * the same contract as funding, breadth and market structure, and are
+ * rendered by the same `EvidenceModuleDetail` the asset pages use. Rotation
+ * emits no verdict at all — it is a level provider in the sense the evidence
+ * contract already defines, producing measurements that other things consume.
  *
- * The two halves refresh at different rates and the page says so rather than
- * implying a uniform freshness it does not have. That asymmetry is real:
- * crypto trades continuously and equities close.
+ * Nothing on this page is ranked by hand. Every ordering falls out of a
+ * subtraction between two price series.
  */
 
-interface EquitySnapshotRow {
-  symbol: string;
-  name: string;
-  bias: MarketBias;
-  lastClose: number;
-  change24hPct: number;
-  asOf: number;
-  plan: TradePlan | null;
-}
+const data = snapshot as unknown as {
+  generatedAt: number;
+  regime: RegimeRead | null;
+  rotation: RotationRead | null;
+  rotationNarrative: string | null;
+};
 
-const equity = snapshot as unknown as { generatedAt: number; decisions: EquitySnapshotRow[] };
+export const metadata = { title: "Market Intelligence — Leverage Terminal" };
 
-/*
- * Crypto composites are behind a 5-minute swr cache; re-rendering this page
- * more often than that would produce identical output at real API cost. The
- * equity half only changes when the snapshot is rebuilt.
- */
-export const revalidate = 300;
+const REGIME_STYLE: Record<string, { tone: string; border: string; label: string }> = {
+  "risk-on": { tone: "text-success", border: "border-success/25", label: "Risk-On" },
+  "risk-off": { tone: "text-danger", border: "border-danger/25", label: "Risk-Off" },
+  mixed: { tone: "text-amber", border: "border-amber/25", label: "Mixed" },
+};
 
-/**
- * An equity plan IS the setup — there is no separate thesis state machine for
- * equities, so its state is always "planned": geometry that exists and waits
- * for price. Labelling it "active" would claim a trigger the equity path has
- * no way to fire.
- */
-function Tape({ label, value, tone = "text-ink" }: { label: string; value: string; tone?: string }) {
-  return (
-    <span className="flex items-baseline gap-1.5">
-      <span className="uppercase tracking-[0.14em] text-ink-faint">{label}</span>
-      <span className={`font-mono ${tone}`}>{value}</span>
-    </span>
-  );
-}
-
-function equitySetup(row: EquitySnapshotRow): SetupSummary | null {
-  if (!row.plan) return null;
-  return {
-    state: "planned",
-    direction: row.bias.verdict === "bearish" ? "short" : "long",
-    riskReward: row.plan.riskRewardRatio,
-    stars: row.plan.stars,
-    status: "waiting",
-  };
-}
-
-/** Same selection the crypto composite makes, so both universes show the same kind of reason. */
-function reasonsOf(bias: MarketBias, side: "for" | "against"): string[] {
-  const agreeing = bias.verdict === "bearish" ? bias.topBearish : bias.topBullish;
-  const opposing = bias.verdict === "bearish" ? bias.topBullish : bias.topBearish;
-  return (side === "for" ? agreeing : opposing).slice(0, 3).map((m) => m.explanation);
-}
-
-export default async function ScannerPage() {
-  const crypto = await getAssetComposites({}).catch(() => null);
-
-  const cryptoRows: ScannableMarket[] = [
-    ...(crypto?.btc ? [crypto.btc] : []),
-    ...(crypto?.eth ? [crypto.eth] : []),
-    ...(crypto?.altcoins?.assets ?? []),
-  ].map((c) => ({ ...c, assetClass: "crypto" as const }));
-
-  const equityRows: ScannableMarket[] = equity.decisions.map((d) => ({
-    asset: d.symbol,
-    name: d.name,
-    assetClass: "equity" as const,
-    score: d.bias.score,
-    verdict: d.bias.verdict,
-    confidence: d.bias.confidence,
-    agreement: d.bias.agreement,
-    riskLevel: d.bias.riskLevel,
-    priceChange24hPct: d.change24hPct,
-    headline: d.bias.headline,
-    setup: equitySetup(d),
-    reasonsFor: reasonsOf(d.bias, "for"),
-    reasonsAgainst: reasonsOf(d.bias, "against"),
-    /*
-     * Equity rows are rebuilt from a daily-close snapshot with no stored
-     * predecessor, so `bias.changes` is structurally empty for them. Marked
-     * as a first reading rather than shown as "nothing moved" — the two are
-     * different claims and only one is true.
-     */
-    changes: [],
-    isFirstReading: true,
-  }));
-
-  const ranked = rankOpportunities([...cryptoRows, ...equityRows]);
-  /* One-line state of the whole universe, so the tape has a shape before the table. */
-  const withSetups = ranked.filter((r) => r.setup != null).length;
-  const actionable = ranked.filter((r) => r.opportunity >= ACTIONABLE_OPPORTUNITY).length;
-  const bullish = ranked.filter((r) => r.verdict === "bullish").length;
-  const bearish = ranked.filter((r) => r.verdict === "bearish").length;
+export default function MarketIntelligencePage() {
+  const { regime, rotation, rotationNarrative } = data;
+  const style = regime ? REGIME_STYLE[regime.regime] : null;
 
   return (
     <div className="min-h-screen">
-      <main className="mx-auto flex max-w-[1200px] flex-col gap-5 px-4 py-6 sm:px-6">
+      <main className="mx-auto flex max-w-[1400px] flex-col gap-5 px-4 py-6 sm:px-6">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
-          <h1 className="text-lg font-semibold text-ink">Scanner</h1>
-          <div className="flex gap-4 text-[11px] uppercase tracking-[0.16em] text-ink-muted">
-            <Link href="/crypto" className="hover:text-ink">
-              Crypto
+          <div>
+            <h1 className="text-lg font-semibold tracking-tight text-ink">Market Intelligence</h1>
+            <p className="mt-0.5 text-[11px] uppercase tracking-[0.16em] text-ink-faint">
+              Regime · rotation · where capital is going
+            </p>
+          </div>
+          <nav className="flex gap-4 text-[11px] uppercase tracking-[0.16em] text-ink-muted">
+            <Link href="/scanner" className="hover:text-ink">
+              Scanner
             </Link>
             <Link href="/markets" className="hover:text-ink">
               Markets
             </Link>
-          </div>
+            <Link href="/crypto" className="hover:text-ink">
+              Crypto
+            </Link>
+          </nav>
         </div>
 
-        {/*
-          THE ANSWER FIRST, and in full. A scanner that opens on a table makes
-          the reader redo the ranking the engine already did.
-        */}
-        {ranked.length === 0 ? (
-          <Card>
-            <CardContent className="py-5">
-              <p className="text-[13px] leading-relaxed text-ink">
-                No market could be scored right now. Every data source for the crypto universe failed
-                this cycle, and the equity snapshot is empty — this is an outage, not a quiet tape.
-              </p>
-            </CardContent>
-          </Card>
+        {/* ── LEVEL 1: THE REGIME ────────────────────────────────────────── */}
+        {regime && style ? (
+          <section className={`rounded-xl border ${style.border} bg-panel/60 px-5 py-6 shadow-glass backdrop-blur-xs sm:px-6`}>
+            <h2 className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-muted">
+              Risk environment
+            </h2>
+            <div className="mt-1.5 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+              <span className={`text-3xl font-bold uppercase leading-none tracking-[0.02em] sm:text-4xl ${style.tone}`}>
+                {style.label}
+              </span>
+              <span className="font-mono text-[11px] text-ink-faint">
+                {regime.agreeing} of {regime.total} independent pairs agree
+              </span>
+            </div>
+            <p className="mt-3 max-w-4xl text-[14px] leading-relaxed text-ink">{regime.headline}</p>
+
+            {/* The pairs themselves, at a glance, then in full on demand. */}
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {regime.metrics.map((m) => (
+                <div key={m.id} className="rounded-md border border-hairline bg-void/40 px-3 py-2.5">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-muted">
+                      {m.label}
+                    </span>
+                    <span
+                      className={`font-mono text-[10px] uppercase ${
+                        m.verdict === "bullish"
+                          ? "text-success"
+                          : m.verdict === "bearish"
+                            ? "text-danger"
+                            : "text-ink-faint"
+                      }`}
+                    >
+                      {m.verdict === "bullish" ? "risk-on" : m.verdict === "bearish" ? "risk-off" : "flat"}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-[11px] leading-relaxed text-ink-muted">{m.explanation}</p>
+                  <p className="mt-1 font-mono text-[9px] text-ink-faint">confidence {m.confidence}%</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 border-t border-hairline pt-3">
+              <Collapsible
+                title="How each pair is measured"
+                summary="ratios, both horizons, and what would flip them"
+              >
+                <ul className="flex flex-col gap-5">
+                  {regime.metrics.map((m) => (
+                    <li key={m.id} className="border-l border-hairline pl-4">
+                      <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-ink">
+                        {m.label}
+                      </h3>
+                      <EvidenceModuleDetail metric={m} allMetrics={regime.metrics} />
+                    </li>
+                  ))}
+                </ul>
+              </Collapsible>
+            </div>
+          </section>
         ) : (
-          <TopOpportunity
-            lead={ranked[0]}
-            runnerUp={ranked[1] ?? null}
-            comparison={ranked[1] ? explainRanking(ranked[0], ranked[1]) : null}
-            totalMarkets={ranked.length}
-          />
+          <section className="rounded-xl border border-hairline bg-panel/60 px-5 py-6">
+            <p className="text-[13px] leading-relaxed text-ink">
+              No risk pair could be evaluated. This means the underlying series are missing, not that the
+              market has no appetite signal — an outage, not a reading.
+            </p>
+          </section>
         )}
 
-        {ranked.length > 0 && (
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 px-1 text-[11px]">
-            <Tape label="Tracked" value={`${ranked.length} markets`} />
-            <Tape label="Clearing the bar" value={`${actionable}`} tone={actionable > 0 ? "text-cyan" : undefined} />
-            <Tape label="With a plan" value={`${withSetups}`} />
-            <Tape
-              label="Direction"
-              value={`${bullish} bullish · ${bearish} bearish · ${ranked.length - bullish - bearish} neutral`}
-            />
+        {/* ── LEVEL 2: WHERE CAPITAL IS MOVING ───────────────────────────── */}
+        {rotation ? (
+          <RotationBoard read={rotation} narrative={rotationNarrative} />
+        ) : (
+          <section className="rounded-xl border border-hairline bg-panel/60 px-5 py-6">
+            <p className="text-[13px] leading-relaxed text-ink">
+              Rotation could not be built — the benchmark series is too short to measure anything against.
+            </p>
+          </section>
+        )}
+
+        {/* ── LEVEL 3: DOWN TO INSTRUMENTS ───────────────────────────────── */}
+        <Link
+          href="/scanner"
+          className="group flex flex-wrap items-center justify-between gap-3 rounded-xl border border-hairline bg-panel/60 px-5 py-4 shadow-glass backdrop-blur-xs transition-colors hover:border-cyan/40 sm:px-6"
+        >
+          <div>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-muted">
+              Next level down
+            </span>
+            <p className="mt-1 text-[14px] leading-relaxed text-ink">
+              Individual instruments, ranked by the decision engine —{" "}
+              <span className="text-ink-muted">
+                read them against the regime above, not on their own.
+              </span>
+            </p>
           </div>
-        )}
+          <span className="text-[11px] uppercase tracking-[0.16em] text-cyan group-hover:underline">
+            Open scanner →
+          </span>
+        </Link>
 
-        {ranked.length > 0 && <WhatChanged rows={ranked} />}
-
-        <Card>
-          <CardContent className="py-5">
-            <ScannerTable rows={ranked} />
-          </CardContent>
-        </Card>
-
-        <p className="text-[11px] leading-relaxed text-ink-faint">
-          <span className="text-ink-muted">Freshness differs by universe, deliberately.</span> Crypto rows
-          are live, cached five minutes. Equity rows come from a daily-close snapshot built{" "}
-          {new Date(equity.generatedAt).toISOString().slice(0, 10)} — equities close and crypto does not, so
-          a single refresh rate would misrepresent one of them. Nothing on this page is computed here:
-          every score, confidence and plan is the same engine output the per-market pages render.
+        <p className="text-[10px] leading-relaxed text-ink-faint">
+          Daily closes through {new Date(data.generatedAt).toISOString().slice(0, 10)}. Regime pairs and
+          sector relatives are computed from adjusted daily bars and rebuilt with the snapshot; they do
+          not move intraday. Not financial advice.
         </p>
       </main>
     </div>
