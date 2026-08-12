@@ -4,6 +4,9 @@ import { fileURLToPath } from "url";
 import { buildEquityEvidence, EquityInstrumentInput } from "../../src/lib/markets/equityEvidence";
 import { buildMarketBias } from "../../src/lib/signals/marketBias";
 import { MarketBias } from "../../src/lib/signals/types";
+import { buildTradePlan, TradePlan } from "../../src/lib/signals/tradePlan";
+import { buildSupportResistanceZones, SupportResistanceZone } from "../../src/lib/technicals/marketStructure";
+import { atr } from "../../src/lib/technicals/indicators";
 
 /**
  * Precomputes the equity decisions into a bundled JSON snapshot.
@@ -52,6 +55,10 @@ export interface MarketDecision {
   lastClose: number;
   change24hPct: number;
   asOf: number;
+  /** Null when the engine has no directional read — a plan for a neutral verdict would be invented. */
+  plan: TradePlan | null;
+  zones: SupportResistanceZone[];
+  atrPct: number | null;
 }
 
 const NAMES: Record<string, string> = {
@@ -89,6 +96,40 @@ function main() {
       continue;
     }
 
+    /*
+     * TRADE PLAN. Same buildTradePlan the crypto side uses — structural stop
+     * beyond the protective zone, targets at structure, R:R re-measured from
+     * the real entry. Two honest departures for equities:
+     *
+     *  - `historicalWinRatePct` is NULL. There is no equity backtest, so the
+     *    star rating is built without the one input that measures whether
+     *    comparable trades actually finished green. Passing a crypto win rate
+     *    here would be the worst kind of borrowed authority.
+     *  - No plan at all for a neutral verdict. A plan needs a direction, and
+     *    manufacturing one from a 52 score is exactly the false precision the
+     *    engine is supposed to refuse.
+     */
+    const zones = buildSupportResistanceZones(bars as never, null, "1D");
+    const atrAbs = atr(bars as never);
+    const lastClose = bars[bars.length - 1].close;
+    const atrPct = atrAbs !== null && lastClose > 0 ? (atrAbs / lastClose) * 100 : null;
+
+    const direction = bias.verdict === "bullish" ? "long" : bias.verdict === "bearish" ? "short" : null;
+    const plan = direction
+      ? buildTradePlan({
+          direction,
+          anchorPrice: lastClose,
+          atrPct,
+          zones,
+          quality: {
+            confidence: bias.confidence,
+            agreement: bias.agreement,
+            historicalWinRatePct: null,
+            historicalWinRateN: null,
+          },
+        })
+      : null;
+
     const prev = bars[bars.length - 2]?.close ?? bars[bars.length - 1].close;
     decisions.push({
       symbol,
@@ -97,8 +138,14 @@ function main() {
       lastClose: bars[bars.length - 1].close,
       change24hPct: prev > 0 ? ((bars[bars.length - 1].close - prev) / prev) * 100 : 0,
       asOf,
+      plan,
+      zones,
+      atrPct,
     });
-    console.log(`  ${symbol}: ${bias.verdict} ${bias.score} (conf ${bias.confidence}) from ${metrics.length} metrics`);
+    console.log(
+      `  ${symbol}: ${bias.verdict} ${bias.score} (conf ${bias.confidence}) from ${metrics.length} metrics` +
+        `${plan ? ` · plan ${plan.riskRewardRatio.toFixed(2)}R` : " · no plan (neutral)"}`
+    );
   }
 
   const out = path.join(__dirname, "..", "..", "src", "data", "equityMarkets.json");

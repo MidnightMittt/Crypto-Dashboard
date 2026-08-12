@@ -96,10 +96,13 @@ function MarketDecisionCard({ decision }: { decision: MarketDecision }) {
     <Card>
       <CardContent className="flex flex-col gap-4 py-5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <div className="flex items-baseline gap-2.5">
+          <Link
+            href={`/markets/${decision.symbol.toLowerCase()}`}
+            className="flex items-baseline gap-2.5 hover:underline"
+          >
             <span className="font-mono text-sm font-semibold text-ink">{decision.symbol}</span>
             <span className="text-[11px] uppercase tracking-[0.14em] text-ink-faint">{decision.name}</span>
-          </div>
+          </Link>
           <span
             className={`font-mono text-[11px] ${
               decision.change24hPct > 0 ? "text-success" : decision.change24hPct < 0 ? "text-danger" : "text-ink-faint"
