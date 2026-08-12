@@ -497,7 +497,16 @@ const PIVOT_LOOKBACK = 3;
  */
 export function evaluateMarketStructure(
   instrument: EquityInstrumentInput,
-  asOf: number
+  asOf: number,
+  /**
+   * Optional structural levels. When supplied, the module reports distance to
+   * the nearest support and resistance as `supporting` measurements — so a UI
+   * never reaches into the zone array to compute "3.2% away" for itself.
+   * Absent, the module still produces a complete verdict on the swing
+   * sequence alone; a level provider being unavailable degrades the evidence,
+   * it does not invalidate it.
+   */
+  levels?: { supportPct: number | null; resistancePct: number | null }
 ): MetricVerdict | null {
   const bars = instrument.bars.slice(-STRUCTURE_WINDOW);
   if (bars.length < STRUCTURE_WINDOW / 2) return null;
@@ -556,11 +565,55 @@ export function evaluateMarketStructure(
   const confidence =
     verdict === "neutral" ? 0 : Math.min(75, Math.round(Math.min(1, decisiveness / 0.15) * 75));
 
+  /*
+   * REFERENCE IMPLEMENTATION — the pattern every future evidence module
+   * follows. See docs/EVIDENCE_MODULE_CONTRACT.md.
+   *
+   * `evidenceFor` states each finding as a discrete claim, mirroring
+   * `conflicts`. `supporting` carries the measurements. Between them the UI
+   * can render structured evidence without parsing prose or touching raw
+   * series — which is the rule the whole contract exists to enforce.
+   *
+   * Note what is NOT here: no score contribution and no risk contribution.
+   * Those are derived by `contributionOf` in categories.ts, because a
+   * module's weight depends on which OTHER modules reported, and only the
+   * engine can see that.
+   */
+  const evidenceFor: string[] = [];
+  if (verdict === "bullish") {
+    evidenceFor.push(`Higher high confirmed — ${lastHigh.toFixed(2)} over ${prevHigh.toFixed(2)}`);
+    evidenceFor.push(`Higher low confirmed — ${lastLow.toFixed(2)} over ${prevLow.toFixed(2)}`);
+    evidenceFor.push(`Last swing low held; no structural break below ${prevLow.toFixed(2)}`);
+  } else if (verdict === "bearish") {
+    evidenceFor.push(`Lower high confirmed — ${lastHigh.toFixed(2)} under ${prevHigh.toFixed(2)}`);
+    evidenceFor.push(`Lower low confirmed — ${lastLow.toFixed(2)} under ${prevLow.toFixed(2)}`);
+    evidenceFor.push(`Last swing high rejected; no reclaim above ${prevHigh.toFixed(2)}`);
+  }
+  // Neutral states deliberately contribute NO supporting evidence. The
+  // findings that matter there are the disagreement, and those are already
+  // in `conflicts`. Padding a neutral verdict with observations would make
+  // an absence of structure look like a body of evidence.
+
+  const supporting: Array<{ label: string; value: string }> = [
+    { label: "Swing highs", value: `${highs.length} in ${bars.length} sessions` },
+    { label: "Swing lows", value: `${lows.length} in ${bars.length} sessions` },
+    { label: "Last swing high", value: lastHigh.toFixed(2) },
+    { label: "Last swing low", value: lastLow.toFixed(2) },
+  ];
+  if (levels?.supportPct !== null && levels?.supportPct !== undefined) {
+    supporting.push({ label: "Nearest support", value: `${levels.supportPct.toFixed(1)}% below` });
+  }
+  if (levels?.resistancePct !== null && levels?.resistancePct !== undefined) {
+    supporting.push({ label: "Nearest resistance", value: `${levels.resistancePct.toFixed(1)}% above` });
+  }
+
   return {
     id: "equityMarketStructure",
     label: "Market Structure",
     verdict,
     confidence,
+    evidenceFor,
+    supporting,
     confidenceBasis: `${highs.length} swing highs and ${lows.length} swing lows over ${bars.length} sessions. Confidence scales with how decisively both legs moved relative to the ${range > 0 ? `${((range / rangeLow) * 100).toFixed(0)}%` : "flat"} range, and is capped at 75 because a two-pivot sequence is short.`,
     explanation: `${instrument.symbol} is printing ${shape}. Last swing high ${lastHigh.toFixed(2)} vs prior ${prevHigh.toFixed(2)}; last swing low ${lastLow.toFixed(2)} vs prior ${prevLow.toFixed(2)}.`,
     whyItMatters:

@@ -282,3 +282,31 @@ export function buildTrendStrength(technicals: TechnicalRead | null): TrendStren
   return { label: bucket?.label ?? "Very Strong", value: technicals.strength };
 }
 
+
+
+/**
+ * How much a metric actually contributed to the composite — DERIVED BY THE
+ * ENGINE, never declared by the module.
+ *
+ * A module that reported its own score contribution would move weighting out
+ * of `METRIC_WEIGHTS`/`CATEGORY_WEIGHTS` and into twenty-four independent
+ * assertions with nothing reconciling them. Worse, `computeWeightedScore`
+ * could no longer renormalise over ABSENT modules — and that renormalisation
+ * is exactly what lets one engine score an equity on six modules and a crypto
+ * asset on eighteen with no branch anywhere.
+ *
+ * Contribution is a property of a metric IN A CONTEXT. The same module is
+ * worth more on a thin evidence base than a rich one, so only something
+ * holding every metric at once can compute it.
+ */
+export function contributionOf(
+  metric: MetricVerdict,
+  all: MetricVerdict[]
+): { sharePct: number; category: Category | null } {
+  const effective = (m: MetricVerdict) => metricWeight(m.id) * (m.confidence / 100);
+  const total = all.reduce((sum, m) => sum + effective(m), 0);
+  return {
+    sharePct: total > 0 ? Math.round((effective(metric) / total) * 100) : 0,
+    category: CATEGORY_MAP[metric.id]?.[0] ?? null,
+  };
+}

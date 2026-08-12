@@ -10,6 +10,7 @@ import {
   EquityInstrumentInput,
 } from "./equityEvidence";
 import { Bar } from "@/lib/research/types";
+import { contributionOf } from "@/lib/signals/categories";
 
 /**
  * Constructed series, hand-reasoned before being asserted — the discipline
@@ -372,5 +373,93 @@ describe("evaluateMarketStructure", () => {
   it("caps confidence at 75 — a two-pivot sequence is real but short", () => {
     const v = evaluateMarketStructure(withPivots("SPY", [10, 200, 20, 400, 30, 600]), ASOF)!;
     expect(v.confidence).toBeLessThanOrEqual(75);
+  });
+});
+
+describe("evidence module contract — market structure as the reference", () => {
+  const uptrend = () => withPivots("SPY", [100, 130, 110, 150, 125, 170]);
+
+  it("emits discrete evidenceFor claims, not prose", () => {
+    const v = evaluateMarketStructure(uptrend(), ASOF)!;
+    expect(v.evidenceFor!.length).toBeGreaterThanOrEqual(3);
+    expect(v.evidenceFor!.some((e) => /Higher high confirmed/.test(e))).toBe(true);
+    expect(v.evidenceFor!.some((e) => /no structural break/i.test(e))).toBe(true);
+  });
+
+  it("gives a NEUTRAL verdict no supporting evidence — absence is not a body of evidence", () => {
+    const v = evaluateMarketStructure(withPivots("QQQ", [100, 140, 90, 160, 70]), ASOF)!;
+    expect(v.verdict).toBe("neutral");
+    expect(v.evidenceFor).toEqual([]);
+    expect(v.conflicts.length).toBeGreaterThan(0);
+  });
+
+  it("carries measurements in `supporting` so no UI re-derives them", () => {
+    const v = evaluateMarketStructure(uptrend(), ASOF)!;
+    const labels = v.supporting!.map((s) => s.label);
+    expect(labels).toContain("Last swing high");
+    expect(labels).toContain("Swing lows");
+  });
+
+  it("reports level distances when a level provider supplies them", () => {
+    const v = evaluateMarketStructure(uptrend(), ASOF, { supportPct: 3.2, resistancePct: 7.8 })!;
+    const s = v.supporting!;
+    expect(s.find((x) => x.label === "Nearest support")!.value).toBe("3.2% below");
+    expect(s.find((x) => x.label === "Nearest resistance")!.value).toBe("7.8% above");
+  });
+
+  it("still produces a complete verdict when no level provider is available", () => {
+    const v = evaluateMarketStructure(uptrend(), ASOF)!;
+    expect(v.verdict).toBe("bullish");
+    expect(v.supporting!.some((x) => x.label.startsWith("Nearest"))).toBe(false);
+  });
+
+  it("declares NO score or risk contribution — those are the engine's to derive", () => {
+    const v = evaluateMarketStructure(uptrend(), ASOF)! as unknown as Record<string, unknown>;
+    expect(v.scoreContribution).toBeUndefined();
+    expect(v.riskContribution).toBeUndefined();
+  });
+});
+
+describe("contributionOf — derived by the engine, never declared", () => {
+  it("shares out by weight x confidence and sums to ~100", () => {
+    const inst = flatThenMove("QQQ", 600, 60, 25);
+    const bench = series("SPY", 600, 0);
+    const all = buildEquityEvidence({
+      instrument: inst, benchmark: bench,
+      universe: [inst, bench, series("DIA", 600, 0), series("IWM", 600, 0)],
+      credit: flatThenMove("HYG", 600, 20, 8), duration: series("TLT", 600, 0),
+      asOf: ASOF,
+    });
+    const total = all.reduce((sum, m) => sum + contributionOf(m, all).sharePct, 0);
+    expect(total).toBeGreaterThanOrEqual(98);
+    expect(total).toBeLessThanOrEqual(102);
+  });
+
+  it("gives the SAME module a bigger share on a thinner evidence base", () => {
+    const inst = flatThenMove("QQQ", 600, 60, 25);
+    const bench = series("SPY", 600, 0);
+    const universe = [inst, bench, series("DIA", 600, 0), series("IWM", 600, 0)];
+    const thin = buildEquityEvidence({ instrument: inst, benchmark: bench, universe, asOf: ASOF });
+    const rich = buildEquityEvidence({
+      instrument: inst, benchmark: bench, universe,
+      credit: flatThenMove("HYG", 600, 20, 8), duration: series("TLT", 600, 0), asOf: ASOF,
+    });
+    const pick = (ms: typeof thin) => ms.find((m) => m.id === "equityRelativeStrength")!;
+    // This is the whole reason contribution cannot be a module export: the
+    // same module is worth more when fewer others reported.
+    expect(contributionOf(pick(thin), thin).sharePct)
+      .toBeGreaterThan(contributionOf(pick(rich), rich).sharePct);
+  });
+
+  it("reports the metric's category, or null for an unregistered id", () => {
+    const inst = flatThenMove("QQQ", 600, 60, 25);
+    const all = buildEquityEvidence({
+      instrument: inst, benchmark: series("SPY", 600, 0),
+      universe: [inst, series("SPY", 600, 0), series("DIA", 600, 0), series("IWM", 600, 0)],
+      asOf: ASOF,
+    });
+    expect(contributionOf(all[0], all).category).not.toBeNull();
+    const orphan = { ...all[0], id: "notRegisteredAnywhere" };
+    expect(contributionOf(orphan, all).category).toBeNull();
   });
 });

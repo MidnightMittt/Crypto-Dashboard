@@ -36,8 +36,31 @@ export interface MetricVerdict {
   /**
    * Related readings that point the other way. Populated rather than
    * smoothed over — the spec's "if signals conflict, say they conflict".
+   *
+   * This is the module's EVIDENCE AGAINST, and `evidenceFor` below is its
+   * mirror. The two are deliberately the same shape.
    */
   conflicts: string[];
+  /**
+   * Discrete findings that SUPPORT this module's own verdict, one claim per
+   * entry — "Higher highs confirmed", not a paragraph.
+   *
+   * OPTIONAL, and that is the point. Twenty-four modules predate this field
+   * and state their support as prose inside `explanation`; making it required
+   * would have forced a migration of every one of them for no behavioural
+   * gain. A module that populates it lets the UI render structured evidence
+   * without parsing English; a module that omits it renders exactly as before.
+   */
+  evidenceFor?: string[];
+  /**
+   * Named measurements behind the verdict, so a surface can display the
+   * numbers without re-deriving them from raw data.
+   *
+   * The rule this enforces: NO UI SHOULD INTERPRET RAW SERIES. If a page
+   * needs "nearest support 3.2% away", the module computes it and puts it
+   * here, rather than the component reaching for the zone array itself.
+   */
+  supporting?: Array<{ label: string; value: string }>;
   /**
    * The concrete level at which this metric would change its own verdict,
    * e.g. "turns bullish above 0.04%/8h". Null when no meaningful threshold
