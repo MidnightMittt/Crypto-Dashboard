@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { InMemoryDataSource } from "./inMemorySource";
 import { extractFeatures, UNIVERSAL_FEATURES, FeatureDefinition } from "./features";
-import { runModules, EvidenceModule, Bar, InstrumentMeta, CONTINUOUS_SESSION, US_EQUITY_SESSION, ResearchContext } from "./types";
+import { runModules, EvidenceModule, Bar, InstrumentMeta, CONTINUOUS_SESSION, US_EQUITY_SESSION, ResearchContext, bindAsOf } from "./types";
 
 const DAY = 86_400_000;
 
@@ -54,7 +54,9 @@ function sourceWith(capabilities?: Seed["capabilities"]) {
 }
 
 function ctxAt(source: InMemoryDataSource, id: string, asOf: number): ResearchContext {
-  return { instrument: source.meta(id)!, source, asOf };
+  // bindAsOf is the ONLY sanctioned route: it strips the `until` parameter,
+  // so nothing downstream can express a request for future data.
+  return { instrument: source.meta(id)!, source: bindAsOf(source, asOf), asOf };
 }
 
 describe("InMemoryDataSource — point-in-time enforcement", () => {
@@ -251,5 +253,85 @@ describe("capability-gated modules — the engine never asks what asset it is", 
     expect(out[0].status).toBe("errored");
     expect(out[1].status).toBe("ok");
     expect(out[1].value).toBe("trend is up");
+  });
+});
+
+
+describe("bindAsOf — look-ahead is structurally impossible, not merely discouraged", () => {
+  const TREND_LONG = Array.from({ length: 400 }, (_, i) => 100 * 1.004 ** i);
+
+  function boundView(asOf: number) {
+    const source = new InMemoryDataSource([{ meta: cryptoMeta, bars: { "1D": bars(TREND_LONG) } }]);
+    return { source, view: bindAsOf(source, asOf) };
+  }
+
+  /*
+   * The hole this closes. `MarketDataSource.bars` takes the cutoff as an
+   * argument, so any holder could pass Infinity and read the whole future.
+   * The bound view exposes no such parameter — the request is unrepresentable.
+   */
+  it("the bound view has no parameter through which a later cutoff could be requested", () => {
+    const { view } = boundView(120 * DAY);
+    // bars(id, timeframe) — arity 2. A third argument is not part of the type,
+    // and passing one at runtime is silently ignored rather than honoured.
+    expect(view.bars.length).toBe(2);
+    const sneaky = (view.bars as unknown as (a: string, b: string, c: number) => Bar[])(
+      "BTC-USD",
+      "1D",
+      Number.MAX_SAFE_INTEGER
+    );
+    expect(sneaky).toHaveLength(121);
+    expect(sneaky[sneaky.length - 1].t).toBe(120 * DAY);
+  });
+
+  it("returns exactly what the unbound source would return at the same cutoff", () => {
+    const { source, view } = boundView(200 * DAY);
+    expect(view.bars("BTC-USD", "1D")).toEqual(source.bars("BTC-USD", "1D", 200 * DAY));
+  });
+
+  it("binds capabilities to the same instant", () => {
+    const source = new InMemoryDataSource([
+      {
+        meta: cryptoMeta,
+        bars: { "1D": bars(TREND_LONG) },
+        capabilities: { funding: { points: [{ knownAtT: 10 * DAY, value: 0.01 }, { knownAtT: 100 * DAY, value: 0.09 }] } },
+      },
+    ]);
+    expect(bindAsOf(source, 50 * DAY).capability<number>("BTC-USD", "funding")).toBe(0.01);
+    expect(bindAsOf(source, 150 * DAY).capability<number>("BTC-USD", "funding")).toBe(0.09);
+    // Bound before the first observation: nothing knowable yet.
+    expect(bindAsOf(source, 5 * DAY).capability<number>("BTC-USD", "funding")).toBeNull();
+  });
+
+  it("exposes asOf read-only and holds no reference back to the unbounded source", () => {
+    const { view } = boundView(120 * DAY);
+    expect(view.asOf).toBe(120 * DAY);
+    // No property on the view leaks the underlying MarketDataSource.
+    expect(Object.values(view).some((v) => typeof v === "object" && v !== null)).toBe(false);
+  });
+
+  it("two views over one source stay independent", () => {
+    const source = new InMemoryDataSource([{ meta: cryptoMeta, bars: { "1D": bars(TREND_LONG) } }]);
+    const early = bindAsOf(source, 50 * DAY);
+    const late = bindAsOf(source, 300 * DAY);
+    expect(early.bars("BTC-USD", "1D")).toHaveLength(51);
+    expect(late.bars("BTC-USD", "1D")).toHaveLength(301);
+    // Creating the later view did not widen the earlier one.
+    expect(early.bars("BTC-USD", "1D")).toHaveLength(51);
+  });
+
+  it("a feature written against the bound view cannot see past its instant even if it tries", () => {
+    const { view } = boundView(120 * DAY);
+    const ctx: ResearchContext = { instrument: view.meta("BTC-USD")!, source: view, asOf: 120 * DAY };
+    const greedy: FeatureDefinition = {
+      key: "greedy",
+      description: "Attempts to read everything.",
+      kind: "numeric",
+      requires: ["ohlcv"],
+      // The only accessor available returns the bounded series.
+      extract: (c) => c.source.bars(c.instrument.id, "1D").length,
+    };
+    const v = extractFeatures([greedy], ctx);
+    expect(v.values.greedy).toBe(121);
   });
 });

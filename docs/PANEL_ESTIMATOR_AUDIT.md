@@ -169,3 +169,38 @@ accurate: **the two dependence structures that produced the withdrawn results
 are now corrected by construction, and validated in both directions.** The
 remaining risks are about how the framework is *used*, not about what it
 computes.
+
+
+---
+
+## Point-in-time enforcement (Priority 3)
+
+`ResearchContext.source` is now a `BoundedMarketView`, not a
+`MarketDataSource`. The distinction is the whole point:
+`MarketDataSource.bars(id, timeframe, until)` takes the cutoff as an
+*argument*, so any holder could pass `Infinity` and read the entire future.
+The bound view removes the parameter — there is no `until` to supply, no
+overload accepting one, and no property exposing the underlying source.
+
+Truncation therefore moved from **convention** (callers trusted to pass the
+right cutoff) to **structure** (the request is unrepresentable). Attempting
+to use a raw source as a research context is now a compile error, which is
+how the migration surfaced every affected call site.
+
+**Residual gaps, honestly:**
+
+- **`scripts/backtest/run.ts` does not use this path.** The legacy replay
+  maintains its own point-in-time discipline through hand-bounded windows
+  (`liveWindowDaily`, `prior4h`). It is verified by
+  `pointInTime.test.ts` but not structurally enforced. Migrating it is a
+  substantial refactor of a working, verified pipeline and was not attempted
+  here.
+- **A study still builds its own observations.** The framework validates that
+  required features arrived; it cannot verify that a study bounded its own
+  data loading. `BoundedMarketView` closes the feature and module paths,
+  which is where extraction actually happens, but a study that hand-rolls
+  data access outside the framework is not prevented from doing so.
+- **`InstrumentSeed` holds full arrays.** Whoever constructs an
+  `InMemoryDataSource` necessarily has the complete history in hand. That is
+  unavoidable — someone must load the data — but it means enforcement begins
+  at the source boundary, not before it.

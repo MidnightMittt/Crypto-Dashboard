@@ -116,7 +116,8 @@ export interface TradeResearchRecord {
  */
 
 const dailyBars = (ctx: ResearchContext, n: number): Bar[] => {
-  const bars = ctx.source.bars(ctx.instrument.id, "1D", ctx.asOf);
+  // No cutoff argument exists to supply: the view is already bound to asOf.
+  const bars = ctx.source.bars(ctx.instrument.id, "1D");
   return bars.slice(Math.max(0, bars.length - n));
 };
 

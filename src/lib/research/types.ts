@@ -184,11 +184,62 @@ export interface MarketDataSource {
 
 // ── Modules ─────────────────────────────────────────────────────────────
 
-/** What a module is handed. Carries the cutoff so a module physically cannot read past it without going around the source. */
+/**
+ * A `MarketDataSource` permanently bound to one decision instant.
+ *
+ * ── Why this type exists ────────────────────────────────────────────────
+ *
+ * `MarketDataSource.bars(id, timeframe, until)` takes the cutoff as an
+ * ARGUMENT, which means any caller holding a source can pass `Infinity` and
+ * read the entire future. Truncation was therefore a convention that
+ * callers were trusted to honour — and convention has already failed once
+ * on this project, which is why overlap correction had to be retrofitted.
+ *
+ * This interface removes the parameter. There is no `until` to pass, no
+ * overload that accepts one, and no accessor exposing the underlying
+ * source. A feature or module handed a `BoundedMarketView` cannot express
+ * a request for future data — not "must not", but *cannot*. Look-ahead
+ * becomes a type error rather than a code-review finding.
+ */
+export interface BoundedMarketView {
+  /** The instant every read is bounded by. Readable for diagnostics; changing it is impossible. */
+  readonly asOf: number;
+  meta(id: string): InstrumentMeta | null;
+  /** Bars with close <= the bound instant, oldest first. */
+  bars(id: string, timeframe: Timeframe): Bar[];
+  hasCapability(id: string, key: CapabilityKey): boolean;
+  capability<T>(id: string, key: CapabilityKey): T | null;
+}
+
+/**
+ * Binds a source to an instant, producing a view that cannot read past it.
+ *
+ * The returned object closes over `asOf` and never exposes it as a mutable
+ * field or the source as a property, so there is no route back to the
+ * unbounded API. This is the ONLY sanctioned way to hand market data to a
+ * feature or evidence module.
+ */
+export function bindAsOf(source: MarketDataSource, asOf: number): BoundedMarketView {
+  return {
+    asOf,
+    meta: (id) => source.meta(id),
+    bars: (id, timeframe) => source.bars(id, timeframe, asOf),
+    hasCapability: (id, key) => source.hasCapability(id, key),
+    capability: <T,>(id: string, key: CapabilityKey) => source.capability<T>(id, key, asOf),
+  };
+}
+
+/**
+ * What a feature or module is handed.
+ *
+ * `source` is a BOUNDED view, not a raw `MarketDataSource`. That is the
+ * structural guarantee: the context carries no API capable of requesting
+ * data past `asOf`.
+ */
 export interface ResearchContext {
   instrument: InstrumentMeta;
-  source: MarketDataSource;
-  /** The decision instant. Every read must be bounded by this. */
+  source: BoundedMarketView;
+  /** The decision instant. Identical to `source.asOf`; kept for readability at call sites. */
   asOf: number;
 }
 
