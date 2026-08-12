@@ -38,11 +38,17 @@ export function Header({ venueCount, updatedAt }: { venueCount?: number; updated
         </div>
 
         <div className="flex items-center gap-3">
+          {/*
+            "Markets", not "Options". The destination is the traditional-market
+            decision surface, of which options are one future evidence module.
+            Naming the nav after a capability that does not exist yet described
+            the roadmap rather than the product.
+          */}
           <Link
-            href="/options"
+            href="/markets"
             className="hidden text-[11px] uppercase tracking-widest text-ink-faint transition-colors hover:text-ink sm:inline"
           >
-            Options →
+            Markets →
           </Link>
           {updatedAt && (
             <span

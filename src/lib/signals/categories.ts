@@ -88,6 +88,31 @@ const CATEGORY_MAP: Record<string, Category[]> = {
   fearGreed: ["risk"],
   options: ["risk"],
   exchangeFlow: ["risk"],
+
+  /*
+   * ── EQUITY CAPABILITY SET ──────────────────────────────────────────────
+   *
+   * Traditional-market evidence maps into the SAME four categories rather
+   * than getting a taxonomy of its own. That is what makes "one decision
+   * engine" true in practice and not merely in principle: `buildMarketBias`
+   * needed no equity branch, but it did need these ids to belong somewhere,
+   * because an uncategorised metric is invisible to `buildAllCategories` and
+   * the entire bias comes back null.
+   *
+   * Found exactly that way — five valid equity verdicts in, null out. The
+   * evidence modules were right and the engine was right; the taxonomy was
+   * the missing join.
+   *
+   * Crypto categories with no equity analogue (positioning: funding, OI,
+   * liquidations) simply receive no metrics, and `combineCategoryScores`
+   * renormalises over the categories actually populated — so an equity is
+   * scored on a genuinely smaller evidence base rather than on silent zeros.
+   */
+  equityRelativeStrength: ["marketStructure"],
+  equityBreadth: ["marketStructure"],
+  equityTrendQuality: ["marketStructure"],
+  equityRiskAppetite: ["leadingDrivers"],
+  equityVolatilityRegime: ["risk"],
 };
 
 /**
