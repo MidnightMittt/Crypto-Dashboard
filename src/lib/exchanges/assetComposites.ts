@@ -1,8 +1,16 @@
-import { AssetSymbol } from "@/types/market";
+import { AssetSymbol, AggregateMarketData } from "@/types/market";
+import { readPlannedSetups } from "../signals/plannedSetup";
+import { SetupSummary } from "../signals/opportunityRanking";
 import { ALL_ASSETS } from "./registry";
 import { getAggregateForAsset } from "./aggregator";
 import { swr } from "../cache/swr";
-import { AssetComposite, PricePoint, derive7dChangePct, aggregateAltcoinComposite } from "../signals/assetComposite";
+import {
+  AssetComposite,
+  PricePoint,
+  derive7dChangePct,
+  aggregateAltcoinComposite,
+  referencePrice,
+} from "../signals/assetComposite";
 import { verdictFromScore } from "../signals/scoring";
 import { Verdict } from "../signals/types";
 
@@ -43,6 +51,9 @@ async function getAssetComposite(
         priceChange24hPct: agg.priceChange24hPct,
         priceChange7dPct: history ? derive7dChangePct(history) : null,
         headline: agg.marketBias.headline,
+        agreement: agg.marketBias.agreement,
+        riskLevel: agg.marketBias.riskLevel,
+        setup: summariseSetup(agg),
       };
       return composite;
     },
@@ -51,6 +62,53 @@ async function getAssetComposite(
     console.warn(`[asset-composites] failed for ${asset}:`, err);
     return null;
   });
+}
+
+/**
+ * Reduces whatever plan the engine currently holds for an asset to the one
+ * shape the scanner ranks on.
+ *
+ * PRECEDENCE IS THE POINT. An ACTIVE swing thesis outranks a PLANNED setup,
+ * because they are different instructions: active means the trade logic has
+ * fired, planned means the geometry is waiting on a level price has not yet
+ * reached. Showing the conditional one while a thesis is live would bury the
+ * more urgent of the two.
+ *
+ * Nothing is computed here. `stars`, `riskRewardRatio` and the status word
+ * are all read off the plan `buildTradePlan` already froze.
+ */
+function summariseSetup(agg: AggregateMarketData): SetupSummary | null {
+  const store = agg.swingThesis?.available ? agg.swingThesis.store : null;
+  if (!store) return null;
+
+  const active = store.active;
+  if (active) {
+    return {
+      state: "active",
+      direction: active.direction,
+      riskReward: active.plan.riskRewardRatio,
+      stars: active.plan.stars,
+      status: active.status,
+    };
+  }
+
+  /*
+   * No thesis: fall back to the conditional setup, and only to the FAVOURED
+   * one. When daily and 4H disagree, `favoured` is null, both sides stand
+   * equal, and no setup is marked primary — picking one for a ranked list
+   * would invent a directional call the engine deliberately declined to make.
+   */
+  const planned = readPlannedSetups(store.plannedSetups ?? null, referencePrice(agg));
+  const primary = planned?.setups.find((s) => s.primary);
+  if (!primary || primary.status === "invalidated") return null;
+
+  return {
+    state: "planned",
+    direction: primary.direction,
+    riskReward: primary.plan.riskRewardRatio,
+    stars: primary.plan.stars,
+    status: primary.status,
+  };
 }
 
 export interface AltcoinComposite {

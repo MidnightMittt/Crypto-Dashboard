@@ -1,5 +1,3 @@
-import { AssetComposite } from "./assetComposite";
-
 /**
  * Ranks the tracked universe by how strong an opportunity the DECISION ENGINE
  * currently sees — not by any indicator.
@@ -30,8 +28,59 @@ import { AssetComposite } from "./assetComposite";
  * Evidence strength survived that test; trend persistence did not.
  */
 
+/** Which universe a row came from. Display and filtering only — never scoring. */
+export type AssetClass = "crypto" | "equity";
+
+/**
+ * A tradeable plan the engine has already produced, summarised for ranking.
+ *
+ * `state` distinguishes the two genuinely different things a plan can be:
+ * ACTIVE means a thesis has fired and the trade is live logic; PLANNED means
+ * the geometry exists and is waiting for price to reach it. Collapsing them
+ * would put "act now" and "watch this level" in the same bucket, which is
+ * the single most decision-relevant distinction a scanner can draw.
+ */
+export interface SetupSummary {
+  state: "active" | "planned";
+  direction: "long" | "short";
+  /** Reward-to-risk measured from the real entry, straight off the plan. */
+  riskReward: number;
+  /** 1-5 entry-quality rating, straight off the plan. Never recomputed here. */
+  stars: number;
+  /** The plan's own lifecycle word, e.g. "WAITING", "AT ENTRY". */
+  status: string;
+}
+
+/**
+ * The minimum a market must publish to be rankable.
+ *
+ * Deliberately structural rather than a class hierarchy: `AssetComposite`
+ * satisfies it as-is, and the equity snapshot's `MarketDecision` maps onto it
+ * with no adapter beyond field selection. Everything optional is genuinely
+ * optional — a universe that cannot supply agreement should be ranked without
+ * it, not given a fabricated value.
+ */
+export interface ScannableMarket {
+  asset: string;
+  score: number;
+  verdict: string;
+  confidence: number;
+  priceChange24hPct: number;
+  headline: string;
+  name?: string;
+  assetClass?: AssetClass;
+  agreement?: number;
+  riskLevel?: string;
+  setup?: SetupSummary | null;
+}
+
 export interface RankedOpportunity {
   asset: string;
+  name?: string;
+  assetClass?: AssetClass;
+  agreement?: number;
+  riskLevel?: string;
+  setup?: SetupSummary | null;
   /** 0-100, the engine's directional score. Passed through untouched. */
   score: number;
   verdict: string;
@@ -59,12 +108,17 @@ const MAX_PRODUCT = 50 * 100;
  */
 export const ACTIONABLE_OPPORTUNITY = 10;
 
-export function rankOpportunities(composites: AssetComposite[]): RankedOpportunity[] {
+export function rankOpportunities(composites: ScannableMarket[]): RankedOpportunity[] {
   return composites
     .map((c) => {
       const conviction = Math.abs(c.score - 50);
       return {
         asset: c.asset,
+        name: c.name,
+        assetClass: c.assetClass,
+        agreement: c.agreement,
+        riskLevel: c.riskLevel,
+        setup: c.setup,
         score: c.score,
         verdict: c.verdict,
         confidence: c.confidence,
@@ -87,4 +141,125 @@ function directionOf(verdict: string): "long" | "short" | "none" {
   if (verdict === "bullish") return "long";
   if (verdict === "bearish") return "short";
   return "none";
+}
+
+/* ── SCANNER SORTING AND FILTERING ─────────────────────────────────────
+ *
+ * Every option below reads a field the ENGINE published. There is no
+ * "momentum" sort, no "volume" sort and no composite of my own invention —
+ * a scanner that ranks on something the decision surface does not show would
+ * be a second opinion competing with the first, and the top row of a ranked
+ * list is the most consequential opinion in the product.
+ *
+ * Sorts that depend on an OPTIONAL field (agreement, risk/reward, quality)
+ * put rows lacking it at the bottom rather than treating a missing value as
+ * zero. Absent and worst are different, and only one of them is a fact.
+ */
+
+export type ScanSort = "opportunity" | "confidence" | "agreement" | "riskReward" | "quality" | "conviction";
+
+export const SCAN_SORT_LABELS: Record<ScanSort, string> = {
+  opportunity: "Best setups",
+  confidence: "Highest confidence",
+  agreement: "Strongest agreement",
+  riskReward: "Risk / reward",
+  quality: "Setup quality",
+  conviction: "Furthest from neutral",
+};
+
+export type ScanFilter =
+  | "bullish"
+  | "bearish"
+  | "neutral"
+  | "highConfidence"
+  | "swingReady"
+  | "noSetup"
+  | "crypto"
+  | "equity";
+
+export const SCAN_FILTER_LABELS: Record<ScanFilter, string> = {
+  bullish: "Bullish",
+  bearish: "Bearish",
+  neutral: "Neutral",
+  highConfidence: "High confidence",
+  swingReady: "Swing ready",
+  noSetup: "No setup",
+  crypto: "Crypto",
+  equity: "Equities",
+};
+
+/**
+ * The confidence at or above which a read counts as well-evidenced.
+ *
+ * Set to 50 because that is the midpoint of the published scale, not because
+ * anything was calibrated to it. Stated plainly rather than dressed up: no
+ * study in this repository establishes a confidence level above which
+ * outcomes measurably improve, and the agreement-quartile section of the
+ * backtest report is the closest thing, which tests a different axis.
+ */
+export const HIGH_CONFIDENCE = 50;
+
+/** Filters within a group are OR'd; groups are AND'd. */
+const FILTER_GROUPS: ScanFilter[][] = [
+  ["bullish", "bearish", "neutral"],
+  ["highConfidence"],
+  ["swingReady", "noSetup"],
+  ["crypto", "equity"],
+];
+
+function matches(row: RankedOpportunity, filter: ScanFilter): boolean {
+  switch (filter) {
+    case "bullish":
+      return row.verdict === "bullish";
+    case "bearish":
+      return row.verdict === "bearish";
+    case "neutral":
+      return row.verdict === "neutral";
+    case "highConfidence":
+      return row.confidence >= HIGH_CONFIDENCE;
+    case "swingReady":
+      return row.setup != null;
+    case "noSetup":
+      return row.setup == null;
+    case "crypto":
+      return row.assetClass === "crypto";
+    case "equity":
+      return row.assetClass === "equity";
+  }
+}
+
+export function filterMarkets(rows: RankedOpportunity[], active: ScanFilter[]): RankedOpportunity[] {
+  if (active.length === 0) return rows;
+  return rows.filter((row) =>
+    FILTER_GROUPS.every((group) => {
+      const chosen = group.filter((f) => active.includes(f));
+      return chosen.length === 0 || chosen.some((f) => matches(row, f));
+    })
+  );
+}
+
+/** Sorted copy. Ties always fall through to the default order, so it is stable. */
+export function sortMarkets(rows: RankedOpportunity[], sort: ScanSort): RankedOpportunity[] {
+  const defaultOrder = (a: RankedOpportunity, b: RankedOpportunity) =>
+    b.opportunity - a.opportunity || b.conviction - a.conviction || a.asset.localeCompare(b.asset);
+
+  // -1 sorts a row with no value for this key below every row that has one.
+  const key = (r: RankedOpportunity): number => {
+    switch (sort) {
+      case "opportunity":
+        return r.opportunity;
+      case "confidence":
+        return r.confidence;
+      case "conviction":
+        return r.conviction;
+      case "agreement":
+        return r.agreement ?? -1;
+      case "riskReward":
+        return r.setup?.riskReward ?? -1;
+      case "quality":
+        return r.setup?.stars ?? -1;
+    }
+  };
+
+  return [...rows].sort((a, b) => key(b) - key(a) || defaultOrder(a, b));
 }

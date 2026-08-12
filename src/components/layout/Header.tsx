@@ -44,6 +44,17 @@ export function Header({ venueCount, updatedAt }: { venueCount?: number; updated
             Naming the nav after a capability that does not exist yet described
             the roadmap rather than the product.
           */}
+          {/*
+            Scanner first. It answers "what should I look at", which precedes
+            every question a single-asset surface answers — and on the ~75% of
+            days with no active thesis it is the only surface with an answer.
+          */}
+          <Link
+            href="/scanner"
+            className="hidden text-[11px] uppercase tracking-widest text-ink-faint transition-colors hover:text-ink sm:inline"
+          >
+            Scanner
+          </Link>
           <Link
             href="/markets"
             className="hidden text-[11px] uppercase tracking-widest text-ink-faint transition-colors hover:text-ink sm:inline"

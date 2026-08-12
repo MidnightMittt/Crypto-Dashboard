@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { rankOpportunities, ACTIONABLE_OPPORTUNITY } from "./opportunityRanking";
+import {
+  rankOpportunities,
+  ACTIONABLE_OPPORTUNITY,
+  sortMarkets,
+  filterMarkets,
+  HIGH_CONFIDENCE,
+  ScannableMarket,
+  SetupSummary,
+} from "./opportunityRanking";
 import { AssetComposite } from "./assetComposite";
 import { Verdict } from "./types";
 
@@ -19,6 +27,9 @@ function composite(asset: string, score: number, confidence: number, verdict: Ve
     priceChange24hPct: 0,
     priceChange7dPct: null,
     headline: `${asset} headline`,
+    agreement: 0,
+    riskLevel: "medium",
+    setup: null,
   };
 }
 
@@ -99,5 +110,111 @@ describe("rankOpportunities", () => {
 
   it("handles an empty universe", () => {
     expect(rankOpportunities([])).toEqual([]);
+  });
+});
+
+/**
+ * The scanner's sort and filter semantics. These decide what a trader sees
+ * FIRST, which makes them as consequential as the scoring itself — nobody
+ * reads past row three.
+ */
+
+function scannable(
+  asset: string,
+  opts: Partial<ScannableMarket> & { score: number; confidence: number }
+): ScannableMarket {
+  return {
+    asset,
+    verdict: opts.score > 56 ? "bullish" : opts.score < 44 ? "bearish" : "neutral",
+    priceChange24hPct: 0,
+    headline: `${asset} headline`,
+    ...opts,
+  };
+}
+
+const setup = (riskReward: number, stars: number): SetupSummary => ({
+  state: "planned",
+  direction: "long",
+  riskReward,
+  stars,
+  status: "waiting",
+});
+
+describe("sortMarkets", () => {
+  it("sorts rows lacking an optional field BELOW every row that has one", () => {
+    // The distinction the whole design turns on: a market with no plan has no
+    // risk/reward, which is not the same as the worst risk/reward. Treating
+    // absent as zero would rank a planless market above a real 0.5R setup.
+    const rows = rankOpportunities([
+      scannable("NOPLAN", { score: 90, confidence: 90 }), // ranks 1st by opportunity
+      scannable("THIN", { score: 52, confidence: 20, setup: setup(0.5, 1) }),
+    ]);
+    expect(rows[0].asset).toBe("NOPLAN"); // default order
+
+    const byRR = sortMarkets(rows, "riskReward");
+    expect(byRR.map((r) => r.asset)).toEqual(["THIN", "NOPLAN"]);
+    expect(sortMarkets(rows, "quality").map((r) => r.asset)).toEqual(["THIN", "NOPLAN"]);
+  });
+
+  it("breaks ties with the default order, so the list never reshuffles", () => {
+    const rows = rankOpportunities([
+      scannable("BBB", { score: 60, confidence: 50, agreement: 80 }),
+      scannable("AAA", { score: 70, confidence: 50, agreement: 80 }),
+    ]);
+    // Equal agreement -> falls through to opportunity: AAA (conviction 20) wins.
+    expect(sortMarkets(rows, "agreement").map((r) => r.asset)).toEqual(["AAA", "BBB"]);
+  });
+
+  it("does not mutate the input array", () => {
+    const rows = rankOpportunities([
+      scannable("A", { score: 90, confidence: 90 }),
+      scannable("B", { score: 55, confidence: 90, setup: setup(3, 5) }),
+    ]);
+    const before = rows.map((r) => r.asset);
+    sortMarkets(rows, "riskReward");
+    expect(rows.map((r) => r.asset)).toEqual(before);
+  });
+});
+
+describe("filterMarkets", () => {
+  const universe = () =>
+    rankOpportunities([
+      scannable("BULLPLAN", { score: 70, confidence: 80, assetClass: "crypto", setup: setup(2, 4) }),
+      scannable("BEARBARE", { score: 30, confidence: 80, assetClass: "crypto" }),
+      scannable("FLATEQ", { score: 50, confidence: 20, assetClass: "equity" }),
+    ]);
+
+  it("returns everything when nothing is selected", () => {
+    expect(filterMarkets(universe(), [])).toHaveLength(3);
+  });
+
+  it("ORs within a group — bullish OR bearish keeps both, drops neutral", () => {
+    const out = filterMarkets(universe(), ["bullish", "bearish"]);
+    expect(out.map((r) => r.asset).sort()).toEqual(["BEARBARE", "BULLPLAN"]);
+  });
+
+  it("ANDs across groups — bullish AND swing ready is an intersection", () => {
+    expect(filterMarkets(universe(), ["bullish", "swingReady"]).map((r) => r.asset)).toEqual(["BULLPLAN"]);
+    // Bearish has no plan, so the same intersection is empty rather than falling
+    // back to a looser match.
+    expect(filterMarkets(universe(), ["bearish", "swingReady"])).toEqual([]);
+  });
+
+  it("separates having no plan from having one", () => {
+    expect(filterMarkets(universe(), ["noSetup"]).map((r) => r.asset).sort()).toEqual([
+      "BEARBARE",
+      "FLATEQ",
+    ]);
+  });
+
+  it("filters by asset class without touching any score", () => {
+    expect(filterMarkets(universe(), ["equity"]).map((r) => r.asset)).toEqual(["FLATEQ"]);
+    expect(filterMarkets(universe(), ["crypto"])).toHaveLength(2);
+  });
+
+  it("applies the high-confidence cut at the published constant", () => {
+    const out = filterMarkets(universe(), ["highConfidence"]);
+    expect(out.every((r) => r.confidence >= HIGH_CONFIDENCE)).toBe(true);
+    expect(out.map((r) => r.asset)).not.toContain("FLATEQ");
   });
 });

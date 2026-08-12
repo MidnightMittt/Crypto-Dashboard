@@ -10,6 +10,7 @@ import { SupportResistanceZone } from "@/lib/technicals/marketStructure";
 import { executionDistanceContext, ExecutionWallContext } from "@/lib/technicals/liquidityWalls";
 import type { SwingThesisState } from "@/lib/signals/swingThesis";
 import { readPlannedSetups, PlannedSetupsView, PlannedSetupView, SetupStatus } from "@/lib/signals/plannedSetup";
+import { referencePrice } from "@/lib/signals/assetComposite";
 import { lookupTradeStatsBySide, ExecutionStatsSnapshot } from "@/lib/sentiment/backtestStats";
 import { formatPrice, formatCompactUsd } from "@/lib/utils/format";
 import executionStatsJson from "@/data/executionStats.json";
@@ -130,7 +131,7 @@ export function TradePlan({
    * the grid contradict the action above it.
    */
   if (!view) {
-    const price = aggregate.exchanges[0]?.price ?? 0;
+    const price = referencePrice(aggregate);
     const planned = readPlannedSetups(aggregate.swingThesis?.store.plannedSetups ?? null, price);
     return (
       <div className="flex flex-col gap-5">

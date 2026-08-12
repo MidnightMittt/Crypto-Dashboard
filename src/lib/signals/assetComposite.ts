@@ -1,5 +1,6 @@
 import { AssetSymbol } from "@/types/market";
-import { Verdict } from "./types";
+import { Verdict, RiskLevel } from "./types";
+import { SetupSummary } from "./opportunityRanking";
 
 /**
  * BTC/ETH/Altcoin composite view — the Dashboard v2 spec's simultaneous
@@ -19,6 +20,39 @@ export interface AssetComposite {
   /** Null when fewer than 7 real days of price history are available — never a fabricated shorter-window number presented as 7d. */
   priceChange7dPct: number | null;
   headline: string;
+  /**
+   * How much the metrics agree WITH EACH OTHER — `bias.agreement`, passed
+   * through. Already computed on every poll; it simply was not carried here,
+   * so the scanner could not offer the "strongest agreement" ordering the
+   * single-asset surface has always displayed.
+   */
+  agreement: number;
+  /** `bias.riskLevel`, passed through for the same reason. */
+  riskLevel: RiskLevel;
+  /**
+   * The engine's current plan for this asset, if it has one — an ACTIVE swing
+   * thesis first, otherwise the favoured PLANNED setup waiting on a level.
+   * Null when neither exists, which is the majority of days and is a finding
+   * rather than a gap.
+   */
+  setup: SetupSummary | null;
+}
+
+/**
+ * The current price a stateless read (setup status, distance to a level) is
+ * measured against.
+ *
+ * `AggregateMarketData` has no single `price` field — it carries a per-venue
+ * array — so callers had settled on `exchanges[0]?.price`. That expression was
+ * about to appear in a second place, and two copies of "which venue counts as
+ * the price" is how one surface starts reporting a setup AT ENTRY while
+ * another still says APPROACHING.
+ *
+ * Returns 0 when no venue reported, which `readPlannedSetups` already treats
+ * as "cannot read" rather than as a real price.
+ */
+export function referencePrice(aggregate: { exchanges: Array<{ price: number }> }): number {
+  return aggregate.exchanges[0]?.price ?? 0;
 }
 
 export interface PricePoint {
