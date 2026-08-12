@@ -113,9 +113,10 @@ import { buildMarketBias, snapshotVerdicts } from "../signals/marketBias";
 import { readBiasSnapshot, writeBiasSnapshot } from "../history/biasStore";
 import { recordBiasHistory, BiasHistoryEntry } from "../history/biasHistory";
 import { readSwingThesis, writeSwingThesis } from "../history/swingThesisStore";
-import type { MarketBias, Verdict } from "../signals/types";
+import type { MarketBias, Verdict, MetricVerdict } from "../signals/types";
 import type { SwingThesisSnapshot } from "@/types/market";
 import { applyDailyClose, applyTick, swingReasons } from "../signals/swingThesis";
+import { buildHarmonicEvidence, selectBestHarmonic, HarmonicEvidence } from "../signals/harmonicEvidence";
 import { buildPlannedSetups } from "../signals/plannedSetup";
 import { lookupTradeStatsBySide, ExecutionStatsSnapshot } from "../sentiment/backtestStats";
 import executionStatsJson from "@/data/executionStats.json";
@@ -705,6 +706,16 @@ async function withRecordedHistory(
     agg.updatedAt
   ).catch(() => null);
 
+  const harmonic = await buildHarmonics(
+    asset,
+    marketBias,
+    technicals,
+    technicals4h,
+    liquidityMap?.supportResistance ?? [],
+    metricVerdicts,
+    point.price
+  ).catch(() => null);
+
   let biasTimeline: BiasHistoryEntry[] = [];
 
   if (marketBias) {
@@ -747,6 +758,7 @@ async function withRecordedHistory(
     deribitOptions,
     technicals,
     technicals4h,
+    harmonic,
     liquidityMap,
     etfFlows,
     spotPerpVolume,
@@ -859,6 +871,7 @@ function buildAggregate(
       deribitOptions: null,
       technicals: null,
       technicals4h: null,
+      harmonic: null,
       liquidityMap: null,
       etfFlows: null,
       spotPerpVolume: null,
@@ -991,6 +1004,7 @@ function buildAggregate(
     deribitOptions: null,
     technicals: null,
     technicals4h: null,
+    harmonic: null,
     liquidityMap: null,
     etfFlows: null,
     spotPerpVolume: null,
@@ -1286,6 +1300,65 @@ async function buildSwingThesis(
     await writeSwingThesis(asset, next);
   }
   return { available: true, store: next };
+}
+
+/**
+ * Best harmonic (Fibonacci-pattern) evidence across Daily and 4H — additive
+ * context only, never wired into activation/scoring (see
+ * harmonicEvidence.ts's own header for why). Mirrors `buildSwingThesis`'s
+ * shape but needs no persisted store: the PRZ is frozen the moment its
+ * candidate forms, and status is a pure function of price against it, so
+ * recomputing from the same swr-cached candles every poll is sufficient —
+ * see harmonicEvidence.ts's header for the full reasoning.
+ */
+async function buildHarmonics(
+  asset: AssetSymbol | "MARKET",
+  bias: MarketBias | null,
+  technicals: TechnicalRead | null,
+  technicals4h: TechnicalRead | null,
+  supportResistance: SupportResistanceZone[],
+  metricVerdicts: MetricVerdict[],
+  price: number
+): Promise<HarmonicEvidence | null> {
+  if (asset === "MARKET" || price <= 0) return null;
+
+  // Cache hits: buildTechnicals/buildTechnicals4h already pulled these this poll.
+  const [dailyCandles, fourHourCandles] = await Promise.all([
+    fetchOkxDailyCandles(asset).catch(() => []),
+    fetchOkx4hCandles(asset).catch(() => []),
+  ]);
+
+  const metricVerdictMap = new Map(metricVerdicts.map((m) => [m.id, m.verdict] as const));
+  const baseCtx = {
+    zones: supportResistance,
+    biasVerdict: bias?.verdict ?? null,
+    metricVerdicts: metricVerdictMap,
+    price,
+  };
+
+  const dailyEvidence =
+    technicals?.atrPct && dailyCandles.length > 0
+      ? buildHarmonicEvidence({
+          ...baseCtx,
+          candles: dailyCandles,
+          timeframe: "1D",
+          atrAbs: (technicals.atrPct / 100) * price,
+          currentDivergence: { rsi: technicals.rsiDivergence, macd: technicals.macdDivergence },
+        })
+      : [];
+
+  const fourHourEvidence =
+    technicals4h?.atrPct && fourHourCandles.length > 0
+      ? buildHarmonicEvidence({
+          ...baseCtx,
+          candles: fourHourCandles,
+          timeframe: "4H",
+          atrAbs: (technicals4h.atrPct / 100) * price,
+          currentDivergence: { rsi: technicals4h.rsiDivergence, macd: technicals4h.macdDivergence },
+        })
+      : [];
+
+  return selectBestHarmonic(dailyEvidence, fourHourEvidence);
 }
 
 /**

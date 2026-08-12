@@ -30,6 +30,7 @@ import {
   SwingThesisStore,
 } from "../../src/lib/signals/swingThesis";
 import { applyCosts, DEFAULT_COST_CONFIG } from "./costs";
+import { buildHarmonicEvidence, selectBestHarmonic, HarmonicEvidence } from "../../src/lib/signals/harmonicEvidence";
 import { LocalHistoryPoint, AggregateMarketData, ExchangeSnapshot, FearGreed, EtfFlowSummary } from "../../src/types/market";
 import type { StablecoinSummary } from "../../src/lib/providers/stablecoins";
 import { classifyLiquidityRegime, classifyRiskRegime, MacroLiquiditySnapshot } from "../../src/lib/providers/macroLiquidity";
@@ -81,7 +82,7 @@ const FORWARD_BUFFER_DAYS = 7; // longest labeled horizon
  * capping it would rewrite every already-published statistic in exchange
  * for no behavioural difference at all.
  */
-const LIVE_CANDLE_LIMIT = 300;
+export const LIVE_CANDLE_LIMIT = 300;
 
 /** Longest a replayed trade is held before being closed at market — matches the forward buffer above, so every ENTER day has the bars needed to resolve it. */
 const MAX_HOLD_MS = FORWARD_BUFFER_DAYS * DAY_MS;
@@ -281,6 +282,14 @@ export interface DayRecord {
   dailyAgreement: string | null;
   dailyDirection: string | null;
   /**
+   * Best harmonic evidence across Daily+4H at this point-in-time close, built
+   * from the SAME production functions (harmonicEvidence.ts) the live
+   * aggregator calls — never a reimplementation. Null whenever nothing
+   * qualifies, which the research script's own census reports honestly
+   * rather than treating as a data gap.
+   */
+  harmonic: HarmonicEvidence | null;
+  /**
    * The FROZEN swing plan on the day a thesis activated, null otherwise.
    *
    * Research-only, and the reason it exists is worth recording: `trade`
@@ -350,7 +359,7 @@ function forwardReturn(
  * bar for the same reason — a half-finished day understates volume badly
  * enough to flip the volume-ratio read on its own.
  */
-function rollUpToDaily(hourly: HourlyBar[]): Candle[] {
+export function rollUpToDaily(hourly: HourlyBar[]): Candle[] {
   const byDay = new Map<string, HourlyBar[]>();
   for (const bar of hourly) {
     const key = new Date(bar.t).toISOString().slice(0, 10);
@@ -387,7 +396,7 @@ function rollUpToDaily(hourly: HourlyBar[]): Candle[] {
  * Binance-derived where the live 4H read is OKX-native, exactly the venue
  * difference the daily series above already carries.
  */
-function rollUpTo4h(hourly: HourlyBar[]): Candle[] {
+export function rollUpTo4h(hourly: HourlyBar[]): Candle[] {
   const FOUR_HOURS_MS = 4 * 3_600_000;
   const byBucket = new Map<number, HourlyBar[]>();
   for (const bar of hourly) {
@@ -701,6 +710,7 @@ export function replayAsset(
 
     const fakeAggregate: AggregateMarketData = {
       asset: asset as "BTC" | "ETH",
+      harmonic: null, // not relevant to this intermediate object — see below where harmonic is actually computed against real evidence
       weightedFundingRatePct: currentFunding.fundingRatePct,
       fundingAnnualizedPct: 0,
       fundingChange24hPct: null,
@@ -787,6 +797,27 @@ export function replayAsset(
     });
 
     const regimeTags = regime ? regimeTagsToStrings(regime) : [];
+
+    /*
+     * Harmonic evidence, point-in-time — calls the exact production
+     * buildHarmonicEvidence/selectBestHarmonic, on the same bounded,
+     * strictly-prior candle windows (liveWindowDaily/prior4h) every other
+     * structural read on this line already uses. Never a reimplementation.
+     */
+    const harmonicMetricVerdicts = new Map(metricVerdicts.map((m) => [m.id, m.verdict] as const));
+    const harmonicCtx = (candles: Candle[], timeframe: "1D" | "4H") => ({
+      candles,
+      timeframe,
+      atrAbs: technicals?.atrPct ? (technicals.atrPct / 100) * (currentPrice ?? 0) : 0,
+      price: currentPrice ?? 0,
+      zones: supportResistance,
+      biasVerdict: bias?.verdict ?? null,
+      metricVerdicts: harmonicMetricVerdicts,
+      currentDivergence: { rsi: technicals?.rsiDivergence ?? null, macd: technicals?.macdDivergence ?? null },
+    });
+    const dailyHarmonics = currentPrice ? buildHarmonicEvidence(harmonicCtx(liveWindowDaily, "1D")) : [];
+    const fourHourHarmonics = currentPrice ? buildHarmonicEvidence(harmonicCtx(prior4h, "4H")) : [];
+    const harmonic = selectBestHarmonic(dailyHarmonics, fourHourHarmonics);
 
     /*
      * The Phase 1 execution layer, replayed through the REAL production
@@ -959,6 +990,7 @@ export function replayAsset(
       swingHealth: swingStore.active?.health ?? null,
       dailyAgreement: technicals ? technicalAgreement(technicals, swingDirectionVerdict) : null,
       dailyDirection: technicals?.direction ?? null,
+      harmonic,
       // Emitted only on the ACTIVATION day (activatedAt === this close), so
       // the calibration counts one plan per thesis rather than one per day
       // the thesis happens to still be alive.

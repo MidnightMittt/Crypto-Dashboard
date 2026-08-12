@@ -6,6 +6,7 @@ import type { DivergenceResult } from "@/lib/technicals/divergence";
 import type { LiquidityWall, WallZoneRelationship } from "@/lib/technicals/liquidityWalls";
 import type { PersistenceLabel } from "@/lib/store/bookSnapshotStore";
 import type { SwingThesisStore } from "@/lib/signals/swingThesis";
+import type { HarmonicEvidence } from "@/lib/signals/harmonicEvidence";
 
 /**
  * The swing layer as the API hands it to the UI. `available` is separate
@@ -212,6 +213,15 @@ export interface AggregateMarketData {
    * `technicals` above.
    */
   technicals4h: TechnicalRead | null;
+  /**
+   * Best harmonic (Fibonacci-pattern) evidence across Daily and 4H —
+   * geometry, PRZ, status and confirmation, never a directional score. See
+   * lib/signals/harmonicEvidence.ts's own header for why status alone can
+   * change on every poll (price-driven, like the swing thesis's own status)
+   * while the PRZ itself only changes at a daily/4H close. Additive context:
+   * nothing in the activation/scoring path reads this field.
+   */
+  harmonic: HarmonicEvidence | null;
   /** US spot ETF flows. BTC/ETH only, null everywhere else. */
   etfFlows: EtfFlowSummary | null;
   /** Spot vs perpetual turnover. Null when either leg is unavailable. */

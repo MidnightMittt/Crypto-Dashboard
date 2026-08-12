@@ -22,6 +22,8 @@ import {
 import { lookupBiasVerdictStat, lookupCalibrationBucket, ExecutionStatsSnapshot } from "@/lib/sentiment/backtestStats";
 import { RegimeTags } from "@/lib/technicals/regimes";
 import { BiasHistoryEntry } from "@/lib/history/biasHistory";
+import { HarmonicEvidence } from "@/lib/signals/harmonicEvidence";
+import { formatPrice } from "@/lib/utils/format";
 import { TimelineList } from "./MarketThesisTimeline";
 import backtestStats from "@/data/backtestStats.json";
 import executionStatsJson from "@/data/executionStats.json";
@@ -114,7 +116,12 @@ export function AiMarketSummary({
 
         <TopReasons reasons={reasons} />
 
-        <TechnicalConfirmation technicals={technicals} technicals4h={technicals4h ?? null} thesis={thesis} />
+        <TechnicalConfirmation
+          technicals={technicals}
+          technicals4h={technicals4h ?? null}
+          thesis={thesis}
+          harmonic={aggregate.harmonic ?? null}
+        />
 
         <ContradictingEvidence
           metric={bias.counterRisk}
@@ -545,15 +552,34 @@ const LEAN_LABEL: Record<NonNullable<Lean> | "unavailable", string> = {
   unavailable: "NO DATA",
 };
 
+/** Same three-state palette everything else on this surface already uses — bullish/bearish/neutral, never a fourth "harmonic" colour. */
+const HARMONIC_STATUS_TEXT: Record<HarmonicEvidence["status"], string> = {
+  "prz-projected": "text-ink-faint",
+  approaching: "text-ink-muted",
+  "inside-prz": "text-warning",
+  "confirmation-pending": "text-warning",
+  confirmed: "text-ink",
+  tradeable: "text-ink",
+  invalidated: "text-ink-faint",
+  expired: "text-ink-faint",
+};
+
 function TechnicalConfirmation({
   technicals,
   technicals4h,
   thesis,
+  harmonic,
 }: {
   technicals: TechnicalRead | null;
   /** Live-only, optional — see okxCandles.ts. Rendered as a secondary qualifier line, never a competing verdict; per the multi-timeframe spec, HTF disagreement is context the trader weighs, not an override of the daily read. */
   technicals4h: TechnicalRead | null;
   thesis: MarketThesis | null;
+  /**
+   * Best Daily/4H harmonic pattern evidence, or null when nothing currently
+   * qualifies — see lib/signals/harmonicEvidence.ts. Additive context only:
+   * never changes the badge above it, never gates the swing thesis.
+   */
+  harmonic: HarmonicEvidence | null;
 }) {
   if (!technicals || !thesis || thesis.technicalConfirmation.length === 0) return null;
 
@@ -593,6 +619,18 @@ function TechnicalConfirmation({
         section can say, so it is never a footnote.
       */}
       <p className={`mt-1.5 text-xs ${alignment.aligned ? "text-ink-muted" : "text-warning"}`}>{alignment.sentence}</p>
+
+      {/*
+        One line, only when a pattern currently qualifies. Says WHERE (the
+        PRZ, in the same $ format as every other level on this page) and
+        WHAT STATE it's in — never a directional call of its own, and never
+        a second badge competing with DAILY/4H above.
+      */}
+      {harmonic && (
+        <p className={`mt-1 text-xs ${HARMONIC_STATUS_TEXT[harmonic.status]}`}>
+          Harmonic: {harmonic.summary} PRZ {formatPrice(harmonic.przLow)}–{formatPrice(harmonic.przHigh)}.
+        </p>
+      )}
 
       {/*
         Per-indicator grid for BOTH timeframes side by side, so a direction
