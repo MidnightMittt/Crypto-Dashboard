@@ -979,7 +979,12 @@ export function replayAsset(
       biasVerdict: bias?.verdict ?? null,
       biasConfidence: bias?.confidence ?? null,
       biasAgreement: bias?.agreement ?? null,
-      categories: (bias?.categories ?? []).map((c) => ({ category: c.category, score: c.score, verdict: c.verdict })),
+      categories: (bias?.categories ?? [])
+        // Context-only categories (score null) assert no direction — there
+        // is no verdict to bucket, so recording them would be a row of nulls
+        // pretending to be an opinion.
+        .filter((c): c is typeof c & { score: number; verdict: NonNullable<typeof c.verdict> } => c.score !== null && c.verdict !== null)
+        .map((c) => ({ category: c.category, score: c.score, verdict: c.verdict })),
       metrics: metricVerdicts.map((m) => ({ id: m.id, verdict: m.verdict })),
       regimeTags,
       action: mtfBlocked

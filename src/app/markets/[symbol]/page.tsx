@@ -470,10 +470,14 @@ function CategoryGrid({ categories }: { categories: CategoryScore[] }) {
                   </span>
                 )}
               </span>
-              {scored ? (
+              {scored && scored.verdict !== null ? (
                 <span className={`font-mono text-xs ${verdictTone(scored.verdict)}`}>
                   {scored.score} · conf {scored.confidence}%
                 </span>
+              ) : scored ? (
+                // Context-only: reads exist but none carries a validated
+                // record, so there is no score to print for the section.
+                <span className="font-mono text-xs text-ink-faint">context only</span>
               ) : (
                 <span className="font-mono text-xs text-ink-faint">—</span>
               )}

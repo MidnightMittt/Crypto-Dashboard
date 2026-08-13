@@ -192,6 +192,44 @@ context. Codified, not implied.
 
 ## 7. Signals to REMOVE entirely
 
+> **IMPLEMENTED (2026-08-12) — measured replay delta.** §5 and §7 landed
+> together as the METRIC_ROLES taxonomy in scoring.ts: nine Edge voters
+> remain (funding, squeezeRisk, openInterest, basis, longShort, etfFlows,
+> spotPerpVolume, stablecoins, macroLiquidity); technicals and
+> marketStructure are State; everything else is context, weight 0. The five
+> equity evidence modules are classified State but hold a TRACKED
+> transitional vote (TRANSITIONAL_STATE_VOTERS) because the Markets/Scanner
+> surfaces present nothing but the composite yet — that redesign is its own
+> task, and the exception is in code, named, with this rationale.
+>
+> Full-history replay, before → after:
+> - Bullish composite days 298 → 358, win rate 59.7% → 58.1%, mean 1d
+>   +0.62% → +0.52%.
+> - Bearish composite days 1,196 → 1,468, win rate 53.4% → 50.8%, mean 1d
+>   −0.15% → 0.00%.
+> - Risk category buckets disappear from the stats entirely (context-only —
+>   no verdict to bucket), as designed.
+>
+> Read honestly: the subtraction made the composite MORE willing to call a
+> direction (fewer neutral days) and its bearish calls in-sample LESS
+> accurate by ~2.6pp. That difference is ~1.3σ given the bucket sizes —
+> statistically indistinguishable from no change, on buckets whose
+> composition also changed — and the in-sample composite win rate of an
+> engine containing unfalsifiable voters was never a defensible number to
+> optimize in the first place; being unable to test a voter is not evidence
+> it helps. But it is a real, published observation, and the per-metric
+> ablation (remove one voter at a time, measure each) is the follow-up that
+> would attribute it.
+>
+> One call REVERSED in degree by the drift census (H1 note above):
+> fearGreed's "no edge at the primary horizon" claim below is outdated —
+> the corrected census shows 53.6% vs a 50.1% null at 24h, p=0.048. That is
+> nominal-only (it does not survive BH-FDR across the 48-cell scan, q
+> threshold ≈0.009 at its rank), so it still does not earn a vote — but it
+> was demoted to displayed context rather than physically deleted, because
+> a nominal positive that might firm up with more history is worth
+> continuing to display and measure.
+
 - **fearGreed** — n=806, no edge at the primary horizon, contrarian story
   unvalidated, and the most retail-coded element on the platform. Delete.
 - **sectorBreadth (crypto)** — unfalsifiable (paid-gated history), tiny

@@ -30,13 +30,19 @@ const metric = (
 });
 
 describe("buildCategoryScore", () => {
-  it("returns null when the only contributing metric carries weight 0", () => {
-    // liquidations folds into `positioning` but carries weight 0 by design —
-    // Positioning's card reads its own volume-profile/S-R data instead, not
-    // this score (see categories.ts's own doc comment). Passing ONLY
-    // liquidations means zero total weight for this call, even though
-    // `positioning` itself carries plenty of weight from its other members.
-    expect(buildCategoryScore([metric("liquidations", "bearish")], "positioning")).toBeNull();
+  it("returns a context-only score (null score/verdict) when no contributing metric votes", () => {
+    // liquidations folds into `positioning` but carries weight 0 by design.
+    // Under the State/Edge taxonomy a category whose only reads are
+    // non-voting is CONTEXT-ONLY: still returned so the UI can display the
+    // reads, but with score/verdict null because nothing here asserts a
+    // direction (see CategoryScore's doc comment in types.ts).
+    const result = buildCategoryScore([metric("liquidations", "bearish")], "positioning");
+    expect(result).not.toBeNull();
+    expect(result!.score).toBeNull();
+    expect(result!.verdict).toBeNull();
+    expect(result!.metrics.map((m) => m.id)).toEqual(["liquidations"]);
+    // topReason still cites the read — display is the whole point.
+    expect(result!.topReason).toContain("liquidations");
   });
 
   it("returns null when no metric belongs to the category at all", () => {

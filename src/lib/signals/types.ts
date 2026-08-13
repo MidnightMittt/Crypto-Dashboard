@@ -93,12 +93,22 @@ export type RiskLevel = "low" | "medium" | "high";
  */
 export type Category = "positioning" | "marketStructure" | "leadingDrivers" | "risk";
 
-/** One category's rollup — same shape as MarketBias, one tier down. */
+/**
+ * One category's rollup — same shape as MarketBias, one tier down.
+ *
+ * `score`/`verdict` are null for a CONTEXT-ONLY category: one whose metrics
+ * all carry role "state" or "context" (see METRIC_ROLES in scoring.ts) and
+ * therefore none votes. The reads are still displayed — they are genuinely
+ * informative — but the category asserts no direction and contributes
+ * nothing to the composite, and the UI must say so rather than render a
+ * score it doesn't have. Risk Monitor is the standing example: every one of
+ * its metrics is unfalsifiable or failed the corrected census.
+ */
 export interface CategoryScore {
   category: Category;
   label: string;
-  score: number;
-  verdict: Verdict;
+  score: number | null;
+  verdict: Verdict | null;
   confidence: number;
   /** The single highest-ranked contributing metric's own explanation, reused verbatim. */
   topReason: string;

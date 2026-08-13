@@ -9,12 +9,46 @@
  * discrete categorical (a -1/0/+1 verdict, or a regime tag), and Hamming
  * directly supports the plain-English claim this feature exists to make
  * ("14 of 15 signals matched"), which cosine similarity wouldn't. Each
- * metric's mismatch is weighted by scoring.ts's metricWeight so a funding
- * mismatch counts more than a liquidations mismatch — the same importance
- * ranking the rest of the app already uses everywhere else.
+ * metric's mismatch is weighted by SIMILARITY_METRIC_WEIGHTS below so a
+ * funding mismatch counts more than a liquidations mismatch.
  */
 
-import { metricWeight } from "./scoring";
+/**
+ * DELIBERATELY NOT scoring.ts's `metricWeight`. That function now answers
+ * "how much does this metric's opinion move the composite" and returns 0 for
+ * every state/context metric under the State/Edge taxonomy (see
+ * METRIC_ROLES). Similarity answers a different question — "how much does a
+ * disagreement on this metric make two days LESS alike" — and a day's
+ * technical character or fear/greed reading is exactly the kind of thing
+ * that makes days resemble each other, vote or no vote. So this table
+ * freezes the relative-importance ranking similarity has always used.
+ * Unknown ids fall back to 0.05, same as the historical default: an
+ * unranked dimension still describes the day.
+ */
+const SIMILARITY_METRIC_WEIGHTS: Record<string, number> = {
+  funding: 0.15,
+  squeezeRisk: 0.14,
+  technicals: 0.13,
+  orderFlow: 0.1,
+  openInterest: 0.09,
+  basis: 0.08,
+  longShort: 0.08,
+  etfFlows: 0.08,
+  options: 0.06,
+  exchangeFlow: 0.06,
+  spotPerpVolume: 0.05,
+  spotCvd: 0.05,
+  stablecoins: 0.04,
+  coinbasePremium: 0.03,
+  fearGreed: 0.03,
+  sectorBreadth: 0.03,
+  macroLiquidity: 0.04,
+  liquidations: 0, // permanently neutral by design — a "match" on it carries no information
+};
+
+function similarityWeight(id: string): number {
+  return SIMILARITY_METRIC_WEIGHTS[id] ?? 0.05;
+}
 
 export interface DayFingerprint {
   asset: string;
@@ -45,7 +79,7 @@ function daysBetween(a: string, b: string): number {
   return Math.abs(Date.parse(a) - Date.parse(b)) / 86_400_000;
 }
 
-/** Regime-tag mismatch counts for less than a metric-verdict mismatch — it's context, not the primary similarity signal (whose weights already sum to ~1.0 via scoring.ts's METRIC_WEIGHTS). */
+/** Regime-tag mismatch counts for less than a metric-verdict mismatch — it's context, not the primary similarity signal (whose weights already sum to ~1.0 via SIMILARITY_METRIC_WEIGHTS). */
 const REGIME_DISTANCE_WEIGHT = 0.3;
 
 /**
@@ -63,7 +97,7 @@ function metricMismatchFraction(a: Record<string, -1 | 0 | 1>, b: Record<string,
   let mismatchWeight = 0;
   let totalWeight = 0;
   for (const id of sharedIds) {
-    const w = metricWeight(id);
+    const w = similarityWeight(id);
     totalWeight += w;
     if (a[id] !== b[id]) mismatchWeight += w;
   }

@@ -35,7 +35,13 @@ import { TechnicalRead } from "@/types/market";
  */
 
 /**
- * Which categories each metric feeds. Every metric is single-homed in the
+ * Which categories each metric feeds — MEMBERSHIP ONLY. Whether a metric's
+ * opinion moves any score is a separate question answered by METRIC_ROLES
+ * in scoring.ts (State/Edge taxonomy): a category can hold metrics that are
+ * displayed but never vote, and a category composed entirely of those is
+ * returned as context-only (score null) by buildCategoryScore below.
+ *
+ * Every metric is single-homed in the
  * new taxonomy — the prior taxonomy's one dual-membership (`funding` in
  * both leveragedPositioning and marketStress, read under two different
  * framings) has been dropped to a single category; the "how extreme is the
@@ -159,7 +165,27 @@ function metricsForCategory(metrics: MetricVerdict[], category: Category): Metri
 export function buildCategoryScore(metrics: MetricVerdict[], category: Category): CategoryScore | null {
   const contributing = metricsForCategory(metrics, category);
   const result = computeWeightedScore(contributing, metricWeight);
-  if (!result) return null;
+
+  /*
+   * No voter reported, but reads exist → a CONTEXT-ONLY category: displayed,
+   * never scored (see CategoryScore's doc comment). Its topReason is the
+   * highest-CONFIDENCE read since weight×confidence is zero across the
+   * board, and its confidence is the plain mean — an evidence-quality
+   * figure, which stays meaningful for reads that don't vote.
+   */
+  if (!result) {
+    if (contributing.length === 0) return null;
+    const top = [...contributing].sort((a, b) => b.confidence - a.confidence)[0];
+    return {
+      category,
+      label: CATEGORY_LABELS[category],
+      score: null,
+      verdict: null,
+      confidence: Math.round(contributing.reduce((s, m) => s + m.confidence, 0) / contributing.length),
+      topReason: `${top.label}: ${top.explanation}`,
+      metrics: contributing,
+    };
+  }
 
   const weighted = contributing.filter((m) => metricWeight(m.id) > 0);
   const top = weighted.length
@@ -238,6 +264,10 @@ export function combineCategoryScores(
   let confWeightedSum = 0;
 
   for (const c of categories) {
+    // Context-only categories (score null — no voting metric) contribute
+    // nothing here, not even to the confidence average: their evidence
+    // quality describes reads that are not in the composite.
+    if (c.score === null) continue;
     const baseWeight = weights[c.category];
     confWeightTotal += baseWeight;
     confWeightedSum += c.confidence * baseWeight;

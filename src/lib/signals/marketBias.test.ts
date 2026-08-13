@@ -102,20 +102,35 @@ describe("top reasons", () => {
 
 describe("topReasons", () => {
   it("interleaves bullish and bearish by rank, not by side", () => {
-    // Hand-computed rankMetric (weight x confidence/100) at confidence 90:
-    // funding 0.15*0.9=0.135, technicals 0.13*0.9=0.117, basis 0.08*0.9=0.072,
-    // coinbasePremium 0.03*0.9=0.027 — so the merged, re-ranked order should
-    // be funding(bull), technicals(bear), basis(bear), coinbasePremium(bull),
-    // NOT the two topBullish entries first followed by the two topBearish.
+    // Hand-computed rankMetric (weight x confidence/100) at confidence 90,
+    // all four EDGE voters (a state/context metric can't be a top reason at
+    // all — see the test below): funding 0.15*0.9=0.135, squeezeRisk
+    // 0.14*0.9=0.126, basis 0.08*0.9=0.072, stablecoins 0.04*0.9=0.036 —
+    // so the merged, re-ranked order should be funding(bull),
+    // squeezeRisk(bear), basis(bear), stablecoins(bull), NOT the two
+    // topBullish entries first followed by the two topBearish.
     const bias = build([
       metric("funding", "bullish", 90),
       metric("basis", "bearish", 90),
-      metric("coinbasePremium", "bullish", 90),
-      metric("technicals", "bearish", 90),
+      metric("stablecoins", "bullish", 90),
+      metric("squeezeRisk", "bearish", 90),
     ])!;
     const reasons = topReasons(bias, 4);
-    expect(reasons.map((r) => r.id)).toEqual(["funding", "technicals", "basis", "coinbasePremium"]);
+    expect(reasons.map((r) => r.id)).toEqual(["funding", "squeezeRisk", "basis", "stablecoins"]);
     expect(reasons.map((r) => r.side)).toEqual(["bullish", "bearish", "bearish", "bullish"]);
+  });
+
+  it("never lists a non-voting (state/context) metric as a top reason", () => {
+    // technicals is State and coinbasePremium is context under the
+    // taxonomy: both weight 0. A read that contributed nothing to the
+    // score cannot be presented as the reason for it, however confident.
+    const bias = build([
+      metric("funding", "bullish", 50),
+      metric("technicals", "bullish", 100),
+      metric("coinbasePremium", "bearish", 100),
+    ])!;
+    expect(bias.topBullish.map((m) => m.id)).toEqual(["funding"]);
+    expect(bias.topBearish).toEqual([]);
   });
 
   it("defaults to five and respects a smaller explicit limit", () => {
@@ -338,13 +353,13 @@ describe("agreement, opportunity and counter-risk", () => {
 
   it("surfaces the best-supported opposing metric as the counter-risk", () => {
     // Bullish side needs enough weight to clear the +/-6 neutral band —
-    // funding alone against squeezeRisk lands at 55, which is correctly
-    // still neutral.
+    // funding alone against squeezeRisk lands near 50, which is correctly
+    // still neutral; etfFlows (its own unanimous leadingDrivers category)
+    // pushes the combined read clearly bullish.
     const bias = build([
       metric("funding", "bullish", 95),
-      metric("technicals", "bullish", 95),
+      metric("etfFlows", "bullish", 95),
       metric("squeezeRisk", "bearish", 80),
-      metric("coinbasePremium", "bearish", 20),
     ])!;
     expect(bias.verdict).toBe("bullish");
     expect(bias.counterRisk?.id).toBe("squeezeRisk");
@@ -401,17 +416,17 @@ describe("category rollup fields", () => {
 
   it("computes the overall score BY combining categories, not the old flat per-metric sum", () => {
     // openInterest+longShort (both positioning-only, weights
-    // 0.09+0.08=0.17) at full weight vs. fearGreed (risk-only,
-    // weight 0.03) at full weight: under FLAT per-metric weighting fearGreed's
-    // tiny 0.03 would barely dent a combined 0.17 bullish weight. Under
-    // CATEGORY weighting risk gets its full 20% category weight
-    // to fight positioning's 35%, a much closer contest — hand-
-    // verified directly (npx tsx against the real buildMarketBias): score
-    // lands at 64, not the >90 a flat sum would produce.
+    // 0.09+0.08=0.17) at full weight vs. etfFlows (leadingDrivers-only,
+    // weight 0.08) at full weight: under FLAT per-metric weighting a lone
+    // 0.08 would barely dent a combined 0.17 bullish weight (score >75).
+    // Under CATEGORY weighting leadingDrivers gets its full 20% category
+    // weight to fight positioning's 35%, a much closer contest —
+    // hand-computed: positioning scores 100 (w 0.35), leadingDrivers 0
+    // (w 0.20), combined pull (0.35-0.20)/0.55 = 0.273 → score 64.
     const bias = build([
       metric("openInterest", "bullish", 100),
       metric("longShort", "bullish", 100),
-      metric("fearGreed", "bearish", 100),
+      metric("etfFlows", "bearish", 100),
     ])!;
     expect(bias.verdict).toBe("bullish");
     expect(bias.score).toBeLessThan(90);

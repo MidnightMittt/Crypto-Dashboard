@@ -157,13 +157,16 @@ export function buildMarketBias(inputs: MarketBiasInputs): MarketBias | null {
   const { score, verdict, confidence } = combined;
 
   // Ranked by weight x confidence so the best-supported reasons lead, not
-  // merely the loudest-sounding ones.
+  // merely the loudest-sounding ones. Restricted to VOTING metrics: a
+  // state/context read (weight 0) can't be the stated reason for a score it
+  // contributed nothing to — it still appears in the category cards, just
+  // never as the composite's justification.
   const topBullish = metrics
-    .filter((m) => m.verdict === "bullish")
+    .filter((m) => m.verdict === "bullish" && metricWeight(m.id) > 0)
     .sort((a, b) => rankMetric(b) - rankMetric(a))
     .slice(0, 5);
   const topBearish = metrics
-    .filter((m) => m.verdict === "bearish")
+    .filter((m) => m.verdict === "bearish" && metricWeight(m.id) > 0)
     .sort((a, b) => rankMetric(b) - rankMetric(a))
     .slice(0, 5);
 

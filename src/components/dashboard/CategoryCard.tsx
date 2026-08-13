@@ -35,6 +35,11 @@ import backtestStats from "@/data/backtestStats.json";
 const TOP_REASONS_LIMIT = 5;
 
 function topReasonsFor(category: CategoryScore, limit = TOP_REASONS_LIMIT): MetricVerdict[] {
+  // A context-only category has no weighted metric at all — rank its reads
+  // by confidence instead, since weight×confidence is uniformly zero.
+  if (category.score === null) {
+    return [...category.metrics].sort((a, b) => b.confidence - a.confidence).slice(0, limit);
+  }
   return [...category.metrics]
     .filter((m) => metricWeight(m.id) > 0)
     .sort((a, b) => rankMetric(b) - rankMetric(a))
@@ -70,17 +75,38 @@ export function CategoryCard({
               whyItMatters={`Combines ${category.metrics.length} metric${category.metrics.length === 1 ? "" : "s"} into one read for this category.`}
             />
           </div>
-          <VerdictBadge verdict={category.verdict} />
+          {category.verdict !== null ? (
+            <VerdictBadge verdict={category.verdict} />
+          ) : (
+            <span className="rounded-sm border border-hairline/60 px-1.5 py-0.5 text-[10px] uppercase tracking-[0.14em] text-ink-faint">
+              Context
+            </span>
+          )}
         </div>
 
-        <div className="flex items-baseline gap-2">
-          <span className="font-mono text-2xl font-semibold leading-none text-ink">
-            {category.score}
-          </span>
-          <span className="text-[11px] text-ink-faint">{intensityLabel(category.score)}</span>
-        </div>
-
-        <IntensityMeter value={category.score} tone={category.verdict} />
+        {/*
+          A context-only category (score null) shows its reads without a
+          number: none of its metrics carries a validated historical record,
+          so it holds no vote in the composite and rendering a score would
+          claim a direction nothing here can defend. The reads below remain —
+          they are genuinely informative live color.
+        */}
+        {category.score !== null && category.verdict !== null ? (
+          <>
+            <div className="flex items-baseline gap-2">
+              <span className="font-mono text-2xl font-semibold leading-none text-ink">
+                {category.score}
+              </span>
+              <span className="text-[11px] text-ink-faint">{intensityLabel(category.score)}</span>
+            </div>
+            <IntensityMeter value={category.score} tone={category.verdict} />
+          </>
+        ) : (
+          <p className="text-[11px] leading-relaxed text-ink-faint">
+            Displayed for context — no metric in this section carries a validated historical
+            record, so none votes in the composite score.
+          </p>
+        )}
 
         {topReasons.length === 0 ? (
           <p className="text-[11px] leading-relaxed text-ink-faint">{category.topReason}</p>
@@ -156,6 +182,8 @@ export function CategoryCard({
  * bucket says nothing rather than stating a number with false confidence.
  */
 function BacktestStatLine({ category }: { category: CategoryScore }) {
+  // A context-only category has no verdict to look up a bucket for.
+  if (category.verdict === null) return null;
   const stat = lookupCategoryStat(backtestStats, category.category, category.verdict);
   if (!stat) return null;
 

@@ -11,12 +11,72 @@ import { MetricVerdict, Verdict } from "./types";
  */
 
 /**
- * Relative importance per metric, reused for both the overall score and
- * for ranking metrics WITHIN a category. Extends the scheme already used in
- * marketThesis.ts rather than inventing a second, competing one — the
- * ordering there (funding and squeeze heaviest, premium and flow lightest)
- * carries over, with newer sources slotted in by how much independent
- * information they add.
+ * THE ROLE TAXONOMY — the decision-engine redesign's central subtraction
+ * (docs/DECISION_ENGINE_REDESIGN.md §5/§7/§12).
+ *
+ *  - `edge`    PREDICTS. Has a historical source in the census, so its claim
+ *              to move the composite is falsifiable — and gets falsified
+ *              (funding's own row is currently a measured anti-signal at 24h;
+ *              its weight is a debt the census keeps visible).
+ *  - `state`   DESCRIBES. Structure, trend character, regime. Real, useful,
+ *              rendered — and NEVER a vote: describing where the market is
+ *              carries no claim about where it goes, and the census agreed
+ *              (marketStructure @7d is BH-significant in the WRONG direction;
+ *              technicals' 13-vote blob sits at 48% @24h). State's jobs are
+ *              to condition which Edge statistics apply, gate the planner,
+ *              and set stop context.
+ *  - `context` DISPLAYED ONLY. Either no historical source exists to test it
+ *              (orderFlow, options, exchangeFlow, spotCvd, sectorBreadth,
+ *              coinbasePremium), or it is backward-looking (liquidations), or
+ *              its record failed the corrected census (fearGreed: nominal
+ *              p≈0.048 at 24h that does not survive BH-FDR across the scan).
+ *              An engine whose brand is statistical honesty cannot let an
+ *              untestable reading move the score.
+ *
+ * Every id `evaluateAll()`/`buildEquityEvidence()` can emit MUST appear here;
+ * `metricWeight` treats an undeclared id as 0, so a metric cannot vote by
+ * default — it has to be classified first.
+ */
+export type MetricRole = "edge" | "state" | "context";
+
+export const METRIC_ROLES: Record<string, MetricRole> = {
+  funding: "edge",
+  squeezeRisk: "edge",
+  openInterest: "edge",
+  basis: "edge",
+  longShort: "edge",
+  etfFlows: "edge",
+  spotPerpVolume: "edge",
+  stablecoins: "edge",
+  macroLiquidity: "edge",
+
+  technicals: "state",
+  marketStructure: "state",
+  equityRelativeStrength: "state",
+  equityBreadth: "state",
+  equityTrendQuality: "state",
+  equityRiskAppetite: "state",
+  equityVolatilityRegime: "state",
+
+  orderFlow: "context",
+  spotCvd: "context",
+  options: "context",
+  exchangeFlow: "context",
+  coinbasePremium: "context",
+  sectorBreadth: "context",
+  fearGreed: "context",
+  liquidations: "context",
+};
+
+export function metricRole(id: string): MetricRole | null {
+  return METRIC_ROLES[id] ?? null;
+}
+
+/**
+ * Relative importance per EDGE metric — only edge metrics appear, because
+ * only edge metrics vote. The ratios for the survivors are unchanged from
+ * the pre-taxonomy table (re-earning weights from measured performance is a
+ * later step of the same redesign; this step is subtraction only).
  *
  * These do not need to sum to 1: only their ratios matter, since absent
  * metrics force a renormalization anyway.
@@ -24,29 +84,41 @@ import { MetricVerdict, Verdict } from "./types";
 export const METRIC_WEIGHTS: Record<string, number> = {
   funding: 0.15,
   squeezeRisk: 0.14,
-  technicals: 0.13,
-  orderFlow: 0.1,
   openInterest: 0.09,
   basis: 0.08,
   longShort: 0.08,
   etfFlows: 0.08,
-  options: 0.06,
-  exchangeFlow: 0.06,
   spotPerpVolume: 0.05,
-  spotCvd: 0.05,
   stablecoins: 0.04,
-  coinbasePremium: 0.03,
-  fearGreed: 0.03,
-  sectorBreadth: 0.03, // same weight class as fearGreed: context/fragility signal, no backtest source (CoinGecko historical category data is paid-tier gated)
-  macroLiquidity: 0.04, // market-wide macro backdrop signal, same weight class as stablecoins — genuinely backtestable (FRED has real history), unlike fearGreed/sectorBreadth
-  liquidations: 0, // backward-looking; shown for context, never scored
+  macroLiquidity: 0.04, // market-wide macro backdrop signal, same weight class as stablecoins — genuinely backtestable (FRED has real history)
+};
+
+/**
+ * TRANSITIONAL, TRACKED EXCEPTION — the five equity evidence modules are
+ * State by classification, but the Markets and Scanner surfaces currently
+ * present nothing except the bias composite built from them; stripping
+ * their vote today would null every equity read on the site without a
+ * replacement presentation. They keep their old default weight until the
+ * equity State-presentation redesign lands, at which point this table is
+ * deleted. `marketStructure` is deliberately NOT here: it loses its vote
+ * everywhere immediately, because its 7d record is BH-significant in the
+ * wrong direction — an exception for a measured anti-signal would be
+ * indefensible.
+ */
+const TRANSITIONAL_STATE_VOTERS: Record<string, number> = {
+  equityRelativeStrength: 0.05,
+  equityBreadth: 0.05,
+  equityTrendQuality: 0.05,
+  equityRiskAppetite: 0.05,
+  equityVolatilityRegime: 0.05,
 };
 
 /** Score distance from 50 beyond which a roll-up reads as directional rather than balanced. */
 export const DIRECTIONAL_THRESHOLD = 6;
 
 export function metricWeight(id: string): number {
-  return METRIC_WEIGHTS[id] ?? 0.05;
+  if (METRIC_ROLES[id] === "edge") return METRIC_WEIGHTS[id] ?? 0;
+  return TRANSITIONAL_STATE_VOTERS[id] ?? 0;
 }
 
 /** Signed contribution: +1 bullish, -1 bearish, 0 neutral. */
