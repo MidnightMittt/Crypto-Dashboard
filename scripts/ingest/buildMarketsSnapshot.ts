@@ -204,6 +204,60 @@ function main() {
   const out = path.join(__dirname, "..", "..", "src", "data", "equityMarkets.json");
   fs.writeFileSync(out, JSON.stringify({ generatedAt: Date.now(), decisions }, null, 0));
   console.log(`\n[markets] wrote ${decisions.length} decisions to ${out}`);
+
+  writeMarketContext(spy, universe, credit, duration);
+}
+
+/**
+ * THE SHARED MARKET CONTEXT — what every equity has in common.
+ *
+ * Breadth and risk appetite are properties of the MARKET, not of a ticker:
+ * the reading is byte-identical for AAPL and for SPY, because neither is
+ * computed from the instrument at all. So they are computed once here and
+ * committed, which is what lets the live ticker search score an arbitrary
+ * symbol without refetching six index ETFs and two bond funds on every
+ * request.
+ *
+ * The benchmark series ships alongside them because relative strength — the
+ * single most load-bearing equity read — is meaningless without something to
+ * be relative TO. Only `t` and `close` are kept (that is all the evaluator
+ * reads) and only the trailing window the percentile bands actually reach,
+ * which keeps this to a few tens of kilobytes rather than shipping years of
+ * OHLCV into the bundle.
+ */
+function writeMarketContext(
+  spy: EquityInstrumentInput,
+  universe: EquityInstrumentInput[],
+  credit: EquityInstrumentInput | undefined,
+  duration: EquityInstrumentInput | undefined
+) {
+  const asOf = spy.bars[spy.bars.length - 1].t;
+
+  /*
+   * Built by asking for SPY's own evidence and keeping only the market-wide
+   * modules. Deliberately not a second code path: if these were recomputed
+   * differently here, a searched ticker and a snapshot page could disagree
+   * about the same market on the same day.
+   */
+  const spyEvidence = buildEquityEvidence({
+    instrument: spy, benchmark: spy, universe, credit, duration, asOf,
+  });
+  const MARKET_WIDE_IDS = new Set(["equityBreadth", "equityRiskAppetite"]);
+  const marketWide = spyEvidence.filter((m) => MARKET_WIDE_IDS.has(m.id));
+
+  /** 60 sessions for the relative-strength window + 500 of percentile history, plus slack. */
+  const KEEP = 600;
+  const benchmarkCloses = spy.bars.slice(-KEEP).map((b) => ({ t: b.t, close: b.close }));
+
+  const out = path.join(__dirname, "..", "..", "src", "data", "marketContext.json");
+  fs.writeFileSync(
+    out,
+    JSON.stringify({ generatedAt: Date.now(), asOf, benchmarkSymbol: "SPY", benchmarkCloses, marketWide }, null, 0)
+  );
+  console.log(
+    `[context] ${marketWide.length} market-wide readings (${marketWide.map((m) => m.label).join(", ")}) ` +
+      `+ ${benchmarkCloses.length} benchmark closes -> ${out}`
+  );
 }
 
 main();

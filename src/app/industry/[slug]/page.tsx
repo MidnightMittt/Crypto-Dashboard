@@ -317,6 +317,14 @@ function NameColumn({
       <div className="border-b border-hairline pb-1.5">
         <span className={`text-[11px] font-semibold uppercase tracking-[0.14em] ${tone}`}>{title}</span>
         <div className="text-[9px] uppercase tracking-[0.1em] text-ink-faint">{note}</div>
+        {/* Name the two columns of numbers. They were bare — a reader saw
+            "+13.9  -8.1" with nothing saying which horizon each was, or that
+            both are measured against the S&P rather than being returns. */}
+        <div className="mt-1 flex items-baseline justify-end gap-2 text-[8px] uppercase tracking-[0.1em] text-ink-faint">
+          <span>1 mo</span>
+          <span>6 mo</span>
+          <span className="text-ink-faint/60">vs S&amp;P</span>
+        </div>
       </div>
       {rows.length === 0 ? (
         <p className="text-[11px] text-ink-faint">None.</p>
@@ -354,4 +362,5 @@ function NameColumn({
   );
 }
 
-const fmt = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(1)}pp`;
+/** Percentage points ahead of / behind the S&P. "pp" was jargon; the sign and a % read fine. */
+const fmt = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`;

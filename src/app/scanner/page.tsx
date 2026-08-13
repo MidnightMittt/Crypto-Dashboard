@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/Card";
+import { TickerSearch } from "@/components/search/TickerSearch";
 import { ScannerTable } from "@/components/scanner/ScannerTable";
 import {
   rankOpportunities,
@@ -151,6 +152,18 @@ export default async function ScannerPage() {
             </Link>
           </div>
         </div>
+
+        {/*
+          SEARCH FIRST. The ranked list below answers "what looks best right
+          now" across the tracked universe; this answers "what about the one I
+          am actually thinking about", which is the more common question and
+          was previously unanswerable.
+        */}
+        <Card>
+          <CardContent className="py-5">
+            <TickerSearch />
+          </CardContent>
+        </Card>
 
         {/*
           THE ANSWER FIRST, and in full. A scanner that opens on a table makes

@@ -55,6 +55,16 @@ export default function IndustriesPage() {
 
         <FreshnessBanner generatedAt={data.generatedAt} />
 
+        {/* Same clarification the rotation board carries: these are RELATIVE
+            figures, and a reader who takes them for returns reads the whole
+            table backwards in a down market. */}
+        <p className="rounded-md border border-hairline bg-void/30 px-3 py-2 text-[11px] leading-relaxed text-ink-muted">
+          <span className="text-ink">The percentages below compare each industry to the S&amp;P 500</span> — they
+          are not gains. “+5%” means it beat the index by 5 points over that period; the industry itself may
+          still have fallen. “How many are beating the market” is the share of the companies inside it that
+          are individually ahead, which is what separates a move carried by two names from a broad one.
+        </p>
+
         {industries.length === 0 ? (
           <p className="rounded-xl border border-hairline bg-panel/60 px-5 py-6 text-[13px] leading-relaxed text-ink">
             No industry could be built. The proxy ETFs are not ingested — an outage, not an empty market.
@@ -66,9 +76,9 @@ export default function IndustriesPage() {
                 <tr className="border-b border-hairline text-[9px] uppercase tracking-[0.14em] text-ink-faint">
                   <th className="px-4 py-3 font-medium">Industry</th>
                   <th className="px-3 py-3 font-medium">State</th>
-                  <th className="px-3 py-3 text-right font-medium">1m vs SPY</th>
-                  <th className="px-3 py-3 text-right font-medium">6m vs SPY</th>
-                  <th className="px-3 py-3 font-medium">Breadth</th>
+                  <th className="px-3 py-3 text-right font-medium">1 month vs S&amp;P</th>
+                  <th className="px-3 py-3 text-right font-medium">6 months vs S&amp;P</th>
+                  <th className="px-3 py-3 font-medium">How many are beating the market</th>
                   <th className="px-3 py-3 font-medium">Parent sector</th>
                   <th className="px-4 py-3 font-medium">Flag</th>
                 </tr>

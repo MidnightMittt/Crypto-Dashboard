@@ -152,7 +152,7 @@ export function evaluateRelativeStrength(
     verdict,
     confidence: confidenceFrom(p, history.length),
     confidenceBasis: `${history.length} prior sessions of this pair's own relative-strength history; current reading sits at the ${ordinal(Math.round(p * 100))} percentile of it.`,
-    explanation: `Over ${RS_WINDOW} sessions ${instrument.symbol} is ${Math.abs(rsNow).toFixed(1)}pp ${lead} ${benchmark.symbol} — the ${ordinal(Math.round(p * 100))} percentile of its own history against that benchmark.`,
+    explanation: `Over the last ${RS_WINDOW} trading days ${instrument.symbol} is ${Math.abs(rsNow).toFixed(1)}% ${lead} the S&P 500. That is a wider gap than ${Math.round(p * 100)}% of the readings in its own history against the index — so this is ${p >= 0.67 ? "unusually strong" : p <= 0.33 ? "unusually weak" : "unremarkable"} for this name.`,
     whyItMatters:
       "An instrument that persistently lags its benchmark is not participating in the move, whatever its own chart says. Relative strength separates a rising tide from genuine demand.",
     asOf,
@@ -296,7 +296,7 @@ export function evaluateRiskAppetite(
     verdict,
     confidence: confidenceFrom(p, history.length),
     confidenceBasis: `${history.length} prior sessions of the same credit-minus-duration spread; the current reading is at its ${ordinal(Math.round(p * 100))} percentile.`,
-    explanation: `Over ${RISK_WINDOW} sessions ${credit.symbol} is ${spread >= 0 ? "outperforming" : "underperforming"} ${duration.symbol} by ${Math.abs(spread).toFixed(1)}pp — ${verdict === "bullish" ? "money is being paid to take credit risk and is taking it" : verdict === "bearish" ? "capital is rotating into duration, the classic defensive move" : "neither side is decisively favoured"}.`,
+    explanation: `Over the last ${RISK_WINDOW} trading days riskier corporate bonds are ${spread >= 0 ? "beating" : "lagging"} safe government bonds by ${Math.abs(spread).toFixed(1)}% — ${verdict === "bullish" ? "money is willing to take risk to earn more, which usually accompanies a rising stock market" : verdict === "bearish" ? "money is retreating into safety, the classic defensive move" : "neither side is clearly favoured"}.`,
     whyItMatters:
       "Credit turns before equity does more often than not. When high yield stops keeping up with Treasuries, the bid for risk is weakening regardless of where the index is trading.",
     asOf,
@@ -412,7 +412,7 @@ export function evaluateVolatilityRegime(
     verdict,
     confidence: Math.round(confidenceFrom(p, history.length) / 2),
     confidenceBasis: `${history.length} prior sessions of this instrument's own ATR history. Confidence is halved deliberately: the volatility-return relationship is a conditional regularity, not a mechanism.`,
-    explanation: `${instrument.symbol}'s 14-session ATR is ${now.toFixed(2)}% of price — the ${ordinal(Math.round(p * 100))} percentile of its own history. ${verdict === "bearish" ? "Elevated volatility is a headwind; equity vol expands into drawdowns." : verdict === "bullish" ? "Compressed volatility is the benign regime equity advances usually occur in." : "Volatility is unremarkable for this instrument."}`,
+    explanation: `${instrument.symbol} typically moves ${now.toFixed(2)}% in a day right now — more volatile than ${Math.round(p * 100)}% of its own past. ${verdict === "bearish" ? "That is elevated volatility, and stocks tend to get more violent on the way down than on the way up." : verdict === "bullish" ? "That is calm, and calm is the condition most steady advances happen in." : "That is unremarkable for this name."}`,
     whyItMatters:
       "Position size and stop distance both scale with volatility, so the same trade is a different risk in a different regime. In equities specifically, expanding volatility tends to accompany falling prices.",
     asOf,

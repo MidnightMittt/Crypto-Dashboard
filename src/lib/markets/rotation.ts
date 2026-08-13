@@ -62,6 +62,37 @@ export const ROTATION_STATE_MEANING: Record<RotationState, string> = {
   lagging: "Behind over both horizons — capital is elsewhere and has not turned.",
 };
 
+/**
+ * The relative move as a SENTENCE, because the bare number was unreadable.
+ *
+ * The board printed "+5.0" and "-3.3" with nothing saying these are
+ * performance AGAINST THE S&P rather than raw returns — so a sector that
+ * fell 2% in a market that fell 7% displayed "+5.0" and read like a gain.
+ * That is the most misleading thing a rotation board can do, and it cost
+ * one clause to fix.
+ */
+export function describeRelative(relPct: number, horizon: string): string {
+  const size = Math.abs(relPct).toFixed(1);
+  if (Math.abs(relPct) < 0.1) return `matching the S&P over ${horizon}`;
+  return relPct > 0
+    ? `${size}% ahead of the S&P over ${horizon}`
+    : `${size}% behind the S&P over ${horizon}`;
+}
+
+/**
+ * `momentumPct` (short-horizon relative minus long-horizon relative) as a
+ * direction of travel. It was displayed as "shift +5.4" — a number whose
+ * units and sign convention a reader had no way to guess. What it actually
+ * answers is "is this getting stronger or weaker", so it now says that.
+ */
+export function describeMomentum(momentumPct: number): string {
+  if (momentumPct >= 5) return "improving quickly";
+  if (momentumPct >= 1) return "improving";
+  if (momentumPct <= -5) return "deteriorating quickly";
+  if (momentumPct <= -1) return "deteriorating";
+  return "holding steady";
+}
+
 export interface SectorRotation {
   symbol: string;
   name: string;

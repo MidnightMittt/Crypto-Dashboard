@@ -108,7 +108,10 @@ describe("evaluateRelativeStrength", () => {
 
   it("states the percentile it used, so the verdict is auditable", () => {
     const v = evaluateRelativeStrength(flatThenMove("QQQ", 600, 60, 25), series("SPY", 600, 0), ASOF)!;
-    expect(v.explanation).toMatch(/percentile/);
+    // The AUDIT guarantee, which must survive plain language: the reading
+    // states where it sits against its own history, and the precise
+    // percentile stays in confidenceBasis for anyone checking the maths.
+    expect(v.explanation).toMatch(/of the readings in its own history/);
     expect(v.confidenceBasis).toMatch(/percentile/);
   });
 });
@@ -168,7 +171,7 @@ describe("evaluateRiskAppetite", () => {
     const duration = series("TLT", 600, 0);
     const v = evaluateRiskAppetite(credit, duration, ASOF)!;
     expect(v.verdict).toBe("bullish");
-    expect(v.explanation).toMatch(/outperforming/);
+    expect(v.explanation).toMatch(/beating safe government bonds/);
   });
 
   it("reads bearish on a flight to duration", () => {
@@ -176,7 +179,7 @@ describe("evaluateRiskAppetite", () => {
     const duration = series("TLT", 600, 0);
     const v = evaluateRiskAppetite(credit, duration, ASOF)!;
     expect(v.verdict).toBe("bearish");
-    expect(v.explanation).toMatch(/rotating into duration/);
+    expect(v.explanation).toMatch(/retreating into safety/);
   });
 });
 
@@ -264,7 +267,7 @@ describe("evaluateVolatilityRegime", () => {
     const stressed = noisy("SPY", 60, -0.2, 3).bars.map((b, i) => ({ ...b, t: T0 + (540 + i) * DAY }));
     const v = evaluateVolatilityRegime({ symbol: "SPY", bars: [...calm, ...stressed] }, ASOF)!;
     expect(v.verdict).toBe("bearish");
-    expect(v.explanation).toMatch(/Elevated volatility/);
+    expect(v.explanation).toMatch(/elevated volatility/);
   });
 
   it("halves confidence — a conditional regularity must not outweigh a direct read", () => {

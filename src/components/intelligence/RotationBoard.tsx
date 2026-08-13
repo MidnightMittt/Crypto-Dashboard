@@ -3,6 +3,7 @@ import {
   RotationState,
   ROTATION_STATE_LABEL,
   ROTATION_STATE_MEANING,
+  describeMomentum,
 } from "@/lib/markets/rotation";
 
 /**
@@ -39,11 +40,21 @@ export function RotationBoard({ read, narrative }: { read: RotationRead; narrati
           Capital rotation
         </h2>
         <span className="font-mono text-[10px] text-ink-faint">
-          {read.sectors.length} sectors vs {read.benchmark} · dispersion {read.dispersionPct.toFixed(1)}pp
+          {read.sectors.length} sectors · {read.dispersionPct.toFixed(1)}% between best and worst
         </span>
       </div>
 
       {narrative && <p className="mt-2 max-w-4xl text-[13px] leading-relaxed text-ink">{narrative}</p>}
+
+      {/* THE MISSING SENTENCE. Every figure below is performance AGAINST the
+          S&P, not a raw return — without saying so, a sector that fell 2%
+          while the market fell 7% shows "+5.0" and reads like a gain. */}
+      <p className="mt-2 rounded-md border border-hairline bg-void/30 px-3 py-2 text-[11px] leading-relaxed text-ink-muted">
+        <span className="text-ink">Read these as “compared to the S&amp;P 500”, not as gains.</span> A sector
+        showing +5% beat the index by 5 points over the last month — it may still have fallen, if the market
+        fell further. That is the point: this board is about where money is moving relative to everything
+        else, which is visible long before it shows up in a price chart.
+      </p>
 
       <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {ORDER.map((state) => {
@@ -82,15 +93,18 @@ export function RotationBoard({ read, narrative }: { read: RotationRead; narrati
                           />
                           <span className="absolute left-1/2 top-0 h-full w-px bg-hairline" />
                         </div>
-                        <span className={`w-14 shrink-0 text-right font-mono text-[11px] ${cfg.accent}`}>
+                        <span className={`w-16 shrink-0 text-right font-mono text-[11px] ${cfg.accent}`}>
                           {s.shortRelPct >= 0 ? "+" : ""}
-                          {s.shortRelPct.toFixed(1)}
+                          {s.shortRelPct.toFixed(1)}%
                         </span>
                       </div>
-                      <p className="mt-0.5 font-mono text-[9px] text-ink-faint">
-                        6m {s.longRelPct >= 0 ? "+" : ""}
-                        {s.longRelPct.toFixed(1)}pp · shift {s.momentumPct >= 0 ? "+" : ""}
-                        {s.momentumPct.toFixed(1)}
+                      {/* Both horizons named, and momentum as a DIRECTION rather
+                          than as "shift +5.4" — a number whose units and sign
+                          convention the reader had no way to guess. */}
+                      <p className="mt-0.5 text-[10px] leading-relaxed text-ink-faint">
+                        <span className="text-ink-muted">vs S&amp;P:</span> {s.shortRelPct >= 0 ? "+" : ""}
+                        {s.shortRelPct.toFixed(1)}% over 1 month, {s.longRelPct >= 0 ? "+" : ""}
+                        {s.longRelPct.toFixed(1)}% over 6 — {describeMomentum(s.momentumPct)}
                       </p>
                     </li>
                   ))}
