@@ -1,6 +1,6 @@
 import { BiasChange, MarketBias, MetricVerdict, RiskLevel, Verdict } from "./types";
 import { agreementOf } from "./confidence";
-import { computeWeightedScore, metricWeight, rankMetric } from "./scoring";
+import { computeWeightedScore, metricWeight, rankMetric, clusterOf } from "./scoring";
 import { buildAllCategories, buildTrendStrength, combineCategoryScores } from "./categories";
 import { TechnicalRead } from "@/types/market";
 import { RegimeTags } from "@/lib/technicals/regimes";
@@ -184,14 +184,39 @@ export function buildMarketBias(inputs: MarketBiasInputs): MarketBias | null {
   const risk = assessRisk(metrics, technicals, squeezeScore);
 
   /*
-   * Agreement across the metrics themselves, NOT a restatement of
-   * confidence. Liquidations is excluded because it is permanently neutral
-   * by design, and counting a metric that can never take a side would
-   * dilute every agreement figure identically and meaninglessly.
+   * Agreement across DECORRELATED CLUSTERS, not raw metrics (redesign §4/§9).
+   * funding, basis, squeezeRisk and longShort all read one leveraged-demand
+   * phenomenon; counting their concurrence as four independent opinions
+   * inflated agreement exactly when those four moved together — which is
+   * when a user most needs the number honest. Each unanimous cluster
+   * contributes ONE opinion; a cluster whose members point both ways
+   * contributes a vote on each side, because two reads of one phenomenon
+   * disagreeing is a real conflict, not a consensus to net out. Singleton
+   * clusters reproduce the old per-metric behavior exactly, so only the
+   * leverage family's counting changes.
    */
-  const agreement = Math.round(
-    agreementOf(metrics.filter((m) => metricWeight(m.id) > 0).map((m) => m.verdict)) * 100
-  );
+  const clusterSides = new Map<string, { bull: boolean; bear: boolean }>();
+  for (const m of metrics) {
+    if (metricWeight(m.id) <= 0) continue;
+    const cluster = clusterOf(m.id);
+    const sides = clusterSides.get(cluster) ?? { bull: false, bear: false };
+    if (m.verdict === "bullish") sides.bull = true;
+    if (m.verdict === "bearish") sides.bear = true;
+    clusterSides.set(cluster, sides);
+  }
+  const clusterVerdicts: Verdict[] = [];
+  for (const sides of clusterSides.values()) {
+    if (sides.bull && sides.bear) {
+      // A cluster whose members point both ways is NOT collapsed to its net
+      // sign here — two reads of one phenomenon disagreeing is exactly the
+      // kind of conflict this figure exists to surface, so a split cluster
+      // counts as one disagreement (a vote on each side), never as consensus.
+      clusterVerdicts.push("bullish", "bearish");
+    } else {
+      clusterVerdicts.push(sides.bull ? "bullish" : sides.bear ? "bearish" : "neutral");
+    }
+  }
+  const agreement = Math.round(agreementOf(clusterVerdicts) * 100);
 
   /*
    * Opportunity and counter-risk are the best-supported metric on each side

@@ -135,8 +135,11 @@ agreement-quartile table (52→57%) suggests the correlation is weak at best.
 > honest and mostly humbling — bearish:clear:bear is the standout
 > (65.4% vs 57.5% blind, +7.8pp, n=153) while bearish:leaning:bear
 > UNDERPERFORMS blind shorts by 6.9pp — and thin cells print
-> "uncalibrated" as designed. Cluster-decorrelated agreement is the
-> remaining §9 item. Agreement, by contrast, showed real lift in its top quartile on
+> "uncalibrated" as designed. Cluster-decorrelated agreement then
+> SHIPPED as the final §9 item: the leverage family (funding, basis,
+> squeezeRisk, longShort) counts as one opinion, a self-split cluster
+> counts as a disagreement, and the replayed quartiles separate more
+> cleanly (51/49/53/56, top quartile p=0.025 vs the drift null). Agreement, by contrast, showed real lift in its top quartile on
 > the post-taxonomy replay (56.4%, n=328) and stays a live candidate.
 
 **H3 — Unexamined constants.** DIRECTIONAL_THRESHOLD=6 (chosen for display

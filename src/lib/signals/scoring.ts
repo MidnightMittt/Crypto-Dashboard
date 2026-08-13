@@ -113,6 +113,27 @@ const TRANSITIONAL_STATE_VOTERS: Record<string, number> = {
   equityVolatilityRegime: 0.05,
 };
 
+/**
+ * CORRELATION CLUSTERS among the Edge voters — the redesign's §4
+ * double-counting map, made executable. funding, basis, squeezeRisk and
+ * longShort all read the same leveraged-demand phenomenon; when they agree
+ * it is ONE cluster agreeing, and any statistic that counts them as four
+ * independent opinions inflates exactly when a user most needs it honest.
+ * Every edge voter not named here is its own cluster. Used by
+ * marketBias.ts's agreement figure; the SCORE still weights metrics
+ * individually — clustering fixes the concurrence claim, not the vote.
+ */
+export const EDGE_CLUSTERS: Record<string, string> = {
+  funding: "leverage",
+  basis: "leverage",
+  squeezeRisk: "leverage",
+  longShort: "leverage",
+};
+
+export function clusterOf(id: string): string {
+  return EDGE_CLUSTERS[id] ?? id;
+}
+
 /** Score distance from 50 beyond which a roll-up reads as directional rather than balanced. */
 export const DIRECTIONAL_THRESHOLD = 6;
 

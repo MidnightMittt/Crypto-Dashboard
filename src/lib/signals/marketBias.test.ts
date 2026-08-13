@@ -326,6 +326,29 @@ describe("agreement, opportunity and counter-risk", () => {
     expect(bias.agreement).toBe(0);
   });
 
+  it("counts the leverage cluster as ONE opinion, not four", () => {
+    // funding+basis+squeezeRisk+longShort all read leveraged demand (§4's
+    // double-counting map). All four bullish + etfFlows bearish used to read
+    // 4-vs-1 (60% agreement); under cluster counting it is 1-vs-1 — an even
+    // split, agreement 0.
+    const bias = build([
+      metric("funding", "bullish"),
+      metric("basis", "bullish"),
+      metric("squeezeRisk", "bullish"),
+      metric("longShort", "bullish"),
+      metric("etfFlows", "bearish"),
+    ])!;
+    expect(bias.agreement).toBe(0);
+  });
+
+  it("a cluster split against itself is a disagreement, never netted into consensus", () => {
+    // funding bullish vs squeezeRisk bearish are two reads of one
+    // phenomenon in conflict — collapsing to the net sign would print 100%
+    // agreement out of a direct contradiction.
+    const bias = build([metric("funding", "bullish"), metric("squeezeRisk", "bearish")])!;
+    expect(bias.agreement).toBe(0);
+  });
+
   it("keeps agreement distinct from confidence — unanimous but thin scores high then low", () => {
     // The case the two-number split exists to expose: everything agrees, but
     // nothing behind it is well-evidenced.
