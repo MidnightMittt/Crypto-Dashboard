@@ -3,6 +3,7 @@ import { readPlannedSetups } from "../signals/plannedSetup";
 import { SetupSummary } from "../signals/opportunityRanking";
 import { ALL_ASSETS } from "./registry";
 import { getAggregateForAsset } from "./aggregator";
+import { regimeTagsToStrings } from "@/lib/technicals/regimes";
 import { swr } from "../cache/swr";
 import {
   AssetComposite,
@@ -53,6 +54,7 @@ async function getAssetComposite(
         headline: agg.marketBias.headline,
         agreement: agg.marketBias.agreement,
         riskLevel: agg.marketBias.riskLevel,
+        regimeTags: agg.marketThesis?.regimeTags ? regimeTagsToStrings(agg.marketThesis.regimeTags) : null,
         setup: summariseSetup(agg),
         reasonsFor: sideReasons(agg.marketBias, "for"),
         reasonsAgainst: sideReasons(agg.marketBias, "against"),

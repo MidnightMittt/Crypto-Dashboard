@@ -6,6 +6,7 @@ import {
 } from "@/lib/signals/opportunityRanking";
 import { intensityLabel } from "@/lib/signals/scoring";
 import { hrefFor, verdictTone, RISK_TONE } from "./shared";
+import { ScoreCalibrationLine } from "@/components/dashboard/ScoreCalibrationLine";
 
 /**
  * THE ANSWER, BEFORE THE TABLE.
@@ -89,6 +90,19 @@ export function TopOpportunity({
         </div>
 
         <p className="max-w-3xl text-[14px] leading-relaxed text-ink">{lead.headline}</p>
+
+        {/*
+          What reads LIKE THIS ONE actually did (24h hit rate vs the
+          regime-conditional drift null) — renders only for the replayed
+          universe (BTC/ETH) with a known regime; see the component's own
+          refusal rules. The one probability-shaped sentence on this page.
+        */}
+        <ScoreCalibrationLine
+          asset={lead.asset}
+          score={lead.score}
+          verdict={lead.verdict}
+          regimeTags={lead.regimeTags ?? null}
+        />
 
         {lead.setup ? (
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-md border border-hairline bg-void/40 px-4 py-3">

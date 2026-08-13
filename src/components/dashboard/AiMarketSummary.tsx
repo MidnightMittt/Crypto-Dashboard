@@ -19,7 +19,8 @@ import {
   DimensionStance,
   Lean,
 } from "@/lib/sentiment/technicalDimensions";
-import { lookupBiasVerdictStat, lookupScoreCalibration, BacktestMetricStats, ExecutionStatsSnapshot } from "@/lib/sentiment/backtestStats";
+import { lookupBiasVerdictStat, ExecutionStatsSnapshot } from "@/lib/sentiment/backtestStats";
+import { ScoreCalibrationLine } from "./ScoreCalibrationLine";
 import { RegimeTags, regimeTagsToStrings } from "@/lib/technicals/regimes";
 import { BiasHistoryEntry } from "@/lib/history/biasHistory";
 import { HarmonicEvidence } from "@/lib/signals/harmonicEvidence";
@@ -27,10 +28,8 @@ import { formatPrice } from "@/lib/utils/format";
 import { TimelineList } from "./MarketThesisTimeline";
 import backtestStats from "@/data/backtestStats.json";
 import executionStatsJson from "@/data/executionStats.json";
-import backtestMetricStatsJson from "@/data/backtestMetricStats.json";
 
 const executionStats = executionStatsJson as unknown as ExecutionStatsSnapshot;
-const backtestMetricStats = backtestMetricStatsJson as unknown as BacktestMetricStats;
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -293,7 +292,7 @@ function Decision({
         */}
         <p className="text-[13px] leading-relaxed text-ink">{bias.headline}</p>
 
-        <ScoreCalibrationLine score={bias.score} verdict={bias.verdict} regimeTags={thesis?.regimeTags ?? null} />
+        <ScoreCalibrationLine asset={bias.asset} score={bias.score} verdict={bias.verdict} regimeTags={thesis?.regimeTags ? regimeTagsToStrings(thesis.regimeTags) : null} />
 
         {/*
           TACTICAL, kept visually and semantically separate from the action
@@ -384,62 +383,6 @@ function Decision({
  * clears MIN_SAMPLE_N, so a thin bucket says nothing rather than stating a
  * number with false confidence.
  */
-/**
- * THE CALIBRATED-PROBABILITY LINE (redesign §9): what reads LIKE TODAY'S —
- * same direction, same score strength, same trend regime — actually did
- * over the next 24h, quoted against the regime-conditional drift null they
- * had to beat. The one sentence on the page that is allowed to sound like
- * a probability, because it is one: an empirical rate with its interval
- * and effective sample attached.
- *
- * Renders the explicit "uncalibrated" state when the cell is too thin —
- * §9's rule is that a thin bucket says so rather than borrowing the global
- * rate — and nothing at all on a neutral read, which asserts no direction
- * to calibrate.
- */
-function ScoreCalibrationLine({
-  score,
-  verdict,
-  regimeTags,
-}: {
-  score: number;
-  verdict: MarketBias["verdict"];
-  regimeTags: RegimeTags | null;
-}) {
-  if (verdict === "neutral") return null;
-  const tags = regimeTags ? regimeTagsToStrings(regimeTags) : [];
-  const cell = lookupScoreCalibration(backtestMetricStats, score, verdict, tags);
-  const strength = Math.abs(score - 50) >= 15 ? "clearly" : "leaning";
-  const trend = tags.includes("bull") ? "bull-trend" : tags.includes("bear") ? "bear-trend" : "trendless";
-
-  if (!cell) {
-    return (
-      <p className="max-w-4xl text-[12px] leading-relaxed text-ink-faint">
-        Historically {strength} {verdict} reads during {trend} regimes are too rare in the
-        backtested window to quote a rate — this setup is uncalibrated, which is itself worth
-        knowing before sizing anything.
-      </p>
-    );
-  }
-
-  const edgeWord = cell.edgePP >= 1 ? "text-success" : cell.edgePP <= -1 ? "text-danger" : "text-ink-faint";
-  return (
-    <p className="max-w-4xl text-[12px] leading-relaxed text-ink-muted">
-      Reads like this one ({strength} {verdict}, {trend} regime) moved with the read{" "}
-      <span className="font-mono text-ink">{cell.hitRatePct.toFixed(0)}%</span> of the time over the
-      next 24h (95% CI {(cell.interval.lower * 100).toFixed(0)}–{(cell.interval.upper * 100).toFixed(0)}%,{" "}
-      {cell.n} occurrences ≈ {cell.effectiveN} independent) vs{" "}
-      <span className="font-mono">{cell.nullRatePct.toFixed(0)}%</span> for blind {verdict} exposure in
-      that regime —{" "}
-      <span className={`font-mono ${edgeWord}`}>
-        {cell.edgePP >= 0 ? "+" : ""}
-        {cell.edgePP.toFixed(1)}pp
-      </span>{" "}
-      of measured edge.
-    </p>
-  );
-}
-
 function BiasBacktestStatLine({ verdict }: { verdict: MarketBias["verdict"] }) {
   const stat = lookupBiasVerdictStat(backtestStats, verdict);
   if (!stat) return null;

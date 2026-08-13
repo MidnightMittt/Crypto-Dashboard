@@ -71,6 +71,8 @@ export interface ScannableMarket {
   assetClass?: AssetClass;
   agreement?: number;
   riskLevel?: string;
+  /** Trend/vol regime tags, present only for crypto composites — see AssetComposite.regimeTags. */
+  regimeTags?: string[] | null;
   setup?: SetupSummary | null;
   /** The engine's own top explanations, agreeing and opposing. Verbatim. */
   reasonsFor?: string[];
@@ -85,6 +87,8 @@ export interface RankedOpportunity {
   assetClass?: AssetClass;
   agreement?: number;
   riskLevel?: string;
+  /** Trend/vol regime tags, present only for crypto composites — see AssetComposite.regimeTags. */
+  regimeTags?: string[] | null;
   setup?: SetupSummary | null;
   reasonsFor?: string[];
   reasonsAgainst?: string[];
@@ -127,6 +131,7 @@ export function rankOpportunities(composites: ScannableMarket[]): RankedOpportun
         assetClass: c.assetClass,
         agreement: c.agreement,
         riskLevel: c.riskLevel,
+        regimeTags: c.regimeTags ?? null,
         setup: c.setup,
         reasonsFor: c.reasonsFor,
         reasonsAgainst: c.reasonsAgainst,

@@ -29,6 +29,7 @@ function composite(asset: string, score: number, confidence: number, verdict: Ve
     headline: `${asset} headline`,
     agreement: 0,
     riskLevel: "medium",
+  regimeTags: null,
     setup: null,
     reasonsFor: [],
     reasonsAgainst: [],

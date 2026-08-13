@@ -30,6 +30,13 @@ export interface AssetComposite {
   /** `bias.riskLevel`, passed through for the same reason. */
   riskLevel: RiskLevel;
   /**
+   * The live trend/vol regime tags for this asset (regimeTagsToStrings
+   * output), carried so a decision surface can look up regime-conditional
+   * statistics — the score-calibration cells most immediately. Null when
+   * the thesis layer produced no classification.
+   */
+  regimeTags: string[] | null;
+  /**
    * The engine's current plan for this asset, if it has one — an ACTIVE swing
    * thesis first, otherwise the favoured PLANNED setup waiting on a level.
    * Null when neither exists, which is the majority of days and is a finding
