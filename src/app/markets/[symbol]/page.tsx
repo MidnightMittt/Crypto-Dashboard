@@ -5,8 +5,20 @@ import { Collapsible } from "@/components/ui/Collapsible";
 import { EvidenceModuleDetail } from "@/components/evidence/EvidenceModuleDetail";
 import { StructureLadder, LadderMarker } from "@/components/markets/StructureLadder";
 import { MarketBias, MetricVerdict, CategoryScore } from "@/lib/signals/types";
-import { TradePlan, TradePlanRefusal, TRADE_PLAN_REFUSAL_TEXT } from "@/lib/signals/tradePlan";
+import {
+  TradePlan,
+  TradePlanRefusal,
+  TRADE_PLAN_REFUSAL_TEXT,
+  TRADE_PLAN_REFUSAL_SHORT,
+} from "@/lib/signals/tradePlan";
 import { EarningsVetoResult } from "@/lib/markets/earningsVeto";
+import { equityVerdict } from "@/lib/markets/equityVerdict";
+import {
+  describeAgreement,
+  describeConviction,
+  evidenceLevel,
+  strengthStars,
+} from "@/lib/signals/plainLanguage";
 import { SupportResistanceZone } from "@/lib/technicals/marketStructure";
 import { intensityLabel, DIRECTIONAL_THRESHOLD } from "@/lib/signals/scoring";
 import { CATEGORY_WEIGHTS, CATEGORY_ORDER, CATEGORY_LABELS } from "@/lib/signals/categories";
@@ -67,9 +79,21 @@ export default async function MarketDetailPage({ params }: { params: Promise<{ s
 
   const { bias, plan } = decision;
   const tone = verdictTone(bias.verdict);
-  const leadSide = bias.verdict === "bearish" ? bias.topBearish : bias.topBullish;
-  const againstSide = bias.verdict === "bearish" ? bias.topBullish : bias.topBearish;
-  const structure = bias.metrics.find((m) => m.id === "marketStructure") ?? null;
+
+  /*
+   * The headline answer, derived by the same gated rule the crypto side
+   * uses: a directional read whose plan was REFUSED reads WAIT, never
+   * "bullish". See equityVerdict.ts — the word has to survive every gate,
+   * or it is marketing.
+   */
+  const verdict = equityVerdict({
+    bias,
+    plan,
+    refusal: decision.planRefusal,
+    earningsDate: decision.earnings?.date ?? null,
+  });
+  const stars = strengthStars(bias.score);
+  const evidence = evidenceLevel(bias.confidence);
 
   const markers: LadderMarker[] = plan
     ? [
@@ -102,185 +126,145 @@ export default async function MarketDetailPage({ params }: { params: Promise<{ s
           </Link>
         </div>
 
-        {/* ── THE DECISION ──────────────────────────────────────────────── */}
+        {/* ── 1. THE ANSWER ─────────────────────────────────────────────
+            Bullish, bearish or neither, and what to do about it. Everything
+            about HOW the engine got here moves below the plan — a reader
+            came to decide, not to audit, and the audit is one click away. */}
         <Card>
           <CardContent className="flex flex-col gap-3 py-5">
-            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <span className={`text-2xl font-bold uppercase leading-none tracking-[0.04em] sm:text-3xl ${tone}`}>
-                {intensityLabel(bias.score)}
-                {bias.basis === "state" && <span className="text-ink-muted"> conditions</span>}
+            <div className="flex items-center gap-3">
+              <span className="text-4xl leading-none sm:text-5xl" aria-hidden>
+                {verdict.emoji}
               </span>
-              <span className="font-mono text-lg leading-none text-ink">{bias.score}</span>
-              <span className="text-[11px] text-ink-faint">
-                / 100 · Data Quality {bias.confidence}% · Agreement {bias.agreement}%
-              </span>
+              <div className="flex flex-col gap-0.5">
+                <span
+                  className={`text-3xl font-black uppercase leading-none tracking-[0.04em] sm:text-4xl ${verdict.tone}`}
+                >
+                  {verdict.word}
+                </span>
+                <span className="text-[11px] uppercase tracking-[0.16em] text-ink-faint">
+                  {decision.symbol} · daily
+                </span>
+              </div>
             </div>
-            <p className="text-[13px] leading-relaxed text-ink">{bias.headline}</p>
-            {bias.basis === "state" && (
-              <p className="border-t border-hairline pt-2 text-[11px] leading-relaxed text-ink-faint">
-                <span className="font-semibold uppercase tracking-[0.12em] text-ink-muted">
-                  Market state, not edge
-                </span>{" "}
-                · Every equity module here (relative strength, breadth, trend quality, risk appetite,
-                volatility regime) DESCRIBES current conditions. None has a measured forward record, so this
-                score claims what the market is — never what it does next. The crypto composite is the
-                different, backtested question.
-              </p>
-            )}
+
+            <p className="text-[15px] leading-relaxed text-ink">{verdict.sentence}</p>
+
+            {/* Strength and evidence as WORDS. The exact figures live in the
+                workings section, where someone auditing the read will look. */}
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-hairline pt-3">
+              <div className="flex items-baseline gap-2">
+                <span className="text-[10px] uppercase tracking-[0.14em] text-ink-faint">Strength</span>
+                <span className={`font-mono text-sm ${tone}`} aria-label={`${stars} out of 5`}>
+                  {"●".repeat(stars)}
+                  <span className="text-ink-faint">{"○".repeat(5 - stars)}</span>
+                </span>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-[10px] uppercase tracking-[0.14em] text-ink-faint">Evidence</span>
+                <span
+                  className={`text-sm capitalize ${
+                    evidence === "strong" ? "text-success" : evidence === "moderate" ? "text-amber" : "text-danger"
+                  }`}
+                >
+                  {evidence}
+                </span>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-[10px] uppercase tracking-[0.14em] text-ink-faint">Signals</span>
+                <span className="text-sm text-ink-muted">{describeAgreement(bias.agreement)}</span>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        {/* ── DATA QUALITY, EXPLAINED ───────────────────────────────────── */}
+        {/* ── 2. THE PLAN ───────────────────────────────────────────────
+            The second thing on the page, always — either the levels, or the
+            plain reason there are none. */}
         <Card>
           <CardContent className="flex flex-col gap-3 py-5">
-            <SectionTitle>Data Quality · {bias.confidence}%</SectionTitle>
-            <p className="text-[12px] leading-relaxed text-ink-muted">
-              This measures <span className="text-ink">evidence quality</span>, not the probability of a
-              move. {bias.confidence}% means the read rests on{" "}
-              {bias.confidence >= 65 ? "solid, agreeing" : bias.confidence >= 40 ? "partial" : "thin"} data —
-              never that price rises {bias.confidence}% of the time. Agreement ({bias.agreement}%) is the
-              separate question of whether the modules concur with{" "}
-              <span className="text-ink">each other</span>; a unanimous read built on thin data is high
-              agreement and low data quality, which is exactly the case worth seeing.
-            </p>
-            <ConfidenceDrivers bias={bias} />
-          </CardContent>
-        </Card>
-
-        {/* ── TECHNICAL SUMMARY (the category rollups) ──────────────────── */}
-        <Card>
-          <CardContent className="flex flex-col gap-3 py-5">
-            <SectionTitle>Technical summary</SectionTitle>
-            <p className="text-[12px] leading-relaxed text-ink-muted">
-              The four questions the engine scores separately before combining them. Where they disagree,
-              the composite is a compromise rather than a consensus — worth knowing before acting on it.
-            </p>
-            <CategoryGrid categories={bias.categories} />
-          </CardContent>
-        </Card>
-
-        {/* ── MARKET STRUCTURE + LEVELS ─────────────────────────────────── */}
-        <Card>
-          <CardContent className="flex flex-col gap-4 py-5">
-            {/*
-              Titled "Structure & levels", not "Market Structure", on purpose.
-              `marketStructure` is BOTH a metric id and a category id, and a
-              page that used the same words for the swing-sequence module and
-              for the four-module category above it would leave a reader unable
-              to tell which "Market Structure 60" referred to.
-            */}
-            <SectionTitle>Structure &amp; levels</SectionTitle>
-            {structure ? (
+            <SectionTitle>{plan ? "The plan" : "Why there is no trade"}</SectionTitle>
+            {plan ? (
               <>
-                <p className="-mt-1 text-[11px] leading-relaxed text-ink-faint">
-                  The swing-sequence reading — one of the {
-                    bias.categories.find((c) => c.category === "marketStructure")?.metrics.length ?? 1
-                  }{" "}
-                  modules inside the Market Structure category above, shown in full because it is what a
-                  stop is placed against.
+                <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 lg:grid-cols-5">
+                  <PlanStat
+                    label={bias.verdict === "bearish" ? "Sell zone" : "Buy zone"}
+                    value={`${formatPrice(plan.entryLow)}–${formatPrice(plan.entryHigh)}`}
+                  />
+                  <PlanStat label="Get out if it hits" value={formatPrice(plan.stopPrice)} tone="text-danger" />
+                  <PlanStat label="First target" value={formatPrice(plan.target1Price)} tone="text-success" />
+                  <PlanStat label="Second target" value={formatPrice(plan.target2Price)} tone="text-success" />
+                  <PlanStat
+                    label="Reward vs risk"
+                    value={`${plan.riskRewardRatio.toFixed(1)}× to first`}
+                  />
+                </div>
+
+                <p className="rounded-md border border-amber/20 bg-amber/[0.04] px-3 py-2 text-[13px] leading-relaxed text-ink">
+                  <span className="font-semibold uppercase tracking-[0.12em] text-amber">If it goes wrong</span> · A
+                  daily close beyond {formatPrice(plan.stopPrice)} means the reason for this trade is gone — not that
+                  price simply moved. That level sits past the support the whole idea rests on, so losing it ends the
+                  thesis rather than testing it.
                 </p>
-                <EvidenceModuleDetail metric={structure} allMetrics={bias.metrics} basis={bias.basis} />
+
+                <p className="text-[12px] leading-relaxed text-ink-muted">
+                  You risk {formatPrice(Math.abs(plan.entryRef - plan.stopPrice))} per share to make{" "}
+                  {formatPrice(Math.abs(plan.target1Price - plan.entryRef))} at the first target — about{" "}
+                  {plan.riskRewardRatio.toFixed(1)} times what you put up. Waiting for the buy zone rather than buying
+                  here is what produces that ratio; chasing the price changes the trade.
+                </p>
+
+                <Collapsible title="Where these levels came from" summary="the reasoning behind each price">
+                  <dl className="flex flex-col gap-1 text-[11px] leading-relaxed">
+                    <LevelBasis label="Entry" basis={plan.entryBasis} />
+                    <LevelBasis label="Stop" basis={plan.stopBasis} />
+                    <LevelBasis label="Target 1" basis={plan.target1Basis} />
+                    <LevelBasis label="Target 2" basis={plan.target2Basis} />
+                  </dl>
+                  <p className="mt-3 text-[11px] leading-relaxed text-ink-faint">
+                    Quality {plan.stars}/5. {plan.starRationale}{" "}
+                    <span className="text-ink-muted">
+                      This rating is computed WITHOUT a historical win rate:
+                    </span>{" "}
+                    there is no equity trade-by-trade replay yet, so the one input that measures whether comparable
+                    trades actually finished green is missing. Treat the geometry as sound and the rating as
+                    incomplete.
+                  </p>
+                </Collapsible>
               </>
             ) : (
-              <p className="text-xs leading-relaxed text-ink-faint">
-                Not enough swing history to read a structural sequence. Two swing highs and two swing lows
-                are the minimum that can express a sequence at all — one pivot is a location, not a
-                direction.
-              </p>
+              <NoSetup bias={bias} refusal={decision.planRefusal} earnings={decision.earnings} />
             )}
-
-            <div className="border-t border-hairline pt-4">
-              <h3 className="mb-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
-                Support &amp; resistance{plan ? ", with the plan's levels" : ""}
-              </h3>
-              <StructureLadder
-                zones={decision.zones}
-                currentPrice={decision.lastClose}
-                markers={markers}
-                atrPct={decision.atrPct}
-              />
-            </div>
           </CardContent>
         </Card>
 
-        {/* ── EVIDENCE ──────────────────────────────────────────────────── */}
+        {/* ── 3. WHY ────────────────────────────────────────────────────── */}
         <Card>
           <CardContent className="flex flex-col gap-4 py-5">
-            <SectionTitle>Evidence</SectionTitle>
+            <SectionTitle>Why</SectionTitle>
             <div className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
-              <EvidenceList title="Evidence for" mark="✓" markClass="text-success" items={leadSide} empty="None." />
               <EvidenceList
-                title="Evidence against"
+                title="Points up"
+                mark="✓"
+                markClass="text-success"
+                items={bias.topBullish}
+                empty="Nothing currently argues for the upside."
+              />
+              <EvidenceList
+                title="Points down"
                 mark="✕"
                 markClass="text-danger"
-                items={againstSide}
-                empty="Nothing material argues the other way."
+                items={bias.topBearish}
+                empty="Nothing currently argues for the downside."
               />
             </div>
-
-            <div className="border-t border-hairline pt-4">
-              <Collapsible
-                title="Every reading, in full"
-                summary={`${bias.metrics.length} modules · evidence, measurements and what would flip each one`}
-              >
-                <ul className="flex flex-col gap-5">
-                  {bias.metrics.map((m) => (
-                    <li key={m.id} className="border-l border-hairline pl-4">
-                      <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-ink">
-                        {m.label}
-                      </h4>
-                      <EvidenceModuleDetail metric={m} allMetrics={bias.metrics} basis={bias.basis} />
-                    </li>
-                  ))}
-                </ul>
-              </Collapsible>
-            </div>
-
-            {/*
-              Naming what is ABSENT is as important as what is present. A
-              reader who knows crypto scores on eighteen modules needs to see
-              that Positioning is structurally empty here, not omitted.
-            */}
-            <p className="border-t border-hairline pt-3 text-[11px] leading-relaxed text-ink-faint">
-              <span className="text-ink-muted">Not available for equities:</span> funding, open interest,
-              liquidations and on-chain have no equity analogue and are structurally absent, not missing.
-              ETF flows, earnings and options flow are not built — no provider for them is ingested. The
-              score renormalises over the evidence that exists rather than treating absent modules as zero.
-              This gap is permanent for the derivatives modules and a backlog item only for the rest.
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* ── RISK ──────────────────────────────────────────────────────── */}
-        <Card>
-          <CardContent className="flex flex-col gap-3 py-5">
-            <div className="flex flex-wrap items-baseline gap-x-3">
-              <SectionTitle>Risk</SectionTitle>
-              <span
-                className={`text-sm font-semibold uppercase tracking-[0.06em] ${
-                  bias.riskLevel === "high"
-                    ? "text-danger"
-                    : bias.riskLevel === "medium"
-                      ? "text-amber"
-                      : "text-success"
-                }`}
-              >
-                {bias.riskLevel}
-              </span>
-              {decision.atrPct !== null && (
-                <span className="font-mono text-[11px] text-ink-faint">
-                  Daily range {decision.atrPct.toFixed(2)}% (ATR)
-                </span>
-              )}
-            </div>
-            <p className="text-[13px] leading-relaxed text-ink">{bias.riskRationale}</p>
 
             {bias.counterRisk && (
               <div className="border-t border-hairline pt-3">
                 <h3 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
                   The most likely reason this is wrong
                 </h3>
-                <p className="mt-1.5 text-xs leading-relaxed text-ink">
+                <p className="mt-1.5 text-[13px] leading-relaxed text-ink">
                   <span className="text-ink-muted">{bias.counterRisk.label} · </span>
                   {bias.counterRisk.explanation}
                 </p>
@@ -290,13 +274,13 @@ export default async function MarketDetailPage({ params }: { params: Promise<{ s
             {bias.watchNext.length > 0 && (
               <div className="border-t border-hairline pt-3">
                 <h3 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
-                  Closest to flipping
+                  What would change this
                 </h3>
                 <ul className="mt-1.5 flex flex-col gap-1">
                   {bias.watchNext.map((m) => (
-                    <li key={m.id} className="text-[11px] leading-relaxed text-ink-muted">
+                    <li key={m.id} className="text-[12px] leading-relaxed text-ink-muted">
                       <span className="text-ink">{m.label}</span>
-                      {m.nextTrigger ? ` ${m.nextTrigger}` : " has no stated threshold to cross"}
+                      {m.nextTrigger ? ` ${m.nextTrigger}` : " has no stated level to cross"}
                     </li>
                   ))}
                 </ul>
@@ -305,56 +289,107 @@ export default async function MarketDetailPage({ params }: { params: Promise<{ s
           </CardContent>
         </Card>
 
-        {/* ── TRADE PLAN ────────────────────────────────────────────────── */}
+        {/* ── 4. PRICE LEVELS ───────────────────────────────────────────── */}
         <Card>
           <CardContent className="flex flex-col gap-3 py-5">
-            <SectionTitle>Trade plan</SectionTitle>
-            {plan ? (
-              <>
-                <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 lg:grid-cols-6">
-                  <PlanStat label="Entry" value={`${formatPrice(plan.entryLow)}–${formatPrice(plan.entryHigh)}`} />
-                  <PlanStat label="Stop" value={formatPrice(plan.stopPrice)} tone="text-danger" />
-                  <PlanStat label="Target 1" value={formatPrice(plan.target1Price)} tone="text-success" />
-                  <PlanStat label="Target 2" value={formatPrice(plan.target2Price)} tone="text-success" />
-                  <PlanStat label="Risk / Reward" value={`${plan.riskRewardRatio.toFixed(2)}R`} />
-                  <PlanStat label="To Target 2" value={`${plan.riskRewardRatio2.toFixed(2)}R`} />
+            <SectionTitle>Price levels that matter</SectionTitle>
+            <p className="text-[12px] leading-relaxed text-ink-muted">
+              Where price sits against the levels it has repeatedly reacted to. These are what a stop is placed
+              against — a level is only meaningful because buyers or sellers have defended it before.
+            </p>
+            <StructureLadder
+              zones={decision.zones}
+              currentPrice={decision.lastClose}
+              markers={markers}
+              atrPct={decision.atrPct}
+            />
+            <p className="text-[11px] leading-relaxed text-ink-faint">
+              <span className="text-ink-muted">Typical daily move · </span>
+              {decision.atrPct === null
+                ? "not measurable from the available history."
+                : `${decision.atrPct.toFixed(2)}% of price. A stop closer than that would be hit by ordinary movement rather than by the idea being wrong.`}
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* ── 5. THE FULL WORKINGS ──────────────────────────────────────
+            Everything the page used to open with. Nothing was deleted; it
+            was demoted, because a reader deciding whether to buy does not
+            need the engine's self-assessment before the answer. */}
+        <Card>
+          <CardContent className="py-2">
+            <Collapsible
+              title="Show the full workings"
+              summary={`the score, how confident it is, and all ${bias.metrics.length} readings behind it`}
+            >
+              <div className="flex flex-col gap-6 pt-2">
+                <div>
+                  <h3 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
+                    The score
+                  </h3>
+                  <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    <span className={`text-xl font-bold uppercase leading-none ${tone}`}>
+                      {intensityLabel(bias.score)}
+                    </span>
+                    <span className="font-mono text-base leading-none text-ink">{bias.score}</span>
+                    <span className="text-[11px] text-ink-faint">
+                      / 100 · evidence {bias.confidence}% · agreement {bias.agreement}%
+                    </span>
+                  </div>
+                  <p className="mt-2 text-[12px] leading-relaxed text-ink">{bias.headline}</p>
+                  <p className="mt-2 text-[12px] leading-relaxed text-ink-muted">
+                    {describeConviction(bias.confidence, bias.agreement)}
+                  </p>
+                  {bias.basis === "state" && (
+                    <p className="mt-2 text-[11px] leading-relaxed text-ink-faint">
+                      Every reading here describes what this market IS doing — how it is trending, how broad the
+                      move is, how volatile it has been. None of them has a track record of predicting what happens
+                      next, so this score is a description of conditions and not a forecast.
+                    </p>
+                  )}
                 </div>
 
-                {/* Every level says where it came from — the plan is only as
-                    trustworthy as the structure it is anchored to. */}
-                <dl className="flex flex-col gap-1 border-t border-hairline pt-3 text-[11px] leading-relaxed">
-                  <LevelBasis label="Entry" basis={plan.entryBasis} />
-                  <LevelBasis label="Stop" basis={plan.stopBasis} />
-                  <LevelBasis label="Target 1" basis={plan.target1Basis} />
-                  <LevelBasis label="Target 2" basis={plan.target2Basis} />
-                </dl>
+                <div className="border-t border-hairline pt-4">
+                  <h3 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
+                    What is raising and lowering confidence
+                  </h3>
+                  <ConfidenceDrivers bias={bias} />
+                </div>
 
-                <p className="rounded-md border border-amber/20 bg-amber/[0.04] px-3 py-2 text-[12px] leading-relaxed text-ink-muted">
-                  <span className="font-semibold uppercase tracking-[0.12em] text-amber">Invalidation</span> · A
-                  close beyond {formatPrice(plan.stopPrice)} ends this thesis. That level sits past the
-                  structure the plan is built on, so losing it means the reason for the trade is gone — not
-                  merely that price moved.
-                </p>
+                <div className="border-t border-hairline pt-4">
+                  <h3 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
+                    The four questions, scored separately
+                  </h3>
+                  <p className="mb-3 mt-1 text-[11px] leading-relaxed text-ink-muted">
+                    Where these disagree, the overall score is a compromise rather than a consensus.
+                  </p>
+                  <CategoryGrid categories={bias.categories} />
+                </div>
 
-                {/*
-                  The star rating is deliberately caveated rather than shown
-                  bare. Its historical-win-rate input is null for equities.
-                */}
-                <p className="text-[11px] leading-relaxed text-ink-faint">
-                  <span className="text-ink-muted">Quality {plan.stars}/5 · </span>
-                  {plan.starRationale} Geometry is the same <code>buildTradePlan</code> the crypto side
-                  uses.{" "}
-                  <span className="text-ink-muted">
-                    The rating is computed WITHOUT a historical win rate:
-                  </span>{" "}
-                  there is no equity execution replay yet, so the one input that measures whether comparable
-                  trades actually finished green is absent. Treat the geometry as sound and the rating as
-                  incomplete.
+                <div className="border-t border-hairline pt-4">
+                  <h3 className="mb-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
+                    Every reading in full
+                  </h3>
+                  <ul className="flex flex-col gap-5">
+                    {bias.metrics.map((m) => (
+                      <li key={m.id} className="border-l border-hairline pl-4">
+                        <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-ink">
+                          {m.label}
+                        </h4>
+                        <EvidenceModuleDetail metric={m} allMetrics={bias.metrics} basis={bias.basis} />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <p className="border-t border-hairline pt-3 text-[11px] leading-relaxed text-ink-faint">
+                  <span className="text-ink-muted">Not available for stocks:</span> funding, open interest,
+                  liquidations and on-chain data do not exist for equities and are structurally absent, not missing.
+                  Options flow is not built — no provider for it is ingested. The score divides across the evidence
+                  that exists rather than treating absent readings as neutral.
                 </p>
-              </>
-            ) : (
-              <NoSetup bias={bias} refusal={decision.planRefusal} earnings={decision.earnings} />
-            )}
+              </div>
+            </Collapsible>
           </CardContent>
         </Card>
 
@@ -384,45 +419,50 @@ function NoSetup({
 }) {
   if (refusal) {
     return (
-      <div className="flex flex-col gap-2">
-        <p className="text-[13px] leading-relaxed text-ink">
-          The engine reads {intensityLabel(bias.score).toLowerCase()}, so it does have a direction here —
-          but no plan clears the bar.
-        </p>
-        <p className="text-xs leading-relaxed text-ink-muted">{TRADE_PLAN_REFUSAL_TEXT[refusal]}</p>
+      <div className="flex flex-col gap-3">
+        {/* The plain sentence first; the full reasoning is one click below,
+            so the reader learns WHAT before they can even see the HOW. */}
+        <p className="text-[14px] leading-relaxed text-ink">{TRADE_PLAN_REFUSAL_SHORT[refusal]}</p>
+
         {refusal === "earnings-imminent" && earnings && (
-          <p className="text-xs leading-relaxed text-ink">
-            <span className="font-semibold uppercase tracking-[0.12em] text-amber">Report date</span> ·{" "}
+          <p className="rounded-md border border-amber/20 bg-amber/[0.04] px-3 py-2 text-[13px] leading-relaxed text-ink">
+            <span className="font-semibold uppercase tracking-[0.12em] text-amber">Reports</span> ·{" "}
             {earnings.date} —{" "}
             {earnings.sessions === 0
               ? "today"
               : earnings.sessions === 1
-                ? "the next session"
-                : `${earnings.sessions} sessions away`}
-            . A plan returns automatically once the report is out.
+                ? "the next trading day"
+                : `${earnings.sessions} trading days away`}
+            . A plan comes back on its own once the report is out.
           </p>
         )}
-        <p className="text-[11px] leading-relaxed text-ink-faint">
-          This is the engine declining, not failing. A plan appears when structure moves into a position
-          that supports one — which usually means waiting for price to come to a level rather than for the
+
+        <p className="text-[12px] leading-relaxed text-ink-muted">
+          This is the engine declining, not failing. A plan appears when price moves into a position that
+          supports one — which usually means waiting for it to come to a level, rather than waiting for the
           read to change.
         </p>
+
+        <Collapsible title="The full reasoning" summary="why this bar exists at all">
+          <p className="text-xs leading-relaxed text-ink-muted">{TRADE_PLAN_REFUSAL_TEXT[refusal]}</p>
+        </Collapsible>
       </div>
     );
   }
 
   const distance = Math.abs(bias.score - 50);
   return (
-    <div className="flex flex-col gap-2">
-      <p className="text-[13px] leading-relaxed text-ink">
-        No plan, because there is no direction to build one on.
+    <div className="flex flex-col gap-3">
+      <p className="text-[14px] leading-relaxed text-ink">
+        There is no direction to build a plan on. The evidence for up and the evidence for down roughly
+        cancel out.
       </p>
-      <p className="text-xs leading-relaxed text-ink-muted">
-        The composite sits at {bias.score}, {distance.toFixed(0)} point{distance === 1 ? "" : "s"} from
-        neutral — inside the {DIRECTIONAL_THRESHOLD}-point band where the evidence is judged balanced
-        rather than leaning. The score would need to reach{" "}
-        {50 + DIRECTIONAL_THRESHOLD} or {50 - DIRECTIONAL_THRESHOLD} before a side is worth committing to.
-        Manufacturing a plan from {bias.score} would be exactly the false precision this engine refuses.
+      <p className="text-[12px] leading-relaxed text-ink-muted">
+        The score sits at {bias.score}, {distance.toFixed(0)} point{distance === 1 ? "" : "s"} away from dead
+        neutral — inside the band where this engine treats the evidence as balanced rather than leaning. It
+        would need to reach {50 + DIRECTIONAL_THRESHOLD} or {50 - DIRECTIONAL_THRESHOLD} before a side is
+        worth committing to. Inventing a trade from {bias.score} is exactly the false confidence this engine
+        exists to refuse.
       </p>
       {bias.watchNext.length > 0 && (
         <p className="text-[11px] leading-relaxed text-ink-faint">

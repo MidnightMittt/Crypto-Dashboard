@@ -234,6 +234,31 @@ export const TRADE_PLAN_REFUSAL_TEXT: Record<TradePlanRefusal, string> = {
     "The primary target sits beyond where 75% of winning trades in this regime ever reached. A plan priced on excursions this strategy does not produce is fantasy with a risk/reward attached.",
 };
 
+/**
+ * The same refusals in ONE PLAIN SENTENCE, for the headline.
+ *
+ * The full texts above are the reasoning and stay available underneath —
+ * they are what make a refusal auditable. But a reader arriving at the page
+ * needs to know why there is no trade before they need to know how the
+ * engine reached that view, and "reward-to-risk falls below the engine's
+ * minimum once measured from the real entry" is a sentence you have to work
+ * at. Same claim, no working required, and never softer: if the reason a
+ * trade is refused is that it loses money, the short version says so.
+ */
+export const TRADE_PLAN_REFUSAL_SHORT: Record<TradePlanRefusal, string> = {
+  "no-volatility": "Not enough price history to judge how far this normally moves, so any stop would be arbitrary.",
+  "no-structure": "There is no clear support or resistance nearby to place a stop against.",
+  "no-pullback-entry": "Price has already run. This setup needs a pullback, and buying here would be a different trade.",
+  "stop-at-entry": "The stop would sit on top of the entry, leaving nothing to measure the risk against.",
+  "stop-inside-noise": "The stop would sit inside this asset's normal daily movement — ordinary noise would take it out.",
+  "reward-too-small": "The direction may be right, but the move on offer does not pay enough for the risk it takes.",
+  "earnings-imminent": "Earnings land within three trading days, and price can gap straight past a stop through a report.",
+  "negative-expectancy": "Trades like this one have lost money on our own measured record, so no plan is offered.",
+  "stop-tighter-than-winners-drawdown":
+    "The stop is tighter than the dip most winning trades sat through first — it would turn winners into losers.",
+  "target-beyond-winners-reach": "The target is further than trades like this one usually reach, so the reward is not realistic.",
+};
+
 /** A plan, or a named reason there is none. Never a degraded plan. */
 export type TradePlanOutcome =
   | { plan: TradePlan; refusal: null }

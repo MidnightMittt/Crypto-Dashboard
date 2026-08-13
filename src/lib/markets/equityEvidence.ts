@@ -224,7 +224,7 @@ export function evaluateBreadth(universe: EquityInstrumentInput[], asOf: number)
 
   return {
     id: "equityBreadth",
-    label: "Breadth (proxy)",
+    label: "Market Breadth",
     verdict,
     confidence: capped,
     confidenceBasis: `${readings.length} broad ETFs, a PROXY for breadth rather than a constituent advance/decline line. Confidence is capped at 60 for that reason.`,
@@ -305,10 +305,23 @@ export function evaluateRiskAppetite(
   };
 }
 
+/**
+ * What would flip this reading, in words rather than statistics.
+ *
+ * These strings surface in "What would change this", which is one of the two
+ * most-read lines on the page — so "turns directional outside the 33rd-67th
+ * percentile band" was the worst possible place for the engine's internal
+ * vocabulary. A percentile is just "how it compares to its own past", and
+ * saying that costs nothing and loses no precision: the same thresholds, the
+ * same current value, no statistics degree required.
+ */
 function triggerText(p: number, verdict: Verdict): string {
-  if (verdict === "bullish") return `turns neutral below the ${Math.round(UPPER_PERCENTILE * 100)}th percentile of its own history`;
-  if (verdict === "bearish") return `turns neutral above the ${Math.round(LOWER_PERCENTILE * 100)}th percentile of its own history`;
-  return `turns directional outside the ${Math.round(LOWER_PERCENTILE * 100)}th-${Math.round(UPPER_PERCENTILE * 100)}th percentile band (currently ${ordinal(Math.round(p * 100))})`;
+  const now = Math.round(p * 100);
+  if (verdict === "bullish")
+    return `stops being bullish if it falls out of the top third of its own past readings — right now it is higher than ${now}% of them`;
+  if (verdict === "bearish")
+    return `stops being bearish if it climbs out of the bottom third of its own past readings — right now it is higher than only ${now}% of them`;
+  return `only picks a side once it reaches the top or bottom third of its own past readings — right now it is higher than ${now}% of them, which is the middle`;
 }
 
 /**
@@ -395,7 +408,7 @@ export function evaluateVolatilityRegime(
 
   return {
     id: "equityVolatilityRegime",
-    label: "Volatility Regime",
+    label: "Volatility",
     verdict,
     confidence: Math.round(confidenceFrom(p, history.length) / 2),
     confidenceBasis: `${history.length} prior sessions of this instrument's own ATR history. Confidence is halved deliberately: the volatility-return relationship is a conditional regularity, not a mechanism.`,
@@ -452,11 +465,11 @@ export function evaluateTrendQuality(
 
   return {
     id: "equityTrendQuality",
-    label: "Trend Quality",
+    label: "Trend Strength",
     verdict,
     confidence: Math.round(Math.min(1, efficiency / 0.6) * 100),
-    confidenceBasis: `Kaufman efficiency ratio of ${efficiency.toFixed(2)} over ${TREND_WINDOW} sessions. Confidence scales with efficiency and reaches 100 at 0.60, a strongly directional path.`,
-    explanation: `Over ${TREND_WINDOW} sessions ${instrument.symbol} moved ${netPct >= 0 ? "+" : ""}${netPct.toFixed(1)}% with an efficiency ratio of ${efficiency.toFixed(2)} — ${efficiency < EFFICIENCY_FLOOR ? "a round trip rather than a trend, so no direction is claimed" : efficiency > 0.4 ? "a clean, persistent path" : "a directional but choppy path"}.`,
+    confidenceBasis: `Path efficiency of ${efficiency.toFixed(2)} over ${TREND_WINDOW} sessions — the distance actually covered divided by the total ground travelled to cover it (Kaufman's efficiency ratio). Confidence rises with efficiency and reaches 100 at 0.60, a strongly directional path.`,
+    explanation: `Over ${TREND_WINDOW} sessions ${instrument.symbol} moved ${netPct >= 0 ? "+" : ""}${netPct.toFixed(1)}%, and only ${Math.round(efficiency * 100)}% of its day-to-day movement went toward getting there — the rest was back and forth. ${efficiency < EFFICIENCY_FLOOR ? "That is a round trip rather than a trend, so no direction is claimed from it." : efficiency > 0.4 ? "That is a clean, persistent path." : "That is a real direction, but a choppy one."}`,
     whyItMatters:
       "Direction alone does not say whether a move is worth following. The same net return produced by a straight line and by a round trip demand different trades; efficiency is what separates them.",
     asOf,
@@ -464,6 +477,6 @@ export function evaluateTrendQuality(
       efficiency < EFFICIENCY_FLOOR
         ? [`Net move is ${netPct >= 0 ? "positive" : "negative"} but the path is inefficient — the sign is not evidence of a trend.`]
         : [],
-    nextTrigger: `turns directional above an efficiency ratio of ${EFFICIENCY_FLOOR.toFixed(2)} (currently ${efficiency.toFixed(2)})`,
+    nextTrigger: `only takes a side once the path gets cleaner — ${EFFICIENCY_FLOOR.toFixed(2)} of the moves in one direction rather than back and forth, against ${efficiency.toFixed(2)} now`,
   };
 }

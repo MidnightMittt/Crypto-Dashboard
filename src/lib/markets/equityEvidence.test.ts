@@ -138,11 +138,21 @@ describe("evaluateBreadth", () => {
     expect(v.conflicts.length).toBeGreaterThan(0);
   });
 
-  it("caps confidence and labels itself a proxy — it is not an advance/decline line", () => {
+  it("caps confidence and DISCLOSES that it is a proxy, not an advance/decline line", () => {
+    /*
+     * The disclosure moved OUT of the label and into the reasoning, because
+     * "Breadth (proxy)" made a two-word heading do explanatory work and left
+     * a reader parsing parentheses before they had the concept. What must
+     * never move is the disclosure itself: this reads five ETFs, not the
+     * constituents of an index, and anything that implies otherwise is
+     * overclaiming. Confidence stays capped and the caveat stays stated.
+     */
     const v = evaluateBreadth([above("SPY"), above("QQQ"), above("DIA"), above("IWM"), above("XLF")], ASOF)!;
     expect(v.confidence).toBeLessThanOrEqual(60);
-    expect(v.label).toMatch(/proxy/i);
     expect(v.confidenceBasis).toMatch(/PROXY/);
+    expect(v.confidenceBasis).toMatch(/advance\/decline/i);
+    // The label names the concept; it must not claim more than the module is.
+    expect(v.label).toBe("Market Breadth");
   });
 });
 

@@ -138,11 +138,24 @@ export const CATEGORY_WEIGHTS: Record<Category, number> = {
   risk: 0.2,
 };
 
+/**
+ * What each category is CALLED ON SCREEN — plain trader English, not the
+ * engine's internal ids.
+ *
+ * These were "Positioning Intelligence", "Leading Drivers" and "Risk
+ * Monitor": accurate to the code and meaningless to a reader. A label the
+ * user has to decode is a label that failed, and "Leading Drivers" in
+ * particular described the engine's plumbing rather than the thing being
+ * measured — which is money moving into and out of the asset.
+ *
+ * The ids are untouched, so every stored score, backtest cell and ledger
+ * entry keeps its meaning; only the display string changed.
+ */
 export const CATEGORY_LABELS: Record<Category, string> = {
-  positioning: "Positioning Intelligence",
-  marketStructure: "Market Structure",
-  leadingDrivers: "Leading Drivers",
-  risk: "Risk Monitor",
+  positioning: "Trader Positioning",
+  marketStructure: "Trend & Structure",
+  leadingDrivers: "Money Flow",
+  risk: "Risk & Volatility",
 };
 
 /** Display order — heaviest-weighted category first. */
