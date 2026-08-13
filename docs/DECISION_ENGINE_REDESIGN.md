@@ -153,6 +153,29 @@ and SMH/SPY are both equity-internal ratios; in a beta selloff they agree
 for a shared reason. Effective independent sources ≈ 2, not 3. The headline
 "2 of 3 independent pairs" should not use the word independent.
 
+> **MEASURED (2026-08-13, post-leak-fix — scripts/backtest/
+> conjunctionRevalidation.md).** Step 6 ran as specified, on corrected
+> data: every scan-significant conjunction (BH-corrected for automatic
+> pairs) faced the block bootstrap against the exposure-weighted drift
+> null AND a chronological-halves walk-forward. **10 cells survive both
+> hurdles**, with etfFlows in six of them — coherent with its status as
+> the census's strongest solo voter. Headliners: longShort+etfFlows@24h
+> (77.4% vs 49.8% null, block p<0.0001, both halves >+23pp) and
+> etfFlows+fearGreed@24h (77.1%, both halves >+24pp). Note the taxonomy
+> nuance: several survivors condition on non-voting reads (fearGreed,
+> technicals, marketStructure) — a conjunction may use a State/context
+> read as a CONDITION without restoring its solo vote.
+>
+> Survival earns REGISTRATION, not weight — deliberately weaker than this
+> section's original wording, because in-sample survivors still carry the
+> selection bias of having been found in this same history. All 10 are
+> frozen in scripts/backtest/forwardHypotheses.json with registration
+> timestamps and immutable in-sample stats; every future replay scores
+> them on post-registration days only (the report's "Forward record"
+> section, currently 0 days, accruing daily). Engine weight follows the
+> forward record — the validation-factory gate applied to our own best
+> cells.
+
 **H5 — Combination cells are uncorrected.** The only 70%+ material ever
 measured here (Positioning+Structure+LeadingDrivers bullish @7d: 73%, n=30;
 Positioning+Structure @7d: 70%, n=61; Structure+Leading+Risk @24h: 73%,

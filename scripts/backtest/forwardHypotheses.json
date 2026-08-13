@@ -1,0 +1,152 @@
+[
+  {
+    "metricIds": [
+      "longShort",
+      "etfFlows"
+    ],
+    "holdingPeriod": "24h",
+    "registeredAt": 1786607356757,
+    "registeredAtIso": "2026-08-13T07:49:16.757Z",
+    "frozenInSample": {
+      "n": 53,
+      "winRatePct": 77.35849056603774,
+      "nullRatePct": 49.80845408110081,
+      "blockP": 0.000014092641644980475
+    }
+  },
+  {
+    "metricIds": [
+      "etfFlows",
+      "fearGreed"
+    ],
+    "holdingPeriod": "24h",
+    "registeredAt": 1786607356760,
+    "registeredAtIso": "2026-08-13T07:49:16.760Z",
+    "frozenInSample": {
+      "n": 70,
+      "winRatePct": 77.14285714285715,
+      "nullRatePct": 50.147987371744286,
+      "blockP": 2.3719766684138222e-7
+    }
+  },
+  {
+    "metricIds": [
+      "squeezeRisk",
+      "technicals"
+    ],
+    "holdingPeriod": "7d",
+    "registeredAt": 1786607356761,
+    "registeredAtIso": "2026-08-13T07:49:16.761Z",
+    "frozenInSample": {
+      "n": 85,
+      "winRatePct": 72.94117647058823,
+      "nullRatePct": 52.511593849158025,
+      "blockP": 2.821437449229691e-7
+    }
+  },
+  {
+    "metricIds": [
+      "longShort",
+      "etfFlows"
+    ],
+    "holdingPeriod": "7d",
+    "registeredAt": 1786607356762,
+    "registeredAtIso": "2026-08-13T07:49:16.762Z",
+    "frozenInSample": {
+      "n": 53,
+      "winRatePct": 71.69811320754717,
+      "nullRatePct": 50.76332889689185,
+      "blockP": 2.6802940966685895e-7
+    }
+  },
+  {
+    "metricIds": [
+      "squeezeRisk",
+      "stablecoins"
+    ],
+    "holdingPeriod": "7d",
+    "registeredAt": 1786607356764,
+    "registeredAtIso": "2026-08-13T07:49:16.764Z",
+    "frozenInSample": {
+      "n": 77,
+      "winRatePct": 71.42857142857143,
+      "nullRatePct": 52.594708196368046,
+      "blockP": 0.00003630226380413326
+    }
+  },
+  {
+    "metricIds": [
+      "etfFlows",
+      "fearGreed"
+    ],
+    "holdingPeriod": "7d",
+    "registeredAt": 1786607356764,
+    "registeredAtIso": "2026-08-13T07:49:16.764Z",
+    "frozenInSample": {
+      "n": 70,
+      "winRatePct": 71.42857142857143,
+      "nullRatePct": 51.57083580320096,
+      "blockP": 0.00729766181007907
+    }
+  },
+  {
+    "metricIds": [
+      "squeezeRisk",
+      "spotPerpVolume"
+    ],
+    "holdingPeriod": "7d",
+    "registeredAt": 1786607356765,
+    "registeredAtIso": "2026-08-13T07:49:16.765Z",
+    "frozenInSample": {
+      "n": 72,
+      "winRatePct": 70.83333333333334,
+      "nullRatePct": 52.478100507146245,
+      "blockP": 0.0009000335595227282
+    }
+  },
+  {
+    "metricIds": [
+      "stablecoins",
+      "fearGreed"
+    ],
+    "holdingPeriod": "7d",
+    "registeredAt": 1786607356767,
+    "registeredAtIso": "2026-08-13T07:49:16.767Z",
+    "frozenInSample": {
+      "n": 156,
+      "winRatePct": 67.94871794871796,
+      "nullRatePct": 51.38312586445366,
+      "blockP": 0.019353828284151886
+    }
+  },
+  {
+    "metricIds": [
+      "etfFlows",
+      "marketStructure"
+    ],
+    "holdingPeriod": "24h",
+    "registeredAt": 1786607356768,
+    "registeredAtIso": "2026-08-13T07:49:16.768Z",
+    "frozenInSample": {
+      "n": 107,
+      "winRatePct": 66.35514018691589,
+      "nullRatePct": 50.053570506531756,
+      "blockP": 0.0007548046958382182
+    }
+  },
+  {
+    "metricIds": [
+      "etfFlows",
+      "macroLiquidity"
+    ],
+    "holdingPeriod": "24h",
+    "registeredAt": 1786607356770,
+    "registeredAtIso": "2026-08-13T07:49:16.770Z",
+    "frozenInSample": {
+      "n": 107,
+      "winRatePct": 65.42056074766354,
+      "nullRatePct": 50.063897351164364,
+      "blockP": 0.0013741339271877706
+    }
+  }
+]
