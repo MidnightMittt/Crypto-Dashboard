@@ -52,7 +52,7 @@ export interface TradeRecommendation {
   action: SuggestedAction;
   label: string;
   reason: string;
-  blockingLayer: "thesis" | "technicals" | null;
+  blockingLayer: "thesis" | "technicals" | "record" | null;
   nextTrigger: string | null;
 }
 
@@ -77,12 +77,44 @@ export function buildTradeRecommendation(
    * — HTF disagreement rides along as a caveat on an otherwise-clearing
    * ENTER recommendation, never blocks one outright the way Layer 1/2 do.
    */
-  technicals4h: TechnicalRead | null = null
+  technicals4h: TechnicalRead | null = null,
+  /**
+   * The measured excursion/EV constraints for the BIAS direction's side in
+   * the current volatility regime (planConstraintsFor). When present and
+   * EV-negative at the Wilson lower bound, an otherwise-clearing ENTER is
+   * downgraded to NO TRADE with the record cited — the top-of-page word
+   * must pass every honesty layer the platform has, and a side whose own
+   * replayed history loses money does not pass. Optional so the backtest
+   * replay (which must stay ungated — see plannerStats.ts) and older
+   * callers are unchanged.
+   */
+  evConstraint: { evLowerPct: number; n: number; cellKey: string } | null = null
 ): TradeRecommendation {
   const agreement = thesis && technicals ? technicalAgreement(technicals, thesis.dominant) : "not-yet-confirmed";
   const htfAgreement = thesis && technicals4h ? technicalAgreement(technicals4h, thesis.dominant) : null;
 
   if (bias.verdict !== "neutral" && agreement === "confirms") {
+    /*
+     * Layer 3 — THE RECORD. Direction reads, technicals confirm, and yet:
+     * if this side's own replayed trades lose money at the 95% lower bound
+     * of their record, recommending the entry would be the engine
+     * overruling its own evidence. The read is still stated (the reason
+     * names the direction); only the ACTION is withheld.
+     */
+    if (evConstraint && evConstraint.evLowerPct <= 0) {
+      const side = bias.verdict === "bullish" ? "long" : "short";
+      return {
+        action: "no-trade",
+        label: ACTION_LABEL["no-trade"],
+        reason:
+          `${bias.headline} Technicals confirm the direction — but ${side}s in the current ` +
+          `volatility regime carry NEGATIVE measured expectancy at the pessimistic bound of their ` +
+          `own replayed record (${evConstraint.n} trades, ${evConstraint.cellKey}). The engine reads ` +
+          `the market and still refuses the trade; this gate re-opens automatically if the record turns positive.`,
+        blockingLayer: "record",
+        nextTrigger: null,
+      };
+    }
     const action: SuggestedAction = bias.verdict === "bullish" ? "enter-long" : "enter-short";
     const htfCaveat =
       htfAgreement === "weakens" || htfAgreement === "contradicts"

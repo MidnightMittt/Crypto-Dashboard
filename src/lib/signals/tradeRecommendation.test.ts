@@ -264,3 +264,45 @@ describe("buildTradeRecommendation", () => {
     expect(rec.blockingLayer).toBeNull();
   });
 });
+
+describe("the record gate (Layer 3 — measured EV)", () => {
+  it("downgrades a confirmed directional entry to NO TRADE when the side's record is EV-negative", () => {
+    // Bias bearish + technicals confirm would normally be enter-short; a
+    // negative-EV record for shorts in this regime withholds the ACTION
+    // while the reason still states the read.
+    const rec = buildTradeRecommendation(
+      baseBias({ verdict: "bearish", score: 30 }),
+      baseThesis({ dominant: "bearish" }),
+      baseTechnicals("bearish"),
+      null,
+      { evLowerPct: -0.69, n: 289, cellKey: "short:high-vol" }
+    );
+    expect(rec.action).toBe("no-trade");
+    expect(rec.blockingLayer).toBe("record");
+    expect(rec.reason).toContain("NEGATIVE measured expectancy");
+    expect(rec.reason).toContain("short:high-vol");
+  });
+
+  it("lets a positive-record side through unchanged", () => {
+    const rec = buildTradeRecommendation(
+      baseBias({ verdict: "bullish", score: 70 }),
+      baseThesis({ dominant: "bullish" }),
+      baseTechnicals("bullish"),
+      null,
+      { evLowerPct: 2.48, n: 82, cellKey: "long:high-vol" }
+    );
+    expect(rec.action).toBe("enter-long");
+    expect(rec.blockingLayer).toBeNull();
+  });
+
+  it("changes nothing when no record covers the setup — absence of evidence is not a veto", () => {
+    const args = [
+      baseBias({ verdict: "bearish", score: 30 }),
+      baseThesis({ dominant: "bearish" }),
+      baseTechnicals("bearish"),
+    ] as const;
+    expect(buildTradeRecommendation(...args, null, null).action).toBe(
+      buildTradeRecommendation(...args).action
+    );
+  });
+});

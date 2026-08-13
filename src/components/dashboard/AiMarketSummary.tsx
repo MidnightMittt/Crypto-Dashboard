@@ -6,7 +6,7 @@ import { VerdictBadge, ConfidenceLabel } from "@/components/ui/VerdictBadge";
 import { Collapsible } from "@/components/ui/Collapsible";
 import { MarketBias, MetricVerdict } from "@/lib/signals/types";
 import { topReasons, RankedReason } from "@/lib/signals/marketBias";
-import { buildTradeRecommendation, TradeRecommendation } from "@/lib/signals/tradeRecommendation";
+import { buildTradeRecommendation, TradeRecommendation, SuggestedAction } from "@/lib/signals/tradeRecommendation";
 import { MarketThesis, TechnicalRead, AggregateMarketData } from "@/types/market";
 import { TradePlan, swingTradePlanView, starGrade, EntryQualityView } from "./EntryQualityCard";
 import { buildSwingView, shortTermCondition, SwingView, SwingTone } from "@/lib/signals/swingPresentation";
@@ -21,6 +21,7 @@ import {
 } from "@/lib/sentiment/technicalDimensions";
 import { lookupBiasVerdictStat, ExecutionStatsSnapshot } from "@/lib/sentiment/backtestStats";
 import { ScoreCalibrationLine } from "./ScoreCalibrationLine";
+import { planConstraintsFor, PlannerStatsSnapshot } from "@/lib/signals/planConstraints";
 import { RegimeTags, regimeTagsToStrings } from "@/lib/technicals/regimes";
 import { BiasHistoryEntry } from "@/lib/history/biasHistory";
 import { HarmonicEvidence } from "@/lib/signals/harmonicEvidence";
@@ -88,7 +89,22 @@ export function AiMarketSummary({
 
   const reasons = topReasons(bias, 5);
   const invalidationLines = thesis?.invalidation ?? [];
-  const recommendation = buildTradeRecommendation(bias, thesis, technicals, technicals4h ?? null);
+  /*
+   * The EV constraint for the bias direction, so the top-of-page word can
+   * never recommend a side whose own replayed record loses money (same
+   * gate the plan machinery applies; same published cells). Crypto only —
+   * planConstraintsFor itself returns null without regime tags, and the
+   * cells were measured on the replayed universe.
+   */
+  const evConstraint =
+    bias.verdict !== "neutral" && thesis?.regimeTags
+      ? planConstraintsFor(
+          bias.verdict === "bullish" ? "long" : "short",
+          regimeTagsToStrings(thesis.regimeTags),
+          (executionStatsJson as { planner?: PlannerStatsSnapshot }).planner
+        )
+      : null;
+  const recommendation = buildTradeRecommendation(bias, thesis, technicals, technicals4h ?? null, evConstraint);
 
   /*
    * The SWING thesis is the decision now, not the stateless recommendation.
@@ -167,6 +183,38 @@ export function AiMarketSummary({
         </p>
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * The one-glance verdict: emoji + word, the largest element on the page.
+ *
+ * The word is the GATED action from tradeRecommendation.ts, deliberately
+ * not the raw bias verdict — the recommendation already requires the
+ * composite to clear the directional threshold AND technicals to confirm,
+ * and lets a divergence veto it, so this word can never green-light a read
+ * the engine's own machinery refuses to act on. The emoji is the color
+ * carrier by explicit product direction: deep knowledge, simple interface.
+ */
+const VERDICT_DISPLAY: Record<SuggestedAction, { emoji: string; word: string; tone: string }> = {
+  "enter-long": { emoji: "\u{1F7E2}", word: "Long", tone: "text-success" },
+  "enter-short": { emoji: "\u{1F534}", word: "Short", tone: "text-danger" },
+  "wait-long-confirmation": { emoji: "\u{1F7E1}", word: "Wait", tone: "text-amber" },
+  "wait-short-confirmation": { emoji: "\u{1F7E1}", word: "Wait", tone: "text-amber" },
+  "no-trade": { emoji: "\u26AA", word: "Stand Aside", tone: "text-ink-muted" },
+};
+
+function VerdictStrip({ recommendation }: { recommendation: TradeRecommendation }) {
+  const v = VERDICT_DISPLAY[recommendation.action];
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-3xl leading-none sm:text-4xl" aria-hidden>
+        {v.emoji}
+      </span>
+      <span className={`text-3xl font-black uppercase leading-none tracking-[0.05em] sm:text-4xl ${v.tone}`}>
+        {v.word}
+      </span>
+    </div>
   );
 }
 
@@ -260,15 +308,43 @@ function Decision({
           relegated to a footnote. The action moves down to the trade plan,
           where it is the correct answer to a different question.
         */}
+        {/*
+          THE ONE-GLANCE VERDICT — the whole product in one word.
+
+          Emoji + word + one sentence, before anything else: should I trade
+          this asset, and which way. The word is the trade RECOMMENDATION
+          (the gated action, not the raw bias), because that is the only
+          quantity here that already passes through every honesty layer the
+          platform has built — the composite must clear the directional
+          threshold, technicals must confirm, divergence can veto, and the
+          plan machinery downstream applies the measured EV gate. A raw
+          bias word would green-light reads the engine itself refuses to
+          act on. Everything below this strip is the evidence; nothing
+          below it may contradict it, because it is derived from the same
+          single engine.
+        */}
+        <VerdictStrip recommendation={recommendation} />
+
+        {/*
+          THE ENGINE'S OWN EXPLANATION — recommendation.reason, which embeds
+          `bias.headline` (direction, leading metric, strongest counter) and
+          adds WHY the action is what it is (technical confirmation, a
+          divergence veto, a higher-timeframe caveat). One sentence-cluster,
+          never two competing explanations: the separate headline paragraph
+          this replaces was a strict subset of it.
+        */}
+        <p className="max-w-4xl text-[13px] leading-relaxed text-ink">{recommendation.reason}</p>
+
+        {/* The read's strength and data quality — detail under the verdict, no longer the headline. */}
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-2">
-          <div className="flex items-center gap-2.5">
-            <Icon className={`h-6 w-6 shrink-0 ${style.text}`} aria-hidden />
-            <span className={`text-2xl font-bold uppercase leading-none tracking-[0.04em] sm:text-3xl ${style.text}`}>
+          <div className="flex items-center gap-2">
+            <Icon className={`h-4 w-4 shrink-0 ${style.text}`} aria-hidden />
+            <span className={`text-sm font-bold uppercase leading-none tracking-[0.04em] ${style.text}`}>
               {intensityLabel(bias.score)}
             </span>
           </div>
           <div className="flex items-baseline gap-2.5">
-            <span className="font-mono text-lg leading-none text-ink">{bias.score}</span>
+            <span className="font-mono text-sm leading-none text-ink">{bias.score}</span>
             <span className="text-[11px] text-ink-faint">/ 100</span>
             <span
               className="text-[11px] text-ink-faint"
@@ -278,19 +354,6 @@ function Decision({
             </span>
           </div>
         </div>
-
-        {/*
-          THE ENGINE'S OWN EXPLANATION.
-
-          `bias.headline` is generated by buildHeadline() from the ranked
-          evidence — it names the direction, the metric leading it, and the
-          strongest metric arguing the other way. It is the single most
-          decision-relevant sentence the engine produces, and until now it
-          rendered ONLY in the cross-asset comparison strip and the history
-          timeline. The primary decision surface never showed it. Putting it
-          here is the whole point of the panel.
-        */}
-        <p className="text-[13px] leading-relaxed text-ink">{bias.headline}</p>
 
         <ScoreCalibrationLine asset={bias.asset} score={bias.score} verdict={bias.verdict} regimeTags={thesis?.regimeTags ? regimeTagsToStrings(thesis.regimeTags) : null} />
 
