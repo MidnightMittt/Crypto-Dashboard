@@ -19,16 +19,18 @@ import {
   DimensionStance,
   Lean,
 } from "@/lib/sentiment/technicalDimensions";
-import { lookupBiasVerdictStat, lookupCalibrationBucket, ExecutionStatsSnapshot } from "@/lib/sentiment/backtestStats";
-import { RegimeTags } from "@/lib/technicals/regimes";
+import { lookupBiasVerdictStat, lookupScoreCalibration, BacktestMetricStats, ExecutionStatsSnapshot } from "@/lib/sentiment/backtestStats";
+import { RegimeTags, regimeTagsToStrings } from "@/lib/technicals/regimes";
 import { BiasHistoryEntry } from "@/lib/history/biasHistory";
 import { HarmonicEvidence } from "@/lib/signals/harmonicEvidence";
 import { formatPrice } from "@/lib/utils/format";
 import { TimelineList } from "./MarketThesisTimeline";
 import backtestStats from "@/data/backtestStats.json";
 import executionStatsJson from "@/data/executionStats.json";
+import backtestMetricStatsJson from "@/data/backtestMetricStats.json";
 
 const executionStats = executionStatsJson as unknown as ExecutionStatsSnapshot;
+const backtestMetricStats = backtestMetricStatsJson as unknown as BacktestMetricStats;
 
 const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -141,10 +143,9 @@ export function AiMarketSummary({
           ~90 words of statistics between the decision and the evidence.
         */}
         <div className="border-t border-hairline pt-5">
-          <Collapsible title="Historical context" summary="backtested reliability, confidence calibration">
+          <Collapsible title="Historical context" summary="backtested reliability by verdict">
             <div className="flex flex-col gap-3 pt-2">
               <BiasBacktestStatLine verdict={bias.verdict} />
-              <ConfidenceCalibrationLine confidence={bias.confidence} />
             </div>
           </Collapsible>
         </div>
@@ -292,6 +293,8 @@ function Decision({
         */}
         <p className="text-[13px] leading-relaxed text-ink">{bias.headline}</p>
 
+        <ScoreCalibrationLine score={bias.score} verdict={bias.verdict} regimeTags={thesis?.regimeTags ?? null} />
+
         {/*
           TACTICAL, kept visually and semantically separate from the action
           above it. This is the line that lets a trader read "conditions are
@@ -382,34 +385,57 @@ function Decision({
  * number with false confidence.
  */
 /**
- * What the confidence score has ACTUALLY been worth, rather than what a
- * 0-100 number sitting beside a market call implies.
+ * THE CALIBRATED-PROBABILITY LINE (redesign §9): what reads LIKE TODAY'S —
+ * same direction, same score strength, same trend regime — actually did
+ * over the next 24h, quoted against the regime-conditional drift null they
+ * had to beat. The one sentence on the page that is allowed to sound like
+ * a probability, because it is one: an empirical rate with its interval
+ * and effective sample attached.
  *
- * marketBias.ts is careful to define confidence as evidence quality, not
- * probability — but a reader sees "64" next to a direction and reads "64%
- * likely." Phase 3 measured it: over the backtested window the score is
- * neither calibrated (observed rates miss the implied probability by ~13
- * points) nor cleanly monotonic. Rather than quietly leaving the wrong
- * reading available, this states the measured rate for the band the live
- * score falls in, and says plainly when the score should not be read as a
- * probability.
- *
- * Renders nothing when the band was too thin to measure — silence is the
- * honest output there, not a hedged guess.
+ * Renders the explicit "uncalibrated" state when the cell is too thin —
+ * §9's rule is that a thin bucket says so rather than borrowing the global
+ * rate — and nothing at all on a neutral read, which asserts no direction
+ * to calibrate.
  */
-function ConfidenceCalibrationLine({ confidence }: { confidence: number }) {
-  const bucket = lookupCalibrationBucket(executionStats, confidence);
-  if (!bucket) return null;
-  const notProbability = executionStats.calibration24h.meanAbsoluteCalibrationErrorPct !== null &&
-    executionStats.calibration24h.meanAbsoluteCalibrationErrorPct > 5;
+function ScoreCalibrationLine({
+  score,
+  verdict,
+  regimeTags,
+}: {
+  score: number;
+  verdict: MarketBias["verdict"];
+  regimeTags: RegimeTags | null;
+}) {
+  if (verdict === "neutral") return null;
+  const tags = regimeTags ? regimeTagsToStrings(regimeTags) : [];
+  const cell = lookupScoreCalibration(backtestMetricStats, score, verdict, tags);
+  const strength = Math.abs(score - 50) >= 15 ? "clearly" : "leaning";
+  const trend = tags.includes("bull") ? "bull-trend" : tags.includes("bear") ? "bear-trend" : "trendless";
+
+  if (!cell) {
+    return (
+      <p className="max-w-4xl text-[12px] leading-relaxed text-ink-faint">
+        Historically {strength} {verdict} reads during {trend} regimes are too rare in the
+        backtested window to quote a rate — this setup is uncalibrated, which is itself worth
+        knowing before sizing anything.
+      </p>
+    );
+  }
+
+  const edgeWord = cell.edgePP >= 1 ? "text-success" : cell.edgePP <= -1 ? "text-danger" : "text-ink-faint";
   return (
-    <p className="max-w-4xl text-[13px] leading-relaxed text-ink-faint">
-      Days scoring {bucket.label} on confidence went on to move in the read&apos;s direction{" "}
-      {bucket.observedRatePct.toFixed(0)}% of the time over the next 24h (N={bucket.n}, 95% CI{" "}
-      {(bucket.interval.lower * 100).toFixed(0)}-{(bucket.interval.upper * 100).toFixed(0)}%).
-      {notProbability
-        ? " Confidence measures how good the evidence is, not the odds of a move — historically it has not tracked outcome rates closely enough to read as a probability."
-        : ""}
+    <p className="max-w-4xl text-[12px] leading-relaxed text-ink-muted">
+      Reads like this one ({strength} {verdict}, {trend} regime) moved with the read{" "}
+      <span className="font-mono text-ink">{cell.hitRatePct.toFixed(0)}%</span> of the time over the
+      next 24h (95% CI {(cell.interval.lower * 100).toFixed(0)}–{(cell.interval.upper * 100).toFixed(0)}%,{" "}
+      {cell.n} occurrences ≈ {cell.effectiveN} independent) vs{" "}
+      <span className="font-mono">{cell.nullRatePct.toFixed(0)}%</span> for blind {verdict} exposure in
+      that regime —{" "}
+      <span className={`font-mono ${edgeWord}`}>
+        {cell.edgePP >= 0 ? "+" : ""}
+        {cell.edgePP.toFixed(1)}pp
+      </span>{" "}
+      of measured edge.
     </p>
   );
 }

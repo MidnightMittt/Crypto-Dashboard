@@ -106,6 +106,7 @@ function dayRecord(overrides: Partial<DayRecord> = {}): DayRecord {
     squeezeSide: null,
     thesisRegime: null,
     biasVerdict: null,
+    biasScore: null,
     biasConfidence: null,
     biasAgreement: null,
     categories: [],

@@ -208,6 +208,50 @@ export interface BacktestMetricStats {
    * cosmetic. Same MIN_SAMPLE_N-gated shape as everything else here.
    */
   agreementBuckets: AgreementBucketStat[];
+  /**
+   * The "Calibrated Probability" source (redesign §9): empirical 24h hit
+   * rate of composite reads sharing today's direction, score strength, and
+   * trend regime, each cell carrying the regime-conditional drift null it
+   * must beat, a Wilson interval, and the effective sample. Keyed
+   * `${direction}:${strength}:${trendRegime}` — see scoreCellKey in
+   * scripts/backtest/calibration.ts, the single source of the cell
+   * definition. Cells with `calibrated: false` exist so a lookup can say
+   * "uncalibrated" WITH the n that made it so.
+   */
+  scoreCalibration: Record<string, ScoreCalibrationCellSnapshot>;
+}
+
+export interface ScoreCalibrationCellSnapshot {
+  key: string;
+  n: number;
+  effectiveN: number;
+  hitRatePct: number;
+  interval: { point: number; lower: number; upper: number };
+  nullRatePct: number;
+  edgePP: number;
+  calibrated: boolean;
+}
+
+/**
+ * The cell today's live read falls into, or null when there is nothing an
+ * honest surface may quote: a neutral verdict (no direction to calibrate),
+ * a cell the replay never produced, or one below MIN_SAMPLE_N — the §9
+ * rule is that a thin bucket says "uncalibrated", never borrows the global
+ * rate. Duplicates scoreCellKey's boundary (15, intensityLabel's own) via
+ * the same arithmetic rather than importing the backtest script into the
+ * client bundle.
+ */
+export function lookupScoreCalibration(
+  stats: BacktestMetricStats,
+  score: number,
+  verdict: string,
+  regimeTags: string[]
+): ScoreCalibrationCellSnapshot | null {
+  if (verdict !== "bullish" && verdict !== "bearish") return null;
+  const strength = Math.abs(score - 50) >= 15 ? "clear" : "leaning";
+  const trend = regimeTags.includes("bull") ? "bull" : regimeTags.includes("bear") ? "bear" : "neutral";
+  const cell = stats.scoreCalibration?.[`${verdict}:${strength}:${trend}`];
+  return cell && cell.calibrated ? cell : null;
 }
 
 export interface AgreementBucketStat {

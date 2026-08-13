@@ -72,6 +72,7 @@ describe("lookupMetricPerformance", () => {
     coverageEnd: "2026-01-01",
     metrics,
     agreementBuckets: [],
+  scoreCalibration: {},
   });
 
   it("returns the stat when n clears MIN_SAMPLE_N and a historical source exists", () => {

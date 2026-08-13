@@ -32,6 +32,13 @@ import {
   signTestPValue,
 } from "./metrics";
 import { buildCombinations, CombinationDayRecord } from "./combinations";
+import {
+  buildScoreRegimeCalibration,
+  ScoreCalibrationInput,
+  ScoreCalibrationCell,
+  trendRegimeOf,
+  TrendRegime,
+} from "./calibration";
 import { buildWeightReview, WeightReviewDayRecord } from "./weightReview";
 import { buildMetricCombinations, MetricComboDayRecord } from "./metricCombinations";
 import { DayFingerprint } from "../../src/lib/signals/similarity";
@@ -68,6 +75,8 @@ export interface DayRecord {
   squeezeSide: string | null;
   thesisRegime: string | null;
   biasVerdict: string | null;
+  /** 0-100, 50 neutral — run.ts's bias?.score, the composite the score-calibration cells bucket by. */
+  biasScore: number | null;
   /** 0-100, run.ts's bias?.confidence — evidence QUALITY, not concurrence. */
   biasConfidence: number | null;
   /** 0-100, run.ts's bias?.agreement — how much the metrics concur with each other, a DIFFERENT axis from confidence. */
@@ -633,6 +642,63 @@ export function agreementValidationSection(records: DayRecord[]): {
   return { markdown: rows.join("\n"), stats };
 }
 
+/**
+ * SCORE-BUCKET × TREND-REGIME CALIBRATION — the §9 "Calibrated Probability"
+ * source. Cells are direction × strength × trend regime (see
+ * buildScoreRegimeCalibration in calibration.ts); each row's null prob is
+ * the base rate of ITS direction for ITS asset WITHIN days sharing its
+ * trend tag — the regime-conditional drift null, same construction the
+ * metric crosstab uses, because "bullish reads during bull regimes" must
+ * beat bull-regime drift, not a coin.
+ */
+export function scoreCalibrationSection(records: DayRecord[]): {
+  markdown: string;
+  cells: Record<string, ScoreCalibrationCell>;
+} {
+  const perDay = assetsPerDay(records);
+
+  // One null lookup per trend regime, built from that regime's own days.
+  const nullByRegime = new Map<TrendRegime, NullProbFor>();
+  for (const regime of ["bull", "bear", "neutral"] as const) {
+    const subset = records.filter((r) => trendRegimeOf(r.regimeTags) === regime);
+    nullByRegime.set(regime, buildNullLookup(subset, (r) => r.forwardReturn1d));
+  }
+
+  const inputs: ScoreCalibrationInput[] = records
+    .filter((r) => r.biasScore !== null && r.biasVerdict !== null)
+    .map((r) => {
+      const trendRegime = trendRegimeOf(r.regimeTags);
+      return {
+        score: r.biasScore as number,
+        verdict: r.biasVerdict as string,
+        trendRegime,
+        forwardReturnPct: r.forwardReturn1d,
+        nullProb: nullByRegime.get(trendRegime)!({
+          t: r.t,
+          verdict: r.biasVerdict as Occurrence["verdict"],
+          forwardReturnPct: r.forwardReturn1d,
+          asset: r.asset,
+        }),
+      };
+    });
+
+  const cells = buildScoreRegimeCalibration(inputs, blockLengthFor("24h", perDay));
+
+  const rows: string[] = [
+    "| Cell (direction:strength:regime) | N | Eff. N | Hit rate | Null | Edge | 95% CI | Calibrated? |",
+    "|---|---|---|---|---|---|---|---|",
+  ];
+  for (const key of Object.keys(cells).sort()) {
+    const c = cells[key];
+    rows.push(
+      `| ${key} | ${c.n} | ${c.effectiveN} | ${c.hitRatePct.toFixed(1)}% | ${c.nullRatePct.toFixed(1)}% | ` +
+        `${c.edgePP >= 0 ? "+" : ""}${c.edgePP.toFixed(1)}pp | ${(c.interval.lower * 100).toFixed(0)}-${(c.interval.upper * 100).toFixed(0)}% | ` +
+        `${c.calibrated ? "yes" : `no (n<${MIN_SAMPLE_N})`} |`
+    );
+  }
+  return { markdown: rows.join("\n"), cells };
+}
+
 /** bullish -> 1, bearish -> -1, neutral -> 0 — same mapping as scoring.ts's directionSign, duplicated locally since DayRecord.metrics stores verdict as a loose string, not the strict Verdict union. */
 function signOf(verdict: string): -1 | 0 | 1 {
   return verdict === "bullish" ? 1 : verdict === "bearish" ? -1 : 0;
@@ -789,6 +855,7 @@ function main() {
     assetsPerDay(records)
   );
   const agreementValidation = agreementValidationSection(records);
+  const scoreCalibration = scoreCalibrationSection(records);
   const fingerprints = buildFingerprints(records);
 
   const header = `# Backtest Report
@@ -915,6 +982,17 @@ next day's return sign more often than chance. Same sign-test machinery every ot
 already uses.
 
 ${agreementValidation.markdown}
+
+## Score Calibration (direction × strength × trend regime)
+
+The §9 "Calibrated Probability" source: for reads like today's — same direction, same
+score strength (leaning <15 points from 50, clear ≥15, intensityLabel's own boundary),
+same trend regime — how often did price actually move with the read over the next 24h?
+Null is the regime-conditional drift rate (blind exposure in that direction inside that
+regime), same H1 rule as everywhere else. Cells below N=${MIN_SAMPLE_N} are shown but
+must be quoted as "uncalibrated" by any surface.
+
+${scoreCalibration.markdown}
 `;
 
   const report = header + body;
@@ -964,6 +1042,7 @@ ${agreementValidation.markdown}
     coverageEnd,
     metrics: metricPerformance,
     agreementBuckets: agreementValidation.stats,
+    scoreCalibration: scoreCalibration.cells,
   };
   fs.mkdirSync(path.dirname(METRIC_STATS_OUT_PATH), { recursive: true });
   fs.writeFileSync(METRIC_STATS_OUT_PATH, JSON.stringify(metricStatsOut, null, 2));

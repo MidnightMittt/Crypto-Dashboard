@@ -128,9 +128,15 @@ agreement-quartile table (52→57%) suggests the correlation is weak at best.
 > Verdict per §8.5: confidence measures data completeness and is now
 > LABELLED that way — every surface that printed "Confidence" beside the
 > composite now prints "Data Quality" (§9's first bullet, implemented).
-> The calibrated-probability headline (score-bucket × regime hit rate with
-> Wilson bound and n_eff, "uncalibrated" where thin) remains the open half
-> of §9. Agreement, by contrast, showed real lift in its top quartile on
+> The calibrated-probability headline SHIPPED next: score-strength ×
+> direction × trend-regime cells with the regime-conditional drift null
+> attached (report.md "Score Calibration" section; lookupScoreCalibration;
+> ScoreCalibrationLine under the composite headline). The cells are
+> honest and mostly humbling — bearish:clear:bear is the standout
+> (65.4% vs 57.5% blind, +7.8pp, n=153) while bearish:leaning:bear
+> UNDERPERFORMS blind shorts by 6.9pp — and thin cells print
+> "uncalibrated" as designed. Cluster-decorrelated agreement is the
+> remaining §9 item. Agreement, by contrast, showed real lift in its top quartile on
 > the post-taxonomy replay (56.4%, n=328) and stays a live candidate.
 
 **H3 — Unexamined constants.** DIRECTIONAL_THRESHOLD=6 (chosen for display

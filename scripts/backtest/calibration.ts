@@ -152,3 +152,104 @@ function interpret(buckets: CalibrationBucket[], monotonic: boolean | null, mace
 
   return `${direction} ${calibrated}${magnitude}`;
 }
+
+/* ────────────────────────────────────────────────────────────────────────
+ * SCORE-BUCKET × TREND-REGIME CALIBRATION — the redesign's §9 headline
+ * quantity ("Calibrated Probability"): the empirical hit rate of reads
+ * like TODAY's, meaning the same direction, the same score strength, and
+ * the same trend regime. Confidence-band calibration above turned out
+ * degenerate (98% of days in one band); score direction/strength and
+ * regime are the dimensions that actually vary day to day.
+ *
+ * Each cell also carries the DRIFT NULL — what blind exposure in that
+ * direction earned inside that regime — because a bullish read during
+ * bull-tagged days must beat bull-day drift, not a coin (H1, same rule as
+ * every other cell in the census). Cells thinner than MIN_SAMPLE_N are
+ * still emitted with their n so a lookup can say "uncalibrated" with the
+ * reason, rather than silently borrowing the global rate.
+ * ──────────────────────────────────────────────────────────────────────── */
+
+export type TrendRegime = "bull" | "bear" | "neutral";
+export type ScoreStrength = "leaning" | "clear";
+
+export interface ScoreCalibrationInput {
+  score: number;
+  verdict: string;
+  /** The day's trend tag: "bull"/"bear" if tagged, else "neutral". */
+  trendRegime: TrendRegime;
+  forwardReturnPct: number | null;
+  /** 1 if the read's direction matched blind drift for this row's asset — supplied by the caller as the per-row null probability (see buildNullLookup). */
+  nullProb: number;
+}
+
+export interface ScoreCalibrationCell {
+  /** `${direction}:${strength}:${trendRegime}` */
+  key: string;
+  n: number;
+  /** Independent observations after the two-correlated-assets-per-day discount. */
+  effectiveN: number;
+  hitRatePct: number;
+  /** Wilson 95% interval on the hit rate. */
+  interval: ProportionInterval;
+  /** Exposure-weighted drift null for this cell, %. The number the hit rate must beat. */
+  nullRatePct: number;
+  /** hitRatePct − nullRatePct, percentage points. */
+  edgePP: number;
+  /** True when n clears MIN_SAMPLE_N — the gate a UI must respect before quoting the rate. */
+  calibrated: boolean;
+}
+
+/**
+ * The boundary between a "leaning" and a "clear" read is intensityLabel's
+ * own 15-point threshold (scoring.ts) — the cell definition must match the
+ * vocabulary the UI already prints, or the quoted rate describes a
+ * different population than the label the user is reading.
+ */
+const CLEAR_SCORE_DISTANCE = 15;
+
+export function scoreCellKey(score: number, verdict: string, trendRegime: TrendRegime): string | null {
+  if (verdict !== "bullish" && verdict !== "bearish") return null; // neutral asserts no direction — nothing to calibrate
+  const strength: ScoreStrength = Math.abs(score - 50) >= CLEAR_SCORE_DISTANCE ? "clear" : "leaning";
+  return `${verdict}:${strength}:${trendRegime}`;
+}
+
+export function trendRegimeOf(regimeTags: string[]): TrendRegime {
+  if (regimeTags.includes("bull")) return "bull";
+  if (regimeTags.includes("bear")) return "bear";
+  return "neutral";
+}
+
+export function buildScoreRegimeCalibration(
+  inputs: ScoreCalibrationInput[],
+  /** Dependent-run length for the effective-n discount — blockLengthFor("24h", assetsPerDay) at the call site. */
+  blockLength: number
+): Record<string, ScoreCalibrationCell> {
+  const byCell = new Map<string, ScoreCalibrationInput[]>();
+  for (const i of inputs) {
+    if (i.forwardReturnPct === null) continue;
+    const key = scoreCellKey(i.score, i.verdict, i.trendRegime);
+    if (!key) continue;
+    const list = byCell.get(key) ?? [];
+    list.push(i);
+    byCell.set(key, list);
+  }
+
+  const cells: Record<string, ScoreCalibrationCell> = {};
+  for (const [key, list] of byCell) {
+    const hits = list.filter((i) => isFavourable(i.verdict, i.forwardReturnPct as number)).length;
+    const interval = wilsonInterval(hits, list.length);
+    if (!interval) continue;
+    const nullRate = list.reduce((s, i) => s + i.nullProb, 0) / list.length;
+    cells[key] = {
+      key,
+      n: list.length,
+      effectiveN: Math.round(list.length / Math.max(1, blockLength)),
+      hitRatePct: (hits / list.length) * 100,
+      interval,
+      nullRatePct: nullRate * 100,
+      edgePP: (hits / list.length - nullRate) * 100,
+      calibrated: list.length >= MIN_SAMPLE_N,
+    };
+  }
+  return cells;
+}

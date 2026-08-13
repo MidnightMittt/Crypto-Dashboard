@@ -1,6 +1,13 @@
 import { describe, it, expect } from "vitest";
 import { computeTradeStats, TradeRecord } from "./tradeStats";
-import { buildCalibration, CalibrationInput } from "./calibration";
+import {
+  buildCalibration,
+  CalibrationInput,
+  buildScoreRegimeCalibration,
+  ScoreCalibrationInput,
+  scoreCellKey,
+  trendRegimeOf,
+} from "./calibration";
 import { wilsonInterval } from "./metrics";
 
 const DAY = 86_400_000;
@@ -199,5 +206,60 @@ describe("buildCalibration", () => {
       ...Array.from({ length: 100 }, () => ({ confidence: 70, verdict: "neutral", forwardReturnPct: 1 })),
     ];
     expect(buildCalibration(withNeutrals, "24h").buckets[0].n).toBe(40);
+  });
+});
+
+describe("buildScoreRegimeCalibration", () => {
+  const row = (
+    score: number,
+    verdict: string,
+    trendRegime: "bull" | "bear" | "neutral",
+    ret: number | null,
+    nullProb = 0.5
+  ): ScoreCalibrationInput => ({ score, verdict, trendRegime, forwardReturnPct: ret, nullProb });
+
+  it("keys cells by direction, intensityLabel's own 15-point strength boundary, and trend regime", () => {
+    expect(scoreCellKey(64, "bullish", "bull")).toBe("bullish:leaning:bull"); // |64-50|=14 < 15
+    expect(scoreCellKey(65, "bullish", "bull")).toBe("bullish:clear:bull");
+    expect(scoreCellKey(36, "bearish", "neutral")).toBe("bearish:leaning:neutral"); // |36-50|=14
+    expect(scoreCellKey(35, "bearish", "bear")).toBe("bearish:clear:bear");
+    expect(scoreCellKey(50, "neutral", "bull")).toBeNull(); // no direction, nothing to calibrate
+  });
+
+  it("computes hit rate against the direction and the drift null against exposure", () => {
+    // Hand-computed: 3 bullish-leaning-bull rows, returns +1, +1, -1 → 2/3
+    // hits = 66.7%. Null probs 0.6, 0.6, 0.6 → null 60%, edge +6.7pp.
+    const cells = buildScoreRegimeCalibration(
+      [row(60, "bullish", "bull", 1, 0.6), row(60, "bullish", "bull", 1, 0.6), row(60, "bullish", "bull", -1, 0.6)],
+      1
+    );
+    const c = cells["bullish:leaning:bull"];
+    expect(c.n).toBe(3);
+    expect(c.hitRatePct).toBeCloseTo(66.667, 2);
+    expect(c.nullRatePct).toBeCloseTo(60, 6);
+    expect(c.edgePP).toBeCloseTo(6.667, 2);
+    expect(c.calibrated).toBe(false); // 3 < MIN_SAMPLE_N — emitted, but a UI must not quote it
+  });
+
+  it("a bearish hit is a NEGATIVE forward return", () => {
+    const cells = buildScoreRegimeCalibration(
+      [row(30, "bearish", "bear", -2, 0.5), row(30, "bearish", "bear", 3, 0.5)],
+      1
+    );
+    expect(cells["bearish:clear:bear"].hitRatePct).toBe(50);
+  });
+
+  it("discounts effectiveN by the block length and drops null returns", () => {
+    const rows = Array.from({ length: 10 }, () => row(60, "bullish", "neutral", 1, 0.5));
+    rows.push(row(60, "bullish", "neutral", null, 0.5)); // no forward return — excluded, not a hit
+    const cells = buildScoreRegimeCalibration(rows, 2);
+    expect(cells["bullish:leaning:neutral"].n).toBe(10);
+    expect(cells["bullish:leaning:neutral"].effectiveN).toBe(5);
+  });
+
+  it("trendRegimeOf maps tags with neutral as the fallback", () => {
+    expect(trendRegimeOf(["bull", "high-vol"])).toBe("bull");
+    expect(trendRegimeOf(["bear", "normal-vol"])).toBe("bear");
+    expect(trendRegimeOf(["low-vol", "range-bound"])).toBe("neutral");
   });
 });
