@@ -160,6 +160,44 @@ async function fetchDaily(config: InstrumentConfig): Promise<Bar[]> {
   return allZeroVolume ? bars.map((b) => ({ ...b, volume: null })) : bars;
 }
 
+/**
+ * QUARANTINE THE LIVE ROW when the provider serves an impossible bar.
+ *
+ * Observed, not hypothesized: on 2026-08-12 Yahoo's CURRENT-SESSION row for
+ * six unrelated names (DHI, ITB, LEN, SCCO, UPS, WPM) had the open ABOVE the
+ * high by a few cents — e.g. DHI O=151.00, H=150.345 — in the RAW response,
+ * before any adjustment. The bad open print is a live-row artifact; the same
+ * series' history is clean.
+ *
+ * The validator refusing that bar is correct. Refusing the WHOLE INSTRUMENT
+ * for it is not: it would permanently exclude six real companies and one
+ * industry ETF over a one-cent artifact on a row the provider is still
+ * mutating, and make the daily pipeline red on the provider's schedule
+ * rather than ours.
+ *
+ * So: if and only if the FINAL bar violates OHLC containment, drop that one
+ * bar and say so loudly. This is exclusion, not repair — no value is
+ * invented, the instrument simply ends one session earlier, and the log
+ * names the date and prices. Any violation in INTERIOR bars still refuses
+ * the instrument outright, because corrupt history is a finding and a
+ * mutable live row is a nuisance, and only one of them should stop the
+ * pipeline.
+ */
+function quarantineBadLiveRow(bars: Bar[], id: string): Bar[] {
+  if (bars.length === 0) return bars;
+  const last = bars[bars.length - 1];
+  const violated =
+    last.open > last.high || last.open < last.low || last.close > last.high || last.close < last.low;
+  if (!violated) return bars;
+
+  const date = new Date(last.t).toISOString().slice(0, 10);
+  console.log(
+    `   [quarantine] ${id}: final bar ${date} dropped — provider served O ${last.open} outside ` +
+      `[L ${last.low}, H ${last.high}] on the live row. Series ends one session earlier; nothing was altered.`
+  );
+  return bars.slice(0, -1);
+}
+
 async function main() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
   /*
@@ -192,7 +230,7 @@ async function main() {
   let failures = 0;
   for (const config of configs) {
     try {
-      const bars = await fetchDaily(config);
+      const bars = quarantineBadLiveRow(await fetchDaily(config), config.meta.id);
       const report = validateBars(config.meta, bars, "1D");
       console.log(summarizeReport(report));
 
