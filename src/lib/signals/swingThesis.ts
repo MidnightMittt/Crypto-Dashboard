@@ -39,7 +39,7 @@
 
 import { MarketBias, Verdict } from "./types";
 import { EntryQualityInputs } from "./entryQuality";
-import { TradePlan, TradePlanConfig, buildTradePlan } from "./tradePlan";
+import { TradePlan, TradePlanConfig, buildTradePlan, PlanConstraints } from "./tradePlan";
 import type { PlannedSetupsFrozen } from "./plannedSetup";
 import { TechnicalAgreement } from "@/lib/sentiment/technicals";
 import { levelReached, approachesFor, HourBar } from "@/lib/research/tradeExecution";
@@ -236,6 +236,13 @@ export interface DailyCloseEvidence {
   planInputs: EntryQualityInputs | null;
   /** Thesis reasons to freeze onto a newly activated plan. */
   reasons: string[];
+  /**
+   * Measured excursion/EV constraints per side (planConstraintsFor), from
+   * the execution replay's published record. OPTIONAL AND ABSENT in the
+   * backtest replay on purpose — the replay must stay ungated so the
+   * record keeps describing the raw strategy (see plannerStats.ts).
+   */
+  constraintsBySide?: { long: PlanConstraints | null; short: PlanConstraints | null } | null;
 }
 
 export interface TickEvidence {
@@ -541,6 +548,7 @@ function buildPlan(direction: SwingDirection, ev: DailyCloseEvidence, config: Sw
     quality,
     config: planConfigOf(config),
     requirePullbackEntry: true,
+    constraints: ev.constraintsBySide?.[direction] ?? null,
   });
 }
 

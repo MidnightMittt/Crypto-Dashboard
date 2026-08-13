@@ -60,6 +60,39 @@ export interface TradePlan {
   /** Structure snapshot, so displayed context can't drift out from under the frozen levels. */
   supportZone: SupportResistanceZone | null;
   resistanceZone: SupportResistanceZone | null;
+  /**
+   * The adverse move (% of entry) that winning trades in this side+regime
+   * typically endured before working — winners' median MAE. What a holder
+   * of this plan should EXPECT to sit through, stated up front instead of
+   * discovered mid-trade. Null when no excursion record covers this plan.
+   */
+  expectedDrawdownPct: number | null;
+  /** Expectancy % per trade for this side+regime with the win rate at its Wilson lower bound. Null when ungated (no record). */
+  evLowerPct: number | null;
+}
+
+/**
+ * Measured constraints from the execution replay's excursion record
+ * (scripts/backtest/plannerStats.ts), for THIS plan's side and the current
+ * volatility regime. Optional and null-tolerant by design: the equity path
+ * and the backtest replay pass nothing — the replay MUST stay ungated so
+ * these numbers keep describing the raw strategy (measurement vs policy;
+ * see plannerStats.ts) — and every field is independently nullable so a
+ * thin cell constrains nothing rather than constraining from noise.
+ */
+export interface PlanConstraints {
+  /** e.g. "short:low-vol" — named so a refusal can cite its own bucket. */
+  cellKey: string;
+  /** Trades behind these numbers. */
+  n: number;
+  /** Expectancy % per trade with the win rate at its Wilson 95% lower bound. ≤ 0 refuses the plan. */
+  evLowerPct: number;
+  /** Adverse move (% of entry) that winning trades typically endured — the plan's honest "expected drawdown". */
+  winnersMaeP50Pct: number | null;
+  /** A stop closer than this stops out winners: 80% of winning trades drew down less than this before working. */
+  winnersMaeP80Pct: number | null;
+  /** 75% of winners never ran farther than this — a primary target beyond it is priced on trades this strategy does not produce. */
+  winnersMfeP75Pct: number | null;
 }
 
 export interface TradePlanConfig {
@@ -152,6 +185,8 @@ export interface TradePlanInputs {
    * when evidence says act now, entering at market is a legitimate answer.
    */
   requirePullbackEntry?: boolean;
+  /** Measured excursion/EV constraints for this side+regime. Omitted by the equity path and the (deliberately ungated) backtest replay. */
+  constraints?: PlanConstraints | null;
 }
 
 /**
@@ -170,7 +205,10 @@ export type TradePlanRefusal =
   | "no-pullback-entry"
   | "stop-at-entry"
   | "stop-inside-noise"
-  | "reward-too-small";
+  | "reward-too-small"
+  | "negative-expectancy"
+  | "stop-tighter-than-winners-drawdown"
+  | "target-beyond-winners-reach";
 
 export const TRADE_PLAN_REFUSAL_TEXT: Record<TradePlanRefusal, string> = {
   "no-volatility":
@@ -185,6 +223,12 @@ export const TRADE_PLAN_REFUSAL_TEXT: Record<TradePlanRefusal, string> = {
     "The structural stop sits closer than the market's own daily noise. It would be taken out by ordinary movement rather than by the thesis being wrong, so the plan is refused rather than the stop widened — widening it would detach it from the level it represents.",
   "reward-too-small":
     "Reward-to-risk falls below the engine's minimum once measured from the real entry, not from the anchor price. The direction may still be right; the geometry does not pay enough for the risk it requires.",
+  "negative-expectancy":
+    "Trades of this side in this volatility regime have NEGATIVE expectancy at the 95% lower bound of their own replayed record. The engine does not plan trades its own history says lose money — this gate re-opens automatically if the record turns positive on a future regeneration.",
+  "stop-tighter-than-winners-drawdown":
+    "The structural stop sits inside the drawdown that WINNING trades in this regime routinely endured before working (80% of winners drew down further than this stop allows). It would convert winners into losers by construction, so the plan is refused rather than the stop detached from its level.",
+  "target-beyond-winners-reach":
+    "The primary target sits beyond where 75% of winning trades in this regime ever reached. A plan priced on excursions this strategy does not produce is fantasy with a risk/reward attached.",
 };
 
 /** A plan, or a named reason there is none. Never a degraded plan. */
@@ -215,6 +259,23 @@ export function buildTradePlan(inputs: TradePlanInputs): TradePlan | null {
 export function buildTradePlanOutcome(inputs: TradePlanInputs): TradePlanOutcome {
   const { direction, anchorPrice, atrPct, zones, quality } = inputs;
   const config = inputs.config ?? DEFAULT_TRADE_PLAN_CONFIG;
+  const constraints = inputs.constraints ?? null;
+
+  /*
+   * THE EV GATE (redesign §10), checked before any geometry: it is a
+   * property of the side and regime, not of this plan's levels, so no
+   * arrangement of entries and stops can rescue a bucket whose own replayed
+   * record loses money at the pessimistic bound. Measured at the time this
+   * was wired: every short cell was negative at the Wilson lower bound
+   * (986 replayed shorts, −0.04% at the point estimate net of costs) and
+   * every long cell positive — so this line refuses shorts until their
+   * record earns them back. Policy, not measurement: the replay that
+   * produces the record never passes constraints, so the gate cannot
+   * starve its own evidence.
+   */
+  if (constraints && constraints.evLowerPct <= 0) {
+    return { plan: null, refusal: "negative-expectancy" };
+  }
 
   if (atrPct === null || atrPct <= 0 || anchorPrice <= 0) {
     return { plan: null, refusal: "no-volatility" };
@@ -289,6 +350,22 @@ export function buildTradePlanOutcome(inputs: TradePlanInputs): TradePlanOutcome
     return { plan: null, refusal: "stop-inside-noise" };
   }
 
+  /*
+   * Excursion floors and ceilings — geometry proposes, the excursion record
+   * disposes. Percent-of-entry, matching how MAE/MFE were recorded.
+   */
+  const riskPct = (riskDistance / entryRef) * 100;
+  if (constraints?.winnersMaeP80Pct != null && riskPct < constraints.winnersMaeP80Pct) {
+    return { plan: null, refusal: "stop-tighter-than-winners-drawdown" };
+  }
+  const target1DistancePct = (Math.abs(eq.targetPrice - entryRef) / entryRef) * 100;
+  if (constraints?.winnersMfeP75Pct != null && target1DistancePct > constraints.winnersMfeP75Pct) {
+    return { plan: null, refusal: "target-beyond-winners-reach" };
+  }
+  const target2DistancePct = (Math.abs(eq.target2Price - entryRef) / entryRef) * 100;
+  const target2BeyondReach =
+    constraints?.winnersMfeP75Pct != null && target2DistancePct > constraints.winnersMfeP75Pct;
+
   const riskRewardRatio = Math.abs(eq.targetPrice - entryRef) / riskDistance;
   const riskRewardRatio2 = Math.abs(eq.target2Price - entryRef) / riskDistance;
   if (riskRewardRatio < MIN_RR) return { plan: null, refusal: "reward-too-small" };
@@ -303,7 +380,12 @@ export function buildTradePlanOutcome(inputs: TradePlanInputs): TradePlanOutcome
     target1Price: eq.targetPrice,
     target1Basis: eq.targetBasis,
     target2Price: eq.target2Price,
-    target2Basis: eq.target2Basis,
+    // The stretch target keeps its structural level but must say when it
+    // sits beyond what 75% of winners ever reached — annotated, not capped,
+    // because moving it would detach it from the level it represents.
+    target2Basis: target2BeyondReach
+      ? `${eq.target2Basis} — beyond the excursion 75% of winning trades in this regime ever reached; treat as best-case, not base-case`
+      : eq.target2Basis,
     riskRewardRatio,
     riskRewardRatio2,
     stars: eq.stars,
@@ -313,6 +395,8 @@ export function buildTradePlanOutcome(inputs: TradePlanInputs): TradePlanOutcome
     anchorPrice,
     supportZone: eq.nearestSupport,
     resistanceZone: eq.nearestResistance,
+    expectedDrawdownPct: constraints?.winnersMaeP50Pct ?? null,
+    evLowerPct: constraints?.evLowerPct ?? null,
   };
   return { plan, refusal: null };
 }

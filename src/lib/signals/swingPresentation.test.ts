@@ -37,6 +37,8 @@ function state(overrides: Partial<SwingThesisState> = {}): SwingThesisState {
       entryRef: 94,
       supportZone: null,
       resistanceZone: null,
+  expectedDrawdownPct: null,
+  evLowerPct: null,
     },
     ...overrides,
   };

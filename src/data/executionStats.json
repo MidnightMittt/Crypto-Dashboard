@@ -2,7 +2,7 @@
   "provenance": {
     "engineVersion": "4.0.0",
     "featureVersion": "2.0.0",
-    "generatedAt": 1786590612770,
+    "generatedAt": 1786601675263,
     "assets": [
       "BTC",
       "ETH"
@@ -1787,6 +1787,164 @@
       }
     }
   ],
+  "planner": {
+    "cells": {
+      "long:high-vol": {
+        "side": "long",
+        "volRegime": "high-vol",
+        "n": 73,
+        "winRatePct": 68.4931506849315,
+        "winRateWilsonLowPct": 57.14069101601096,
+        "avgWinPct": 8.031625180965959,
+        "avgLossPct": -4.519600254874875,
+        "evPointPct": 4.077129495701038,
+        "evLowerPct": 2.652256690141911,
+        "winners": {
+          "n": 50,
+          "maeP50Pct": 2.213747343671999,
+          "maeP80Pct": 3.8481615371564715,
+          "maeP90Pct": 4.420721069004182,
+          "mfeP50Pct": 10.063865236553792,
+          "mfeP75Pct": 11.858940688834242
+        }
+      },
+      "long:normal-vol": {
+        "side": "long",
+        "volRegime": "normal-vol",
+        "n": 59,
+        "winRatePct": 57.6271186440678,
+        "winRateWilsonLowPct": 44.93425547283663,
+        "avgWinPct": 5.756813091840506,
+        "avgLossPct": -4.323441210265107,
+        "evPointPct": 1.485518896033043,
+        "evLowerPct": 0.20604601015463375,
+        "winners": {
+          "n": 34,
+          "maeP50Pct": 1.7313655637416359,
+          "maeP80Pct": 5.404731184192809,
+          "maeP90Pct": 6.853106633565409,
+          "mfeP50Pct": 6.814346304198251,
+          "mfeP75Pct": 9.469066216517
+        }
+      },
+      "long:low-vol": {
+        "side": "long",
+        "volRegime": "low-vol",
+        "n": 81,
+        "winRatePct": 59.25925925925925,
+        "winRateWilsonLowPct": 48.376114693149965,
+        "avgWinPct": 4.022326590965537,
+        "avgLossPct": -2.3509264300683,
+        "evPointPct": 1.4258161009147141,
+        "evLowerPct": 0.7322057610716743,
+        "winners": {
+          "n": 48,
+          "maeP50Pct": 1.4420697701681857,
+          "maeP80Pct": 2.5040250364365444,
+          "maeP90Pct": 3.3047076628523593,
+          "mfeP50Pct": 5.511041807642877,
+          "mfeP75Pct": 7.513366717213215
+        }
+      },
+      "short:high-vol": {
+        "side": "short",
+        "volRegime": "high-vol",
+        "n": 297,
+        "winRatePct": 45.45454545454545,
+        "winRateWilsonLowPct": 39.885572365754825,
+        "avgWinPct": 5.729078658444753,
+        "avgLossPct": -4.876906481617925,
+        "evPointPct": -0.05600414522579866,
+        "evLowerPct": -0.6466486034770216,
+        "winners": {
+          "n": 135,
+          "maeP50Pct": 2.1030095195262795,
+          "maeP80Pct": 4.245759748152568,
+          "maeP90Pct": 5.720199819757853,
+          "mfeP50Pct": 8.25724027119175,
+          "mfeP75Pct": 11.99373194049851
+        }
+      },
+      "short:normal-vol": {
+        "side": "short",
+        "volRegime": "normal-vol",
+        "n": 300,
+        "winRatePct": 45.33333333333333,
+        "winRateWilsonLowPct": 39.79441581242693,
+        "avgWinPct": 5.998313449587466,
+        "avgLossPct": -4.320618169876562,
+        "evPointPct": 0.35729749761379725,
+        "evLowerPct": -0.21425961382704672,
+        "winners": {
+          "n": 136,
+          "maeP50Pct": 1.8559198631753173,
+          "maeP80Pct": 3.8531982674062397,
+          "maeP90Pct": 4.940179477905063,
+          "mfeP50Pct": 8.369312778228153,
+          "mfeP75Pct": 11.343695471719121
+        }
+      },
+      "short:low-vol": {
+        "side": "short",
+        "volRegime": "low-vol",
+        "n": 389,
+        "winRatePct": 41.90231362467866,
+        "winRateWilsonLowPct": 37.101690568811236,
+        "avgWinPct": 4.514108272334301,
+        "avgLossPct": -3.8261628287444007,
+        "evPointPct": -0.33139627482196277,
+        "evLowerPct": -0.7317812522221954,
+        "winners": {
+          "n": 163,
+          "maeP50Pct": 1.3110952550838362,
+          "maeP80Pct": 2.6127952822833502,
+          "maeP90Pct": 3.967495061348673,
+          "mfeP50Pct": 5.857740585774058,
+          "mfeP75Pct": 9.09938951751722
+        }
+      }
+    },
+    "survival": [
+      {
+        "hours": 24,
+        "n": 1121,
+        "eventualWinRatePct": 49.68777876895629
+      },
+      {
+        "hours": 48,
+        "n": 1034,
+        "eventualWinRatePct": 51.54738878143134
+      },
+      {
+        "hours": 72,
+        "n": 950,
+        "eventualWinRatePct": 54.421052631578945
+      },
+      {
+        "hours": 96,
+        "n": 879,
+        "eventualWinRatePct": 56.31399317406143
+      },
+      {
+        "hours": 120,
+        "n": 823,
+        "eventualWinRatePct": 58.08019441069259
+      },
+      {
+        "hours": 144,
+        "n": 767,
+        "eventualWinRatePct": 60.104302477183836
+      }
+    ],
+    "timeStopFinding": "NO TIME STOP is justified by this data: eventual win rate RISES with age, from 49.7% for trades open at hour 24 (n=1121) to 60.1% at hour 144 (n=767) — stops resolve faster than targets, so surviving trades are the good ones and a time stop would amputate winners. The hypothesized exit-if-below-45% trigger never fires at any measured horizon."
+  },
+  "plannerGateEffect": {
+    "keptN": 213,
+    "refusedN": 986,
+    "keptExpectancyPct": 2.3510195879165128,
+    "refusedExpectancyPct": -0.038901757356658066,
+    "ungatedExpectancyPct": 0.38566308546501427
+  },
   "failureModes": [
     {
       "label": "bear + normal-vol + range-bound",

@@ -106,7 +106,7 @@ import {
   LiquidityWall,
 } from "../technicals/liquidityWalls";
 import { recordAndGetPriorSnapshots, classifyPersistence } from "../store/bookSnapshotStore";
-import { classifyRegime } from "../technicals/regimes";
+import { classifyRegime, regimeTagsToStrings } from "../technicals/regimes";
 import { fetchEtfFlows } from "../providers/etfFlows";
 import { fetchSpotVolumeUsd } from "../providers/spotVolume";
 import { evaluateAll } from "../signals/evaluators";
@@ -120,6 +120,7 @@ import { applyDailyClose, applyTick, swingReasons } from "../signals/swingThesis
 import { CONTINUOUS_SESSION } from "../research/types";
 import { buildHarmonicEvidence, selectBestHarmonic, HarmonicEvidence } from "../signals/harmonicEvidence";
 import { buildPlannedSetups } from "../signals/plannedSetup";
+import { planConstraintsFor, PlannerStatsSnapshot } from "../signals/planConstraints";
 import { lookupTradeStatsBySide, ExecutionStatsSnapshot } from "../sentiment/backtestStats";
 import executionStatsJson from "@/data/executionStats.json";
 import type { TechnicalRead, EtfFlowSummary, SpotPerpVolume, LiquidityMapRead, LiquidityWallRead, LiquidityWallWithPersistence } from "@/types/market";
@@ -1244,6 +1245,25 @@ async function buildSwingThesis(
   const candles = await fetchOkxDailyCandles(asset).catch(() => []);
   const lastClosed = candles[candles.length - 1];
 
+  /*
+   * Excursion/EV constraints for both sides, from the execution replay's
+   * published planner cells + TODAY's volatility regime. Computed here — on
+   * the LIVE path only — because the backtest replay must never gate itself
+   * (measurement vs policy; see scripts/backtest/plannerStats.ts). BTC/ETH
+   * only: the excursion record is those assets' perp trades, and attaching
+   * one market's drawdown habits to another's plan would be borrowed
+   * evidence.
+   */
+  const plannerSnapshot = (executionStatsJson as { planner?: PlannerStatsSnapshot }).planner;
+  const liveRegime = asset === "BTC" || asset === "ETH" ? await buildMarketRegimeTags(asset) : null;
+  const liveTags = liveRegime ? regimeTagsToStrings(liveRegime) : null;
+  const constraintsBySide = liveTags
+    ? {
+        long: planConstraintsFor("long", liveTags, plannerSnapshot),
+        short: planConstraintsFor("short", liveTags, plannerSnapshot),
+      }
+    : null;
+
   let next = store;
 
   if (lastClosed && lastClosed.t > store.lastCloseAt) {
@@ -1272,6 +1292,7 @@ async function buildSwingThesis(
         ...swingWinRate(bias.verdict),
       },
       reasons: swingReasons(bias),
+      constraintsBySide,
     });
   }
 
@@ -1298,6 +1319,7 @@ async function buildSwingThesis(
     next = {
       ...next,
       plannedSetups: buildPlannedSetups({
+        constraintsBySide,
         t: lastClosed.t,
         closePrice: lastClosed.close,
         atrPct: technicals?.atrPct ?? null,

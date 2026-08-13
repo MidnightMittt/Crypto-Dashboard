@@ -31,7 +31,7 @@
  * outside a daily close.
  */
 
-import { TradePlan, TradeDirection, buildTradePlan } from "./tradePlan";
+import { TradePlan, TradeDirection, buildTradePlan, PlanConstraints } from "./tradePlan";
 import { EntryQualityInputs } from "./entryQuality";
 import { SupportResistanceZone } from "@/lib/technicals/marketStructure";
 import { Verdict } from "./types";
@@ -94,6 +94,8 @@ export interface PlannedSetupsView {
 }
 
 export interface PlannedSetupInputs {
+  /** Measured excursion/EV constraints per side. Absent in the (deliberately ungated) backtest replay — see plannerStats.ts. */
+  constraintsBySide?: { long: PlanConstraints | null; short: PlanConstraints | null } | null;
   /** Daily close timestamp — the only cadence at which plans are built. */
   t: number;
   closePrice: number;
@@ -161,7 +163,15 @@ export function buildPlannedSetups(inputs: PlannedSetupInputs): PlannedSetupsFro
    * setup while being the exact opposite of one.
    */
   const plan = (direction: TradeDirection) =>
-    buildTradePlan({ direction, anchorPrice: closePrice, atrPct, zones, quality, requirePullbackEntry: true });
+    buildTradePlan({
+      direction,
+      anchorPrice: closePrice,
+      atrPct,
+      zones,
+      quality,
+      requirePullbackEntry: true,
+      constraints: inputs.constraintsBySide?.[direction] ?? null,
+    });
 
   const long = plan("long");
   const short = plan("short");

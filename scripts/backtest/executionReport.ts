@@ -20,6 +20,14 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { computeTradeStats, TradeRecord, TradeStats } from "./tradeStats";
 import { buildCalibration, CalibrationInput, CalibrationReport } from "./calibration";
+import {
+  buildPlannerStats,
+  gateEffect,
+  PlannerStats,
+  PlannerTradeRow,
+  GateEffect,
+  VolRegime,
+} from "./plannerStats";
 import { buyAndHold, smaCrossover, randomEntry, BenchmarkResult, DailyBar } from "./benchmarks";
 import { buildProvenance, BacktestProvenance } from "./version";
 import {
@@ -94,6 +102,14 @@ export interface ExecutionStats {
   confidenceDistribution: DistributionSummary | null;
   confidenceByAction: Array<{ label: string; distribution: DistributionSummary }>;
   marginalRegimes: RegimeCell[];
+  /**
+   * Side × vol-regime excursion/EV statistics for the trade planner
+   * (plannerStats.ts) — ALWAYS computed from the ungated replay, never from
+   * gated trades; see that module's measurement-vs-policy note.
+   */
+  planner: PlannerStats;
+  /** The live EV gate's analytic effect on this same ungated record. */
+  plannerGateEffect: GateEffect;
   /** Segments whose net expectancy is materially worse than the overall base rate. */
   failureModes: Array<{ label: string; n: number; expectancyNetPct: number; stopHitRatePct: number; deltaVsBasePct: number }>;
 }
@@ -226,6 +242,23 @@ function main() {
     traded.map((d) => ({ ...toTradeRecord(d), regimeTags: d.regimeTags }))
   );
 
+  const volRegimeOf = (tags: string[]): VolRegime | null => {
+    for (const v of ["high-vol", "normal-vol", "low-vol"] as const) {
+      if (tags.includes(v)) return v;
+    }
+    return null;
+  };
+  const plannerRows: PlannerTradeRow[] = traded.map((d) => ({
+    side: d.trade!.side,
+    volRegime: volRegimeOf(d.regimeTags),
+    netReturnPct: d.trade!.netReturnPct,
+    maePct: d.trade!.maePct,
+    mfePct: d.trade!.mfePct,
+    hoursHeld: d.trade!.hoursHeld,
+  }));
+  const planner = buildPlannerStats(plannerRows);
+  const plannerGateEffect = gateEffect(plannerRows, planner);
+
   const base = overall?.expectancyNetPct ?? 0;
   const failureModes = [...byRegime, ...byConfidenceBucket, ...byMtfAgreement, ...groupBy(traded, (d) => d.trade!.side)]
     .map((s) => ({
@@ -262,6 +295,8 @@ function main() {
     confidenceDistribution,
     confidenceByAction,
     marginalRegimes,
+    planner,
+    plannerGateEffect,
     failureModes,
   };
 
@@ -459,6 +494,53 @@ function renderMarkdown(s: ExecutionStats): string {
       );
     }
   }
+  lines.push("");
+
+  lines.push(`## Planner statistics — excursions, EV bounds, and the time-stop verdict`);
+  lines.push("");
+  lines.push(
+    `Side × vol-regime cells from the UNGATED replay (bucket fixed a priori — direction faces ` +
+      `drift asymmetry, volatility scales excursions; see plannerStats.ts). Winners' MAE is the ` +
+      `adverse move winning trades endured before working: a stop tighter than the p80 stops out ` +
+      `winners. Winners' MFE is how far winners actually ran: a target beyond the p75 is priced ` +
+      `on trades this strategy does not produce. EV@lower prices the win rate at its Wilson 95% ` +
+      `lower bound — the number the live gate refuses at ≤ 0.`
+  );
+  lines.push("");
+  lines.push(`| Cell | N | Win rate | Wilson low | Avg win | Avg loss | EV@point | EV@lower | Winners' MAE p80/p90 | Winners' MFE p50/p75 |`);
+  lines.push(`|---|---|---|---|---|---|---|---|---|---|`);
+  for (const key of Object.keys(s.planner.cells).sort()) {
+    const c = s.planner.cells[key as keyof typeof s.planner.cells]!;
+    const w = c.winners;
+    lines.push(
+      `| ${key} | ${c.n} | ${c.winRatePct.toFixed(1)}% | ${c.winRateWilsonLowPct.toFixed(1)}% | ` +
+        `${pct(c.avgWinPct)} | ${pct(c.avgLossPct)} | ${pct(c.evPointPct)} | **${pct(c.evLowerPct)}** | ` +
+        `${w ? `${w.maeP80Pct.toFixed(2)}% / ${w.maeP90Pct.toFixed(2)}%` : "thin"} | ` +
+        `${w ? `${w.mfeP50Pct.toFixed(2)}% / ${w.mfeP75Pct.toFixed(2)}%` : "thin"} |`
+    );
+  }
+  lines.push("");
+  lines.push(`### Survival curve — should plans have a time stop?`);
+  lines.push("");
+  lines.push(`| Still open at hour | N | Eventual win rate |`);
+  lines.push(`|---|---|---|`);
+  for (const pt of s.planner.survival) {
+    lines.push(`| ${pt.hours} | ${pt.n} | ${pt.eventualWinRatePct.toFixed(1)}% |`);
+  }
+  lines.push("");
+  lines.push(s.planner.timeStopFinding);
+  lines.push("");
+  lines.push(`### The EV gate's measured effect on this record`);
+  lines.push("");
+  const g = s.plannerGateEffect;
+  lines.push(
+    `Applied to these same ${g.keptN + g.refusedN} ungated trades, the gate keeps ${g.keptN} ` +
+      `(expectancy ${pct(g.keptExpectancyPct)}) and refuses ${g.refusedN} ` +
+      `(expectancy ${pct(g.refusedExpectancyPct)}); ungated expectancy was ${pct(g.ungatedExpectancyPct)}. ` +
+      `IN-SAMPLE: the gate was derived from this record, so this is the upper bound of its benefit, ` +
+      `not a forecast. The gate re-earns itself every regeneration — a refused bucket whose ungated ` +
+      `record turns positive re-opens automatically.`
+  );
   lines.push("");
   lines.push(`## Unavailable inputs`);
   lines.push("");

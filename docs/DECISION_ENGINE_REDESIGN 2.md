@@ -84,63 +84,11 @@ exposure-matched benchmark). This likely *reduces* several bullish cells and
 *rescues* some bearish ones. It is the highest-priority correction in this
 document.
 
-> **MEASURED (2026-08-12, implemented).** Every directional cell now tests
-> against a Poisson-binomial null where each occurrence's probability is the
-> base rate of ITS direction for ITS asset at that horizon (per-asset, with
-> tags conditioned on tag-filtered days; `buildNullLookup` in
-> scripts/backtest/metrics.ts). The outcome was NOT what the paragraph above
-> predicted at the headline level, and both halves matter:
->
-> - **Unconditional cells barely moved (0 of 48 hypothesis cells flip).**
->   The replay window (2019→present) nets out to ~no daily drift — BTC's 1d
->   up-rate is 50.7%, ETH's 49.6% — so the 24h census was never materially
->   flattered. At 7d BTC drifts (52.7%) and several 7d p-values shifted
->   without crossing 0.05.
-> - **Regime-conditional cells moved a lot: 23 of 336 crosstab cells flip.**
->   Drift hides inside regime tags, not the pooled window. Lost significance:
->   cells that were regime drift wearing a signal costume — e.g.
->   squeezeRisk:bear @24h won 56.9% against a 57.5% blind rate,
->   spotPerpVolume:bull @7d 57.1% vs 55.8%, stablecoins:bull @24h 54.0% vs
->   53.9%. Gained significance: anti-signals drift had been masking — e.g.
->   openInterest:bear @24h won only 41.0% when blind shorts won 51.1%, and
->   fearGreed:bull @24h's 56.0% is genuinely large against bull-tag days'
->   45.6% next-day up-rate.
-> - **5 of 712 conjunction cells lose significance** (all 7d/4h automatic
->   pairs — the family that inherited drift as free credit).
->
-> The report prints `p (vs null)` beside the legacy `p (vs 50%)` for one
-> transition so the correction is auditable; the overlap audit's bootstrap
-> uses the same exposure-weighted null. Downstream consequence for step 2+:
-> the regime crosstab, not the pooled table, is where claims must be
-> re-checked before anything earns weight.
-
 **H2 — Confidence has never been validated against outcomes.** We assert
 that evidence quality should scale conviction (damping), but we have never
 published the calibration curve: realized hit rate by confidence decile. If
 confidence does not correlate with accuracy, the damping is aesthetics. The
 agreement-quartile table (52→57%) suggests the correlation is weak at best.
-
-> **MEASURED (2026-08-12, post-taxonomy replay).** The curve is not merely
-> flat — it is DEGENERATE: 1,788 of 1,826 scoreable days (98%) fall in one
-> band (40–60, observed hit rate 52.5%, Wilson [50.2%, 54.8%]); the only
-> other populated band is 20–40 with n=38. Technically monotonic
-> (39% → 53%), but a number that takes one value cannot rank setups.
-> Verdict per §8.5: confidence measures data completeness and is now
-> LABELLED that way — every surface that printed "Confidence" beside the
-> composite now prints "Data Quality" (§9's first bullet, implemented).
-> The calibrated-probability headline SHIPPED next: score-strength ×
-> direction × trend-regime cells with the regime-conditional drift null
-> attached (report.md "Score Calibration" section; lookupScoreCalibration;
-> ScoreCalibrationLine under the composite headline). The cells are
-> honest and mostly humbling — bearish:clear:bear is the standout
-> (65.4% vs 57.5% blind, +7.8pp, n=153) while bearish:leaning:bear
-> UNDERPERFORMS blind shorts by 6.9pp — and thin cells print
-> "uncalibrated" as designed. Cluster-decorrelated agreement then
-> SHIPPED as the final §9 item: the leverage family (funding, basis,
-> squeezeRisk, longShort) counts as one opinion, a self-split cluster
-> counts as a disagreement, and the replayed quartiles separate more
-> cleanly (51/49/53/56, top quartile p=0.025 vs the drift null). Agreement, by contrast, showed real lift in its top quartile on
-> the post-taxonomy replay (56.4%, n=328) and stays a live candidate.
 
 **H3 — Unexamined constants.** DIRECTIONAL_THRESHOLD=6 (chosen for display
 stability), the 10pp full-strength cap in regime pairs (stated judgement),
@@ -213,44 +161,6 @@ context. Codified, not implied.
   only as priors for signals too young to have a record.
 
 ## 7. Signals to REMOVE entirely
-
-> **IMPLEMENTED (2026-08-12) — measured replay delta.** §5 and §7 landed
-> together as the METRIC_ROLES taxonomy in scoring.ts: nine Edge voters
-> remain (funding, squeezeRisk, openInterest, basis, longShort, etfFlows,
-> spotPerpVolume, stablecoins, macroLiquidity); technicals and
-> marketStructure are State; everything else is context, weight 0. The five
-> equity evidence modules are classified State but hold a TRACKED
-> transitional vote (TRANSITIONAL_STATE_VOTERS) because the Markets/Scanner
-> surfaces present nothing but the composite yet — that redesign is its own
-> task, and the exception is in code, named, with this rationale.
->
-> Full-history replay, before → after:
-> - Bullish composite days 298 → 358, win rate 59.7% → 58.1%, mean 1d
->   +0.62% → +0.52%.
-> - Bearish composite days 1,196 → 1,468, win rate 53.4% → 50.8%, mean 1d
->   −0.15% → 0.00%.
-> - Risk category buckets disappear from the stats entirely (context-only —
->   no verdict to bucket), as designed.
->
-> Read honestly: the subtraction made the composite MORE willing to call a
-> direction (fewer neutral days) and its bearish calls in-sample LESS
-> accurate by ~2.6pp. That difference is ~1.3σ given the bucket sizes —
-> statistically indistinguishable from no change, on buckets whose
-> composition also changed — and the in-sample composite win rate of an
-> engine containing unfalsifiable voters was never a defensible number to
-> optimize in the first place; being unable to test a voter is not evidence
-> it helps. But it is a real, published observation, and the per-metric
-> ablation (remove one voter at a time, measure each) is the follow-up that
-> would attribute it.
->
-> One call REVERSED in degree by the drift census (H1 note above):
-> fearGreed's "no edge at the primary horizon" claim below is outdated —
-> the corrected census shows 53.6% vs a 50.1% null at 24h, p=0.048. That is
-> nominal-only (it does not survive BH-FDR across the 48-cell scan, q
-> threshold ≈0.009 at its rank), so it still does not earn a vote — but it
-> was demoted to displayed context rather than physically deleted, because
-> a nominal positive that might firm up with more history is worth
-> continuing to display and measure.
 
 - **fearGreed** — n=806, no edge at the primary horizon, contrarian story
   unvalidated, and the most retail-coded element on the platform. Delete.
@@ -340,35 +250,6 @@ collected:
 - **Position sizing**: fixed-fractional risk, vol-adjusted, scaled down by
   Risk state (regime, event proximity, leverage heat). Never Kelly-labelled;
   the calibration isn't tight enough to claim it.
-
-> **MEASURED + PARTIALLY IMPLEMENTED (2026-08-13).** The excursion layer
-> shipped (plannerStats.ts → executionStats.json `planner`; PlanConstraints
-> in tradePlan.ts; live crypto path only, threaded via the aggregator —
-> the REPLAY stays deliberately ungated so measurement can never be
-> starved by policy). Cells are side × vol regime, fixed a priori. What
-> the record said:
->
-> - **The EV gate refuses every short.** All three short cells are
->   EV-negative at the Wilson lower bound (−0.65/−0.73/−0.21% per trade;
->   986 replayed shorts, −0.04% even at the point estimate net of costs);
->   all three long cells are positive (+2.65/+0.73/+0.21). Applied to the
->   same ungated record the gate keeps 213 trades at +2.31%/trade and
->   refuses 986 at −0.04%. IN-SAMPLE upper bound, self-re-earning every
->   regeneration; the refusal text names the bucket's own record.
-> - **Stops now have a measured floor**: winners' p80 MAE per cell
->   (2.5–5.4%) — a structural stop tighter than that converts winners to
->   losers by construction and is refused, not widened.
-> - **Targets have a measured ceiling**: primary target beyond winners'
->   p75 MFE is refused; the stretch target is annotated, never moved.
-> - **The time-stop hypothesis above is FALSE on this record** and the
->   finding is auto-written from the survival curve: eventual win rate
->   RISES with age (49.7% at 24h → 60.1% at 144h; stops resolve faster
->   than targets), so the <45% trigger never fires and no time stop
->   exists. The sentence in executionReport.md reverses itself if a
->   future replay's curve dips.
->
-> Still open from this section: level reaction rates, spread/venue
-> execution checks, the event veto (step 4's data), and position sizing.
 
 ## 11. Missing data audit (ranked by expected edge per unit cost)
 
