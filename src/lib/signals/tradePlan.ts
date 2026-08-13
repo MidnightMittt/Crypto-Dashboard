@@ -207,6 +207,7 @@ export type TradePlanRefusal =
   | "stop-inside-noise"
   | "reward-too-small"
   | "negative-expectancy"
+  | "earnings-imminent"
   | "stop-tighter-than-winners-drawdown"
   | "target-beyond-winners-reach";
 
@@ -223,6 +224,8 @@ export const TRADE_PLAN_REFUSAL_TEXT: Record<TradePlanRefusal, string> = {
     "The structural stop sits closer than the market's own daily noise. It would be taken out by ordinary movement rather than by the thesis being wrong, so the plan is refused rather than the stop widened — widening it would detach it from the level it represents.",
   "reward-too-small":
     "Reward-to-risk falls below the engine's minimum once measured from the real entry, not from the anchor price. The direction may still be right; the geometry does not pay enough for the risk it requires.",
+  "earnings-imminent":
+    "Earnings are within the veto window. A stop is a statement about structure, and an earnings gap jumps stops rather than trading through them — the plan's printed risk was never available across that event, so no plan is offered until the report is out.",
   "negative-expectancy":
     "Trades of this side in this volatility regime have NEGATIVE expectancy at the 95% lower bound of their own replayed record. The engine does not plan trades its own history says lose money — this gate re-opens automatically if the record turns positive on a future regeneration.",
   "stop-tighter-than-winners-drawdown":

@@ -6,6 +6,7 @@ import { EvidenceModuleDetail } from "@/components/evidence/EvidenceModuleDetail
 import { StructureLadder, LadderMarker } from "@/components/markets/StructureLadder";
 import { MarketBias, MetricVerdict, CategoryScore } from "@/lib/signals/types";
 import { TradePlan, TradePlanRefusal, TRADE_PLAN_REFUSAL_TEXT } from "@/lib/signals/tradePlan";
+import { EarningsVetoResult } from "@/lib/markets/earningsVeto";
 import { SupportResistanceZone } from "@/lib/technicals/marketStructure";
 import { intensityLabel, DIRECTIONAL_THRESHOLD } from "@/lib/signals/scoring";
 import { CATEGORY_WEIGHTS, CATEGORY_ORDER, CATEGORY_LABELS } from "@/lib/signals/categories";
@@ -45,6 +46,7 @@ interface MarketDecision {
   asOf: number;
   plan: TradePlan | null;
   planRefusal: TradePlanRefusal | null;
+  earnings: EarningsVetoResult | null;
   zones: SupportResistanceZone[];
   atrPct: number | null;
 }
@@ -339,7 +341,7 @@ export default async function MarketDetailPage({ params }: { params: Promise<{ s
                 </p>
               </>
             ) : (
-              <NoSetup bias={bias} refusal={decision.planRefusal} />
+              <NoSetup bias={bias} refusal={decision.planRefusal} earnings={decision.earnings} />
             )}
           </CardContent>
         </Card>
@@ -359,7 +361,15 @@ export default async function MarketDetailPage({ params }: { params: Promise<{ s
  * geometry refused — and a reader can act on the second (wait for a level)
  * in a way they cannot act on the first.
  */
-function NoSetup({ bias, refusal }: { bias: MarketBias; refusal: TradePlanRefusal | null }) {
+function NoSetup({
+  bias,
+  refusal,
+  earnings,
+}: {
+  bias: MarketBias;
+  refusal: TradePlanRefusal | null;
+  earnings: EarningsVetoResult | null;
+}) {
   if (refusal) {
     return (
       <div className="flex flex-col gap-2">
@@ -368,6 +378,18 @@ function NoSetup({ bias, refusal }: { bias: MarketBias; refusal: TradePlanRefusa
           but no plan clears the bar.
         </p>
         <p className="text-xs leading-relaxed text-ink-muted">{TRADE_PLAN_REFUSAL_TEXT[refusal]}</p>
+        {refusal === "earnings-imminent" && earnings && (
+          <p className="text-xs leading-relaxed text-ink">
+            <span className="font-semibold uppercase tracking-[0.12em] text-amber">Report date</span> ·{" "}
+            {earnings.date} —{" "}
+            {earnings.sessions === 0
+              ? "today"
+              : earnings.sessions === 1
+                ? "the next session"
+                : `${earnings.sessions} sessions away`}
+            . A plan returns automatically once the report is out.
+          </p>
+        )}
         <p className="text-[11px] leading-relaxed text-ink-faint">
           This is the engine declining, not failing. A plan appears when structure moves into a position
           that supports one — which usually means waiting for price to come to a level rather than for the

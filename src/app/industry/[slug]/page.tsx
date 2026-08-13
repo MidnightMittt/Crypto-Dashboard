@@ -187,7 +187,10 @@ export default async function IndustryPage({ params }: { params: Promise<{ slug:
             instrument on breadth, credit, positioning and structure — inputs that exist at index level and
             not per company in this dataset. Calling these &quot;bullish&quot; would borrow authority the
             evidence here does not support. What they are is exact: each name&apos;s return minus the
-            S&amp;P&apos;s, on the same two windows as every other level. {HORIZON_NOTE}
+            S&amp;P&apos;s, on the same two windows as every other level. {HORIZON_NOTE} An{" "}
+            <span className="font-semibold text-amber">ER</span> tag means the name reports earnings within
+            the next three sessions — the same window the trade-plan engine refuses plans for, because a
+            stop is meaningless across a gap.
           </p>
         </section>
       </main>
@@ -238,7 +241,11 @@ function NameColumn({
   title: string;
   tone: string;
   note: string;
-  rows: Array<{ symbol: string; rotation: { shortRelPct: number; longRelPct: number } }>;
+  rows: Array<{
+    symbol: string;
+    rotation: { shortRelPct: number; longRelPct: number };
+    earnings?: { date: string; sessions: number } | null;
+  }>;
 }) {
   return (
     <div className="flex flex-col gap-2">
@@ -252,7 +259,22 @@ function NameColumn({
         <ul className="flex flex-col gap-1.5">
           {rows.map((c) => (
             <li key={c.symbol} className="flex items-baseline justify-between gap-2">
-              <span className="font-mono text-[12px] text-ink">{c.symbol}</span>
+              <span className="flex items-baseline gap-1.5 font-mono text-[12px] text-ink">
+                {c.symbol}
+                {c.earnings && (
+                  // Same window, same function as the trade-plan veto — a
+                  // pre-event read is true but acting on it means holding
+                  // through a gap.
+                  <span
+                    className="text-[9px] font-semibold uppercase tracking-[0.08em] text-amber"
+                    title={`Reports earnings ${c.earnings.date} — ${
+                      c.earnings.sessions === 0 ? "today" : `${c.earnings.sessions} session(s) away`
+                    }. Inside the event window the trade-plan engine refuses plans for.`}
+                  >
+                    ER {c.earnings.sessions === 0 ? "today" : `${c.earnings.sessions}d`}
+                  </span>
+                )}
+              </span>
               <span className="flex items-baseline gap-2 font-mono text-[10px]">
                 <span className={c.rotation.shortRelPct >= 0 ? "text-success" : "text-danger"}>
                   {fmt(c.rotation.shortRelPct)}

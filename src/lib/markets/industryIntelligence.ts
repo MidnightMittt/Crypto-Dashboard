@@ -8,6 +8,7 @@ import {
   ROTATION_SHORT_SESSIONS,
 } from "./rotation";
 import { IndustryDef } from "./industries";
+import { earningsVeto, EarningsCalendar, EarningsVetoResult } from "./earningsVeto";
 
 /**
  * INDUSTRY INTELLIGENCE — level three, and the missing link between a sector
@@ -44,6 +45,16 @@ export interface ConstituentRead {
   symbol: string;
   /** Relative strength vs the benchmark, both horizons, and the quadrant. */
   rotation: SectorRotation;
+  /**
+   * Set when the name reports earnings inside the trade-plan veto window
+   * (see earningsVeto.ts — the SAME function, so the marker here and a plan
+   * refusal elsewhere can never disagree about a date). A pre-event
+   * relative-strength read is still true, but acting on it means holding
+   * through a gap; that is worth one glance before it is worth a click.
+   * Null when no report is near — or the calendar is unavailable, which is
+   * indistinguishable on purpose (absence of evidence never warns).
+   */
+  earnings: EarningsVetoResult | null;
 }
 
 export interface IndustryRead {
@@ -87,7 +98,9 @@ export function buildIndustries(
   defs: IndustryDef[],
   loadBars: (symbol: string) => Bar[] | null,
   benchmarkBars: Bar[],
-  sectorRotation: RotationRead | null
+  sectorRotation: RotationRead | null,
+  earningsCalendar: EarningsCalendar | null = null,
+  asOf: number = Date.now()
 ): IndustryRead[] {
   const benchmark = { symbol: "SPY", name: "S&P 500", bars: benchmarkBars };
   const out: IndustryRead[] = [];
@@ -107,7 +120,11 @@ export function buildIndustries(
       .filter((c): c is { symbol: string; name: string; bars: Bar[] } => c.bars !== null);
     const constituentRead = buildRotation(constituentInputs, benchmark);
     const constituents: ConstituentRead[] =
-      constituentRead?.sectors.map((s) => ({ symbol: s.symbol, rotation: s })) ?? [];
+      constituentRead?.sectors.map((s) => ({
+        symbol: s.symbol,
+        rotation: s,
+        earnings: earningsVeto(s.symbol, earningsCalendar, asOf),
+      })) ?? [];
 
     const measured = constituents.length;
     const outperforming = constituents.filter((c) => c.rotation.shortRelPct > 0).length;

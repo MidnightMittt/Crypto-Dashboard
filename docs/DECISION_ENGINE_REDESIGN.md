@@ -403,6 +403,28 @@ collected:
 > Still open from this section: level reaction rates, spread/venue
 > execution checks, the event veto (step 4's data), and position sizing.
 
+> **STEP 4 SHIPPED (2026-08-13) — earnings event veto.** Nasdaq's keyless
+> calendar endpoint, fetched per weekday for 28 days, filtered to the
+> platform's own equity universe (`fetchEarningsCalendar.ts` →
+> `src/data/earningsCalendar.json`; a daily-pipeline step that DEGRADES
+> rather than fails — on any error the committed calendar is kept and its
+> entries expire by date). `earningsVeto.ts` refuses any equity plan whose
+> symbol reports within 3 trading sessions (Mon–Fri counting; holiday
+> miscounts err conservative), with the fixed asymmetry that ABSENCE OF
+> EVIDENCE NEVER VETOES — a stale calendar can only under-warn, never
+> block every plan. The refusal names the report date and session count.
+>
+> Honesty note on scope: the markets snapshot currently builds plans for
+> SPY/QQQ/DIA/IWM only — index ETFs that never report — so the plan-path
+> veto is wired, tested and DORMANT until single-name plans exist. To make
+> the calendar decision-relevant today, the same `earningsVeto` function
+> (one source of truth; a marker and a refusal can never disagree about a
+> date) also stamps industry constituents: HD and AMAT carried live
+> markers on ship day ("ER 3d", "ER today") on the industry pages, with
+> the legend stating why the window matters. FOMC/macro events remain
+> future work — they need a different calendar, not a different mechanism
+> (the veto already takes any dated event list).
+
 ## 11. Missing data audit (ranked by expected edge per unit cost)
 
 | Rank | Source | Edge | Difficulty | Cost | Evidence | Priority |

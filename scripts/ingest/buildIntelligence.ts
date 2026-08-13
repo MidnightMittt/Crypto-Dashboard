@@ -6,6 +6,8 @@ import { buildRotation, RotationInput, RotationRead, describeRotation } from "..
 import { REGIME_PAIRS, evaluateRegimePair, buildRegime, RegimeRead } from "../../src/lib/markets/riskRegime";
 import { INDUSTRIES } from "../../src/lib/markets/industries";
 import { IndustryRead, buildIndustries } from "../../src/lib/markets/industryIntelligence";
+import { EarningsCalendar } from "../../src/lib/markets/earningsVeto";
+import earningsCalendarJson from "../../src/data/earningsCalendar.json";
 
 /**
  * Builds the MARKET INTELLIGENCE snapshot — the top three levels of the
@@ -113,7 +115,10 @@ function main() {
   }
 
   // ── Industries and their constituents ────────────────────────────────
-  const industries = buildIndustries(INDUSTRIES, load, benchBars, rotation);
+  // Earnings markers on constituents use the SAME veto function as trade
+  // plans, so a warning here and a plan refusal elsewhere can never cite
+  // different dates. A missing calendar just means no markers.
+  const industries = buildIndustries(INDUSTRIES, load, benchBars, rotation, earningsCalendarJson as EarningsCalendar);
   console.log(`\n  industries: ${industries.length} of ${INDUSTRIES.length} built`);
   for (const i of industries) {
     console.log(

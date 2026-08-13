@@ -5,6 +5,8 @@ import { buildEquityEvidence, EquityInstrumentInput } from "../../src/lib/market
 import { buildMarketBias } from "../../src/lib/signals/marketBias";
 import { MarketBias } from "../../src/lib/signals/types";
 import { buildTradePlanOutcome, TradePlan, TradePlanRefusal } from "../../src/lib/signals/tradePlan";
+import { earningsVeto, EarningsCalendar, EarningsVetoResult } from "../../src/lib/markets/earningsVeto";
+import earningsCalendarJson from "../../src/data/earningsCalendar.json";
 import {
   buildSupportResistanceZones,
   buildVolumeProfile,
@@ -69,6 +71,8 @@ export interface MarketDecision {
    * silence.
    */
   planRefusal: TradePlanRefusal | null;
+  /** The report date/session count that fired the earnings veto, for the page to cite alongside the refusal. Null when no report is inside the window (or the calendar is unavailable — indistinguishable on purpose). */
+  earnings: EarningsVetoResult | null;
   zones: SupportResistanceZone[];
   atrPct: number | null;
 }
@@ -139,7 +143,17 @@ function main() {
     const atrPct = atrAbs !== null && lastClose > 0 ? (atrAbs / lastClose) * 100 : null;
 
     const direction = bias.verdict === "bullish" ? "long" : bias.verdict === "bearish" ? "short" : null;
-    const outcome = direction
+    /*
+     * EARNINGS VETO (redesign step 4) — checked before any geometry, like
+     * the EV gate: no arrangement of levels makes a stop meaningful across
+     * an earnings gap. Absence of calendar data never vetoes (see
+     * earningsVeto.ts); a veto refuses the PLAN while the read itself
+     * still publishes.
+     */
+    const earnings = earningsVeto(symbol, earningsCalendarJson as EarningsCalendar, Date.now());
+    const outcome = direction && earnings
+      ? ({ plan: null, refusal: "earnings-imminent" } as const)
+      : direction
       ? buildTradePlanOutcome({
           direction,
           anchorPrice: lastClose,
@@ -164,6 +178,7 @@ function main() {
       asOf,
       plan: outcome?.plan ?? null,
       planRefusal: outcome?.refusal ?? null,
+      earnings,
       zones,
       atrPct,
     });

@@ -60,6 +60,12 @@ jobs:
       - name: Rebuild intelligence snapshot
         run: npx tsx scripts/ingest/buildIntelligence.ts
 
+      # Degrade-don't-fail by design: on any error (Nasdaq is known to reject
+      # some datacenter IPs) the script exits 0 and keeps the committed
+      # calendar, whose entries expire naturally by date. See earningsVeto.ts.
+      - name: Refresh earnings calendar
+        run: npx tsx scripts/ingest/fetchEarningsCalendar.ts
+
       - name: Rebuild markets snapshot
         run: npx tsx scripts/ingest/buildMarketsSnapshot.ts
 
@@ -70,7 +76,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add src/data/marketIntelligence.json src/data/equityMarkets.json src/data/signalLedger.json
+          git add src/data/marketIntelligence.json src/data/equityMarkets.json src/data/signalLedger.json src/data/earningsCalendar.json
           if git diff --cached --quiet; then
             echo "No data changes (holiday or re-run on identical bars) — nothing to deploy."
             exit 0
