@@ -1,6 +1,6 @@
 import { BiasChange, MarketBias, MetricVerdict, RiskLevel, Verdict } from "./types";
 import { agreementOf } from "./confidence";
-import { computeWeightedScore, metricWeight, rankMetric, clusterOf } from "./scoring";
+import { computeWeightedScore, metricWeight, rankMetric, clusterOf, ScoreBasis, weightForBasis } from "./scoring";
 import { buildAllCategories, buildTrendStrength, combineCategoryScores } from "./categories";
 import { TechnicalRead } from "@/types/market";
 import { RegimeTags } from "@/lib/technicals/regimes";
@@ -86,7 +86,8 @@ export function buildHeadline(
   confidence: number,
   conflicted: boolean,
   topBullish: MetricVerdict | null,
-  topBearish: MetricVerdict | null
+  topBearish: MetricVerdict | null,
+  basis: ScoreBasis = "edge"
 ): string {
   const strength = Math.abs(score - 50);
 
@@ -98,6 +99,26 @@ export function buildHeadline(
   const leadMetric = direction === "bullish" ? topBullish : topBearish;
   const opposeMetric = direction === "bullish" ? topBearish : topBullish;
   const led = leadMetric ? ` (led by ${leadMetric.label})` : "";
+
+  /*
+   * STATE language describes what conditions ARE; it never says the market
+   * is "leaning" somewhere, which implies a directional pull about to
+   * resolve. The same score, phrased as the description it actually is.
+   */
+  if (basis === "state") {
+    if (verdict === "neutral") {
+      const against = opposeMetric ? ` — ${opposeMetric.label} reads the other way` : "";
+      return `Conditions tilt narrowly ${direction}${led}, but the picture is close to balanced${against}.`;
+    }
+    const qualifier = strength >= 20 ? "clearly" : strength >= 12 ? "moderately" : "modestly";
+    const caveat =
+      confidence < 40
+        ? " — on thin evidence, so treat the description itself as tentative"
+        : conflicted
+          ? ` — though ${opposeMetric ? `${opposeMetric.label} disagrees` : "some reads disagree"}`
+          : "";
+    return `Conditions are ${qualifier} ${direction}${led}${caveat}. This describes the current state, not a prediction.`;
+  }
 
   if (verdict === "neutral") {
     // Score leans a real direction but hasn't crossed the directional
@@ -137,11 +158,20 @@ export interface MarketBiasInputs {
    * zero change.
    */
   regimeTags?: RegimeTags | null;
+  /**
+   * Which question this composite answers (see ScoreBasis in scoring.ts):
+   * "edge" (default) is the predictive composite where only Edge metrics
+   * vote; "state" is an equal-weight CONDITIONS read over State metrics —
+   * the equity surfaces' basis, since every equity module is State and
+   * none has a measured forward record.
+   */
+  basis?: ScoreBasis;
 }
 
 export function buildMarketBias(inputs: MarketBiasInputs): MarketBias | null {
-  const { asset, metrics, technicals, squeezeScore, previous, now, regimeTags = null } = inputs;
+  const { asset, metrics, technicals, squeezeScore, previous, now, regimeTags = null, basis = "edge" } = inputs;
   if (metrics.length === 0) return null;
+  const weightFn = weightForBasis(basis);
 
   /*
    * The headline score is CATEGORY-weighted, not a flat per-metric sum:
@@ -150,7 +180,7 @@ export function buildMarketBias(inputs: MarketBiasInputs): MarketBias | null {
    * optionally shifted by today's market regime (regimeWeights.ts). See
    * categories.ts for the full taxonomy rationale.
    */
-  const categories = buildAllCategories(metrics);
+  const categories = buildAllCategories(metrics, weightFn);
   const combined = combineCategoryScores(categories, regimeTags);
   if (!combined) return null;
 
@@ -162,12 +192,12 @@ export function buildMarketBias(inputs: MarketBiasInputs): MarketBias | null {
   // contributed nothing to — it still appears in the category cards, just
   // never as the composite's justification.
   const topBullish = metrics
-    .filter((m) => m.verdict === "bullish" && metricWeight(m.id) > 0)
-    .sort((a, b) => rankMetric(b) - rankMetric(a))
+    .filter((m) => m.verdict === "bullish" && weightFn(m.id) > 0)
+    .sort((a, b) => rankMetric(b, weightFn) - rankMetric(a, weightFn))
     .slice(0, 5);
   const topBearish = metrics
-    .filter((m) => m.verdict === "bearish" && metricWeight(m.id) > 0)
-    .sort((a, b) => rankMetric(b) - rankMetric(a))
+    .filter((m) => m.verdict === "bearish" && weightFn(m.id) > 0)
+    .sort((a, b) => rankMetric(b, weightFn) - rankMetric(a, weightFn))
     .slice(0, 5);
 
   const changes: BiasChange[] = [];
@@ -197,7 +227,7 @@ export function buildMarketBias(inputs: MarketBiasInputs): MarketBias | null {
    */
   const clusterSides = new Map<string, { bull: boolean; bear: boolean }>();
   for (const m of metrics) {
-    if (metricWeight(m.id) <= 0) continue;
+    if (weightFn(m.id) <= 0) continue;
     const cluster = clusterOf(m.id);
     const sides = clusterSides.get(cluster) ?? { bull: false, bear: false };
     if (m.verdict === "bullish") sides.bull = true;
@@ -235,8 +265,8 @@ export function buildMarketBias(inputs: MarketBiasInputs): MarketBias | null {
    * the overall read most come first.
    */
   const watchNext = metrics
-    .filter((m) => m.nextTrigger !== null && metricWeight(m.id) > 0)
-    .sort((a, b) => metricWeight(b.id) - metricWeight(a.id))
+    .filter((m) => m.nextTrigger !== null && weightFn(m.id) > 0)
+    .sort((a, b) => weightFn(b.id) - weightFn(a.id))
     .slice(0, 4);
 
   return {
@@ -245,7 +275,8 @@ export function buildMarketBias(inputs: MarketBiasInputs): MarketBias | null {
     verdict,
     confidence,
     agreement,
-    headline: buildHeadline(verdict, score, confidence, conflicted, topBullish[0] ?? null, topBearish[0] ?? null),
+    basis,
+    headline: buildHeadline(verdict, score, confidence, conflicted, topBullish[0] ?? null, topBearish[0] ?? null, basis),
     topBullish,
     topBearish,
     opportunity,
@@ -279,10 +310,11 @@ export interface RankedReason extends MetricVerdict {
  * `topBearish` themselves were built with), no new signal.
  */
 export function topReasons(bias: MarketBias, limit = 5): RankedReason[] {
+  const weightFn = weightForBasis(bias.basis);
   return [
     ...bias.topBullish.map((m) => ({ ...m, side: "bullish" as const })),
     ...bias.topBearish.map((m) => ({ ...m, side: "bearish" as const })),
   ]
-    .sort((a, b) => rankMetric(b) - rankMetric(a))
+    .sort((a, b) => rankMetric(b, weightFn) - rankMetric(a, weightFn))
     .slice(0, limit);
 }

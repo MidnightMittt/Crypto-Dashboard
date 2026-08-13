@@ -108,6 +108,7 @@ export default async function MarketDetailPage({ params }: { params: Promise<{ s
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <span className={`text-2xl font-bold uppercase leading-none tracking-[0.04em] sm:text-3xl ${tone}`}>
                 {intensityLabel(bias.score)}
+                {bias.basis === "state" && <span className="text-ink-muted"> conditions</span>}
               </span>
               <span className="font-mono text-lg leading-none text-ink">{bias.score}</span>
               <span className="text-[11px] text-ink-faint">
@@ -115,6 +116,17 @@ export default async function MarketDetailPage({ params }: { params: Promise<{ s
               </span>
             </div>
             <p className="text-[13px] leading-relaxed text-ink">{bias.headline}</p>
+            {bias.basis === "state" && (
+              <p className="border-t border-hairline pt-2 text-[11px] leading-relaxed text-ink-faint">
+                <span className="font-semibold uppercase tracking-[0.12em] text-ink-muted">
+                  Market state, not edge
+                </span>{" "}
+                · Every equity module here (relative strength, breadth, trend quality, risk appetite,
+                volatility regime) DESCRIBES current conditions. None has a measured forward record, so this
+                score claims what the market is — never what it does next. The crypto composite is the
+                different, backtested question.
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -167,7 +179,7 @@ export default async function MarketDetailPage({ params }: { params: Promise<{ s
                   modules inside the Market Structure category above, shown in full because it is what a
                   stop is placed against.
                 </p>
-                <EvidenceModuleDetail metric={structure} allMetrics={bias.metrics} />
+                <EvidenceModuleDetail metric={structure} allMetrics={bias.metrics} basis={bias.basis} />
               </>
             ) : (
               <p className="text-xs leading-relaxed text-ink-faint">
@@ -217,7 +229,7 @@ export default async function MarketDetailPage({ params }: { params: Promise<{ s
                       <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-ink">
                         {m.label}
                       </h4>
-                      <EvidenceModuleDetail metric={m} allMetrics={bias.metrics} />
+                      <EvidenceModuleDetail metric={m} allMetrics={bias.metrics} basis={bias.basis} />
                     </li>
                   ))}
                 </ul>

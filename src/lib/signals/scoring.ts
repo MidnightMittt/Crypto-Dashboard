@@ -94,24 +94,37 @@ export const METRIC_WEIGHTS: Record<string, number> = {
 };
 
 /**
- * TRANSITIONAL, TRACKED EXCEPTION — the five equity evidence modules are
- * State by classification, but the Markets and Scanner surfaces currently
- * present nothing except the bias composite built from them; stripping
- * their vote today would null every equity read on the site without a
- * replacement presentation. They keep their old default weight until the
- * equity State-presentation redesign lands, at which point this table is
- * deleted. `marketStructure` is deliberately NOT here: it loses its vote
- * everywhere immediately, because its 7d record is BH-significant in the
- * wrong direction — an exception for a measured anti-signal would be
- * indefensible.
+ * WHICH QUESTION a composite answers — and therefore which metrics vote.
+ *
+ * "edge": the predictive composite. Only Edge-role metrics vote, at their
+ * METRIC_WEIGHTS; State and Context describe but never move the score.
+ * This is the only basis with any backtested record behind it.
+ *
+ * "state": a CONDITIONS read — what the market currently is (trending,
+ * broad, risk-on), never a claim about what happens next. Only State-role
+ * metrics vote, at EQUAL weight: no measured record differentiates them,
+ * and unequal weights would imply a calibration that does not exist. This
+ * is what the equity surfaces present, since every equity module is State;
+ * it replaced (and deleted) the old TRANSITIONAL_STATE_VOTERS exception
+ * under which those five modules voted in the edge composite at 0.05 each.
+ * Equal weights then, equal weights now — the numbers are identical, but
+ * the claim is finally labelled as the description it always was.
  */
-const TRANSITIONAL_STATE_VOTERS: Record<string, number> = {
-  equityRelativeStrength: 0.05,
-  equityBreadth: 0.05,
-  equityTrendQuality: 0.05,
-  equityRiskAppetite: 0.05,
-  equityVolatilityRegime: 0.05,
-};
+export type ScoreBasis = "edge" | "state";
+
+/**
+ * Vote weight for a metric under a given basis. See ScoreBasis. Anything
+ * that is not exactly "state" falls back to edge weighting — a MarketBias
+ * persisted before the basis field existed is a crypto edge read, and
+ * treating an undefined basis as state would silently rescore it.
+ */
+export function weightForBasis(basis: ScoreBasis | undefined): (id: string) => number {
+  return basis === "state" ? stateWeight : metricWeight;
+}
+
+function stateWeight(id: string): number {
+  return METRIC_ROLES[id] === "state" ? 1 : 0;
+}
 
 /**
  * CORRELATION CLUSTERS among the Edge voters — the redesign's §4
@@ -138,8 +151,7 @@ export function clusterOf(id: string): string {
 export const DIRECTIONAL_THRESHOLD = 6;
 
 export function metricWeight(id: string): number {
-  if (METRIC_ROLES[id] === "edge") return METRIC_WEIGHTS[id] ?? 0;
-  return TRANSITIONAL_STATE_VOTERS[id] ?? 0;
+  return METRIC_ROLES[id] === "edge" ? (METRIC_WEIGHTS[id] ?? 0) : 0;
 }
 
 /** Signed contribution: +1 bullish, -1 bearish, 0 neutral. */
@@ -230,8 +242,8 @@ export function computeWeightedScore(
 }
 
 /** Rank used everywhere a "best-supported metric" needs picking — weight x confidence. */
-export function rankMetric(m: MetricVerdict): number {
-  return metricWeight(m.id) * (m.confidence / 100);
+export function rankMetric(m: MetricVerdict, weightFn: (id: string) => number = metricWeight): number {
+  return weightFn(m.id) * (m.confidence / 100);
 }
 
 /**

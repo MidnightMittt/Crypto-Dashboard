@@ -62,7 +62,10 @@ export default function MarketsPage() {
           relative strength, breadth, risk appetite, volatility regime and trend quality — against
           crypto&apos;s eighteen. Confidence here is correspondingly and correctly lower. Derivatives and
           on-chain evidence have no equity analogue; ETF flows, earnings and options flow are not built
-          because no provider for them is ingested.
+          because no provider for them is ingested.{" "}
+          <span className="text-ink-muted">These are STATE reads:</span> all five modules describe current
+          conditions and none has a measured forward record, so every score on this page says what the
+          market is — never what it does next.
         </div>
 
         {decisions.length === 0 ? (
@@ -117,6 +120,7 @@ function MarketDecisionCard({ decision }: { decision: MarketDecision }) {
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <span className={`text-2xl font-bold uppercase leading-none tracking-[0.04em] ${tone}`}>
             {intensityLabel(bias.score)}
+            {bias.basis === "state" && <span className="text-ink-muted"> conditions</span>}
           </span>
           <span className="font-mono text-base leading-none text-ink">{bias.score}</span>
           <span className="text-[11px] text-ink-faint">/ 100 · Data Quality {bias.confidence}%</span>

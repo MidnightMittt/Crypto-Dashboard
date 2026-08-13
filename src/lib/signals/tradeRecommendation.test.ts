@@ -19,6 +19,7 @@ const watchMetric = (label: string, nextTrigger: string): MetricVerdict => ({
 function baseBias(overrides: Partial<MarketBias> = {}): MarketBias {
   return {
     asset: "BTC",
+    basis: "edge",
     score: 50,
     verdict: "neutral",
     confidence: 60,

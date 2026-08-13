@@ -162,9 +162,13 @@ function metricsForCategory(metrics: MetricVerdict[], category: Category): Metri
  * distinct from a genuinely neutral category, so the UI can say "not
  * enough data" rather than claim a calm reading it doesn't have.
  */
-export function buildCategoryScore(metrics: MetricVerdict[], category: Category): CategoryScore | null {
+export function buildCategoryScore(
+  metrics: MetricVerdict[],
+  category: Category,
+  weightFn: (id: string) => number = metricWeight
+): CategoryScore | null {
   const contributing = metricsForCategory(metrics, category);
-  const result = computeWeightedScore(contributing, metricWeight);
+  const result = computeWeightedScore(contributing, weightFn);
 
   /*
    * No voter reported, but reads exist → a CONTEXT-ONLY category: displayed,
@@ -187,9 +191,9 @@ export function buildCategoryScore(metrics: MetricVerdict[], category: Category)
     };
   }
 
-  const weighted = contributing.filter((m) => metricWeight(m.id) > 0);
+  const weighted = contributing.filter((m) => weightFn(m.id) > 0);
   const top = weighted.length
-    ? weighted.reduce((best, m) => (rankMetric(m) > rankMetric(best) ? m : best))
+    ? weighted.reduce((best, m) => (rankMetric(m, weightFn) > rankMetric(best, weightFn) ? m : best))
     : null;
 
   return {
@@ -204,8 +208,11 @@ export function buildCategoryScore(metrics: MetricVerdict[], category: Category)
 }
 
 /** Every category with at least one contributing metric, in display order. */
-export function buildAllCategories(metrics: MetricVerdict[]): CategoryScore[] {
-  return CATEGORY_ORDER.map((c) => buildCategoryScore(metrics, c)).filter(
+export function buildAllCategories(
+  metrics: MetricVerdict[],
+  weightFn: (id: string) => number = metricWeight
+): CategoryScore[] {
+  return CATEGORY_ORDER.map((c) => buildCategoryScore(metrics, c, weightFn)).filter(
     (c): c is CategoryScore => c !== null
   );
 }
@@ -331,9 +338,10 @@ export function buildTrendStrength(technicals: TechnicalRead | null): TrendStren
  */
 export function contributionOf(
   metric: MetricVerdict,
-  all: MetricVerdict[]
+  all: MetricVerdict[],
+  weightFn: (id: string) => number = metricWeight
 ): { sharePct: number; category: Category | null } {
-  const effective = (m: MetricVerdict) => metricWeight(m.id) * (m.confidence / 100);
+  const effective = (m: MetricVerdict) => weightFn(m.id) * (m.confidence / 100);
   const total = all.reduce((sum, m) => sum + effective(m), 0);
   return {
     sharePct: total > 0 ? Math.round((effective(metric) / total) * 100) : 0,

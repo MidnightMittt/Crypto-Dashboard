@@ -11,6 +11,7 @@ import {
 } from "./equityEvidence";
 import { Bar } from "@/lib/research/types";
 import { contributionOf } from "@/lib/signals/categories";
+import { weightForBasis } from "@/lib/signals/scoring";
 
 /**
  * Constructed series, hand-reasoned before being asserted — the discipline
@@ -430,7 +431,11 @@ describe("contributionOf — derived by the engine, never declared", () => {
       credit: flatThenMove("HYG", 600, 20, 8), duration: series("TLT", 600, 0),
       asOf: ASOF,
     });
-    const total = all.reduce((sum, m) => sum + contributionOf(m, all).sharePct, 0);
+    // Equity modules combine on the STATE basis (they stopped voting on the
+    // edge basis when TRANSITIONAL_STATE_VOTERS was retired), so their
+    // contribution shares only exist against the state weights.
+    const stateWeights = weightForBasis("state");
+    const total = all.reduce((sum, m) => sum + contributionOf(m, all, stateWeights).sharePct, 0);
     expect(total).toBeGreaterThanOrEqual(98);
     expect(total).toBeLessThanOrEqual(102);
   });
@@ -445,10 +450,11 @@ describe("contributionOf — derived by the engine, never declared", () => {
       credit: flatThenMove("HYG", 600, 20, 8), duration: series("TLT", 600, 0), asOf: ASOF,
     });
     const pick = (ms: typeof thin) => ms.find((m) => m.id === "equityRelativeStrength")!;
+    const stateWeights = weightForBasis("state");
     // This is the whole reason contribution cannot be a module export: the
     // same module is worth more when fewer others reported.
-    expect(contributionOf(pick(thin), thin).sharePct)
-      .toBeGreaterThan(contributionOf(pick(rich), rich).sharePct);
+    expect(contributionOf(pick(thin), thin, stateWeights).sharePct)
+      .toBeGreaterThan(contributionOf(pick(rich), rich, stateWeights).sharePct);
   });
 
   it("reports the metric's category, or null for an unregistered id", () => {

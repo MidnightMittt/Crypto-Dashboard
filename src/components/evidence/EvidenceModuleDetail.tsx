@@ -1,5 +1,6 @@
 import { MetricVerdict } from "@/lib/signals/types";
 import { contributionOf } from "@/lib/signals/categories";
+import { ScoreBasis, weightForBasis } from "@/lib/signals/scoring";
 
 /**
  * ONE COMPONENT FOR THE WHOLE EVIDENCE CONTRACT.
@@ -29,12 +30,15 @@ import { contributionOf } from "@/lib/signals/categories";
 export function EvidenceModuleDetail({
   metric,
   allMetrics,
+  basis = "edge",
 }: {
   metric: MetricVerdict;
   /** The full set that reported, so contribution can be derived rather than declared. */
   allMetrics: MetricVerdict[];
+  /** The composite's basis (bias.basis) — contribution shares only mean something against the weights that actually combined these metrics. */
+  basis?: ScoreBasis;
 }) {
-  const { sharePct } = contributionOf(metric, allMetrics);
+  const { sharePct } = contributionOf(metric, allMetrics, weightForBasis(basis));
   const tone =
     metric.verdict === "bullish"
       ? "text-success"

@@ -494,3 +494,70 @@ describe("category rollup fields", () => {
     expect(bias.trendStrength).toBeNull();
   });
 });
+
+/*
+ * The state basis replaced the TRANSITIONAL_STATE_VOTERS exception: the five
+ * equity modules stopped voting in the edge composite and became an
+ * explicitly-labelled equal-weight CONDITIONS read. Same numbers (the
+ * transitional weights were already equal), honest claim.
+ */
+describe("state basis (equity conditions read)", () => {
+  const equitySet = [
+    metric("equityRelativeStrength", "bullish"),
+    metric("equityBreadth", "bullish"),
+    metric("equityTrendQuality", "bullish"),
+    metric("equityRiskAppetite", "neutral"),
+    metric("equityVolatilityRegime", "bullish"),
+  ];
+
+  const buildState = (metrics: MetricVerdict[]) =>
+    buildMarketBias({
+      asset: "SPY",
+      metrics,
+      technicals: null,
+      squeezeScore: null,
+      previous: null,
+      now: 1_700_000_000_000,
+      basis: "state",
+    });
+
+  it("state metrics no longer vote on the edge basis — the transitional exception is gone", () => {
+    expect(build(equitySet)).toBeNull();
+  });
+
+  it("scores the same metrics as a labelled state read", () => {
+    const state = buildState(equitySet)!;
+    expect(state.basis).toBe("state");
+    expect(state.score).toBeGreaterThan(50);
+    expect(state.verdict).toBe("bullish");
+  });
+
+  it("defaults to the edge basis so every crypto caller is unchanged", () => {
+    const bias = build([metric("funding", "bullish")])!;
+    expect(bias.basis).toBe("edge");
+  });
+
+  it("speaks condition language, never directional-pull language", () => {
+    const state = buildState(equitySet)!;
+    expect(state.headline).toMatch(/Conditions/);
+    expect(state.headline).not.toMatch(/leaning/);
+  });
+
+  it("weights state metrics equally — an offsetting pair in one category lands at exactly 50", () => {
+    // Both ids map to the marketStructure category, so equal weight + equal
+    // confidence must cancel exactly; any residual lean would prove a
+    // hidden weight difference.
+    const tied = buildState([
+      metric("equityRelativeStrength", "bullish"),
+      metric("equityBreadth", "bearish"),
+    ])!;
+    expect(tied.score).toBe(50);
+  });
+
+  it("excludes edge metrics from a state read — the two questions never mix", () => {
+    const withEdge = buildState([...equitySet, metric("funding", "bearish", 100)])!;
+    const without = buildState(equitySet)!;
+    expect(withEdge.score).toBe(without.score);
+    expect(withEdge.topBearish.find((m) => m.id === "funding")).toBeUndefined();
+  });
+});

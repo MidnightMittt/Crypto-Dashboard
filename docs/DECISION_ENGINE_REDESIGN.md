@@ -285,6 +285,25 @@ context. Codified, not implied.
 > a nominal positive that might firm up with more history is worth
 > continuing to display and measure.
 
+> **EXCEPTION RETIRED (2026-08-13).** TRANSITIONAL_STATE_VOTERS is deleted.
+> The shared engine now has an explicit `ScoreBasis`: "edge" (the default —
+> only Edge voters, unchanged everywhere crypto) and "state" (equal-weight
+> roll-up of State-role metrics, condition language, the equity surfaces'
+> basis). Same `buildMarketBias`, weight function injected — one engine,
+> two labelled questions, no fork. Every equity surface now says "state,
+> not a validated edge" in place, and headlines read "Conditions are…"
+> rather than "Market is leaning…".
+>
+> MEASURED side effect, published rather than smoothed over: equity scores
+> moved slightly (SPY 71→70, QQQ 58→59, DIA 78→73, IWM 74→72; all verdicts
+> unchanged, confidence −4 to −6pp), because `marketStructure` — State by
+> role, but excluded even from the transitional table for its inverted 7d
+> EDGE record — now participates in the state read. That is deliberate:
+> the inverted record is a fact about its predictive value, not about
+> whether it describes conditions, and on the state basis its
+> zero-confidence "not enough swing history" days now correctly count as
+> evidence thinness (shrinkage toward 50) instead of not counting at all.
+
 - **fearGreed** — n=806, no edge at the primary horizon, contrarian story
   unvalidated, and the most retail-coded element on the platform. Delete.
 - **sectorBreadth (crypto)** — unfalsifiable (paid-gated history), tiny

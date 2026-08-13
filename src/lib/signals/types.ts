@@ -138,6 +138,15 @@ export interface BiasChange {
  */
 export interface MarketBias {
   asset: string;
+  /**
+   * Which question the score answers (see ScoreBasis in scoring.ts):
+   * "edge" — the predictive composite, Edge voters only, the basis with a
+   * backtested record; "state" — an equal-weight CONDITIONS read over
+   * State metrics, a description of what the market currently is. Every
+   * surface must label a state read as such: a state verdict of "bullish"
+   * means bullish CONDITIONS, never a validated forward edge.
+   */
+  basis: "edge" | "state";
   score: number;
   verdict: Verdict;
   /** Aggregate evidence quality across contributing metrics. */

@@ -101,8 +101,17 @@ function main() {
     const asOf = bars[bars.length - 1].t;
 
     const metrics = buildEquityEvidence({ instrument, benchmark: spy, universe, credit, duration, asOf });
+    /*
+     * basis: "state" — every equity evidence module is State-role, so the
+     * composite here is a CONDITIONS read, scored by the same engine on an
+     * explicit state basis (equal weights; see ScoreBasis in scoring.ts).
+     * This replaced the TRANSITIONAL_STATE_VOTERS exception under which
+     * these modules voted in the edge composite: identical numbers (the
+     * transitional weights were already equal), honest label.
+     */
     const bias = buildMarketBias({
       asset: symbol, metrics, technicals: null, squeezeScore: null, previous: null, now: asOf,
+      basis: "state",
     } as never);
 
     if (!bias) {
