@@ -1,7 +1,7 @@
 {
-  "generatedAt": 1786590612580,
-  "coverageStart": "2022-08-13",
-  "coverageEnd": "2026-07-30",
+  "generatedAt": 1786604227139,
+  "coverageStart": "2022-08-14",
+  "coverageEnd": "2026-07-31",
   "metrics": {
     "funding": {
       "metricId": "funding",
@@ -9,7 +9,7 @@
       "hasHistoricalSource": true,
       "n24h": 33,
       "effectiveN24h": 17,
-      "baseRate24h": 0.5003766951280763,
+      "baseRate24h": 0.49976979742173067,
       "winRate24h": 0.30303030303030304,
       "winRate7d": 0.5757575757575758,
       "significant24h": true,
@@ -37,57 +37,57 @@
       "metricId": "openInterest",
       "label": "Open Interest",
       "hasHistoricalSource": true,
-      "n24h": 648,
-      "effectiveN24h": 324,
-      "baseRate24h": 0.5003026737603159,
-      "winRate24h": 0.5169753086419753,
-      "winRate7d": 0.482225656877898,
+      "n24h": 749,
+      "effectiveN24h": 375,
+      "baseRate24h": 0.5002849102670983,
+      "winRate24h": 0.4672897196261682,
+      "winRate7d": 0.49129852744310576,
       "significant24h": false,
       "bestRegime": {
-        "tag": "low-vol",
-        "winRate": 0.5903083700440529
+        "tag": "bull",
+        "winRate": 0.5338345864661654
       },
       "worstRegime": {
         "tag": "bear",
-        "winRate": 0.41025641025641024
+        "winRate": 0.41353383458646614
       },
       "bestHoldingPeriod": {
-        "holdingPeriod": "24h",
-        "winRate": 0.5169753086419753
+        "holdingPeriod": "7d",
+        "winRate": 0.49129852744310576
       },
       "worstHoldingPeriod": {
-        "holdingPeriod": "1h",
-        "winRate": 0.4444444444444444
+        "holdingPeriod": "4h",
+        "winRate": 0.46461949265687585
       },
       "sampleSizeLabel": "Medium",
       "confidenceLabel": "Low",
-      "stableAcrossWindows": true
+      "stableAcrossWindows": false
     },
     "squeezeRisk": {
       "metricId": "squeezeRisk",
       "label": "Squeeze Setup",
       "hasHistoricalSource": true,
-      "n24h": 2340,
-      "effectiveN24h": 1170,
-      "baseRate24h": 0.49945223591632315,
-      "winRate24h": 0.5064102564102564,
-      "winRate7d": 0.5055603079555175,
+      "n24h": 2348,
+      "effectiveN24h": 1174,
+      "baseRate24h": 0.5000805905108031,
+      "winRate24h": 0.50809199318569,
+      "winRate7d": 0.5063993174061433,
       "significant24h": false,
       "bestRegime": {
         "tag": "bear",
-        "winRate": 0.5691489361702128
+        "winRate": 0.5696649029982364
       },
       "worstRegime": {
         "tag": "bull",
-        "winRate": 0.44745762711864406
+        "winRate": 0.4489795918367347
       },
       "bestHoldingPeriod": {
         "holdingPeriod": "24h",
-        "winRate": 0.5064102564102564
+        "winRate": 0.50809199318569
       },
       "worstHoldingPeriod": {
         "holdingPeriod": "4h",
-        "winRate": 0.4807692307692308
+        "winRate": 0.4833901192504259
       },
       "sampleSizeLabel": "Large",
       "confidenceLabel": "Medium",
@@ -97,15 +97,15 @@
       "metricId": "longShort",
       "label": "Long/Short Positioning",
       "hasHistoricalSource": true,
-      "n24h": 1271,
+      "n24h": 1272,
       "effectiveN24h": 636,
-      "baseRate24h": 0.49937296512512236,
-      "winRate24h": 0.5121951219512195,
+      "baseRate24h": 0.4986991382605282,
+      "winRate24h": 0.5117924528301887,
       "winRate7d": 0.5055118110236221,
       "significant24h": false,
       "bestRegime": {
         "tag": "range-bound",
-        "winRate": 0.5750636132315522
+        "winRate": 0.5736040609137056
       },
       "worstRegime": {
         "tag": "bear",
@@ -113,11 +113,11 @@
       },
       "bestHoldingPeriod": {
         "holdingPeriod": "24h",
-        "winRate": 0.5121951219512195
+        "winRate": 0.5117924528301887
       },
       "worstHoldingPeriod": {
         "holdingPeriod": "1h",
-        "winRate": 0.5003933910306845
+        "winRate": 0.5
       },
       "sampleSizeLabel": "Medium",
       "confidenceLabel": "Low",
@@ -129,9 +129,9 @@
       "hasHistoricalSource": true,
       "n24h": 2706,
       "effectiveN24h": 1353,
-      "baseRate24h": 0.4989199364620635,
-      "winRate24h": 0.4963045084996304,
-      "winRate7d": 0.5014792899408284,
+      "baseRate24h": 0.4994211757788027,
+      "winRate24h": 0.4970436067997044,
+      "winRate7d": 0.5011102886750555,
       "significant24h": false,
       "bestRegime": {
         "tag": "bear",
@@ -139,15 +139,15 @@
       },
       "worstRegime": {
         "tag": "bull",
-        "winRate": 0.4544179523141655
+        "winRate": 0.45569620253164556
       },
       "bestHoldingPeriod": {
         "holdingPeriod": "7d",
-        "winRate": 0.5014792899408284
+        "winRate": 0.5011102886750555
       },
       "worstHoldingPeriod": {
         "holdingPeriod": "24h",
-        "winRate": 0.4963045084996304
+        "winRate": 0.4970436067997044
       },
       "sampleSizeLabel": "Large",
       "confidenceLabel": "Medium",
@@ -193,11 +193,11 @@
       "metricId": "technicals",
       "label": "Price Action",
       "hasHistoricalSource": true,
-      "n24h": 2196,
+      "n24h": 2195,
       "effectiveN24h": 1098,
-      "baseRate24h": 0.5003534804617132,
-      "winRate24h": 0.48041894353369763,
-      "winRate7d": 0.4861047835990888,
+      "baseRate24h": 0.5003778678312106,
+      "winRate24h": 0.4797266514806378,
+      "winRate7d": 0.48654810761513906,
       "significant24h": false,
       "bestRegime": {
         "tag": "bear",
@@ -205,15 +205,15 @@
       },
       "worstRegime": {
         "tag": "neutral",
-        "winRate": 0.3925339366515837
+        "winRate": 0.392090395480226
       },
       "bestHoldingPeriod": {
         "holdingPeriod": "4h",
-        "winRate": 0.4918032786885246
+        "winRate": 0.4911161731207289
       },
       "worstHoldingPeriod": {
         "holdingPeriod": "24h",
-        "winRate": 0.48041894353369763
+        "winRate": 0.4797266514806378
       },
       "sampleSizeLabel": "Large",
       "confidenceLabel": "Medium",
@@ -223,10 +223,10 @@
       "metricId": "etfFlows",
       "label": "ETF Flows",
       "hasHistoricalSource": true,
-      "n24h": 541,
+      "n24h": 542,
       "effectiveN24h": 271,
-      "baseRate24h": 0.49995149150846113,
-      "winRate24h": 0.6561922365988909,
+      "baseRate24h": 0.4999184522231959,
+      "winRate24h": 0.6568265682656826,
       "winRate7d": 0.5703703703703704,
       "significant24h": true,
       "bestRegime": {
@@ -234,16 +234,16 @@
         "winRate": 0.7346938775510204
       },
       "worstRegime": {
-        "tag": "neutral",
-        "winRate": 0.6205787781350482
+        "tag": "normal-vol",
+        "winRate": 0.6216216216216216
       },
       "bestHoldingPeriod": {
         "holdingPeriod": "24h",
-        "winRate": 0.6561922365988909
+        "winRate": 0.6568265682656826
       },
       "worstHoldingPeriod": {
         "holdingPeriod": "1h",
-        "winRate": 0.5175600739371534
+        "winRate": 0.518450184501845
       },
       "sampleSizeLabel": "Medium",
       "confidenceLabel": "Medium",
@@ -253,27 +253,27 @@
       "metricId": "spotPerpVolume",
       "label": "Spot vs Perp Volume",
       "hasHistoricalSource": true,
-      "n24h": 2066,
+      "n24h": 2065,
       "effectiveN24h": 1033,
-      "baseRate24h": 0.5001978895348526,
-      "winRate24h": 0.48160696999031943,
-      "winRate7d": 0.49830508474576274,
+      "baseRate24h": 0.5002056773641209,
+      "winRate24h": 0.4808716707021792,
+      "winRate7d": 0.49878817256422686,
       "significant24h": false,
       "bestRegime": {
         "tag": "bull",
-        "winRate": 0.5438871473354232
+        "winRate": 0.5424528301886793
       },
       "worstRegime": {
         "tag": "neutral",
-        "winRate": 0.4174454828660436
+        "winRate": 0.4170124481327801
       },
       "bestHoldingPeriod": {
         "holdingPeriod": "1h",
-        "winRate": 0.5067763794772507
+        "winRate": 0.5065375302663438
       },
       "worstHoldingPeriod": {
         "holdingPeriod": "24h",
-        "winRate": 0.48160696999031943
+        "winRate": 0.4808716707021792
       },
       "sampleSizeLabel": "Large",
       "confidenceLabel": "Medium",
@@ -337,10 +337,10 @@
       "metricId": "stablecoins",
       "label": "Stablecoin Supply",
       "hasHistoricalSource": true,
-      "n24h": 2262,
-      "effectiveN24h": 1131,
-      "baseRate24h": 0.5003798037232999,
-      "winRate24h": 0.5008841732979664,
+      "n24h": 2264,
+      "effectiveN24h": 1132,
+      "baseRate24h": 0.5001891240263107,
+      "winRate24h": 0.5013250883392226,
       "winRate7d": 0.5353982300884956,
       "significant24h": false,
       "bestRegime": {
@@ -349,7 +349,7 @@
       },
       "worstRegime": {
         "tag": "neutral",
-        "winRate": 0.47224749772520475
+        "winRate": 0.4732061762034514
       },
       "bestHoldingPeriod": {
         "holdingPeriod": "7d",
@@ -357,7 +357,7 @@
       },
       "worstHoldingPeriod": {
         "holdingPeriod": "24h",
-        "winRate": 0.5008841732979664
+        "winRate": 0.5013250883392226
       },
       "sampleSizeLabel": "Large",
       "confidenceLabel": "Medium",
@@ -367,12 +367,12 @@
       "metricId": "fearGreed",
       "label": "Fear & Greed",
       "hasHistoricalSource": true,
-      "n24h": 806,
-      "effectiveN24h": 403,
-      "baseRate24h": 0.5005586553884529,
-      "winRate24h": 0.5359801488833746,
+      "n24h": 808,
+      "effectiveN24h": 404,
+      "baseRate24h": 0.5002803457141308,
+      "winRate24h": 0.5346534653465347,
       "winRate7d": 0.543424317617866,
-      "significant24h": true,
+      "significant24h": false,
       "bestRegime": {
         "tag": "normal-vol",
         "winRate": 0.6018518518518519
@@ -387,10 +387,10 @@
       },
       "worstHoldingPeriod": {
         "holdingPeriod": "1h",
-        "winRate": 0.5037220843672456
+        "winRate": 0.5024752475247525
       },
       "sampleSizeLabel": "Medium",
-      "confidenceLabel": "Medium",
+      "confidenceLabel": "Low",
       "stableAcrossWindows": true
     },
     "sectorBreadth": {
@@ -417,9 +417,9 @@
       "hasHistoricalSource": true,
       "n24h": 2350,
       "effectiveN24h": 1175,
-      "baseRate24h": 0.4991783237333861,
-      "winRate24h": 0.5063829787234042,
-      "winRate7d": 0.5085178875638842,
+      "baseRate24h": 0.4995891618667135,
+      "winRate24h": 0.5072340425531915,
+      "winRate7d": 0.5080988917306053,
       "significant24h": false,
       "bestRegime": {
         "tag": "bear",
@@ -427,15 +427,15 @@
       },
       "worstRegime": {
         "tag": "bull",
-        "winRate": 0.48255813953488375
+        "winRate": 0.4839650145772595
       },
       "bestHoldingPeriod": {
-        "holdingPeriod": "7d",
-        "winRate": 0.5085178875638842
+        "holdingPeriod": "1h",
+        "winRate": 0.5085106382978724
       },
       "worstHoldingPeriod": {
         "holdingPeriod": "4h",
-        "winRate": 0.4948936170212766
+        "winRate": 0.4957446808510638
       },
       "sampleSizeLabel": "Large",
       "confidenceLabel": "Medium",
@@ -445,11 +445,11 @@
       "metricId": "marketStructure",
       "label": "Market Structure",
       "hasHistoricalSource": true,
-      "n24h": 1762,
+      "n24h": 1761,
       "effectiveN24h": 881,
-      "baseRate24h": 0.5002727939747031,
-      "winRate24h": 0.49148694665153236,
-      "winRate7d": 0.4554230550823396,
+      "baseRate24h": 0.5001831424259808,
+      "winRate24h": 0.4906303236797274,
+      "winRate7d": 0.4559408754974417,
       "significant24h": false,
       "bestRegime": {
         "tag": "bear",
@@ -457,15 +457,15 @@
       },
       "worstRegime": {
         "tag": "neutral",
-        "winRate": 0.4530663329161452
+        "winRate": 0.4525
       },
       "bestHoldingPeriod": {
         "holdingPeriod": "4h",
-        "winRate": 0.5011350737797957
+        "winRate": 0.5002839295854627
       },
       "worstHoldingPeriod": {
         "holdingPeriod": "7d",
-        "winRate": 0.4554230550823396
+        "winRate": 0.4559408754974417
       },
       "sampleSizeLabel": "Medium",
       "confidenceLabel": "Low",
@@ -493,187 +493,187 @@
   "agreementBuckets": [
     {
       "bucketLabel": "0-25%",
-      "n": 360,
-      "winRate": 0.5083333333333333,
-      "meanReturnPct": 0.14924737790807954,
+      "n": 389,
+      "winRate": 0.5038560411311054,
+      "meanReturnPct": 0.28215619703680556,
       "significant": false
     },
     {
       "bucketLabel": "25-50%",
-      "n": 298,
-      "winRate": 0.4865771812080537,
-      "meanReturnPct": 0.7889639200843284,
+      "n": 286,
+      "winRate": 0.527972027972028,
+      "meanReturnPct": 0.20164699976773348,
       "significant": false
     },
     {
       "bucketLabel": "50-75%",
-      "n": 841,
-      "winRate": 0.525564803804994,
-      "meanReturnPct": -0.077487890077271,
-      "significant": false
+      "n": 835,
+      "winRate": 0.5365269461077844,
+      "meanReturnPct": -0.04923883957442257,
+      "significant": true
     },
     {
       "bucketLabel": "75-100%",
-      "n": 327,
-      "winRate": 0.5626911314984709,
-      "meanReturnPct": -0.10145886250520593,
-      "significant": true
+      "n": 311,
+      "winRate": 0.5209003215434084,
+      "meanReturnPct": 0.14638186507654796,
+      "significant": false
     }
   ],
   "scoreCalibration": {
     "bearish:clear:bull": {
       "key": "bearish:clear:bull",
-      "n": 40,
-      "effectiveN": 20,
-      "hitRatePct": 42.5,
+      "n": 35,
+      "effectiveN": 18,
+      "hitRatePct": 42.857142857142854,
       "interval": {
-        "point": 0.425,
-        "lower": 0.2850916852481588,
-        "upper": 0.5780519956394001
+        "point": 0.42857142857142855,
+        "lower": 0.27984333081678914,
+        "upper": 0.5914287074102662
       },
-      "nullRatePct": 42.898074312860516,
-      "edgePP": -0.39807431286051354,
+      "nullRatePct": 42.91716686674671,
+      "edgePP": -0.06002400960385956,
       "calibrated": true
     },
     "bearish:leaning:neutral": {
       "key": "bearish:leaning:neutral",
-      "n": 497,
-      "effectiveN": 249,
-      "hitRatePct": 52.112676056338024,
+      "n": 488,
+      "effectiveN": 244,
+      "hitRatePct": 53.68852459016394,
       "interval": {
-        "point": 0.5211267605633803,
-        "lower": 0.4772134259883826,
-        "upper": 0.5647159984044793
+        "point": 0.5368852459016393,
+        "lower": 0.492527684623662,
+        "upper": 0.5806666120767392
       },
-      "nullRatePct": 50.12606523819096,
-      "edgePP": 1.986610818147061,
+      "nullRatePct": 50.20863762309838,
+      "edgePP": 3.4798869670655486,
       "calibrated": true
     },
     "bearish:clear:neutral": {
       "key": "bearish:clear:neutral",
-      "n": 325,
-      "effectiveN": 163,
-      "hitRatePct": 46.46153846153846,
+      "n": 317,
+      "effectiveN": 159,
+      "hitRatePct": 44.79495268138801,
       "interval": {
-        "point": 0.4646153846153846,
-        "lower": 0.411120509643527,
-        "upper": 0.5189370013283207
+        "point": 0.4479495268138801,
+        "lower": 0.39415468150387134,
+        "upper": 0.5029908258118881
       },
-      "nullRatePct": 50.18473204520605,
-      "edgePP": -3.723193583667589,
+      "nullRatePct": 50.252227903926894,
+      "edgePP": -5.4572752225388825,
       "calibrated": true
     },
     "bearish:clear:bear": {
       "key": "bearish:clear:bear",
-      "n": 153,
-      "effectiveN": 77,
-      "hitRatePct": 65.359477124183,
+      "n": 160,
+      "effectiveN": 80,
+      "hitRatePct": 63.125,
       "interval": {
-        "point": 0.6535947712418301,
-        "lower": 0.5752693434027233,
-        "upper": 0.7243960514925086
+        "point": 0.63125,
+        "lower": 0.5542312628458188,
+        "upper": 0.7021138900335476
       },
-      "nullRatePct": 57.51112998075703,
-      "edgePP": 7.848347143425971,
+      "nullRatePct": 57.50962930282353,
+      "edgePP": 5.61537069717647,
       "calibrated": true
     },
     "bearish:leaning:bear": {
       "key": "bearish:leaning:bear",
-      "n": 324,
-      "effectiveN": 162,
-      "hitRatePct": 50.617283950617285,
+      "n": 305,
+      "effectiveN": 153,
+      "hitRatePct": 52.131147540983605,
       "interval": {
-        "point": 0.5061728395061729,
-        "lower": 0.4519800651645275,
-        "upper": 0.5602209489837686
+        "point": 0.521311475409836,
+        "lower": 0.46533188705533945,
+        "upper": 0.5767608880112317
       },
-      "nullRatePct": 57.535853191389705,
-      "edgePP": -6.91856924077242,
+      "nullRatePct": 57.53601668469697,
+      "edgePP": -5.4048691437133645,
       "calibrated": true
     },
     "bearish:leaning:bull": {
       "key": "bearish:leaning:bull",
-      "n": 129,
-      "effectiveN": 65,
-      "hitRatePct": 42.63565891472868,
+      "n": 123,
+      "effectiveN": 62,
+      "hitRatePct": 43.90243902439025,
       "interval": {
-        "point": 0.4263565891472868,
-        "lower": 0.3443591959416735,
-        "upper": 0.5126133186922965
+        "point": 0.43902439024390244,
+        "lower": 0.354485645582187,
+        "upper": 0.5272566219388786
       },
-      "nullRatePct": 43.71463687944393,
-      "edgePP": -1.0789779647152498,
+      "nullRatePct": 43.75213500034147,
+      "edgePP": 0.1503040240487752,
       "calibrated": true
     },
     "bullish:leaning:bull": {
       "key": "bullish:leaning:bull",
-      "n": 175,
-      "effectiveN": 88,
-      "hitRatePct": 58.857142857142854,
+      "n": 191,
+      "effectiveN": 96,
+      "hitRatePct": 59.16230366492147,
       "interval": {
-        "point": 0.5885714285714285,
-        "lower": 0.5145216425901605,
-        "upper": 0.6588161043322557
+        "point": 0.5916230366492147,
+        "lower": 0.520773955480825,
+        "upper": 0.6588591413527055
       },
-      "nullRatePct": 57.11932231324825,
-      "edgePP": 1.7378205438946082,
-      "calibrated": true
-    },
-    "bullish:leaning:neutral": {
-      "key": "bullish:leaning:neutral",
-      "n": 108,
-      "effectiveN": 54,
-      "hitRatePct": 52.77777777777778,
-      "interval": {
-        "point": 0.5277777777777778,
-        "lower": 0.43429499826277995,
-        "upper": 0.6193523029203218
-      },
-      "nullRatePct": 49.55160245158275,
-      "edgePP": 3.2261753261950243,
-      "calibrated": true
-    },
-    "bullish:clear:neutral": {
-      "key": "bullish:clear:neutral",
-      "n": 24,
-      "effectiveN": 12,
-      "hitRatePct": 50,
-      "interval": {
-        "point": 0.5,
-        "lower": 0.3142713162776308,
-        "upper": 0.6857286837223692
-      },
-      "nullRatePct": 49.30428844128487,
-      "edgePP": 0.6957115587151286,
-      "calibrated": true
-    },
-    "bullish:clear:bull": {
-      "key": "bullish:clear:bull",
-      "n": 42,
-      "effectiveN": 21,
-      "hitRatePct": 73.80952380952381,
-      "interval": {
-        "point": 0.7380952380952381,
-        "lower": 0.5893098001502446,
-        "upper": 0.8469751462739642
-      },
-      "nullRatePct": 58.15538804595472,
-      "edgePP": 15.654135763569087,
+      "nullRatePct": 56.97347001627888,
+      "edgePP": 2.1888336486425852,
       "calibrated": true
     },
     "bullish:leaning:bear": {
       "key": "bullish:leaning:bear",
-      "n": 9,
-      "effectiveN": 5,
-      "hitRatePct": 55.55555555555556,
+      "n": 13,
+      "effectiveN": 7,
+      "hitRatePct": 61.53846153846154,
       "interval": {
-        "point": 0.5555555555555556,
-        "lower": 0.26664734574402965,
-        "upper": 0.8112245705280859
+        "point": 0.6153846153846154,
+        "lower": 0.3552248097226855,
+        "upper": 0.8229055341876319
       },
-      "nullRatePct": 42.42852862380146,
-      "edgePP": 13.127026931754099,
-      "calibrated": false
+      "nullRatePct": 42.444967786021074,
+      "edgePP": 19.093493752440466,
+      "calibrated": true
+    },
+    "bullish:leaning:neutral": {
+      "key": "bullish:leaning:neutral",
+      "n": 119,
+      "effectiveN": 60,
+      "hitRatePct": 52.10084033613446,
+      "interval": {
+        "point": 0.5210084033613446,
+        "lower": 0.43200647604311226,
+        "upper": 0.6086963477559917
+      },
+      "nullRatePct": 49.52317674904877,
+      "edgePP": 2.577663587085688,
+      "calibrated": true
+    },
+    "bullish:clear:neutral": {
+      "key": "bullish:clear:neutral",
+      "n": 25,
+      "effectiveN": 13,
+      "hitRatePct": 48,
+      "interval": {
+        "point": 0.48,
+        "lower": 0.30031003928960015,
+        "upper": 0.665017820468527
+      },
+      "nullRatePct": 49.239901227566484,
+      "edgePP": -1.2399012275664867,
+      "calibrated": true
+    },
+    "bullish:clear:bull": {
+      "key": "bullish:clear:bull",
+      "n": 45,
+      "effectiveN": 23,
+      "hitRatePct": 64.44444444444444,
+      "interval": {
+        "point": 0.6444444444444445,
+        "lower": 0.49835546011952203,
+        "upper": 0.7678110864309596
+      },
+      "nullRatePct": 57.920946156240284,
+      "edgePP": 6.523498288204166,
+      "calibrated": true
     }
   }
 }

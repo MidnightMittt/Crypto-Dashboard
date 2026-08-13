@@ -412,18 +412,32 @@ async function fetchAsset({ asset, symbol, sosoType }) {
   // — see the header comment for the exact confirmed depths.
   const coinalyzeSymbol = await coinalyzeBinancePerpSymbol(asset);
 
-  // /open-interest-history returns an OHLC-of-OI-value struct per day (OI is
-  // itself a continuously tracked series, so a "daily candle" of it is
-  // meaningful); CLOSE is used as "this day's OI reading" — the same
-  // end-of-day convention rollUpToDaily already uses for price candles
-  // elsewhere in this pipeline, kept consistent rather than picking a
-  // different statistic for a different series.
+  /*
+   * /open-interest-history returns an OHLC-of-OI-value struct per day, with
+   * `t` stamping the interval's START. CLOSE is this day's OI reading — but
+   * a close is only KNOWN at the interval's END, so the row must be stamped
+   * t + 24h, not t.
+   *
+   * This is not pedantry; it was a measured look-ahead. The original
+   * mapping ({t: row.t*1000, oiUsd: row.c}) handed every replay evaluation
+   * at time t the OI level from 24 hours in its own future, and because
+   * USD-denominated OI is contracts × price, the day's OI change embedded
+   * the day's price move: recorded oiChange24hPct correlated 0.70 with the
+   * FORWARD day's return and 0.01 with the past day's — the exact inverse
+   * of point-in-time. Every OI-touching statistic (openInterest and
+   * squeezeRisk census rows, leverage heat, the 80%+ OI conjunction cells)
+   * was contaminated. The long/short series from the same provider was
+   * measured CLEAN (its `r` reading correlates with the PAST day, as honest
+   * positioning data should), so only this mapping shifts. report.ts now
+   * carries a standing leak tripwire so a regression here fails the
+   * pipeline loudly instead of minting a fake 82%-precision signal.
+   */
   const oiHistoryRaw = await fetchCoinalyzeHistory("/open-interest-history", coinalyzeSymbol, {
     convert_to_usd: "true",
   });
   const oiHistory = oiHistoryRaw
     .filter((row) => Number.isFinite(row.c))
-    .map((row) => ({ t: row.t * 1000, oiUsd: row.c }))
+    .map((row) => ({ t: row.t * 1000 + 24 * 3_600_000, oiUsd: row.c }))
     .sort((a, b) => a.t - b.t);
 
   // /long-short-ratio-history returns `r` (the ratio) directly per row, no
@@ -441,7 +455,9 @@ async function fetchAsset({ asset, symbol, sosoType }) {
 
   const etfFlows = await fetchEtfFlowsHistory(sosoType);
 
-  return { asset, futuresKlines, spotKlines, fundingRate, oiHistory, longShortHistory, etfFlows };
+  // Marker consumed by the one-time cache-repair guard (and by humans): OI
+  // rows are stamped at interval END, the moment their close value is known.
+  return { asset, futuresKlines, spotKlines, fundingRate, oiHistory, longShortHistory, etfFlows, oiTimestampConvention: "interval-end" };
 }
 
 async function main() {

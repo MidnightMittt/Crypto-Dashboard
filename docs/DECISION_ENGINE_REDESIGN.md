@@ -408,3 +408,46 @@ The measured edge of this platform currently lives in a handful of
 positioning signals, their conjunctions, and the execution machinery — not
 in the twelve other things voting. The redesign makes the engine say only
 what it can defend, which is the entire brand.
+
+
+---
+
+## Correction log
+
+**2026-08-13 — Open-interest look-ahead (found, fixed, tripwired).** The
+Coinalyze daily OI series stamps intervals at their START; the fetch took
+each interval's CLOSE, so every replay evaluation at time t read the OI
+level from 24 hours in its own future. Because USD-denominated OI embeds
+price, `oiChange24hPct` at t correlated **0.697 with the forward day's
+return and 0.009 with the past day's** — the exact inverse of point-in-time
+— and minted a fake 82%-precision OI-bullish signal. Long/short and basis
+from the same provider were measured clean. The live site was never
+affected (it reads current values); only replay-derived statistics were.
+
+Fixed by stamping OI rows at interval end (fetchHistory.mjs + one-time
+cache repair), verified by the mirrored correlations (forward 0.001, past
+0.697), and made structurally unrepeatable by a **leak tripwire in
+report.ts**: every recorded numeric input's forward-window correlation is
+published, and any |corr| > 0.15 fails the pipeline.
+
+What the correction changed, and what it spared:
+
+- **openInterest's honest 24h record is 46.7%**, not 51.7% — slightly
+  anti, decisively unspectacular. The 82% bull precision was the leak.
+- **Every 80–95% OI conjunction cell is gone** (43 → 29 significant
+  cells; none of the survivors involve OI). Earlier numbers in this
+  document citing openInterest crosstab/conjunction cells (e.g. the H1
+  note's openInterest:bear@24h) should be read against the regenerated
+  report, which supersedes them.
+- **fearGreed's nominal 24h significance disappeared entirely** — the
+  removal-as-voter call is now unambiguous.
+- **The planner's EV gate SURVIVES on corrected data**: long cells
+  +2.48/+0.67/+0.36% at the Wilson lower bound, short cells
+  −0.69/−0.71/−0.17. Shorts remain refused. Trade count barely moved
+  (1,199 → 1,198); ungated expectancy 0.386 → 0.419%/trade.
+- **Score calibration survives with softened magnitudes**:
+  bearish:clear:bear 63.1% vs 57.5% blind (was 65.4%);
+  bullish:clear:bull deflates from +15.7pp to +6.5pp of edge.
+- The **surviving conjunction candidates** for step 6 are the
+  etfFlows/squeezeRisk/longShort family (71–77%, mostly 7d, small n) —
+  block correction and walk-forward still owed before any earns weight.

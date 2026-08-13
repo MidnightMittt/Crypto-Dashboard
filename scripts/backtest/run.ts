@@ -59,6 +59,10 @@ import { classifyLiquidityRegime, classifyRiskRegime, MacroLiquiditySnapshot } f
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, "data");
+
+/** Research-only flags — see ablation.ts. Absent in every standard pipeline invocation. */
+const ABLATED_METRIC = process.argv.find((a) => a.startsWith("--ablate="))?.slice("--ablate=".length) ?? null;
+const OUT_OVERRIDE = process.argv.find((a) => a.startsWith("--out="))?.slice("--out=".length) ?? null;
 const DAY_MS = 86_400_000;
 const OI_BURN_IN_DAYS = 48; // oiPercentileFromHistory's own minimum
 const FORWARD_BUFFER_DAYS = 7; // longest labeled horizon
@@ -784,14 +788,22 @@ export function replayAsset(
       now: t,
     };
 
-    const metricVerdicts = evaluateAll(fakeAggregate, signalContext);
+    let metricVerdicts = evaluateAll(fakeAggregate, signalContext);
+    /*
+     * --ablate=<metricId>: leave-one-out ablation for the research script
+     * (scripts/backtest/ablation.ts). Removing the metric ENTIRELY — as if
+     * it never reported — is exactly what the engine's own renormalization
+     * is specified to handle, so the ablated composite is a legal engine
+     * state, not a hack. Never set in the standard pipeline.
+     */
+    if (ABLATED_METRIC) metricVerdicts = metricVerdicts.filter((m) => m.id !== ABLATED_METRIC);
     // Mirrors the aggregator block exactly — see the comment there. `priorDaily`
     // is already point-in-time filtered (c.t < t), so no look-ahead is possible.
     const structureMetric = evaluateMarketStructure(
       { symbol: asset, bars: priorDaily as never },
       t
     );
-    if (structureMetric) metricVerdicts.push(structureMetric);
+    if (structureMetric && structureMetric.id !== ABLATED_METRIC) metricVerdicts.push(structureMetric);
     const bias = buildMarketBias({
       asset,
       metrics: metricVerdicts,
@@ -1077,8 +1089,9 @@ function main() {
     allRecords.push(...records);
   }
 
-  fs.writeFileSync(path.join(DATA_DIR, "results.json"), JSON.stringify(allRecords, null, 2));
-  console.log(`[run] wrote ${allRecords.length} total day-records to scripts/backtest/data/results.json`);
+  const outFile = OUT_OVERRIDE ?? "results.json";
+  fs.writeFileSync(path.join(DATA_DIR, outFile), JSON.stringify(allRecords, null, 2));
+  console.log(`[run] wrote ${allRecords.length} total day-records to scripts/backtest/data/${outFile}`);
 }
 
 // Guarded, not unconditional: rolling.ts imports `replayAsset` from this

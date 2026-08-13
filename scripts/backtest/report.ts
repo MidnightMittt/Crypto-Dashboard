@@ -699,6 +699,99 @@ export function scoreCalibrationSection(records: DayRecord[]): {
   return { markdown: rows.join("\n"), cells };
 }
 
+/**
+ * POINT-IN-TIME LEAK TRIPWIRE.
+ *
+ * A recorded decision input at time t must not know the future: its
+ * correlation with the FORWARD return (t → t+1d) should be ~0, while
+ * correlation with the PAST return is fine and often expected. This exists
+ * because the failure it guards against actually happened and was invisible
+ * to every other check: the Coinalyze OI series was stamped at interval
+ * START while carrying interval-CLOSE values, so oiChange24hPct correlated
+ * 0.697 with its own forward window (and 0.009 with the past — the exact
+ * inverse of honest data) and minted a fake 82%-precision signal that
+ * contaminated every OI-touching statistic. Unit tests, tsc, and the
+ * census all stayed green.
+ *
+ * DELTAS (day-over-day changes, per asset) are tested rather than levels:
+ * levels are autocorrelated and can correlate with forward returns for
+ * honest reasons; a same-day-computed CHANGE that predicts the next day at
+ * r > threshold is either the platform's holy grail or a leak, and the
+ * pipeline must stop either way until a human decides which.
+ */
+const LEAK_FORWARD_CORR_LIMIT = 0.15;
+
+function pearson(xs: number[], ys: number[]): number | null {
+  const n = xs.length;
+  if (n < 30) return null;
+  const mx = xs.reduce((a, b) => a + b, 0) / n;
+  const my = ys.reduce((a, b) => a + b, 0) / n;
+  let cov = 0, vx = 0, vy = 0;
+  for (let i = 0; i < n; i++) {
+    cov += (xs[i] - mx) * (ys[i] - my);
+    vx += (xs[i] - mx) ** 2;
+    vy += (ys[i] - my) ** 2;
+  }
+  return vx > 0 && vy > 0 ? cov / Math.sqrt(vx * vy) : null;
+}
+
+export function leakTripwireSection(records: DayRecord[]): { markdown: string; breached: boolean } {
+  // Numeric inputs recorded at decision time. Extend this list whenever a
+  // new numeric input lands in DayRecord — an untested input is an untested
+  // leak surface.
+  const inputs: Array<{ label: string; of: (r: DayRecord) => number | null; asDelta: boolean }> = [
+    { label: "oiChange24hPct", of: (r) => (r as unknown as { oiChange24hPct: number | null }).oiChange24hPct, asDelta: false },
+    { label: "longShortRatio (Δ/day)", of: (r) => (r as unknown as { longShortRatio: number | null }).longShortRatio, asDelta: true },
+    { label: "basisPct (Δ/day)", of: (r) => (r as unknown as { basisPct: number | null }).basisPct, asDelta: true },
+    { label: "squeezeScore (Δ/day)", of: (r) => r.squeezeScore, asDelta: true },
+    { label: "biasScore (Δ/day)", of: (r) => (r.biasScore as number | null), asDelta: true },
+  ];
+
+  const rows: string[] = [
+    "| Input @ t | N | corr vs FORWARD (t→t+1d) | corr vs past (t−1d→t) | Verdict |",
+    "|---|---|---|---|---|",
+  ];
+  let breached = false;
+
+  const byAsset = new Map<string, DayRecord[]>();
+  for (const r of records) {
+    const list = byAsset.get(r.asset) ?? [];
+    list.push(r);
+    byAsset.set(r.asset, list);
+  }
+  for (const list of byAsset.values()) list.sort((a, b) => a.t - b.t);
+
+  for (const input of inputs) {
+    const xsF: number[] = [], ysF: number[] = [], xsP: number[] = [], ysP: number[] = [];
+    for (const list of byAsset.values()) {
+      for (let i = 0; i < list.length; i++) {
+        const r = list[i];
+        const raw = input.of(r);
+        if (raw === null) continue;
+        let x = raw;
+        if (input.asDelta) {
+          const prevRaw = i > 0 ? input.of(list[i - 1]) : null;
+          if (prevRaw === null) continue;
+          x = raw - prevRaw;
+        }
+        if (r.forwardReturn1d !== null) { xsF.push(x); ysF.push(r.forwardReturn1d); }
+        const past = (r as unknown as { priceChange24hPct: number | null }).priceChange24hPct;
+        if (past !== null && past !== undefined) { xsP.push(x); ysP.push(past); }
+      }
+    }
+    const cf = pearson(xsF, ysF);
+    const cp = pearson(xsP, ysP);
+    const breach = cf !== null && Math.abs(cf) > LEAK_FORWARD_CORR_LIMIT;
+    if (breach) breached = true;
+    rows.push(
+      `| ${input.label} | ${xsF.length} | ${cf === null ? "—" : cf.toFixed(3)}${breach ? " **⛔ LEAK?**" : ""} | ` +
+        `${cp === null ? "—" : cp.toFixed(3)} | ${breach ? "**FAILS — pipeline stopped**" : "ok"} |`
+    );
+  }
+
+  return { markdown: rows.join("\n"), breached };
+}
+
 /** bullish -> 1, bearish -> -1, neutral -> 0 — same mapping as scoring.ts's directionSign, duplicated locally since DayRecord.metrics stores verdict as a loose string, not the strict Verdict union. */
 function signOf(verdict: string): -1 | 0 | 1 {
   return verdict === "bullish" ? 1 : verdict === "bearish" ? -1 : 0;
@@ -856,6 +949,7 @@ function main() {
   );
   const agreementValidation = agreementValidationSection(records);
   const scoreCalibration = scoreCalibrationSection(records);
+  const leakTripwire = leakTripwireSection(records);
   const fingerprints = buildFingerprints(records);
 
   const header = `# Backtest Report
@@ -983,6 +1077,16 @@ already uses.
 
 ${agreementValidation.markdown}
 
+## Point-in-time integrity (leak tripwire)
+
+A recorded decision input at time t must not correlate with its own FORWARD window; correlation
+with the PAST is fine and often expected. Any |corr| > ${LEAK_FORWARD_CORR_LIMIT} with the forward
+day FAILS the pipeline (nonzero exit) until a human decides whether it is a leak or a miracle.
+Born from a real incident: the Coinalyze OI series arrived stamped a day early and minted a fake
+82%-precision signal that every other check waved through.
+
+${leakTripwire.markdown}
+
 ## Score Calibration (direction × strength × trend regime)
 
 The §9 "Calibrated Probability" source: for reads like today's — same direction, same
@@ -997,6 +1101,12 @@ ${scoreCalibration.markdown}
 
   const report = header + body;
   fs.writeFileSync(path.join(DATA_DIR, "..", "report.md"), report);
+  if (leakTripwire.breached) {
+    // The report is still written above — the breach must be READABLE — but
+    // the pipeline fails so contaminated statistics can't ship silently.
+    console.error("\n[report] ⛔ LEAK TRIPWIRE BREACHED — a decision input correlates with its own forward window. See 'Point-in-time integrity' in report.md. Refusing a clean exit.");
+    process.exitCode = 1;
+  }
   console.log(report);
   console.log(`[report] wrote scripts/backtest/report.md`);
 
