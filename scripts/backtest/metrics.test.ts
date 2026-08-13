@@ -10,6 +10,10 @@ import {
   Occurrence,
   assetsPerDay,
   blockLengthFor,
+  directionalBaseRates,
+  poissonBinomialPmf,
+  poissonBinomialPValue,
+  testSignificanceVsNull,
 } from "./metrics";
 
 describe("winRate", () => {
@@ -252,5 +256,113 @@ describe("assetsPerDay / blockLengthFor", () => {
   it("treats 7d as overlapping BOTH ways — seven days x the asset count", () => {
     expect(blockLengthFor("7d", 2)).toBe(14);
     expect(blockLengthFor("7d", 3)).toBe(21);
+  });
+});
+
+describe("drift-adjusted nulls", () => {
+  /*
+   * The correction that re-decides the census (design doc H1). Every case
+   * hand-computed: an error here silently re-labels which signals the
+   * platform believes in.
+   */
+  const occ = (verdict: "bullish" | "bearish", ret: number, asset = "BTC") =>
+    ({ t: 0, verdict, forwardReturnPct: ret, asset }) as const;
+
+  describe("directionalBaseRates", () => {
+    it("counts strict inequalities, so ties belong to neither side — matching winRate's tie-is-loss rule", () => {
+      // 3 up, 1 down, 1 exactly zero.
+      const r = directionalBaseRates([1, 2, 3, -1, 0])!;
+      expect(r.up).toBeCloseTo(3 / 5, 12);
+      expect(r.down).toBeCloseTo(1 / 5, 12);
+      expect(r.up + r.down).toBeLessThan(1); // the zero belongs to neither
+      expect(r.n).toBe(5);
+    });
+
+    it("returns null on empty input — no data is not a 50/50 market", () => {
+      expect(directionalBaseRates([])).toBeNull();
+    });
+  });
+
+  describe("poissonBinomialPmf", () => {
+    it("hand-computed heterogeneous case: p = [0.5, 0.8]", () => {
+      // P(0) = .5*.2 = .10 ; P(1) = .5*.8 + .5*.2 = .50 ; P(2) = .5*.8 = .40
+      const pmf = poissonBinomialPmf([0.5, 0.8]);
+      expect(pmf[0]).toBeCloseTo(0.1, 12);
+      expect(pmf[1]).toBeCloseTo(0.5, 12);
+      expect(pmf[2]).toBeCloseTo(0.4, 12);
+    });
+
+    it("sums to 1 at census scale (n=2706, mixed probs)", () => {
+      const probs = Array.from({ length: 2706 }, (_, i) => 0.45 + 0.1 * ((i % 10) / 10));
+      const total = poissonBinomialPmf(probs).reduce((a, b) => a + b, 0);
+      expect(total).toBeCloseTo(1, 9);
+    });
+  });
+
+  describe("poissonBinomialPValue", () => {
+    it("is numerically identical to signTestPValue when every null is 0.5", () => {
+      // The two columns in the report must differ ONLY in the null.
+      for (const [n, wins] of [
+        [10, 7],
+        [100, 60],
+        [500, 240],
+      ] as const) {
+        const probs = new Array(n).fill(0.5);
+        expect(poissonBinomialPValue(probs, wins)).toBeCloseTo(signTestPValue(n, wins), 10);
+      }
+    });
+
+    it("the same win count is significant against 50% and NOT against a drifted null", () => {
+      // 60/100 wins: p≈0.057 vs fair coin, but if the tape's base rate was
+      // 58% up, 60 wins is nothing. This asymmetry is the whole point.
+      const vsFair = poissonBinomialPValue(new Array(100).fill(0.5), 60);
+      const vsDrift = poissonBinomialPValue(new Array(100).fill(0.58), 60);
+      expect(vsFair).toBeLessThan(0.06);
+      expect(vsDrift).toBeGreaterThan(0.6);
+    });
+  });
+
+  describe("testSignificanceVsNull", () => {
+    const rates: Record<string, { up: number; down: number }> = {
+      BTC: { up: 0.6, down: 0.38 },
+      ETH: { up: 0.52, down: 0.46 },
+    };
+    const nullFor = (o: { verdict: string; asset?: string }) => {
+      const r = rates[o.asset ?? "BTC"];
+      return o.verdict === "bullish" ? r.up : r.down;
+    };
+
+    it("hand-computed: null win rate is the exposure-weighted mean of per-occurrence nulls", () => {
+      const occurrences = [
+        occ("bullish", 1, "BTC"), // null .60, win
+        occ("bullish", -1, "ETH"), // null .52, loss
+        occ("bearish", -1, "BTC"), // null .38, win
+        occ("bearish", 1, "ETH"), // null .46, loss
+      ];
+      const out = testSignificanceVsNull(occurrences, nullFor, 1)!;
+      expect(out.n).toBe(4);
+      expect(out.wins).toBe(2);
+      expect(out.nullWinRate).toBeCloseTo((0.6 + 0.52 + 0.38 + 0.46) / 4, 12);
+      expect(out.edgeVsNull).toBeCloseTo(0.5 - 0.49, 12);
+    });
+
+    it("a bearish signal beating its own hostile base rate is rewarded, not punished", () => {
+      // 50 bearish wins of 100 on a tape where down-days run 38%: far above
+      // blind shorting. The fair-coin test calls this nothing (p=1); the
+      // drift test calls it real.
+      const occurrences = Array.from({ length: 100 }, (_, i) => occ("bearish", i < 50 ? -1 : 1, "BTC"));
+      const out = testSignificanceVsNull(occurrences, nullFor, 30)!;
+      expect(out.nullWinRate).toBeCloseTo(0.38, 12);
+      expect(out.edgeVsNull).toBeCloseTo(0.12, 12);
+      expect(out.pValue).toBeLessThan(0.05);
+      expect(signTestPValue(100, 50)).toBeGreaterThan(0.9); // the old test shrugs
+    });
+
+    it("applies the same tie-is-loss and neutral-exclusion rules as winRate", () => {
+      const occurrences = [occ("bullish", 0, "BTC"), { t: 0, verdict: "neutral", forwardReturnPct: 5 } as const];
+      const out = testSignificanceVsNull(occurrences, nullFor, 1)!;
+      expect(out.n).toBe(1); // neutral excluded
+      expect(out.wins).toBe(0); // zero return = loss
+    });
   });
 });

@@ -4,7 +4,7 @@ import { fileURLToPath } from "url";
 import { CATEGORY_ORDER, CATEGORY_LABELS } from "../../src/lib/signals/categories";
 import { Category } from "../../src/lib/signals/types";
 import { MIN_SAMPLE_N } from "../../src/lib/sentiment/backtestStats";
-import { summarizeOccurrences, Occurrence, OccurrenceSummary } from "./metrics";
+import { summarizeOccurrences, Occurrence, OccurrenceSummary, buildNullLookup, NullProbFor } from "./metrics";
 import { HOLDING_PERIODS, HoldingPeriod } from "../../src/lib/signals/hypothesis";
 
 /**
@@ -32,6 +32,8 @@ const DATA_DIR = path.join(__dirname, "data");
 
 export interface CombinationDayRecord {
   t: number;
+  /** Optional in the type, present at runtime (report.ts casts full DayRecords) — per-asset drift nulls read it. */
+  asset?: string;
   categories: Array<{ category: string; score: number; verdict: string }>;
   forwardReturn1h: number | null;
   forwardReturn4h: number | null;
@@ -98,22 +100,34 @@ function setsEqual(a: Set<string>, b: string[]): boolean {
  * matrix's denominator — a day that matched a DIFFERENT pattern while price
  * still rose is a real false negative for this one).
  */
-function testCombination(records: CombinationDayRecord[], subset: Category[], hp: HoldingPeriod): OccurrenceSummary {
+function testCombination(
+  records: CombinationDayRecord[],
+  subset: Category[],
+  hp: HoldingPeriod,
+  nullFor: NullProbFor
+): OccurrenceSummary {
   const field = holdingPeriodField(hp);
   const subsetKeys = subset as string[];
   const occurrences: Occurrence[] = records.map((r) => ({
     t: r.t,
     verdict: setsEqual(bullishSetFor(r), subsetKeys) ? "bullish" : "neutral",
     forwardReturnPct: r[field],
+    asset: r.asset,
   }));
-  return summarizeOccurrences(occurrences, MIN_SAMPLE_N);
+  return summarizeOccurrences(occurrences, MIN_SAMPLE_N, nullFor);
 }
 
 export function buildCombinations(records: CombinationDayRecord[]): { markdown: string; results: CombinationResult[] } {
+  // Bullish-only patterns: without a drift null the whole partition inherits
+  // the asset's upward drift as free credit. One lookup per horizon.
+  const nullLookups = new Map<HoldingPeriod, NullProbFor>(
+    HOLDING_PERIODS.map((hp) => [hp, buildNullLookup(records, (r) => r[holdingPeriodField(hp)])])
+  );
+
   const results: CombinationResult[] = [];
   for (const subset of allSubsets()) {
     for (const hp of HOLDING_PERIODS) {
-      results.push({ subset, label: subsetLabel(subset), holdingPeriod: hp, stat: testCombination(records, subset, hp) });
+      results.push({ subset, label: subsetLabel(subset), holdingPeriod: hp, stat: testCombination(records, subset, hp, nullLookups.get(hp)!) });
     }
   }
 

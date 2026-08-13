@@ -3,7 +3,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { DayRecord } from "./run";
 import { SIGNAL_HYPOTHESES, HOLDING_PERIODS, HoldingPeriod } from "../../src/lib/signals/hypothesis";
-import { signTestPValue } from "./metrics";
+import { signTestPValue, buildNullLookup, NullProbFor } from "./metrics";
+import { Verdict } from "../../src/lib/signals/types";
 import { blockBootstrapProportion } from "../../src/lib/research/overlap";
 import { assetsPerDay, blockLengthFor } from "./metrics";
 import { deriveSampleSizeLabel, MIN_SAMPLE_N } from "../../src/lib/sentiment/backtestStats";
@@ -64,10 +65,27 @@ function main() {
 
   const perDay = assetsPerDay(records);
 
+  /*
+   * Drift-adjusted nulls, same construction as report.ts's hypothesis
+   * section: each occurrence's null is the base rate of ITS direction for
+   * ITS asset at this horizon. The bootstrap tests one pooled proportion,
+   * so the per-occurrence nulls collapse to their exposure-weighted mean —
+   * the win rate blind firing in the same directions would have earned.
+   * Passing 0.5 here would re-teach the exact lesson H1 corrects: under
+   * upward drift a bullish signal beats a coin by existing.
+   */
+  const nullLookups = new Map<HoldingPeriod, NullProbFor>();
+  for (const hp of HOLDING_PERIODS) {
+    const field = fieldFor(hp);
+    nullLookups.set(hp, buildNullLookup(records, (r) => r[field] as number | null));
+  }
+
   say("## Per-metric hypothesis stats (report.ts's core table)");
   say("");
-  say("| Metric | Holding | N | Eff. N | Win rate | naive p | corrected p | Verdict change |");
-  say("|---|---|---|---|---|---|---|---|");
+  say("Corrected p is the block bootstrap tested against the DRIFT null (exposure-weighted per-asset base rate), so it applies both corrections at once: overlap deflates the confidence, drift moves the bar. naive p is the plain sign test against 50% kept for contrast.");
+  say("");
+  say("| Metric | Holding | N | Eff. N | Win rate | Null | naive p | corrected p | Verdict change |");
+  say("|---|---|---|---|---|---|---|---|---|");
 
   let flipped = 0;
   let tested = 0;
@@ -77,23 +95,30 @@ function main() {
     if (!h.hasHistoricalSource) continue;
     for (const hp of HOLDING_PERIODS) {
       const field = fieldFor(hp);
-      const scored = records
+      const rows = records
         .filter((r) => {
           const m = r.metrics.find((x) => x.id === h.id);
           return m && m.verdict !== "neutral" && r[field] !== null;
         })
-        .map((r): number => {
+        .map((r) => {
           const verdict = r.metrics.find((x) => x.id === h.id)!.verdict;
           const ret = r[field] as number;
-          return (verdict === "bullish" ? ret > 0 : ret < 0) ? 1 : 0;
+          return {
+            win: (verdict === "bullish" ? ret > 0 : ret < 0) ? 1 : 0,
+            // DayRecord stores verdict as plain string (JSON round-trip); the
+            // lookup only distinguishes bullish/bearish/other, so the cast is safe.
+            nullP: nullLookups.get(hp)!({ t: r.t, verdict: verdict as Verdict, forwardReturnPct: ret, asset: r.asset }),
+          };
         });
 
-      if (scored.length < MIN_SAMPLE_N) continue;
+      if (rows.length < MIN_SAMPLE_N) continue;
       tested++;
 
+      const scored = rows.map((r) => r.win);
+      const nullBar = rows.reduce((a, r) => a + r.nullP, 0) / rows.length;
       const wins = scored.reduce((a, b) => a + b, 0);
       const naiveP = signTestPValue(scored.length, wins);
-      const corrected = blockBootstrapProportion(scored, blockLengthFor(hp, perDay))!;
+      const corrected = blockBootstrapProportion(scored, blockLengthFor(hp, perDay), nullBar)!;
 
       const wasSig = naiveP < 0.05;
       const isSig = corrected.pValue < 0.05;
@@ -104,7 +129,7 @@ function main() {
       }
 
       say(`| ${h.label} | ${hp} | ${scored.length} | ${corrected.effectiveN.toFixed(0)} | ` +
-          `${f1((100 * wins) / scored.length)}% | ${naiveP.toFixed(4)} | ${corrected.pValue.toFixed(4)} | ${change} |`);
+          `${f1((100 * wins) / scored.length)}% | ${f1(100 * nullBar)}% | ${naiveP.toFixed(4)} | ${corrected.pValue.toFixed(4)} | ${change} |`);
     }
   }
   say("");

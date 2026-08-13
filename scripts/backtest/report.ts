@@ -20,7 +20,17 @@ import {
 } from "../../src/lib/sentiment/backtestStats";
 import { MarketRegime } from "../../src/types/market";
 import { SIGNAL_HYPOTHESES, HOLDING_PERIODS, HoldingPeriod } from "../../src/lib/signals/hypothesis";
-import { summarizeOccurrences, winRate, Occurrence, assetsPerDay, blockLengthFor } from "./metrics";
+import {
+  summarizeOccurrences,
+  winRate,
+  Occurrence,
+  assetsPerDay,
+  blockLengthFor,
+  buildNullLookup,
+  NullProbFor,
+  DriftAdjustedSignificance,
+  signTestPValue,
+} from "./metrics";
 import { buildCombinations, CombinationDayRecord } from "./combinations";
 import { buildWeightReview, WeightReviewDayRecord } from "./weightReview";
 import { buildMetricCombinations, MetricComboDayRecord } from "./metricCombinations";
@@ -277,7 +287,7 @@ function occurrencesFor(records: DayRecord[], metricId: string, hp: HoldingPerio
   for (const r of records) {
     const m = r.metrics.find((x) => x.id === metricId);
     if (!m) continue;
-    occurrences.push({ t: r.t, verdict: m.verdict as Occurrence["verdict"], forwardReturnPct: r[field] });
+    occurrences.push({ t: r.t, verdict: m.verdict as Occurrence["verdict"], forwardReturnPct: r[field], asset: r.asset });
   }
   return occurrences;
 }
@@ -294,34 +304,47 @@ function hypothesesSection(records: DayRecord[]): {
   stats: Partial<Record<`${string}:${HoldingPeriod}`, HypothesisStat>>;
 } {
   const rows: string[] = [
-    "| Metric | Holding | N | Win rate | Mean | Median | Max DD | Bull P/R | Bear P/R | p-value |",
-    "|---|---|---|---|---|---|---|---|---|---|",
+    "| Metric | Holding | N | Win rate | Null* | Edge | Mean | Max DD | Bull P/R | Bear P/R | p (vs null) | p (vs 50%) |",
+    "|---|---|---|---|---|---|---|---|---|---|---|---|",
   ];
   const stats: Partial<Record<`${string}:${HoldingPeriod}`, HypothesisStat>> = {};
 
   const pct = (n: number | null) => (n === null ? "—" : `${(n * 100).toFixed(0)}%`);
 
+  /*
+   * DRIFT-ADJUSTED NULLS (design doc H1). One lookup per holding period,
+   * built from the SAME records this section scores, so a rolling window
+   * automatically tests against its own window's drift rather than the full
+   * history's. Built once here and shared across every metric row — the
+   * null a signal must beat cannot depend on which metric is asking.
+   */
+  const nullLookups = new Map<HoldingPeriod, NullProbFor>(
+    HOLDING_PERIODS.map((hp) => [hp, buildNullLookup(records, (r) => r[holdingPeriodField(hp)])])
+  );
+
   for (const h of SIGNAL_HYPOTHESES) {
     if (!h.hasHistoricalSource) continue;
     for (const hp of HOLDING_PERIODS) {
       const occurrences = occurrencesFor(records, h.id, hp);
-      const stat = summarizeOccurrences(occurrences, MIN_SAMPLE_N);
+      const stat = summarizeOccurrences(occurrences, MIN_SAMPLE_N, nullLookups.get(hp)!);
       stats[`${h.id}:${hp}`] = stat;
 
       if (stat.n < MIN_SAMPLE_N) {
-        rows.push(`| ${h.label} | ${hp} | ${stat.n} | insufficient data | | | | | | |`);
+        rows.push(`| ${h.label} | ${hp} | ${stat.n} | insufficient data | | | | | | | | |`);
         continue;
       }
 
+      const drift = stat.significance as DriftAdjustedSignificance | null;
+      const legacyP = drift ? signTestPValue(drift.n, drift.wins) : null;
       rows.push(
-        `| ${h.label} | ${hp} | ${stat.n} | ${stat.winRate === null ? "—" : `${(stat.winRate * 100).toFixed(0)}%`} | ${fmt(stat.meanReturnPct)} | ${fmt(stat.medianReturnPct)} | ${stat.maxDrawdownPct === null ? "—" : `${stat.maxDrawdownPct.toFixed(2)}%`} | ${pct(stat.bullish.precision)}/${pct(stat.bullish.recall)} | ${pct(stat.bearish.precision)}/${pct(stat.bearish.recall)} | ${stat.significance ? stat.significance.pValue.toFixed(4) : "—"} |`
+        `| ${h.label} | ${hp} | ${stat.n} | ${stat.winRate === null ? "—" : `${(stat.winRate * 100).toFixed(0)}%`} | ${drift ? `${(drift.nullWinRate * 100).toFixed(0)}%` : "—"} | ${drift ? `${drift.edgeVsNull >= 0 ? "+" : ""}${(drift.edgeVsNull * 100).toFixed(1)}pp` : "—"} | ${fmt(stat.meanReturnPct)} | ${stat.maxDrawdownPct === null ? "—" : `${stat.maxDrawdownPct.toFixed(2)}%`} | ${pct(stat.bullish.precision)}/${pct(stat.bullish.recall)} | ${pct(stat.bearish.precision)}/${pct(stat.bearish.recall)} | ${drift ? drift.pValue.toFixed(4) : "—"} | ${legacyP === null ? "—" : legacyP.toFixed(4)} |`
       );
     }
   }
 
   rows.push("");
   rows.push(
-    "*Bull/Bear P/R: one-vs-rest precision/recall for that class (e.g. Bull P = of the days this metric fired bullish, how often price actually rose; Bull R = of the days price actually rose, how often this metric had fired bullish). p-value is a two-sided exact sign test against a 50% null — small values mean the win rate is unlikely to be a coin flip, not that the effect is large."
+    "*Null: what firing blindly in the same directions would have won — each occurrence's null is the base rate of ITS direction, for ITS asset, over this window (exact Poisson-binomial test, same doubled-tail construction as before). The asset drifts, so 50% was the wrong question: a bullish 53% against a 54% up-day base rate is value subtracted, and a bearish 48% against a 44% down-day rate is value added. Edge = win rate − null. The legacy p (vs 50%) is kept for one transition so the correction itself is auditable. Bull/Bear P/R: one-vs-rest precision/recall for that class."
   );
   return { markdown: rows.join("\n"), stats };
 }
@@ -356,7 +379,7 @@ function regimeOccurrencesFor(records: DayRecord[], metricId: string, hp: Holdin
     if (!r.regimeTags.includes(tag)) continue;
     const m = r.metrics.find((x) => x.id === metricId);
     if (!m) continue;
-    occurrences.push({ t: r.t, verdict: m.verdict as Occurrence["verdict"], forwardReturnPct: r[field] });
+    occurrences.push({ t: r.t, verdict: m.verdict as Occurrence["verdict"], forwardReturnPct: r[field], asset: r.asset });
   }
   return occurrences;
 }
@@ -377,12 +400,28 @@ function metricRegimeCrosstabSection(records: DayRecord[]): {
   const rows: string[] = ["| Metric | Regime | N | Win rate | Mean | p-value |", "|---|---|---|---|---|---|"];
   const stats: Partial<Record<`${string}:${string}:${HoldingPeriod}`, HypothesisStat>> = {};
 
+  /*
+   * REGIME-CONDITIONAL nulls, deliberately. The bull tag is trend-defined,
+   * so up-days are mechanically over-represented inside it — a bullish
+   * signal that fires only on bull-tagged days must beat the base rate OF
+   * THOSE DAYS, or it is being credited for the regime rather than for any
+   * information of its own. Built per (tag, horizon) from the tag-filtered
+   * records, shared across metrics.
+   */
+  const tagNullLookups = new Map<string, NullProbFor>();
+  for (const tag of ALL_REGIME_TAGS) {
+    const tagged = records.filter((r) => r.regimeTags.includes(tag));
+    for (const hp of HOLDING_PERIODS) {
+      tagNullLookups.set(`${tag}:${hp}`, buildNullLookup(tagged, (r) => r[holdingPeriodField(hp)]));
+    }
+  }
+
   for (const h of SIGNAL_HYPOTHESES) {
     if (!h.hasHistoricalSource) continue;
     for (const tag of ALL_REGIME_TAGS) {
       for (const hp of HOLDING_PERIODS) {
         const occurrences = regimeOccurrencesFor(records, h.id, hp, tag);
-        const stat = summarizeOccurrences(occurrences, MIN_SAMPLE_N);
+        const stat = summarizeOccurrences(occurrences, MIN_SAMPLE_N, tagNullLookups.get(`${tag}:${hp}`)!);
         stats[`${h.id}:${tag}:${hp}`] = stat;
 
         if (hp !== "24h") continue;
@@ -565,11 +604,14 @@ export function agreementValidationSection(records: DayRecord[]): {
   ];
   const stats: AgreementBucketStat[] = [];
 
+  // Buckets select on agreement, not on trend, so the unconditional 1d null applies.
+  const nullFor = buildNullLookup(records, (r) => r.forwardReturn1d);
+
   for (const bucket of AGREEMENT_BUCKETS) {
     const occurrences: Occurrence[] = records
       .filter((r) => r.biasAgreement !== null && bucket.test(r.biasAgreement) && r.biasVerdict !== null)
-      .map((r) => ({ t: r.t, verdict: r.biasVerdict as Occurrence["verdict"], forwardReturnPct: r.forwardReturn1d }));
-    const stat = summarizeOccurrences(occurrences, MIN_SAMPLE_N);
+      .map((r) => ({ t: r.t, verdict: r.biasVerdict as Occurrence["verdict"], forwardReturnPct: r.forwardReturn1d, asset: r.asset }));
+    const stat = summarizeOccurrences(occurrences, MIN_SAMPLE_N, nullFor);
 
     stats.push({
       bucketLabel: bucket.label,
@@ -666,7 +708,11 @@ export function metricPerformanceSection(
     const winRate7d = raw7d && raw7d.n >= MIN_SAMPLE_N ? raw7d.winRate : null;
 
     const n24h = headline?.n ?? null;
+    // Drift-adjusted since the H1 correction: this flag now answers "beats
+    // blind trading", not "beats a coin flip" — the flag every confidence
+    // label downstream is built from.
     const significant24h = headline?.significance?.significant ?? null;
+    const baseRate24h = headline?.significance?.nullWinRate ?? null;
 
     /*
      * LABELLED ON THE EFFECTIVE SAMPLE, not the raw count.
@@ -693,6 +739,7 @@ export function metricPerformanceSection(
       hasHistoricalSource: h.hasHistoricalSource,
       n24h,
       effectiveN24h,
+      baseRate24h,
       winRate24h: headline?.winRate ?? null,
       winRate7d,
       significant24h,

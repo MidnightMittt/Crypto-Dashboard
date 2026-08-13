@@ -168,6 +168,13 @@ export interface MetricPerformanceSummary {
    * at this horizon. The 7d bucket suffers both and is not published here.
    */
   effectiveN24h: number | null;
+  /**
+   * What firing blindly would have won at 24h — the number `winRate24h`
+   * must BEAT, not 50%. The asset drifts; a bullish 53% against a 54%
+   * up-day base rate is value subtracted. Null when the headline lacks
+   * sample.
+   */
+  baseRate24h: number | null;
   winRate24h: number | null;
   /** Looked up separately from the 24h headline — the panel wants both explicitly, not just whichever holding period happens to be best/worst. */
   winRate7d: number | null;
@@ -335,6 +342,17 @@ export interface HypothesisSignificance {
   wins: number;
   pValue: number;
   significant: boolean;
+  /**
+   * Drift-adjusted fields, present on every stat generated after the H1
+   * correction (design doc): `nullWinRate` is what firing blindly in the
+   * same directions would have won — each occurrence's null is the base
+   * rate of ITS direction for ITS asset — and `pValue` above is tested
+   * against THAT, not against a fair coin. Optional only so stats
+   * serialized before the correction still typecheck.
+   */
+  nullWinRate?: number;
+  /** winRate − nullWinRate, proportion points. The honest size of the edge. */
+  edgeVsNull?: number;
 }
 
 export interface HypothesisStat {

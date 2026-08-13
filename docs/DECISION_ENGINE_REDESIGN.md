@@ -84,6 +84,36 @@ exposure-matched benchmark). This likely *reduces* several bullish cells and
 *rescues* some bearish ones. It is the highest-priority correction in this
 document.
 
+> **MEASURED (2026-08-12, implemented).** Every directional cell now tests
+> against a Poisson-binomial null where each occurrence's probability is the
+> base rate of ITS direction for ITS asset at that horizon (per-asset, with
+> tags conditioned on tag-filtered days; `buildNullLookup` in
+> scripts/backtest/metrics.ts). The outcome was NOT what the paragraph above
+> predicted at the headline level, and both halves matter:
+>
+> - **Unconditional cells barely moved (0 of 48 hypothesis cells flip).**
+>   The replay window (2019→present) nets out to ~no daily drift — BTC's 1d
+>   up-rate is 50.7%, ETH's 49.6% — so the 24h census was never materially
+>   flattered. At 7d BTC drifts (52.7%) and several 7d p-values shifted
+>   without crossing 0.05.
+> - **Regime-conditional cells moved a lot: 23 of 336 crosstab cells flip.**
+>   Drift hides inside regime tags, not the pooled window. Lost significance:
+>   cells that were regime drift wearing a signal costume — e.g.
+>   squeezeRisk:bear @24h won 56.9% against a 57.5% blind rate,
+>   spotPerpVolume:bull @7d 57.1% vs 55.8%, stablecoins:bull @24h 54.0% vs
+>   53.9%. Gained significance: anti-signals drift had been masking — e.g.
+>   openInterest:bear @24h won only 41.0% when blind shorts won 51.1%, and
+>   fearGreed:bull @24h's 56.0% is genuinely large against bull-tag days'
+>   45.6% next-day up-rate.
+> - **5 of 712 conjunction cells lose significance** (all 7d/4h automatic
+>   pairs — the family that inherited drift as free credit).
+>
+> The report prints `p (vs null)` beside the legacy `p (vs 50%)` for one
+> transition so the correction is auditable; the overlap audit's bootstrap
+> uses the same exposure-weighted null. Downstream consequence for step 2+:
+> the regime crosstab, not the pooled table, is where claims must be
+> re-checked before anything earns weight.
+
 **H2 — Confidence has never been validated against outcomes.** We assert
 that evidence quality should scale conviction (damping), but we have never
 published the calibration curve: realized hit rate by confidence decile. If

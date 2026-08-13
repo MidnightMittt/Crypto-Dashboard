@@ -71,7 +71,18 @@ export function HistoricalPerformancePanel({
           value={String(perf.n24h)}
           suffix={perf.effectiveN24h !== null ? ` · ${perf.effectiveN24h} independent` : undefined}
         />
-        <Stat label="24 Hour Win Rate" value={pct(perf.winRate24h)} />
+        {/*
+          The base rate is what firing blindly in the same directions would
+          have won — the asset drifts, so 50% is not the bar. A win rate
+          shown without it reads as edge when it may be less than doing
+          nothing; a win rate shown WITH it lets the reader do the honest
+          subtraction themselves.
+        */}
+        <Stat
+          label="24 Hour Win Rate"
+          value={pct(perf.winRate24h)}
+          suffix={perf.baseRate24h !== null ? ` vs ${pct(perf.baseRate24h)} blind` : undefined}
+        />
         <Stat label="7 Day Win Rate" value={pct(perf.winRate7d)} />
         <Stat
           label="Best Environment"

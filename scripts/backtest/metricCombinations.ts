@@ -1,6 +1,6 @@
 import { SIGNAL_HYPOTHESES, HOLDING_PERIODS, HoldingPeriod } from "../../src/lib/signals/hypothesis";
 import { MIN_SAMPLE_N } from "../../src/lib/sentiment/backtestStats";
-import { summarizeOccurrences, Occurrence, OccurrenceSummary } from "./metrics";
+import { summarizeOccurrences, Occurrence, OccurrenceSummary, buildNullLookup, NullProbFor } from "./metrics";
 import { benjaminiHochberg } from "../../src/lib/research/multipleTesting";
 
 /**
@@ -43,6 +43,8 @@ const NAMED_COMBOS: Array<{ label: string; metricIds: string[] }> = [
 
 export interface MetricComboDayRecord {
   t: number;
+  /** Optional in the type for callers that predate drift nulls; present at runtime — report.ts casts full DayRecords here. Per-asset nulls need it. */
+  asset?: string;
   metrics: Array<{ id: string; verdict: string }>;
   forwardReturn1h: number | null;
   forwardReturn4h: number | null;
@@ -95,23 +97,39 @@ function allPairs(ids: string[]): Array<[string, string]> {
  * matrix, matching the same convention combinations.ts/report.ts already
  * use.
  */
-function testComboBullish(records: MetricComboDayRecord[], metricIds: string[], hp: HoldingPeriod): OccurrenceSummary {
+function testComboBullish(
+  records: MetricComboDayRecord[],
+  metricIds: string[],
+  hp: HoldingPeriod,
+  nullFor: NullProbFor
+): OccurrenceSummary {
   const field = holdingPeriodField(hp);
   const occurrences: Occurrence[] = records.map((r) => {
     const allBullish = metricIds.every((id) => r.metrics.find((m) => m.id === id)?.verdict === "bullish");
-    return { t: r.t, verdict: allBullish ? "bullish" : "neutral", forwardReturnPct: r[field] };
+    return { t: r.t, verdict: allBullish ? "bullish" : "neutral", forwardReturnPct: r[field], asset: r.asset };
   });
-  return summarizeOccurrences(occurrences, MIN_SAMPLE_N);
+  return summarizeOccurrences(occurrences, MIN_SAMPLE_N, nullFor);
 }
 
 export function buildMetricCombinations(records: MetricComboDayRecord[]): { markdown: string; results: MetricComboStat[] } {
   const allIds = SIGNAL_HYPOTHESES.map((h) => h.id);
   const pairs = allPairs(allIds);
 
+  /*
+   * Drift nulls matter MOST here: every conjunction below is bullish-only,
+   * so under the old fair-coin null the entire scan inherited the asset's
+   * upward drift as free credit. The 70%+ cells this file produced are
+   * exactly the ones this correction re-examines. One lookup per horizon,
+   * shared across all 105+ combos.
+   */
+  const nullLookups = new Map<HoldingPeriod, NullProbFor>(
+    HOLDING_PERIODS.map((hp) => [hp, buildNullLookup(records, (r) => r[holdingPeriodField(hp)])])
+  );
+
   const namedResults: MetricComboStat[] = [];
   for (const combo of NAMED_COMBOS) {
     for (const hp of HOLDING_PERIODS) {
-      const stat = testComboBullish(records, combo.metricIds, hp);
+      const stat = testComboBullish(records, combo.metricIds, hp, nullLookups.get(hp)!);
       namedResults.push({ label: combo.label, metricIds: combo.metricIds, holdingPeriod: hp, isNamed: true, stat });
     }
   }
@@ -121,7 +139,7 @@ export function buildMetricCombinations(records: MetricComboDayRecord[]): { mark
     const hpPairs = pairs.map(([a, b]) => ({
       label: `${labelFor(a)} + ${labelFor(b)}`,
       metricIds: [a, b],
-      stat: testComboBullish(records, [a, b], hp),
+      stat: testComboBullish(records, [a, b], hp, nullLookups.get(hp)!),
     }));
 
     // FDR is computed only over pairs with an actual significance result

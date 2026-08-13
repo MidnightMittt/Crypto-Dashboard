@@ -18,6 +18,13 @@ export interface Occurrence {
   t: number;
   verdict: Verdict;
   forwardReturnPct: number | null;
+  /**
+   * Which asset produced this occurrence. Optional for backward
+   * compatibility; required in practice for drift-adjusted nulls, because
+   * BTC's and ETH's base rates differ and pooling them would hand the
+   * higher-drift asset's signals credit for the other's tape.
+   */
+  asset?: string;
 }
 
 // ── Win rate / return stats ─────────────────────────────────────────────
@@ -224,7 +231,8 @@ export interface OccurrenceSummary {
   maxDrawdownPct: number | null;
   bullish: ConfusionMatrix;
   bearish: ConfusionMatrix;
-  significance: SignificanceResult | null;
+  /** Drift-adjusted when the caller supplied a null lookup; the extra fields identify which. */
+  significance: SignificanceResult | DriftAdjustedSignificance | null;
 }
 
 /**
@@ -233,7 +241,18 @@ export interface OccurrenceSummary {
  * category-combination testing so the two can never compute "the same
  * measurement" two different ways.
  */
-export function summarizeOccurrences(occurrences: Occurrence[], minSampleN: number): OccurrenceSummary {
+export function summarizeOccurrences(
+  occurrences: Occurrence[],
+  minSampleN: number,
+  /**
+   * When provided, significance is tested against each occurrence's own
+   * drift-adjusted null instead of a fair coin — see the drift-null section
+   * below for why the fair coin is the wrong question under drift. Optional
+   * so older research scripts keep their historical vs-50% semantics until
+   * they are individually migrated; every LIVE-facing section passes it.
+   */
+  nullProbFor?: NullProbFor
+): OccurrenceSummary {
   const scored = occurrences.filter((o) => o.verdict !== "neutral" && o.forwardReturnPct !== null);
   const returns = scored.map((o) => o.forwardReturnPct as number);
   return {
@@ -244,7 +263,9 @@ export function summarizeOccurrences(occurrences: Occurrence[], minSampleN: numb
     maxDrawdownPct: maxDrawdown(scored),
     bullish: confusionMatrix(occurrences, "bullish"),
     bearish: confusionMatrix(occurrences, "bearish"),
-    significance: testSignificance(occurrences, minSampleN),
+    significance: nullProbFor
+      ? testSignificanceVsNull(occurrences, nullProbFor, minSampleN)
+      : testSignificance(occurrences, minSampleN),
   };
 }
 
@@ -315,4 +336,165 @@ export function blockLengthFor(holdingPeriod: string, assetCount: number): numbe
   const perDay = Math.max(1, assetCount);
   // Only 7d overlaps itself in time; the rest are back-to-back windows.
   return holdingPeriod === "7d" ? 7 * perDay : perDay;
+}
+
+// ── Drift-adjusted nulls ────────────────────────────────────────────────
+
+/*
+ * THE 50% NULL IS WRONG UNDER DRIFT — design doc H1, the correction that
+ * re-decides everything downstream of it.
+ *
+ * Every sign test above asks "better than a coin flip?" But the asset
+ * drifts: over this replay window the unconditional share of up-days is not
+ * 50%. A bullish signal that fired on RANDOM days would win at that base
+ * rate, so the honest question is "better than firing blindly in the same
+ * direction?" — a bullish 53% against a 54% base rate is value SUBTRACTED,
+ * and a bearish 48% against a 46% down-rate is value added. The old test
+ * gets both of those exactly backwards.
+ *
+ * Mechanics: each occurrence carries its own null probability — the base
+ * rate of the direction it fired, for its asset and horizon. Under the null
+ * the win count is Poisson-binomial (independent Bernoullis with UNEQUAL
+ * p's), computed exactly by dynamic programming. The intermediate dp values
+ * are genuine partial-binomial pmfs, bounded well away from overflow, so
+ * plain double precision holds at any n this replay produces.
+ *
+ * Ties: a forward return of exactly 0 is a LOSS for either direction in
+ * `winRate` above, so the base rates here are strict inequalities — pUp and
+ * pDown deliberately do not sum to 1 when zero-returns exist. Defining the
+ * null with the same convention as the statistic is the whole game; a
+ * >=-based base rate against a >-based win rate would quietly bias every
+ * comparison bullish.
+ */
+
+export interface DirectionalBaseRates {
+  /** P(forward return > 0) over ALL evaluable days — the bullish null. */
+  up: number;
+  /** P(forward return < 0) — the bearish null. NOT 1-up when zero-returns exist. */
+  down: number;
+  /** Days the rates were measured over. */
+  n: number;
+}
+
+/** Base rates from an unconditional return series (every evaluable day, not just signal days — signal days are a selected sample and would make the null circular). */
+export function directionalBaseRates(returns: number[]): DirectionalBaseRates | null {
+  if (returns.length === 0) return null;
+  let up = 0;
+  let down = 0;
+  for (const r of returns) {
+    if (r > 0) up++;
+    else if (r < 0) down++;
+  }
+  return { up: up / returns.length, down: down / returns.length, n: returns.length };
+}
+
+/**
+ * Exact pmf of a sum of independent Bernoulli(p_i) — the Poisson-binomial
+ * distribution. O(n²) dynamic programming; ~7M multiply-adds at the
+ * largest census cell (n≈2700), well under a second.
+ */
+export function poissonBinomialPmf(probs: number[]): number[] {
+  let dp = [1];
+  for (const p of probs) {
+    const next = new Array(dp.length + 1).fill(0);
+    for (let k = 0; k < dp.length; k++) {
+      next[k] += dp[k] * (1 - p);
+      next[k + 1] += dp[k] * p;
+    }
+    dp = next;
+  }
+  return dp;
+}
+
+/**
+ * Two-sided p-value for `wins` successes under heterogeneous nulls, using
+ * the SAME doubled-tail method as `signTestPValue` — min(1, 2·min(P(X≤w),
+ * P(X≥w))) — so the drift-adjusted and legacy columns differ only in the
+ * null, never in the test construction. With every p equal to 0.5 this is
+ * numerically identical to the binomial route (pinned by test).
+ */
+export function poissonBinomialPValue(nullProbs: number[], wins: number): number {
+  if (nullProbs.length === 0) return 1;
+  const pmf = poissonBinomialPmf(nullProbs);
+  const cdfLE = pmf.slice(0, wins + 1).reduce((a, b) => a + b, 0);
+  const cdfGE = pmf.slice(wins).reduce((a, b) => a + b, 0);
+  return Math.min(1, 2 * Math.min(cdfLE, cdfGE));
+}
+
+/** Looks up the null probability for one occurrence: the base rate of the direction it fired. */
+export type NullProbFor = (o: Occurrence) => number;
+
+export interface DriftAdjustedSignificance extends SignificanceResult {
+  /** Exposure-weighted null win rate: mean p_i across scored occurrences. The number the win rate must BEAT. */
+  nullWinRate: number;
+  /** winRate − nullWinRate, in proportion points. The honest size of the edge. */
+  edgeVsNull: number;
+}
+
+/**
+ * The drift-adjusted counterpart of `testSignificance`. Same scoring
+ * convention, same doubled-tail test, same MIN_SAMPLE_N-and-p gate — the
+ * only change is that the null is what firing blindly would have earned.
+ */
+export function testSignificanceVsNull(
+  occurrences: Occurrence[],
+  nullProbFor: NullProbFor,
+  minSampleN: number
+): DriftAdjustedSignificance | null {
+  const scored = occurrences.filter((o) => o.verdict !== "neutral" && o.forwardReturnPct !== null);
+  if (scored.length === 0) return null;
+
+  const wins = scored.filter(
+    (o) => (o.verdict === "bullish" ? o.forwardReturnPct! > 0 : o.forwardReturnPct! < 0)
+  ).length;
+  const nullProbs = scored.map(nullProbFor);
+  const nullWinRate = nullProbs.reduce((a, b) => a + b, 0) / nullProbs.length;
+  const pValue = poissonBinomialPValue(nullProbs, wins);
+
+  return {
+    n: scored.length,
+    wins,
+    pValue,
+    significant: scored.length >= minSampleN && pValue < 0.05,
+    nullWinRate,
+    edgeVsNull: wins / scored.length - nullWinRate,
+  };
+}
+
+/**
+ * Builds the per-occurrence null lookup from a set of day-records — one
+ * call per (record set, horizon), shared by every section that scores that
+ * horizon so no two tables can disagree about what "blind" earns.
+ *
+ * Per-asset when the records carry an asset (they all do at runtime; some
+ * older record TYPES only declare it optionally), pooled as the fallback —
+ * pooling BTC and ETH would otherwise hand the higher-drift asset's signals
+ * credit for the other's tape.
+ */
+export function buildNullLookup<R extends { asset?: string }>(
+  records: R[],
+  retOf: (r: R) => number | null
+): NullProbFor {
+  const byAsset = new Map<string, number[]>();
+  const pooled: number[] = [];
+  for (const r of records) {
+    const ret = retOf(r);
+    if (ret === null) continue;
+    pooled.push(ret);
+    const key = r.asset ?? "*";
+    const arr = byAsset.get(key) ?? [];
+    arr.push(ret);
+    byAsset.set(key, arr);
+  }
+
+  const rates = new Map<string, DirectionalBaseRates | null>();
+  for (const [asset, returns] of byAsset) rates.set(asset, directionalBaseRates(returns));
+  const pooledRates = directionalBaseRates(pooled);
+
+  return (o: Occurrence) => {
+    const r = (o.asset !== undefined ? rates.get(o.asset) : undefined) ?? pooledRates;
+    // No evaluable days at all: 0.5 is the only null that claims nothing.
+    if (!r) return 0.5;
+    return o.verdict === "bullish" ? r.up : o.verdict === "bearish" ? r.down : 0.5;
+  };
 }
