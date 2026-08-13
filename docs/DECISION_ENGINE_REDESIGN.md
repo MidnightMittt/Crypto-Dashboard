@@ -207,6 +207,16 @@ context. Codified, not implied.
   ("Positioning AND Structure bullish → 7d long"), revalidated with block
   correction and walk-forward. If they survive, they carry more weight than
   any single metric. If they don't, the negative result is published.
+- **MEASURED (2026-08-13, post-leak-fix ablation — scripts/backtest/
+  ablationReport.md):** leave-one-out over the nine Edge voters, edges vs
+  the drift null. macroLiquidity is the largest contributor (+5.0pp of
+  bullish edge, mostly by vetoing bad bullish days: without it bullish
+  days triple and the edge collapses 6.8→1.7pp); etfFlows contributes on
+  both sides (+3.1/+1.6pp); squeezeRisk helps bullish selection (+2.9pp).
+  openInterest (−1.2pp) and spotPerpVolume (−1.0pp) mildly DETRACT —
+  each consistent with its own standalone census record. In-sample,
+  9-way-scan-uncorrected; the input to re-derivation, not a verdict.
+
 - Structurally: **weights stop being constants.** Edge weight = a bounded
   function of audited, overlap-corrected, out-of-sample performance,
   re-earned quarterly, decaying to State on failure. Hand-set ratios remain
