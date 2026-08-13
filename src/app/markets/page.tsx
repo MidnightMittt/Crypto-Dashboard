@@ -119,7 +119,7 @@ function MarketDecisionCard({ decision }: { decision: MarketDecision }) {
             {intensityLabel(bias.score)}
           </span>
           <span className="font-mono text-base leading-none text-ink">{bias.score}</span>
-          <span className="text-[11px] text-ink-faint">/ 100 · Confidence {bias.confidence}%</span>
+          <span className="text-[11px] text-ink-faint">/ 100 · Data Quality {bias.confidence}%</span>
         </div>
 
         {/* The engine's own explanation — the same buildHeadline output. */}

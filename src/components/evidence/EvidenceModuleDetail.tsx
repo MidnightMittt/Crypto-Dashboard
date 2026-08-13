@@ -49,7 +49,7 @@ export function EvidenceModuleDetail({
           {metric.verdict}
         </span>
         <span className="text-[11px] text-ink-faint">
-          Confidence {metric.confidence}% · {sharePct}% of the composite&apos;s evidence weight
+          Data quality {metric.confidence}% · {sharePct}% of the composite&apos;s evidence weight
         </span>
       </div>
 

@@ -109,17 +109,17 @@ export default async function MarketDetailPage({ params }: { params: Promise<{ s
               </span>
               <span className="font-mono text-lg leading-none text-ink">{bias.score}</span>
               <span className="text-[11px] text-ink-faint">
-                / 100 · Confidence {bias.confidence}% · Agreement {bias.agreement}%
+                / 100 · Data Quality {bias.confidence}% · Agreement {bias.agreement}%
               </span>
             </div>
             <p className="text-[13px] leading-relaxed text-ink">{bias.headline}</p>
           </CardContent>
         </Card>
 
-        {/* ── CONFIDENCE, EXPLAINED ─────────────────────────────────────── */}
+        {/* ── DATA QUALITY, EXPLAINED ───────────────────────────────────── */}
         <Card>
           <CardContent className="flex flex-col gap-3 py-5">
-            <SectionTitle>Confidence · {bias.confidence}%</SectionTitle>
+            <SectionTitle>Data Quality · {bias.confidence}%</SectionTitle>
             <p className="text-[12px] leading-relaxed text-ink-muted">
               This measures <span className="text-ink">evidence quality</span>, not the probability of a
               move. {bias.confidence}% means the read rests on{" "}
@@ -127,7 +127,7 @@ export default async function MarketDetailPage({ params }: { params: Promise<{ s
               never that price rises {bias.confidence}% of the time. Agreement ({bias.agreement}%) is the
               separate question of whether the modules concur with{" "}
               <span className="text-ink">each other</span>; a unanimous read built on thin data is high
-              agreement and low confidence, which is exactly the case worth seeing.
+              agreement and low data quality, which is exactly the case worth seeing.
             </p>
             <ConfidenceDrivers bias={bias} />
           </CardContent>

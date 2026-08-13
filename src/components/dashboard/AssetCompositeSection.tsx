@@ -149,7 +149,7 @@ function CompositeCard({
         </div>
 
         <div className="grid grid-cols-3 gap-3 border-t border-hairline pt-3">
-          <Stat label="Confidence" value={`${confidence}%`} />
+          <Stat label="Data Quality" value={`${confidence}%`} />
           <TrendStat label="24h" pct={priceChange24hPct} />
           <TrendStat label="7d" pct={priceChange7dPct} />
         </div>

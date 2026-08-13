@@ -272,9 +272,9 @@ function Decision({
             <span className="text-[11px] text-ink-faint">/ 100</span>
             <span
               className="text-[11px] text-ink-faint"
-              title="How good the evidence behind this read is — not the odds of a move."
+              title="How complete and well-agreeing the underlying data is — never the odds of a move. Renamed from 'Confidence': the calibration study found this number's realized hit rate barely varies across its range, so it measures data quality, not accuracy."
             >
-              · Confidence {bias.confidence}%
+              · Data Quality {bias.confidence}%
             </span>
           </div>
         </div>

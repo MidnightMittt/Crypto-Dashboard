@@ -120,6 +120,19 @@ published the calibration curve: realized hit rate by confidence decile. If
 confidence does not correlate with accuracy, the damping is aesthetics. The
 agreement-quartile table (52→57%) suggests the correlation is weak at best.
 
+> **MEASURED (2026-08-12, post-taxonomy replay).** The curve is not merely
+> flat — it is DEGENERATE: 1,788 of 1,826 scoreable days (98%) fall in one
+> band (40–60, observed hit rate 52.5%, Wilson [50.2%, 54.8%]); the only
+> other populated band is 20–40 with n=38. Technically monotonic
+> (39% → 53%), but a number that takes one value cannot rank setups.
+> Verdict per §8.5: confidence measures data completeness and is now
+> LABELLED that way — every surface that printed "Confidence" beside the
+> composite now prints "Data Quality" (§9's first bullet, implemented).
+> The calibrated-probability headline (score-bucket × regime hit rate with
+> Wilson bound and n_eff, "uncalibrated" where thin) remains the open half
+> of §9. Agreement, by contrast, showed real lift in its top quartile on
+> the post-taxonomy replay (56.4%, n=328) and stays a live candidate.
+
 **H3 — Unexamined constants.** DIRECTIONAL_THRESHOLD=6 (chosen for display
 stability), the 10pp full-strength cap in regime pairs (stated judgement),
 HIGH_CONFIDENCE=50 (midpoint, admitted uncalibrated), ACTIONABLE=10 (too

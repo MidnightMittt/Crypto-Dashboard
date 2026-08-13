@@ -78,7 +78,7 @@ export function TopOpportunity({
           {/* The three numbers a PM asks for in order, at a size that reads across a room. */}
           <dl className="flex shrink-0 gap-6">
             <HeroStat label="Opportunity" value={`${lead.opportunity}`} suffix="/100" tone="text-cyan" />
-            <HeroStat label="Confidence" value={`${lead.confidence}%`} />
+            <HeroStat label="Data Quality" value={`${lead.confidence}%`} />
             <HeroStat
               label="Risk"
               value={lead.riskLevel ?? "—"}

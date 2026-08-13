@@ -95,7 +95,7 @@ export function HistoricalPerformancePanel({
           suffix={worstIsCurrent ? " (current)" : undefined}
         />
         <Stat
-          label="Confidence"
+          label="Record Strength"
           value={perf.confidenceLabel ?? "—"}
           tone={perf.confidenceLabel ? CONFIDENCE_TONE[perf.confidenceLabel] : undefined}
         />
