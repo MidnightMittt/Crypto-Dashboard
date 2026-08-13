@@ -140,6 +140,35 @@ export default function DashboardPage() {
             */}
 
             {/*
+              ── THE PER-ASSET DECISION SURFACE, REINSTATED ─────────────────
+              The scanner redesign removed this panel from the page and it
+              silently died: the panel is the ONLY surface that renders the
+              swing action, entry quality, planned setups, trade
+              invalidation and the execution plan, so the product spent a
+              day with no per-asset decision surface at all — every check
+              (tests, build) stayed green because tree-shaking removed the
+              unrendered code along with the bug.
+
+              It is NOT the duplication the scanner removed: the scanner
+              answers "which asset deserves attention?" across the
+              universe; this answers "what is the read and the plan for THE
+              ASSET I AM LOOKING AT" — the charter's homepage questions
+              (state, entry quality, reasons for, reasons against). Both
+              questions need answering, in this order: ranking first,
+              decision second.
+            */}
+            {aggregate.marketBias && (
+              <AiMarketSummary
+                aggregate={aggregate}
+                bias={aggregate.marketBias}
+                thesis={aggregate.marketThesis}
+                technicals={aggregate.technicals}
+                technicals4h={aggregate.technicals4h}
+                timeline={aggregate.biasTimeline}
+              />
+            )}
+
+            {/*
               ── LEADING DRIVERS / MARKET STRUCTURE / POSITIONING / RISK ────
               The four scored categories, one card per trading question —
               Dashboard V2's "one card = one decision" rule. Same underlying

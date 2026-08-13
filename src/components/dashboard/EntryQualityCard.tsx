@@ -450,6 +450,37 @@ function PlannedSetupRow({ setup }: { setup: PlannedSetupView }) {
         </div>
       </dl>
 
+      {/*
+        The excursion record's two numbers for this side+regime (redesign
+        §10), present only on plans built after the constraints landed:
+        what a winner typically drew down before working — what HOLDING
+        this feels like — and the expectancy at the record's own
+        pessimistic bound. Null-gated, never fabricated for older frozen
+        plans.
+      */}
+      {(plan.expectedDrawdownPct != null || plan.evLowerPct != null) && (
+        <p className="mt-1 text-[11px] leading-relaxed text-ink-faint">
+          {plan.expectedDrawdownPct != null && (
+            <>
+              Winning trades like this typically drew down{" "}
+              <span className="font-mono text-ink-muted">{plan.expectedDrawdownPct.toFixed(1)}%</span> before
+              working — expect to sit through that.
+            </>
+          )}
+          {plan.evLowerPct != null && (
+            <>
+              {" "}
+              Measured expectancy for this side in this regime:{" "}
+              <span className="font-mono text-ink-muted">
+                {plan.evLowerPct >= 0 ? "+" : ""}
+                {plan.evLowerPct.toFixed(2)}%
+              </span>{" "}
+              per trade at the record&apos;s pessimistic bound.
+            </>
+          )}
+        </p>
+      )}
+
       <p className="mt-1 text-[11px] text-ink-muted">
         {setup.trigger}
         {setup.triggerPrice !== null && <span className="text-ink-faint"> ({formatPrice(setup.triggerPrice)})</span>}
