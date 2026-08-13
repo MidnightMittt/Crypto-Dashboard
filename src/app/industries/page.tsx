@@ -84,6 +84,13 @@ export default function IndustriesPage() {
                         </Link>
                         <div className="mt-0.5 font-mono text-[10px] text-ink-faint">
                           {i.etf} · {i.measured} names
+                          {i.driver?.driver && (
+                            /* What it actually tracks, at a glance — the one
+                               fact a relative-strength row cannot express. */
+                            <span className="ml-1.5 text-cyan">
+                              ρ {i.driver.driver.rho.toFixed(2)} vs {i.driver.symbol}
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td className={`px-3 py-3 text-[11px] font-semibold uppercase tracking-[0.1em] ${STATE_TONE[i.rotation.state]}`}>

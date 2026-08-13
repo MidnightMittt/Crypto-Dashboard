@@ -215,6 +215,16 @@ export const UNIVERSE: InstrumentConfig[] = [
   fxPair({ pair: "USDCHF", inception: "2003-12-01T00:00:00Z" }),
 
   // ── 6. Crypto spot ───────────────────────────────────────────────────
+  /*
+   * BTC spot is registered SEPARATELY from the BTC perpetual above and is
+   * not a duplicate of it. The perp is an OKX contract on a 24/7 venue and
+   * feeds the crypto engine; this is the Yahoo cash series, and it exists
+   * because the equity side needs it: it is the declared driver of the
+   * AI-datacenter/mining industry (industries.ts), and a driver read has to
+   * be measured against the same vendor and calendar convention as the
+   * equity series it is joined to.
+   */
+  cryptoSpot({ symbol: "BTC", inception: "2014-09-17T00:00:00Z" }),
   cryptoSpot({ symbol: "SOL", inception: "2020-04-10T00:00:00Z" }),
   cryptoSpot({ symbol: "BNB", inception: "2017-07-25T00:00:00Z" }),
   cryptoSpot({ symbol: "XRP", inception: "2014-08-04T00:00:00Z" }),

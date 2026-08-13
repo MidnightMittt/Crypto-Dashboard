@@ -7,6 +7,7 @@ import {
   HORIZON_NOTE,
 } from "@/lib/markets/industryIntelligence";
 import { ROTATION_STATE_LABEL, ROTATION_STATE_MEANING, RotationState } from "@/lib/markets/rotation";
+import { describeDriver, DriverRead } from "@/lib/markets/driverBeta";
 import { RegimeRead } from "@/lib/markets/riskRegime";
 import { FreshnessBanner } from "@/components/intelligence/FreshnessBanner";
 import snapshot from "@/data/marketIntelligence.json";
@@ -151,6 +152,8 @@ export default async function IndustryPage({ params }: { params: Promise<{ slug:
             </p>
           )}
 
+          {industry.driver && <DriverPanel driver={industry.driver} industryName={industry.name} />}
+
           <p className="mt-3 border-t border-hairline pt-3 text-[11px] leading-relaxed text-ink-faint">
             <span className="text-ink-muted">Proxy · </span>
             {industry.proxyNote}
@@ -194,6 +197,68 @@ export default async function IndustryPage({ params }: { params: Promise<{ slug:
           </p>
         </section>
       </main>
+    </div>
+  );
+}
+
+/**
+ * WHAT THIS INDUSTRY IS ACTUALLY LONG.
+ *
+ * Shown only for industries that declare an external driver, because for
+ * everything else the sector IS the answer and a row of 1.0s would be noise.
+ * The sentence comes from `describeDriver`; the numbers beside it are there so
+ * the sentence can be checked rather than trusted.
+ */
+function DriverPanel({ driver, industryName }: { driver: DriverRead; industryName: string }) {
+  const dominant =
+    driver.driver && driver.sector
+      ? Math.abs(driver.driver.rho) >= Math.abs(driver.sector.rho)
+      : driver.driver !== null;
+
+  return (
+    <div className="mt-4 rounded-md border border-cyan/20 bg-cyan/[0.03] px-4 py-3">
+      <h3 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-cyan">
+        What this industry actually tracks
+      </h3>
+      <p className="mt-1.5 text-[13px] leading-relaxed text-ink">
+        {describeDriver(driver, industryName)}
+      </p>
+      <dl className="mt-3 flex flex-wrap gap-x-8 gap-y-2 border-t border-hairline pt-2.5">
+        <Fit label={`vs ${driver.label} (${driver.symbol})`} fit={driver.driver} emphasis={dominant} />
+        <Fit label={`vs sector (${driver.sectorSymbol})`} fit={driver.sector} emphasis={!dominant} />
+      </dl>
+      <p className="mt-2 text-[10px] leading-relaxed text-ink-faint">
+        Correlation is how RELIABLY it follows; beta is how MUCH it amplifies — a 1% driver move
+        against the industry&apos;s own historical response. Both are descriptions of the last{" "}
+        {driver.windowSessions} sessions, not forecasts: a relationship measured over six months can
+        break in a week, which is why the window travels with the numbers.
+      </p>
+    </div>
+  );
+}
+
+function Fit({
+  label,
+  fit,
+  emphasis,
+}: {
+  label: string;
+  fit: { rho: number; beta: number; n: number } | null;
+  emphasis: boolean;
+}) {
+  return (
+    <div>
+      <dt className="text-[9px] uppercase tracking-[0.14em] text-ink-faint">{label}</dt>
+      <dd className={`mt-0.5 font-mono text-[13px] ${emphasis ? "text-ink" : "text-ink-muted"}`}>
+        {fit ? (
+          <>
+            ρ {fit.rho.toFixed(2)} <span className="text-ink-faint">·</span> β {fit.beta.toFixed(2)}{" "}
+            <span className="text-[10px] text-ink-faint">n={fit.n}</span>
+          </>
+        ) : (
+          <span className="text-ink-faint">not measurable</span>
+        )}
+      </dd>
     </div>
   );
 }

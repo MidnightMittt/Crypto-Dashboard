@@ -53,10 +53,16 @@ const SECTORS: Array<{ symbol: string; name: string }> = [
 
 const BENCHMARK = { symbol: "SPY", name: "S&P 500" };
 
-function load(symbol: string): Bar[] | null {
-  const f = path.join(DATA_DIR, `${symbol}.US.json`);
+/** By INSTRUMENT ID, exactly as ingested — the only loader that touches disk. */
+function loadSeries(id: string): Bar[] | null {
+  const f = path.join(DATA_DIR, `${id}.json`);
   if (!fs.existsSync(f)) return null;
   return JSON.parse(fs.readFileSync(f, "utf8")).bars as Bar[];
+}
+
+/** By US ticker, applying the `.US` convention. */
+function load(symbol: string): Bar[] | null {
+  return loadSeries(`${symbol}.US`);
 }
 
 export interface IntelligenceSnapshot {
@@ -118,7 +124,14 @@ function main() {
   // Earnings markers on constituents use the SAME veto function as trade
   // plans, so a warning here and a plan refusal elsewhere can never cite
   // different dates. A missing calendar just means no markers.
-  const industries = buildIndustries(INDUSTRIES, load, benchBars, rotation, earningsCalendarJson as EarningsCalendar);
+  const industries = buildIndustries({
+    defs: INDUSTRIES,
+    loadBars: load,
+    benchmarkBars: benchBars,
+    sectorRotation: rotation,
+    loadSeries,
+    earningsCalendar: earningsCalendarJson as EarningsCalendar,
+  });
   console.log(`\n  industries: ${industries.length} of ${INDUSTRIES.length} built`);
   for (const i of industries) {
     console.log(

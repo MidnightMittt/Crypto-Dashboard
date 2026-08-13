@@ -37,14 +37,14 @@ describe("buildIndustries", () => {
       C: series(100, 120),
       D: series(100, 105),
     };
-    const [read] = buildIndustries([def(["A", "B", "C", "D"])], (s) => bars[s] ?? null, bench, null);
+    const [read] = buildIndustries({ defs: [def(["A", "B", "C", "D"])], loadBars: (s) => bars[s] ?? null, benchmarkBars: bench, sectorRotation: null });
     expect(read.measured).toBe(4);
     expect(read.breadthPct).toBe(75);
   });
 
   it("returns NULL breadth below the minimum, never 0 — unknown is not 'none are outperforming'", () => {
     const bars: Record<string, Bar[]> = { ETF: series(100, 120), A: series(100, 105) };
-    const [read] = buildIndustries([def(["A"])], (s) => bars[s] ?? null, bench, null);
+    const [read] = buildIndustries({ defs: [def(["A"])], loadBars: (s) => bars[s] ?? null, benchmarkBars: bench, sectorRotation: null });
     expect(read.measured).toBeLessThan(MIN_BREADTH_CONSTITUENTS);
     expect(read.breadthPct).toBeNull();
   });
@@ -55,19 +55,20 @@ describe("buildIndustries", () => {
       [{ symbol: "XLK", name: "Technology", bars: series(100, 130) }],
       { symbol: "SPY", name: "S&P 500", bars: bench }
     )!;
-    const [read] = buildIndustries([def([])], (s) => bars[s] ?? null, bench, sectorRotation);
+    const [read] = buildIndustries({ defs: [def([])], loadBars: (s) => bars[s] ?? null, benchmarkBars: bench, sectorRotation });
     expect(read.sectorState).toBe(sectorRotation.sectors[0].state);
     expect(read.sectorShortRelPct).toBe(sectorRotation.sectors[0].shortRelPct);
   });
 
   it("skips an industry whose proxy ETF is missing rather than emitting a hollow one", () => {
-    expect(buildIndustries([def(["A"])], () => null, bench, null)).toEqual([]);
+    expect(buildIndustries({ defs: [def(["A"])], loadBars: () => null, benchmarkBars: bench, sectorRotation: null })).toEqual([]);
   });
 });
 
 describe("breadthDivergence", () => {
   const base = {
     slug: "x", name: "X", etf: "E", sectorEtf: "XLK", sectorName: "Tech", proxyNote: "",
+    driver: null,
     sectorState: null, sectorShortRelPct: null, measured: 10, constituents: [],
   };
   const rot = (shortRelPct: number) => ({

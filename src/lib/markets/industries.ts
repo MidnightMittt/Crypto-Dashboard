@@ -40,6 +40,27 @@ export interface IndustryDef {
   /** Why this ETF is the right proxy, and what it does and does not cover. */
   proxyNote: string;
   /**
+   * The dominant EXTERNAL driver, when this industry has one — a series that
+   * explains its moves better than its own sector does.
+   *
+   * Most industries have none: Software is moved by software. But Gold Miners
+   * are a leveraged expression of the gold price, and the bitcoin-miner /
+   * AI-datacenter names are a leveraged expression of bitcoin. For those, a
+   * "leading vs the S&P" reading is true but incomplete, and a reader who
+   * does not know what they are actually long can be right about the industry
+   * and wrong about the position.
+   *
+   * Declaring the symbol here is a claim about WHAT to measure against, never
+   * about the strength of the relationship — that is measured per run in
+   * driverBeta.ts and is free to come back weak, which is itself a finding.
+   *
+   * `seriesId` is the INGESTED instrument id, spelled out rather than derived
+   * from the symbol, because a driver need not be a US listing: gold is the
+   * GLD.US session series, bitcoin is the BTC-USD.SPOT continuous one, and a
+   * `${symbol}.US` convention would silently invent a ticker for the latter.
+   */
+  driver?: { symbol: string; label: string; seriesId: string };
+  /**
    * Constituents, ALPHABETICAL. Not a ranking and not exhaustive — a liquid,
    * recognisable subset large enough that leadership within the industry is
    * measurable. Where a name spans two industries it is listed under the one
@@ -165,8 +186,9 @@ export const INDUSTRIES: IndustryDef[] = [
     etf: "GDX",
     sectorEtf: "XLB",
     sectorName: "Materials",
+    driver: { symbol: "GLD", label: "Gold", seriesId: "GLD.US" },
     proxyNote:
-      "VanEck Gold Miners. A leveraged expression of the gold price rather than an independent industry — read it against GLD, not against the market, to separate operating performance from the metal.",
+      "VanEck Gold Miners. A leveraged expression of the gold price rather than an independent industry — read it against GLD, not against the market, to separate operating performance from the metal. That instruction is no longer only prose: the driver read below measures it.",
     constituents: ["AEM", "AU", "GOLD", "KGC", "NEM", "WPM"],
   },
   {
@@ -178,6 +200,17 @@ export const INDUSTRIES: IndustryDef[] = [
     proxyNote:
       "Global X Copper Miners. Widely used as a read on industrial demand and on electrification capital expenditure specifically.",
     constituents: ["FCX", "SCCO", "TECK"],
+  },
+  {
+    slug: "datacenter-mining",
+    name: "AI Datacenter & Mining",
+    etf: "WGMI",
+    sectorEtf: "XLK",
+    sectorName: "Technology",
+    driver: { symbol: "BTC", label: "Bitcoin", seriesId: "BTC-USD.SPOT" },
+    proxyNote:
+      "CoinShares Valkyrie Bitcoin Miners. A pure-play basket of exactly this cohort, which is why it proxies the group better than any broad blockchain fund. These names are conventionally traded as bitcoin proxies, and are increasingly repricing on HPC/AI hosting contracts instead — rather than assert which story is winning, the driver read below MEASURES both against the same window and lets the numbers settle it. Two cautions the numbers do not cover: the group is mid-cap and far more volatile than anything else on this board, so a rotation reading swings harder here than the same reading elsewhere; and several of these tickers carry long price histories belonging to a DIFFERENT business (WULF traded as IKONICS before the 2021 TeraWulf merger, MARA as Marathon Patent Group before its 2021 mining pivot, CIFR and BTDR as blank-cheque vehicles). The six-month window used here never reaches that far back, but any longer-horizon study on these symbols would be measuring two companies as one.",
+    constituents: ["BTDR", "CIFR", "HUT", "IREN", "MARA", "WULF"],
   },
   {
     slug: "utilities-power",

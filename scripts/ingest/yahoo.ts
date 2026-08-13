@@ -3,7 +3,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { Bar } from "../../src/lib/research/types";
 import { InstrumentConfig, instrumentsByProvider, usListing } from "../../src/lib/research/universe";
-import { industryUniverse } from "../../src/lib/markets/industries";
+import { industryUniverse, INDUSTRIES } from "../../src/lib/markets/industries";
 import { validateBars, summarizeReport } from "../../src/lib/research/validation";
 
 /**
@@ -214,17 +214,30 @@ async function main() {
     .map((sym) => usListing(sym, sym));
 
   /*
-   * --only-us: the DAILY pipeline's scope. The snapshots (intelligence,
-   * markets, history ledger) read exclusively .US series; the FX pairs are
-   * research-universe members with long-standing validation findings that are
-   * a research problem, not a daily-freshness problem. Without this filter a
-   * known-bad FX series would fail the cron every day, and a pipeline that is
-   * always red alerts nobody. The full run (no flag) remains the default for
-   * research work, refusals and all.
+   * --only-us: the DAILY pipeline's scope, which is exactly WHAT THE SNAPSHOTS
+   * READ — not literally the .US suffix. Those two were the same thing until
+   * the industry layer declared external drivers (industries.ts): gold's
+   * driver is GLD.US and already in scope, but bitcoin's is BTC-USD.SPOT, and
+   * a suffix test would have left it to go stale while every other input
+   * refreshed daily. Stale-by-omission is the worst failure shape here,
+   * because a driver correlation computed against a frozen series still
+   * renders a confident-looking number.
+   *
+   * Excluded, deliberately: the FX pairs, research-universe members with
+   * long-standing validation findings that are a research problem rather than
+   * a daily-freshness one. Without that exclusion a known-bad series would
+   * fail the cron every day, and a pipeline that is always red alerts nobody.
+   * The full run (no flag) remains the default for research work, refusals
+   * and all.
    */
+  const snapshotDriverIds = new Set(
+    INDUSTRIES.map((i) => i.driver?.seriesId).filter((id): id is string => id !== undefined)
+  );
   const onlyUs = process.argv.includes("--only-us");
   const all = [...research, ...industry];
-  const configs = onlyUs ? all.filter((c) => c.meta.id.endsWith(".US")) : all;
+  const configs = onlyUs
+    ? all.filter((c) => c.meta.id.endsWith(".US") || snapshotDriverIds.has(c.meta.id))
+    : all;
   console.log(`[ingest] ${research.length} research + ${industry.length} industry-layer instruments from yahoo\n`);
 
   let failures = 0;

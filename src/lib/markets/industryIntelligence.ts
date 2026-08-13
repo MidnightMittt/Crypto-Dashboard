@@ -9,6 +9,7 @@ import {
 } from "./rotation";
 import { IndustryDef } from "./industries";
 import { earningsVeto, EarningsCalendar, EarningsVetoResult } from "./earningsVeto";
+import { buildDriverRead, DriverRead } from "./driverBeta";
 
 /**
  * INDUSTRY INTELLIGENCE — level three, and the missing link between a sector
@@ -64,6 +65,14 @@ export interface IndustryRead {
   sectorEtf: string;
   sectorName: string;
   proxyNote: string;
+  /**
+   * What this industry is ACTUALLY long, for the few that are moved by
+   * something other than their own sector (see driverBeta.ts). Null for the
+   * majority, which declare no external driver — absence here means "no
+   * dominant outside force claimed", not "measured and found nothing"; a
+   * measured-and-found-nothing shows up as a low rho on a present read.
+   */
+  driver: DriverRead | null;
   /** The industry ETF's own relative strength — the headline read. */
   rotation: SectorRotation;
   /**
@@ -87,21 +96,41 @@ export interface IndustryRead {
 /** Below this many measurable names, a breadth percentage is noise dressed as a statistic. */
 export const MIN_BREADTH_CONSTITUENTS = 3;
 
+export interface BuildIndustriesInputs {
+  defs: IndustryDef[];
+  /** US-listing loader, by plain symbol. Injected rather than imported so this module stays pure and testable — the same reason every evidence module takes its data as an argument instead of fetching. */
+  loadBars: (symbol: string) => Bar[] | null;
+  benchmarkBars: Bar[];
+  sectorRotation: RotationRead | null;
+  /**
+   * Loader by full INSTRUMENT ID, for driver series that are not US listings
+   * (bitcoin is BTC-USD.SPOT). Separate from `loadBars` on purpose: one takes
+   * a ticker and applies the US convention, the other takes an id and applies
+   * none, and collapsing them would mean guessing which a string is.
+   */
+  loadSeries?: (id: string) => Bar[] | null;
+  earningsCalendar?: EarningsCalendar | null;
+  asOf?: number;
+}
+
 /**
  * Builds every industry that has enough data, skipping the rest loudly.
  *
- * `loadBars` is injected rather than imported so this module stays pure and
- * testable — the same reason every evidence module takes its data as an
- * argument instead of fetching.
+ * Takes a named-argument object rather than a positional list: this grew to
+ * six parameters, two of them optional and both nullable, which is the shape
+ * where a caller silently passes a calendar where a timestamp belongs and
+ * nothing complains.
  */
-export function buildIndustries(
-  defs: IndustryDef[],
-  loadBars: (symbol: string) => Bar[] | null,
-  benchmarkBars: Bar[],
-  sectorRotation: RotationRead | null,
-  earningsCalendar: EarningsCalendar | null = null,
-  asOf: number = Date.now()
-): IndustryRead[] {
+export function buildIndustries(inputs: BuildIndustriesInputs): IndustryRead[] {
+  const {
+    defs,
+    loadBars,
+    benchmarkBars,
+    sectorRotation,
+    loadSeries = () => null,
+    earningsCalendar = null,
+    asOf = Date.now(),
+  } = inputs;
   const benchmark = { symbol: "SPY", name: "S&P 500", bars: benchmarkBars };
   const out: IndustryRead[] = [];
 
@@ -133,6 +162,24 @@ export function buildIndustries(
 
     const sector = sectorRotation?.sectors.find((s) => s.symbol === def.sectorEtf) ?? null;
 
+    /*
+     * What this industry is actually long, when it declares an external
+     * driver. Measured against the industry ETF (not the constituents): the
+     * ETF is the group, and a per-name beta would be six numbers where the
+     * decision needs one. The sector ETF is fitted alongside so the two
+     * explanations compete on the same window — see driverBeta.ts.
+     */
+    const driverBars = def.driver ? loadSeries(def.driver.seriesId) : null;
+    const driver = def.driver
+      ? buildDriverRead({
+          industryBars: etfBars,
+          driverBars,
+          sectorBars: loadBars(def.sectorEtf),
+          driver: def.driver,
+          sectorSymbol: def.sectorEtf,
+        })
+      : null;
+
     out.push({
       slug: def.slug,
       name: def.name,
@@ -140,6 +187,7 @@ export function buildIndustries(
       sectorEtf: def.sectorEtf,
       sectorName: def.sectorName,
       proxyNote: def.proxyNote,
+      driver,
       rotation: etfRead.sectors[0],
       sectorState: sector?.state ?? null,
       sectorShortRelPct: sector?.shortRelPct ?? null,
