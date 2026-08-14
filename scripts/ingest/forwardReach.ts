@@ -19,6 +19,7 @@ import {
 } from "../../src/lib/dossier/equityExpectations";
 import { buildLiveAnalysis, MIN_BARS_FOR_ANALYSIS } from "../../src/lib/search/liveAnalysis";
 import { Bar } from "../../src/lib/research/types";
+import { nearestWatchLevels, watchEdge } from "../../src/lib/technicals/marketStructure";
 
 /**
  * THE FORWARD RECORD — registers today's reach predictions, scores the ones
@@ -96,11 +97,10 @@ function verify(all: Map<string, Loaded>, snapshot: EquityExecutionSnapshot, asO
     const atrAbs = res.analysis.atrPct !== null && price > 0 ? (res.analysis.atrPct / 100) * price : 0;
     if (atrAbs <= 0) continue;
 
-    const below = res.analysis.zones.filter((z) => z.kind === "support" && z.priceHigh < price).sort((a, b) => b.priceHigh - a.priceHigh)[0];
-    const above = res.analysis.zones.filter((z) => z.kind === "resistance" && z.priceLow > price).sort((a, b) => a.priceLow - b.priceLow)[0];
-    for (const [zone, direction] of [[below, "long"], [above, "short"]] as const) {
+    const near = nearestWatchLevels(res.analysis.zones, price);
+    for (const [zone, direction] of [[near.support, "long"], [near.resistance, "short"]] as const) {
       if (!zone) continue;
-      const level = direction === "long" ? zone.priceHigh : zone.priceLow;
+      const level = watchEdge(zone, direction);
       const distanceAtr = Math.abs(price - level) / atrAbs;
       const cell = reachRateFor(distanceAtr, zone.reactionCount, snapshot, "zone");
       if (!cell) continue;
@@ -189,20 +189,14 @@ function main() {
     if (atrAbs <= 0) continue;
 
     /*
-     * The SAME nearest-structure rule the dossier's watch levels use. If
-     * these two ever diverge the record stops describing what was shown,
-     * which would make the whole exercise decorative.
+     * The SAME rule the dossier's watch levels use — now literally the same
+     * function, not a copy with a warning comment attached to it.
      */
-    const below = res.analysis.zones
-      .filter((z) => z.kind === "support" && z.priceHigh < price)
-      .sort((a, b) => b.priceHigh - a.priceHigh)[0];
-    const above = res.analysis.zones
-      .filter((z) => z.kind === "resistance" && z.priceLow > price)
-      .sort((a, b) => a.priceLow - b.priceLow)[0];
+    const near = nearestWatchLevels(res.analysis.zones, price);
 
-    const register = (zone: typeof below, direction: "long" | "short") => {
+    const register = (zone: typeof near.support, direction: "long" | "short") => {
       if (!zone) return;
-      const level = direction === "long" ? zone.priceHigh : zone.priceLow;
+      const level = watchEdge(zone, direction);
       const distanceAtr = Math.abs(price - level) / atrAbs;
       const cell = reachRateFor(distanceAtr, zone.reactionCount, snapshot, "zone");
       if (!cell) return; // No published rate means nothing was promised to score.
@@ -220,8 +214,8 @@ function main() {
         resolvedDate: null,
       });
     };
-    register(below, "long");
-    register(above, "short");
+    register(near.support, "long");
+    register(near.resistance, "short");
   }
 
   const registered = registerPredictions(record.predictions, fresh);

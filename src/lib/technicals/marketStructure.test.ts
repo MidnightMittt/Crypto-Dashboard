@@ -9,6 +9,8 @@ import {
   classifyZoneStatus,
   SupportResistanceZone,
   ConfluenceTag,
+  nearestWatchLevels,
+  watchEdge,
 } from "./marketStructure";
 import { Candle, fibonacciRetracement } from "./indicators";
 
@@ -391,5 +393,57 @@ describe("buildSupportResistanceZones — end to end", () => {
     expect(zones.every((z) => z.priceLow > 100)).toBe(true);
     // And no single zone spans the two eras, which is how the bug presented.
     expect(zones.every((z) => z.priceHigh / z.priceLow < 2)).toBe(true);
+  });
+});
+
+describe("nearestWatchLevels — one rule, three consumers", () => {
+  const zone = (kind: "support" | "resistance", lo: number, hi: number): SupportResistanceZone =>
+    ({
+      kind,
+      priceLow: lo,
+      priceHigh: hi,
+      reactionCount: 2,
+      timeframe: "1D",
+      confluence: [],
+      lastTouchBarsAgo: null,
+      strength: 1,
+    }) as unknown as SupportResistanceZone;
+
+  const zones = [
+    zone("support", 80, 85),
+    zone("support", 90, 95), // nearest below 100
+    zone("resistance", 105, 110), // nearest above 100
+    zone("resistance", 120, 130),
+  ];
+
+  it("picks the closest zone on each side of price", () => {
+    const n = nearestWatchLevels(zones, 100);
+    expect(n.support?.priceHigh).toBe(95);
+    expect(n.resistance?.priceLow).toBe(105);
+  });
+
+  /*
+   * The edge is what price REACHES first: the top of a support coming down,
+   * the bottom of a resistance coming up. A midpoint would overstate every
+   * distance and therefore understate every published reach probability —
+   * the same bias in the display, the forward record and the replay at once.
+   */
+  it("measures to the edge price reaches first, not the middle of the zone", () => {
+    const n = nearestWatchLevels(zones, 100);
+    expect(watchEdge(n.support!, "long")).toBe(95);
+    expect(watchEdge(n.resistance!, "short")).toBe(105);
+  });
+
+  it("ignores zones on the wrong side of price entirely", () => {
+    // Price below every support: nothing qualifies as "support below".
+    const n = nearestWatchLevels(zones, 70);
+    expect(n.support).toBeNull();
+    expect(n.resistance?.priceLow).toBe(105);
+  });
+
+  it("returns nulls rather than throwing when there is no structure", () => {
+    const n = nearestWatchLevels([], 100);
+    expect(n.support).toBeNull();
+    expect(n.resistance).toBeNull();
   });
 });

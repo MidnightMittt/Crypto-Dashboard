@@ -21,6 +21,7 @@ import {
 } from "../../src/lib/dossier/equityExpectations";
 import { Bar, SessionModel } from "../../src/lib/research/types";
 import { MetricVerdict } from "../../src/lib/signals/types";
+import { nearestWatchLevels, watchEdge } from "../../src/lib/technicals/marketStructure";
 
 /**
  * THE EQUITY EXECUTION REPLAY.
@@ -354,14 +355,15 @@ function main() {
        * whether or not it produced a plan.
        */
       if (atrAbsAt > 0) {
-        const below = res.analysis.zones
-          .filter((z) => z.kind === "support" && z.priceHigh < close)
-          .sort((a, b) => b.priceHigh - a.priceHigh)[0];
-        const above = res.analysis.zones
-          .filter((z) => z.kind === "resistance" && z.priceLow > close)
-          .sort((a, b) => a.priceLow - b.priceLow)[0];
-        if (below) zonePending.push({ symbol: inst.symbol, t: asOf, level: below.priceHigh, dir: "down", distanceAtr: (close - below.priceHigh) / atrAbsAt, touches: below.reactionCount });
-        if (above) zonePending.push({ symbol: inst.symbol, t: asOf, level: above.priceLow, dir: "up", distanceAtr: (above.priceLow - close) / atrAbsAt, touches: above.reactionCount });
+        const near = nearestWatchLevels(res.analysis.zones, close);
+        if (near.support) {
+          const lvl = watchEdge(near.support, "long");
+          zonePending.push({ symbol: inst.symbol, t: asOf, level: lvl, dir: "down", distanceAtr: (close - lvl) / atrAbsAt, touches: near.support.reactionCount });
+        }
+        if (near.resistance) {
+          const lvl = watchEdge(near.resistance, "short");
+          zonePending.push({ symbol: inst.symbol, t: asOf, level: lvl, dir: "up", distanceAtr: (lvl - close) / atrAbsAt, touches: near.resistance.reactionCount });
+        }
       }
 
       const vol = volRegimeFromMetrics(res.analysis.bias.metrics);

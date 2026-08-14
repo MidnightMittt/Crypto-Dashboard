@@ -477,3 +477,44 @@ export function mergeTimeframeZones(
 
   return merged.sort((a, b) => a.priceLow - b.priceLow);
 }
+
+
+/**
+ * THE NEAREST LEVEL EITHER SIDE OF PRICE — one definition, three consumers.
+ *
+ * The research page shows these as levels to watch, the nightly job
+ * registers them as forward predictions, and the replay measured how often
+ * price reaches them. Those three MUST select the same zone from the same
+ * price or the published odds describe one level, the record scores a
+ * second, and the reader is shown a third.
+ *
+ * That is not a hypothetical: this rule existed as four separate copies
+ * before it was extracted here, with a comment in one of them warning that
+ * they must not diverge — which is a note, not a mechanism.
+ *
+ * The EDGE is what price reaches first: the TOP of a support zone coming
+ * down, the BOTTOM of a resistance zone coming up. Using a zone's midpoint
+ * would systematically overstate the distance and understate the odds.
+ */
+export interface NearestStructure {
+  support: SupportResistanceZone | null;
+  resistance: SupportResistanceZone | null;
+}
+
+export function nearestWatchLevels(zones: SupportResistanceZone[], price: number): NearestStructure {
+  return {
+    support:
+      zones
+        .filter((z) => z.kind === "support" && z.priceHigh < price)
+        .sort((a, b) => b.priceHigh - a.priceHigh)[0] ?? null,
+    resistance:
+      zones
+        .filter((z) => z.kind === "resistance" && z.priceLow > price)
+        .sort((a, b) => a.priceLow - b.priceLow)[0] ?? null,
+  };
+}
+
+/** The price a zone is first reached at, given the side approaching it. */
+export function watchEdge(zone: SupportResistanceZone, direction: "long" | "short"): number {
+  return direction === "long" ? zone.priceHigh : zone.priceLow;
+}

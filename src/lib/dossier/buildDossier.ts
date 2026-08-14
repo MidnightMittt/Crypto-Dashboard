@@ -1,5 +1,6 @@
 import { LiveAnalysis, MIN_BARS_FOR_ANALYSIS } from "@/lib/search/liveAnalysis";
 import { equityVerdict } from "@/lib/markets/equityVerdict";
+import { nearestWatchLevels, SupportResistanceZone, watchEdge } from "@/lib/technicals/marketStructure";
 import { TRADE_PLAN_REFUSAL_SHORT } from "@/lib/signals/tradePlan";
 import { describeAgreement, evidenceLevel, strengthStars } from "@/lib/signals/plainLanguage";
 import { buildMacroContext } from "./macroContext";
@@ -427,16 +428,11 @@ function buildWatchLevels(
   const atrAbs = analysis.atrPct !== null && price > 0 ? (analysis.atrPct / 100) * price : 0;
   if (price <= 0 || atrAbs <= 0) return [];
 
-  const nearestBelow = analysis.zones
-    .filter((z) => z.kind === "support" && z.priceHigh < price)
-    .sort((a, b) => b.priceHigh - a.priceHigh)[0];
-  const nearestAbove = analysis.zones
-    .filter((z) => z.kind === "resistance" && z.priceLow > price)
-    .sort((a, b) => a.priceLow - b.priceLow)[0];
+  const { support: nearestBelow, resistance: nearestAbove } = nearestWatchLevels(analysis.zones, price);
 
-  const build = (zone: typeof nearestBelow, direction: "long" | "short"): WatchLevel | null => {
+  const build = (zone: SupportResistanceZone | null, direction: "long" | "short"): WatchLevel | null => {
     if (!zone) return null;
-    const level = direction === "long" ? zone.priceHigh : zone.priceLow;
+    const level = watchEdge(zone, direction);
     const distanceAtr = Math.abs(price - level) / atrAbs;
     const r = reachOf ? reachOf(distanceAtr, zone.reactionCount, "zone") : null;
     return {
