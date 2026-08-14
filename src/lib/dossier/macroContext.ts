@@ -41,6 +41,8 @@ export interface MacroInputs {
   regime: RegimeRead | null;
   rotation: RotationRead | null;
   industries: IndustryRead[];
+  /** Volatility/rates/dollar/credit sentences from macroBackdrop.ts, when fetched. */
+  backdropLines?: string[] | null;
 }
 
 export function buildMacroContext(inputs: MacroInputs): Section<MacroContext> {
@@ -105,17 +107,21 @@ export function buildMacroContext(inputs: MacroInputs): Section<MacroContext> {
         industryName: membership?.name ?? null,
         industryState,
       }),
+      backdropLines: inputs.backdropLines ?? null,
     },
     /*
      * MEASURED, not merely descriptive: the regime is three independent
-     * instrument pairs and the rotation board spans twelve sectors, all from
-     * validated ingested bars. Institutional needs the missing macro legs —
-     * the dollar, rates and credit spreads as first-class per-ticker context.
+     * instrument pairs, the rotation board spans twelve sectors, and the
+     * backdrop now carries volatility, rates, the dollar and credit. The
+     * upgrade this section used to name — ingest those four legs — was
+     * DELIVERED, and the tier deliberately did not rise for it: more inputs
+     * make a richer description, and only a forward-tested record makes a
+     * validated one. The upgrade line now names that honest last step.
      */
     "advanced",
     {
       to: "institutional",
-      when: "dollar, interest-rate and credit-spread reads are ingested as per-ticker context, so the tape is described by four independent macro forces rather than equity pairs alone",
+      when: "the regime and backdrop reads are scored against their own forward record, so 'risk-off' carries a measured consequence rather than a description",
     }
   );
 }

@@ -202,7 +202,7 @@ interface SubmissionsRecent {
 }
 
 /** Ticker -> zero-padded CIK, via the SEC's own mapping file. Cached a day. */
-async function lookupCik(symbol: string): Promise<string | null> {
+export async function lookupCik(symbol: string): Promise<string | null> {
   const res = await fetch("https://www.sec.gov/files/company_tickers.json", {
     headers: SEC_UA,
     next: { revalidate: 86_400 },

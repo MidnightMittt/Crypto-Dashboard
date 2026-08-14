@@ -38,6 +38,8 @@ export type SectionId =
   | "invalidation"
   | "analogs"
   | "macro"
+  | "business"
+  | "street"
   | "options"
   | "ownership"
   | "attention"
@@ -61,6 +63,13 @@ export const DOSSIER_SECTIONS: readonly SectionDef[] = [
    * the score, and a page that led with options flow would be implying an
    * integration the engine has not measured.
    */
+  /*
+   * Added with the SEC-fundamentals and Nasdaq-consensus providers: what the
+   * stock is a claim on, and what professional opinion says — both verify-
+   * phase corroboration, neither votes.
+   */
+  { id: "business", phase: "verify" },
+  { id: "street", phase: "verify" },
   { id: "options", phase: "verify" },
   { id: "ownership", phase: "verify" },
   { id: "attention", phase: "verify" },

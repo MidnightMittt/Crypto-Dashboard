@@ -413,6 +413,18 @@ export function MacroPanel({ d }: { d: TickerDossier }) {
               </li>
             )}
           </ul>
+          {m.data.backdropLines && m.data.backdropLines.length > 0 && (
+            <div className="flex flex-col gap-1.5 border-t border-hairline pt-3">
+              <h3 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
+                The wider forces
+              </h3>
+              {m.data.backdropLines.map((line) => (
+                <p key={line.slice(0, 40)} className="text-[12px] leading-relaxed text-ink-muted">
+                  {line}
+                </p>
+              ))}
+            </div>
+          )}
           <DepthMeta section={m} />
         </>
       ) : (
@@ -744,6 +756,57 @@ export function AttentionPanel({ d }: { d: TickerDossier }) {
           <DepthMeta section={social} />
         </div>
       )}
+    </Panel>
+  );
+}
+
+/* ── THE BUSINESS: SEC FUNDAMENTALS ──────────────────────────────────── */
+
+export function BusinessPanel({ d }: { d: TickerDossier }) {
+  const s = d.business;
+  if (s.status !== "available") return null;
+  const f = s.data;
+
+  return (
+    <Panel
+      title="The business underneath"
+      subtitle={`audited SEC filings · ${f.quartersCovered} quarters through ${f.latestFrame ?? "—"}`}
+    >
+      <div className="flex flex-col gap-2">
+        {f.lines.map((line) => (
+          <p key={line.slice(0, 40)} className="text-[13px] leading-relaxed text-ink">
+            {line}
+          </p>
+        ))}
+      </div>
+      <p className="text-[10px] leading-relaxed text-ink-faint">
+        Growth, margin and share count are arithmetic on audited numbers. No valuation verdict is offered —
+        &quot;cheap&quot; and &quot;expensive&quot; need assumptions nobody can verify, and this page does not
+        print unverifiable claims.
+      </p>
+      <DepthMeta section={s} />
+    </Panel>
+  );
+}
+
+/* ── THE STREET: ANALYST CONSENSUS ───────────────────────────────────── */
+
+export function StreetPanel({ d }: { d: TickerDossier }) {
+  const s = d.street;
+  if (s.status !== "available") return null;
+  const v = s.data;
+
+  return (
+    <Panel title="What Wall Street thinks" subtitle="reported opinion, labelled as such">
+      <div className="flex flex-col gap-2">
+        {v.lines.map((line) => (
+          <p key={line.slice(0, 40)} className="text-[13px] leading-relaxed text-ink">
+            {line}
+          </p>
+        ))}
+      </div>
+      <p className="text-[10px] leading-relaxed text-ink-faint">{v.herdingCaveat}</p>
+      <DepthMeta section={s} />
     </Panel>
   );
 }

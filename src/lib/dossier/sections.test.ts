@@ -18,6 +18,10 @@ describe("the section manifest", () => {
       "macro",
       // Deliberate addition, 2026-08-13: the provider-backed trio landed
       // (CBOE options, EDGAR + FINRA ownership, news + social attention).
+      // Deliberate addition, 2026-08-13 (second wave): fundamentals and
+      // analyst consensus landed.
+      "business",
+      "street",
       "options",
       "ownership",
       "attention",

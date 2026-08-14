@@ -219,6 +219,13 @@ export interface MacroContext {
   industrySlug: string | null;
   /** One sentence combining all of the above for the reader who wants only that. */
   summary: string;
+  /**
+   * The wider forces: volatility, rates, the dollar, credit — level plus
+   * one-month direction, each with its conventional mechanism in "tends to"
+   * language. Context sentences; none votes, and the tier does not rise for
+   * having them: validated is earned by forward records, not by more inputs.
+   */
+  backdropLines: string[] | null;
 }
 
 export interface EvidenceGroup {
@@ -273,6 +280,10 @@ export interface TickerDossier {
    * work: the slots existed before the data did.
    */
   moneyFlow: Section<EvidenceGroup>;
+  /** Audited financials from SEC filings — what the stock is a claim on. */
+  business: Section<import("./providers/secFundamentals").FundamentalsSummary>;
+  /** Analyst consensus, targets and surprise history — reported opinion, labelled as such. */
+  street: Section<import("./providers/nasdaqStreet").StreetSummary>;
   news: Section<import("./providers/attention").NewsSummary>;
   socialSentiment: Section<import("./providers/attention").SocialSummary>;
   optionsFlow: Section<import("./providers/cboeOptions").OptionsSummary>;

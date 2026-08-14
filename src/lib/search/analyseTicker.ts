@@ -9,6 +9,9 @@ import { fetchOptionsSummary } from "@/lib/dossier/providers/cboeOptions";
 import { fetchInsiderSummary } from "@/lib/dossier/providers/edgarInsiders";
 import { fetchShortVolume } from "@/lib/dossier/providers/finraShortVolume";
 import { fetchNews, fetchSocial } from "@/lib/dossier/providers/attention";
+import { fetchFundamentals } from "@/lib/dossier/providers/secFundamentals";
+import { fetchStreet } from "@/lib/dossier/providers/nasdaqStreet";
+import { fetchBackdrop } from "@/lib/dossier/providers/macroBackdrop";
 import { RegimeRead } from "@/lib/markets/riskRegime";
 import { RotationRead } from "@/lib/markets/rotation";
 import { IndustryRead } from "@/lib/markets/industryIntelligence";
@@ -88,6 +91,33 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
   if (!history.ok) {
     return { status: "error", message: history.reason, symbol: resolved.symbol };
   }
+
+  /*
+   * Second stage, because it needs the price: analyst targets are only
+   * meaningful relative to the last close, so the street fetch waits for the
+   * history. Fundamentals and the macro backdrop ride the same round trip.
+   */
+  const lastClose = history.history.bars[history.history.bars.length - 1]?.close ?? 0;
+  const [fundamentals, street, backdrop] = await Promise.all([
+    isCrypto ? null : fetchFundamentals(resolved.symbol),
+    isCrypto ? null : fetchStreet(resolved.symbol, lastClose),
+    isCrypto ? null : fetchBackdrop(),
+  ]);
+
+  /*
+   * THE EARNINGS-VETO HOLE, closed. The committed calendar covers only the
+   * tracked universe, so a searched ticker could previously carry a plan
+   * straight across its own report. The per-symbol date fetched from Nasdaq
+   * is MERGED into that same calendar, so the one existing earningsVeto
+   * function fires for any searched symbol — same function, same three-
+   * session window, and a missing date still never vetoes.
+   */
+  const staticCalendar = earningsCalendarJson as EarningsCalendar;
+  const fetchedDate = street?.ok ? street.summary.nextEarningsDate : null;
+  const earningsCalendar: EarningsCalendar = fetchedDate
+    ? { ...staticCalendar, entries: [...staticCalendar.entries, { symbol: resolved.symbol, date: fetchedDate }] }
+    : staticCalendar;
+
   const result = buildLiveAnalysis({
     symbol: resolved.symbol,
     name: history.history.name,
@@ -98,7 +128,7 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
     benchmarkCloses: isCrypto ? null : context.benchmarkCloses,
     benchmarkSymbol: context.benchmarkSymbol,
     marketWide: isCrypto ? [] : context.marketWide,
-    earningsCalendar: earningsCalendarJson as EarningsCalendar,
+    earningsCalendar,
     hasDerivatives: isCrypto ? resolved.hasDerivatives : false,
     now: Date.now(),
   });
@@ -141,6 +171,15 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
       to: "advanced" as const,
       when: "message velocity is baselined per symbol, so a crowd arriving is distinguishable from a crowd that was always there",
     }),
+    business: toSection(fundamentals, "advanced", {
+      to: "institutional" as const,
+      when: "fundamental trends are scored against forward returns, so growth and dilution carry measured consequences rather than descriptions",
+    }),
+    street: toSection(street, "basic", {
+      to: "advanced" as const,
+      when: "target accuracy and rating changes are scored against realised outcomes, so the consensus carries a track record instead of a caveat",
+    }),
+    backdropLines: backdrop?.lines ?? null,
   });
 
   return { status: "ok", analysis: result.analysis, dossier, resolved };

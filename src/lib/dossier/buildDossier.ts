@@ -50,6 +50,10 @@ export interface DossierInputs {
   shortVolume?: TickerDossier["shortInterest"];
   newsSection?: TickerDossier["news"];
   social?: TickerDossier["socialSentiment"];
+  business?: TickerDossier["business"];
+  street?: TickerDossier["street"];
+  /** Volatility/rates/dollar/credit sentences, threaded into the macro section. */
+  backdropLines?: string[] | null;
 }
 
 export function buildDossier(inputs: DossierInputs): TickerDossier {
@@ -107,6 +111,7 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
       regime,
       rotation,
       industries,
+      backdropLines: inputs.backdropLines ?? null,
     }),
 
     evidence: bias.categories.map(
@@ -127,6 +132,23 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
 
     // ── Provider-backed sections, with per-asset-class defaults ─────────
     moneyFlow: buildMoneyFlow(bias.categories, isCrypto),
+
+    business:
+      inputs.business ??
+      unavailable(
+        isCrypto ? "not-applicable" : "no-provider",
+        isCrypto
+          ? "A crypto asset has no issuer filing audited financials — there is no business underneath the token in the corporate sense."
+          : "Company financials were not queried for this asset."
+      ),
+    street:
+      inputs.street ??
+      unavailable(
+        isCrypto ? "not-applicable" : "no-provider",
+        isCrypto
+          ? "Sell-side analyst coverage in the equity sense does not exist for crypto assets."
+          : "Analyst coverage was not queried for this asset."
+      ),
 
     news:
       inputs.newsSection ??
