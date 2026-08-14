@@ -589,6 +589,19 @@ export function OptionsPanel({ d }: { d: TickerDossier }) {
         />
       </div>
 
+      {/* THE SIGNAL — today's flow read against the standing book, which is
+          the baseline a single snapshot can honestly support. */}
+      <p
+        className={`rounded-md border px-3 py-2 text-[12px] leading-relaxed ${
+          o.openingFlow.hotStrikes.length > 0
+            ? "border-cyan/25 bg-cyan/[0.04] text-ink"
+            : "border-hairline bg-void/30 text-ink-muted"
+        }`}
+      >
+        <span className="font-semibold uppercase tracking-[0.12em] text-cyan">Opening flow</span> ·{" "}
+        {o.openingFlow.signalLine}
+      </p>
+
       {o.largestOiStrikes.length > 0 && (
         <p className="text-[11px] leading-relaxed text-ink-muted">
           <span className="text-ink">Where positions concentrate · </span>
@@ -619,20 +632,26 @@ export function OwnershipPanel({ d }: { d: TickerDossier }) {
           <h3 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
             Insider trading · last {ins.data.windowDays} days · SEC filings
           </h3>
-          {ins.data.buys.transactions === 0 && ins.data.sells.transactions === 0 ? (
-            <p className="text-[13px] leading-relaxed text-ink">
-              No open-market insider buys or sells were filed in the window — insiders are sitting still,
-              which is itself a fact worth more than silence.
-            </p>
-          ) : (
+          {/* THE SIGNAL leads: the cluster classification is the baseline
+              that makes a pile of filings mean something. */}
+          <p
+            className={`rounded-md border px-3 py-2 text-[12px] leading-relaxed ${
+              ins.data.cluster === "cluster-buying"
+                ? "border-success/25 bg-success/[0.04] text-ink"
+                : "border-hairline bg-void/30 text-ink-muted"
+            }`}
+          >
+            {ins.data.signalLine}
+          </p>
+          {(ins.data.buys.transactions > 0 || ins.data.sells.transactions > 0) && (
             <>
-              <p className="text-[13px] leading-relaxed text-ink">
+              <p className="text-[12px] leading-relaxed text-ink-muted">
                 {ins.data.buys.transactions > 0
-                  ? `Insiders made ${ins.data.buys.transactions} open-market purchase${ins.data.buys.transactions === 1 ? "" : "s"} totalling ${ins.data.buys.shares.toLocaleString()} shares${ins.data.buys.valueUsd !== null ? ` (about $${Math.round(ins.data.buys.valueUsd).toLocaleString()})` : ""}.`
-                  : "No open-market insider purchases in the window."}{" "}
+                  ? `${ins.data.buys.transactions} purchase${ins.data.buys.transactions === 1 ? "" : "s"} totalling ${ins.data.buys.shares.toLocaleString()} shares${ins.data.buys.valueUsd !== null ? ` (about $${Math.round(ins.data.buys.valueUsd).toLocaleString()})` : ""} across ${ins.data.distinctBuyers} insider${ins.data.distinctBuyers === 1 ? "" : "s"}.`
+                  : "No open-market purchases."}{" "}
                 {ins.data.sells.transactions > 0
-                  ? `They sold ${ins.data.sells.shares.toLocaleString()} shares across ${ins.data.sells.transactions} sale${ins.data.sells.transactions === 1 ? "" : "s"}${ins.data.sells.valueUsd !== null ? ` (about $${Math.round(ins.data.sells.valueUsd).toLocaleString()})` : ""}.`
-                  : "No open-market sales either."}
+                  ? `${ins.data.sells.shares.toLocaleString()} shares sold across ${ins.data.sells.transactions} sale${ins.data.sells.transactions === 1 ? "" : "s"}${ins.data.sells.valueUsd !== null ? ` (about $${Math.round(ins.data.sells.valueUsd).toLocaleString()})` : ""}.`
+                  : "No open-market sales."}
               </p>
               <p className="text-[10px] leading-relaxed text-ink-faint">{ins.data.asymmetryNote}</p>
             </>
@@ -646,7 +665,25 @@ export function OwnershipPanel({ d }: { d: TickerDossier }) {
           <h3 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
             Short-sale volume · FINRA · {sv.data.latest.date.replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3")}
           </h3>
-          <p className="text-[13px] leading-relaxed text-ink">
+          {/* THE SIGNAL: today against this symbol's own recent sessions. The
+              level alone was the old display; the position is the read. */}
+          {sv.data.baseline ? (
+            <p
+              className={`rounded-md border px-3 py-2 text-[12px] leading-relaxed ${
+                sv.data.baseline.percentile >= 80 || sv.data.baseline.percentile <= 20
+                  ? "border-cyan/25 bg-cyan/[0.04] text-ink"
+                  : "border-hairline bg-void/30 text-ink-muted"
+              }`}
+            >
+              {sv.data.baseline.signalLine}
+            </p>
+          ) : (
+            <p className="text-[12px] leading-relaxed text-ink-muted">
+              Too few recent sessions could be fetched to compare today against this symbol&apos;s own norm, so
+              only the raw figure is shown.
+            </p>
+          )}
+          <p className="text-[12px] leading-relaxed text-ink-muted">
             {sv.data.latest.shortRatioPct.toFixed(0)}% of the day&apos;s FINRA-reported volume printed as short
             sales ({Math.round(sv.data.latest.shortVolume).toLocaleString()} of{" "}
             {Math.round(sv.data.latest.totalVolume).toLocaleString()} shares).

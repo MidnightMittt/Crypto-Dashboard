@@ -38,6 +38,19 @@ export interface InsiderTransaction {
 }
 
 /**
+ * WHO filed. One reporting owner per Form 4 in the overwhelming case, and
+ * the name is what turns a pile of filings into a cluster read: the
+ * evidenced pattern in the Form 4 literature is SEVERAL DISTINCT insiders
+ * buying in a window, not one insider buying several times — three officers
+ * reaching the same conclusion independently is different information from
+ * one officer averaging in.
+ */
+export function parseOwnerName(xml: string): string | null {
+  const name = xml.match(/<rptOwnerName>\s*([^<]+?)\s*<\/rptOwnerName>/)?.[1];
+  return name && name.length > 0 ? name : null;
+}
+
+/**
  * Pull the open-market transactions out of one Form 4 XML.
  *
  * Regex-scoped extraction rather than a DOM parser, deliberately: the
@@ -74,11 +87,20 @@ export function parseForm4(xml: string): InsiderTransaction[] {
   return out;
 }
 
+/** The cluster classification — the baseline that makes filings a signal. */
+export type ClusterSignal = "cluster-buying" | "single-buyer" | "selling-only" | "quiet";
+
 export interface InsiderSummary {
   windowDays: number;
   filingsExamined: number;
   buys: { transactions: number; shares: number; valueUsd: number | null };
   sells: { transactions: number; shares: number; valueUsd: number | null };
+  /** DISTINCT insiders on each side — the cluster read's raw material. */
+  distinctBuyers: number;
+  distinctSellers: number;
+  cluster: ClusterSignal;
+  /** The read as a sentence, with the names count attached. */
+  signalLine: string;
   lastFilingDate: string | null;
   /** The stated asymmetry: why the buy side means more than the sell side. */
   asymmetryNote: string;
@@ -86,11 +108,15 @@ export interface InsiderSummary {
 
 /** Aggregate parsed transactions across filings into the 90-day picture. */
 export function aggregateInsiderActivity(
-  filings: Array<{ transactions: InsiderTransaction[] }>,
+  filings: Array<{ transactions: InsiderTransaction[]; ownerName: string | null }>,
   lastFilingDate: string | null
 ): InsiderSummary {
   const buys = { transactions: 0, shares: 0, valueKnown: 0, valueUsd: 0 };
   const sells = { transactions: 0, shares: 0, valueKnown: 0, valueUsd: 0 };
+  const buyerNames = new Set<string>();
+  const sellerNames = new Set<string>();
+  let anonymousBuyers = 0;
+  let anonymousSellers = 0;
 
   for (const f of filings) {
     for (const t of f.transactions) {
@@ -103,8 +129,41 @@ export function aggregateInsiderActivity(
         bucket.valueKnown++;
         bucket.valueUsd += t.shares * t.pricePerShare;
       }
+      if (t.code === "P") {
+        if (f.ownerName) buyerNames.add(f.ownerName);
+        else anonymousBuyers++;
+      } else {
+        if (f.ownerName) sellerNames.add(f.ownerName);
+        else anonymousSellers++;
+      }
     }
   }
+
+  /*
+   * A filing whose owner name failed to parse still counts as ONE buyer at
+   * most — never inflated into several — so a parser gap can understate a
+   * cluster but cannot invent one.
+   */
+  const distinctBuyers = buyerNames.size + Math.min(anonymousBuyers, 1);
+  const distinctSellers = sellerNames.size + Math.min(anonymousSellers, 1);
+
+  const cluster: ClusterSignal =
+    distinctBuyers >= 2
+      ? "cluster-buying"
+      : distinctBuyers === 1
+        ? "single-buyer"
+        : sells.transactions > 0
+          ? "selling-only"
+          : "quiet";
+
+  const signalLine =
+    cluster === "cluster-buying"
+      ? `CLUSTER BUYING: ${distinctBuyers} different insiders bought on the open market within ${INSIDER_WINDOW_DAYS} days. Several people with inside knowledge reaching the same conclusion independently is the pattern the Form 4 research literature finds informative — one insider buying repeatedly is not.`
+      : cluster === "single-buyer"
+        ? `One insider bought on the open market in the window. A real but modest signal — the evidenced pattern is several DIFFERENT insiders buying, and this is not that.`
+        : cluster === "selling-only"
+          ? `Only sales in the window (${distinctSellers} insider${distinctSellers === 1 ? "" : "s"}). Sales carry little signal on their own — see the note below.`
+          : "No open-market insider activity in the window — insiders are sitting still.";
 
   return {
     windowDays: INSIDER_WINDOW_DAYS,
@@ -121,6 +180,10 @@ export function aggregateInsiderActivity(
       shares: sells.shares,
       valueUsd: sells.transactions > 0 && sells.valueKnown === sells.transactions ? sells.valueUsd : null,
     },
+    distinctBuyers,
+    distinctSellers,
+    cluster,
+    signalLine,
     lastFilingDate,
     asymmetryNote:
       "Insider sales are noisy — executives sell for houses, taxes and diversification. Open-market purchases have essentially one explanation, which is why the buy side carries the signal.",
@@ -183,13 +246,14 @@ export async function fetchInsiderSummary(symbol: string): Promise<InsiderResult
     }
 
     // Small, sequential-ish fan-out — SEC asks for restraint and gets it.
-    const filings: Array<{ transactions: InsiderTransaction[] }> = [];
+    const filings: Array<{ transactions: InsiderTransaction[]; ownerName: string | null }> = [];
     for (const f of form4s) {
       const acc = f.accession.replace(/-/g, "");
       const url = `https://www.sec.gov/Archives/edgar/data/${Number(cik)}/${acc}/${f.doc}`;
       const r = await fetch(url, { headers: { ...SEC_UA, Accept: "application/xml" }, next: { revalidate: 86_400 } });
       if (!r.ok) continue;
-      filings.push({ transactions: parseForm4(await r.text()) });
+      const xml = await r.text();
+      filings.push({ transactions: parseForm4(xml), ownerName: parseOwnerName(xml) });
     }
 
     return { ok: true, summary: aggregateInsiderActivity(filings, form4s[0]?.date ?? null) };

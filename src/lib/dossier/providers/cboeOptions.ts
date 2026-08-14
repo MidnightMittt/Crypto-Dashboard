@@ -78,6 +78,76 @@ export interface OptionsSummary {
   largestOiStrikes: Array<{ strike: number; kind: "call" | "put"; openInterest: number; expiry: string }>;
   /** The convention caveat, carried with the data rather than left to the UI. */
   gexCaveat: string;
+  /** Today's flow read against the standing positions — the baseline that needs no history. */
+  openingFlow: OpeningFlow;
+}
+
+/**
+ * OPENING-FLOW DETECTION — the baseline a single snapshot can support.
+ *
+ * The one arithmetic certainty in an option chain: a contract that trades
+ * MORE volume today than its entire standing open interest must include
+ * opening trades — there are not enough existing positions for all of it to
+ * be closing. That inequality is what makes "unusual options activity" a
+ * measurement here rather than a vibe: no stored history, no threshold
+ * someone picked against another symbol's norm.
+ *
+ * What it cannot say — stated, because the number will be read as more than
+ * it is — is WHO opened or WHY: a hot call strike is new positioning, not
+ * provably bullish positioning (it may be the short leg of a spread, or a
+ * hedge). The direction claim stays at "new money chose this strike today."
+ */
+export interface OpeningFlow {
+  /** Chain-wide: today's total volume as a share of total open interest. */
+  chainVolumeOverOi: number | null;
+  /** Strikes where volume ≥ 2× OI with an absolute floor — must-be-opening flow, sized. */
+  hotStrikes: Array<{
+    strike: number;
+    kind: "call" | "put";
+    expiry: string;
+    volume: number;
+    openInterest: number;
+    volumeOverOi: number;
+  }>;
+  /** The read as a sentence. */
+  signalLine: string;
+}
+
+/** A strike qualifies as hot only past BOTH bars: relative and absolute. */
+const HOT_VOL_OVER_OI = 2;
+/** Floor in contracts, so a 10-lot on 3 OI cannot masquerade as a signal. */
+const HOT_MIN_VOLUME = 500;
+
+export function detectOpeningFlow(parsed: ParsedContract[]): OpeningFlow {
+  let totalVolume = 0;
+  let totalOi = 0;
+  const hot: OpeningFlow["hotStrikes"] = [];
+
+  for (const p of parsed) {
+    totalVolume += p.volume;
+    totalOi += p.openInterest;
+    if (p.volume >= HOT_MIN_VOLUME && p.volume >= HOT_VOL_OVER_OI * Math.max(p.openInterest, 1)) {
+      hot.push({
+        strike: p.strike,
+        kind: p.kind,
+        expiry: p.expiry,
+        volume: p.volume,
+        openInterest: p.openInterest,
+        volumeOverOi: p.volume / Math.max(p.openInterest, 1),
+      });
+    }
+  }
+  hot.sort((a, b) => b.volume - a.volume);
+
+  const chainVolumeOverOi = totalOi > 0 ? totalVolume / totalOi : null;
+  const top = hot[0];
+
+  const signalLine =
+    hot.length === 0
+      ? "No strike traded more than its standing open interest today — the flow is running through existing positions, not opening new ones."
+      : `New positioning is being opened: ${hot.length} strike${hot.length === 1 ? "" : "s"} traded well past their standing open interest today, led by the ${top.strike} ${top.kind}s (${top.volume.toLocaleString()} contracts against ${top.openInterest.toLocaleString()} open — ${top.volumeOverOi.toFixed(1)}× must-be-opening flow). New money chose these strikes today; whether it is outright or the leg of a spread is not knowable from the tape.`;
+
+  return { chainVolumeOverOi, hotStrikes: hot.slice(0, 3), signalLine };
 }
 
 /** Contracts more than this far from spot are noise for ATM IV purposes. */
@@ -154,6 +224,7 @@ export function summariseChain(contracts: CboeContract[], spot: number): Options
     nearestExpiry,
     netGexUsdPer1Pct: sawGamma ? gex : null,
     largestOiStrikes,
+    openingFlow: detectOpeningFlow(parsed),
     gexCaveat:
       "Gamma exposure assumes the standard dealer convention (dealers long customer calls, short customer puts). That is an industry assumption, not an observation — true dealer inventory is not public.",
   };

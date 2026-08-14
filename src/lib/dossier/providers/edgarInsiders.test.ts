@@ -48,6 +48,7 @@ describe("parseForm4", () => {
 describe("aggregateInsiderActivity", () => {
   const filing = (...t: Array<{ code: string; shares: number; pricePerShare: number | null }>) => ({
     transactions: t.map((x) => ({ ...x, acquiredDisposed: null })),
+    ownerName: "SMITH JANE" as string | null,
   });
 
   it("counts only open-market P and S — grants, exercises and withholding are mechanics", () => {
@@ -95,5 +96,51 @@ describe("aggregateInsiderActivity", () => {
 
   it("carries the buy/sell asymmetry note in the data itself", () => {
     expect(aggregateInsiderActivity([], null).asymmetryNote).toContain("essentially one explanation");
+  });
+});
+
+describe("cluster detection", () => {
+  const buy = { code: "P", shares: 1000, pricePerShare: 50 };
+  const sell = { code: "S", shares: 500, pricePerShare: 55 };
+  const by = (name: string | null, ...t: Array<{ code: string; shares: number; pricePerShare: number | null }>) => ({
+    transactions: t.map((x) => ({ ...x, acquiredDisposed: null })),
+    ownerName: name,
+  });
+
+  it("calls a cluster only for DISTINCT buyers — one insider buying twice is not a cluster", () => {
+    const oneBuyerTwice = aggregateInsiderActivity([by("SMITH JANE", buy), by("SMITH JANE", buy)], null);
+    expect(oneBuyerTwice.distinctBuyers).toBe(1);
+    expect(oneBuyerTwice.cluster).toBe("single-buyer");
+
+    const twoBuyers = aggregateInsiderActivity([by("SMITH JANE", buy), by("DOE JOHN", buy)], null);
+    expect(twoBuyers.distinctBuyers).toBe(2);
+    expect(twoBuyers.cluster).toBe("cluster-buying");
+    expect(twoBuyers.signalLine).toContain("CLUSTER BUYING");
+  });
+
+  it("a parser gap can understate a cluster but never invent one", () => {
+    // Three filings with unparseable names collapse to at most ONE buyer.
+    const s = aggregateInsiderActivity([by(null, buy), by(null, buy), by(null, buy)], null);
+    expect(s.distinctBuyers).toBe(1);
+    expect(s.cluster).toBe("single-buyer");
+  });
+
+  it("classifies selling-only and quiet as their own states, not as weak buying", () => {
+    expect(aggregateInsiderActivity([by("SMITH JANE", sell)], null).cluster).toBe("selling-only");
+    expect(aggregateInsiderActivity([], null).cluster).toBe("quiet");
+  });
+
+  it("a grant does not make its filer a buyer", () => {
+    const s = aggregateInsiderActivity([by("SMITH JANE", { code: "A", shares: 9999, pricePerShare: null })], null);
+    expect(s.distinctBuyers).toBe(0);
+    expect(s.cluster).toBe("quiet");
+  });
+});
+
+describe("parseOwnerName", () => {
+  it("extracts the reporting owner", async () => {
+    const { parseOwnerName } = await import("./edgarInsiders");
+    expect(parseOwnerName("<reportingOwner><rptOwnerName>COOK TIMOTHY D</rptOwnerName></reportingOwner>")).toBe("COOK TIMOTHY D");
+    expect(parseOwnerName("<xml>no owner here</xml>")).toBeNull();
   });
 });

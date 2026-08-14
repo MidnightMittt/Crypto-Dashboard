@@ -57,3 +57,81 @@ describe("summariseMessages", () => {
     expect(summariseMessages([msg("Bullish")]).selfReportNote).toContain("self-reported");
   });
 });
+
+describe("baselineShortRatio", () => {
+  const day = (date: string, ratio: number) => ({
+    date,
+    shortVolume: ratio,
+    totalVolume: 100,
+    shortRatioPct: ratio,
+  });
+
+  it("hand-verifies the percentile: today above 9 of 10 priors reads 90th (mid-rank)", async () => {
+    const { baselineShortRatio } = await import("./finraShortVolume");
+    const prior = Array.from({ length: 10 }, (_, i) => day(`202608${String(i + 1).padStart(2, "0")}`, 30 + i)); // 30..39
+    const b = baselineShortRatio(day("20260812", 38.5), prior)!;
+    // 9 below, 0 ties -> (9 + 0)/10 = 90th
+    expect(b.percentile).toBe(90);
+    expect(b.signalLine).toContain("unusually heavy");
+    expect(b.typicalRatioPct).toBeCloseTo(34.5, 6);
+  });
+
+  it("uses mid-rank on ties so a flat series reads as the middle, not an extreme", async () => {
+    const { baselineShortRatio } = await import("./finraShortVolume");
+    const prior = Array.from({ length: 10 }, (_, i) => day(`2026080${i}`, 40));
+    const b = baselineShortRatio(day("20260812", 40), prior)!;
+    expect(b.percentile).toBe(50);
+    expect(b.signalLine).toContain("ordinary for this name");
+  });
+
+  it("refuses a baseline below the session floor", async () => {
+    const { baselineShortRatio, MIN_BASELINE_SESSIONS } = await import("./finraShortVolume");
+    const prior = Array.from({ length: MIN_BASELINE_SESSIONS - 1 }, (_, i) => day(`2026080${i}`, 30));
+    expect(baselineShortRatio(day("20260812", 50), prior)).toBeNull();
+  });
+});
+
+describe("detectOpeningFlow", () => {
+  const contract = (kind: "call" | "put", strike: number, volume: number, oi: number) => ({
+    expiry: "2026-08-14",
+    kind,
+    strike,
+    iv: 0.3,
+    gamma: 0.01,
+    openInterest: oi,
+    volume,
+  });
+
+  it("flags a strike only past BOTH bars: 2x open interest AND the absolute floor", async () => {
+    const { detectOpeningFlow } = await import("./cboeOptions");
+    const flow = detectOpeningFlow([
+      contract("call", 110, 1200, 400), // 3x OI, above floor -> hot
+      contract("call", 115, 300, 50), // 6x OI but under the 500 floor -> not hot
+      contract("put", 90, 5000, 4000), // big volume but only 1.25x OI -> not hot
+    ]);
+    expect(flow.hotStrikes).toHaveLength(1);
+    expect(flow.hotStrikes[0]).toMatchObject({ strike: 110, volume: 1200, openInterest: 400 });
+    expect(flow.hotStrikes[0].volumeOverOi).toBeCloseTo(3, 6);
+    expect(flow.signalLine).toContain("New positioning is being opened");
+  });
+
+  it("states the identification honestly: new money, direction not knowable from the tape", async () => {
+    const { detectOpeningFlow } = await import("./cboeOptions");
+    const flow = detectOpeningFlow([contract("call", 110, 1200, 400)]);
+    expect(flow.signalLine).toContain("not knowable from the tape");
+  });
+
+  it("says so plainly when nothing is opening", async () => {
+    const { detectOpeningFlow } = await import("./cboeOptions");
+    const flow = detectOpeningFlow([contract("call", 110, 100, 4000)]);
+    expect(flow.hotStrikes).toHaveLength(0);
+    expect(flow.signalLine).toContain("existing positions, not opening new ones");
+  });
+
+  it("a zero-OI strike cannot divide by zero its way into an infinite ratio", async () => {
+    const { detectOpeningFlow } = await import("./cboeOptions");
+    const flow = detectOpeningFlow([contract("put", 95, 600, 0)]);
+    expect(flow.hotStrikes[0].volumeOverOi).toBe(600);
+    expect(Number.isFinite(flow.hotStrikes[0].volumeOverOi)).toBe(true);
+  });
+});
