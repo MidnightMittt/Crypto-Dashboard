@@ -1,0 +1,227 @@
+import { MarketBias, MetricVerdict } from "@/lib/signals/types";
+import { TradePlan, TradePlanRefusal } from "@/lib/signals/tradePlan";
+import { EarningsVetoResult } from "@/lib/markets/earningsVeto";
+import { SupportResistanceZone } from "@/lib/technicals/marketStructure";
+import { RotationState } from "@/lib/markets/rotation";
+
+/**
+ * THE TICKER DOSSIER — one contract for the research page.
+ *
+ * The page this feeds is meant to be the best place on the internet to decide
+ * whether to trade a given symbol. That ambition creates an architectural
+ * problem before it creates a design one: BTC arrives with eighteen evidence
+ * modules, a derivatives book and 1,198 replayed trades, while a mid-cap
+ * equity arrives with six modules and no replay at all. A page written
+ * against the richest asset would lie about the thinnest one, and a page
+ * written against the thinnest would waste everything the richest has.
+ *
+ * ── The rule that resolves it ─────────────────────────────────────────
+ *
+ * EVERY SECTION DECLARES ITS OWN AVAILABILITY. The page renders the same
+ * skeleton for every ticker; each section reports whether it has data and,
+ * when it does not, WHY NOT. Nothing silently disappears — an absent section
+ * that vanishes is indistinguishable from one that was never built, and a
+ * reader cannot tell whether "no options data" means calm positioning or no
+ * provider.
+ *
+ * This also makes the roadmap self-documenting: `blockedBy` values are, quite
+ * literally, the build queue. Adding a data source fills a slot. It never
+ * touches the page.
+ */
+
+/**
+ * WHY a section has nothing to show. The distinction between these is the
+ * honest part — three of them are permanent-ish facts about the world and one
+ * is an admission of work not yet done.
+ */
+export type BlockedBy =
+  /** No provider for this data is ingested at all. A sourcing problem. */
+  | "no-provider"
+  /** Structurally meaningless for this asset class — funding rates on a stock. */
+  | "not-applicable"
+  /** The asset itself is too young to measure against its own past. */
+  | "insufficient-history"
+  /**
+   * We HAVE the inputs and have not built the study yet. Deliberately
+   * distinct from "no-provider": this is our backlog, not the market's
+   * limitation, and labelling it as anything else would be self-flattering.
+   */
+  | "not-measured-yet";
+
+export type Section<T> =
+  | { status: "available"; data: T }
+  | { status: "unavailable"; reason: string; blockedBy: BlockedBy };
+
+export const unavailable = <T>(blockedBy: BlockedBy, reason: string): Section<T> => ({
+  status: "unavailable",
+  reason,
+  blockedBy,
+});
+
+export const available = <T>(data: T): Section<T> => ({ status: "available", data });
+
+/** Convenience for rendering: the data, or null. Never throws, never fabricates. */
+export function dataOf<T>(section: Section<T>): T | null {
+  return section.status === "available" ? section.data : null;
+}
+
+// ── Section payloads ───────────────────────────────────────────────────
+
+export interface VerdictSection {
+  emoji: string;
+  word: string;
+  tone: string;
+  sentence: string;
+  action: "buy" | "sell" | "wait" | "stand-aside";
+  /** 1-5, magnitude of the read. */
+  stars: number;
+  evidence: "thin" | "moderate" | "strong";
+  agreementLine: string;
+}
+
+/**
+ * The four-clause summary. Stored as clauses rather than one blob so a
+ * surface can render them separately, and so a test can assert that a clause
+ * is absent when its evidence is.
+ */
+export interface TldrSection {
+  /** What the market is doing. */
+  state: string;
+  /** What supports it. Null when nothing does. */
+  support: string | null;
+  /** What argues against it, and what that implies for entry. Null when nothing does. */
+  tension: string | null;
+  /** The level that ends the idea. Null when there is no plan to invalidate. */
+  invalidation: string | null;
+  /** All present clauses joined — the ten-second read. */
+  full: string;
+}
+
+export interface PlanFieldsSection {
+  plan: TradePlan | null;
+  refusal: TradePlanRefusal | null;
+  /**
+   * Replay-derived expectations. Present only where an execution replay
+   * exists for the asset class — crypto today, equities once the equity
+   * replay is built. Null fields are rendered as "not measured", never as 0.
+   */
+  expectations: Section<PlanExpectations>;
+}
+
+export interface PlanExpectations {
+  /** Wilson lower bound of expectancy per trade, in percent. */
+  evLowerPct: number;
+  /** Point estimate of the win rate for comparable trades. */
+  winRatePct: number;
+  /** Trades behind the estimate. */
+  n: number;
+  /** p80 of the drawdown WINNING trades endured before working. */
+  expectedDrawdownPct: number;
+  /** p75 of how far winners ran. */
+  expectedRunPct: number | null;
+  /** Median sessions to resolution. */
+  medianHoldSessions: number | null;
+  /** Which measured bucket produced these. */
+  cellKey: string;
+}
+
+export interface EvidenceBullet {
+  /** Plain-English claim, one line. */
+  claim: string;
+  /** The module it came from, so it is traceable. */
+  metricId: string;
+  label: string;
+  /** Full explanation for the expandable layer. */
+  detail: string;
+  /** Evidence quality of the underlying module, 0-100. */
+  confidence: number;
+}
+
+export interface InvalidationTrigger {
+  /** What would have to happen. */
+  condition: string;
+  /** Why that ends the thesis rather than merely bruising it. */
+  consequence: string;
+  /** "price" triggers are levels; "evidence" triggers are module flips. */
+  kind: "price" | "evidence" | "event";
+}
+
+export interface AnalogStats {
+  occurrences: number;
+  winRatePct: number;
+  medianReturnPct: number;
+  averageReturnPct: number;
+  averageDrawdownPct: number | null;
+  medianHoldSessions: number | null;
+  /** What made two setups "similar" — stated so the number can be judged. */
+  matchBasis: string;
+  /** The honest caveat: in-sample, overlapping, or otherwise limited. */
+  caveat: string;
+}
+
+export interface MacroContext {
+  regime: string;
+  regimeDetail: string;
+  sectorName: string | null;
+  sectorState: RotationState | null;
+  sectorLine: string | null;
+  industryName: string | null;
+  industryState: RotationState | null;
+  industryLine: string | null;
+  industrySlug: string | null;
+  /** One sentence combining all of the above for the reader who wants only that. */
+  summary: string;
+}
+
+export interface EvidenceGroup {
+  /** Plain-English category name, e.g. "Trend & Structure". */
+  label: string;
+  score: number | null;
+  verdict: string | null;
+  confidence: number;
+  topReason: string;
+  metrics: MetricVerdict[];
+}
+
+export interface IdentitySection {
+  symbol: string;
+  name: string;
+  assetClass: "equity" | "crypto";
+  lastClose: number;
+  change24hPct: number;
+  asOf: number;
+  /** Where the numbers came from, so freshness is never implied. */
+  provenance: string;
+  /** Sessions of history behind the read. */
+  barsUsed: number;
+}
+
+/**
+ * THE DOSSIER. Section order here is the page's reading order, deliberately:
+ * decide, then understand, then verify.
+ */
+export interface TickerDossier {
+  identity: IdentitySection;
+  verdict: VerdictSection;
+  tldr: TldrSection;
+  plan: PlanFieldsSection;
+  reasonsFor: EvidenceBullet[];
+  reasonsAgainst: EvidenceBullet[];
+  invalidation: InvalidationTrigger[];
+  analogs: Section<AnalogStats>;
+  macro: Section<MacroContext>;
+  evidence: EvidenceGroup[];
+  /** Structural context the evidence groups do not cover. */
+  earnings: EarningsVetoResult | null;
+  zones: SupportResistanceZone[];
+  atrPct: number | null;
+  bias: MarketBias;
+
+  // ── Sections with no provider yet. Present, empty, and explained. ────
+  moneyFlow: Section<EvidenceGroup>;
+  news: Section<never>;
+  socialSentiment: Section<never>;
+  optionsFlow: Section<never>;
+  insiderActivity: Section<never>;
+  shortInterest: Section<never>;
+}
