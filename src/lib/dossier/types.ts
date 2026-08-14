@@ -289,6 +289,17 @@ export interface WatchLevel {
   reachAttempts: number | null;
 }
 
+export interface ForwardRecordSummary {
+  /** Predictions whose ten-session horizon has fully elapsed. */
+  resolved: number;
+  /** What the page promised, averaged over those. */
+  predictedPct: number | null;
+  /** What actually happened — the only out-of-sample number on this page. */
+  observedPct: number | null;
+  /** When registration began, so "none yet" reads as young rather than broken. */
+  since: string | null;
+}
+
 export interface PlannedEntryRead {
   anchorPrice: number;
   favoured: "long" | "short" | null;
@@ -301,6 +312,11 @@ export interface PlannedEntryRead {
    * close enough to price a plan against.
    */
   watchLevels: WatchLevel[];
+  /**
+   * The out-of-sample scorecard for the reach numbers above. Everything else
+   * on this page is in-sample; this is the one line that is not.
+   */
+  forward: ForwardRecordSummary | null;
 }
 
 export interface AnalogStats {

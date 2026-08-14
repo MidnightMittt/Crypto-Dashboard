@@ -7,6 +7,7 @@ import { composeInvalidation, composeReasonsAgainst, composeReasonsFor, composeT
 import {
   AnalogStats,
   available,
+  ForwardRecordSummary,
   PlannedEntry,
   PlannedEntryRead,
   WatchLevel,
@@ -51,6 +52,8 @@ export interface DossierInputs {
   plannedRecords?: { long: AnalogStats | null; short: AnalogStats | null } | null;
   /** Measured reach lookup, supplied by the caller (asset-class specific). */
   reachOf?: ((distanceAtr: number, touches: number, prefer: "plan" | "zone") => PlannedEntry["reach"]) | null;
+  /** Out-of-sample scorecard for the reach numbers, when one exists. */
+  forward?: ForwardRecordSummary | null;
   /*
    * Provider-backed sections, already shaped by the caller (analyseTicker
    * maps each provider result to a Section with its depth and upgrade).
@@ -117,7 +120,7 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
 
     analogs: buildAnalogs(inputs.analogs ?? null, isCrypto, analysis.barsUsed),
 
-    nextEntry: buildNextEntry(analysis, inputs.plannedRecords ?? null, inputs.reachOf ?? null),
+    nextEntry: buildNextEntry(analysis, inputs.plannedRecords ?? null, inputs.reachOf ?? null, inputs.forward ?? null),
 
     macro: buildMacroContext({
       symbol: analysis.symbol,
@@ -324,7 +327,8 @@ function buildMoneyFlow(
 function buildNextEntry(
   analysis: LiveAnalysis,
   records: { long: AnalogStats | null; short: AnalogStats | null } | null,
-  reachOf: ((distanceAtr: number, touches: number, prefer: "plan" | "zone") => PlannedEntry["reach"]) | null
+  reachOf: ((distanceAtr: number, touches: number, prefer: "plan" | "zone") => PlannedEntry["reach"]) | null,
+  forward: ForwardRecordSummary | null
 ): Section<PlannedEntryRead> {
   /*
    * NEVER "NOTHING TO DO". Structure exists on both sides of price at all
@@ -352,6 +356,7 @@ function buildNextEntry(
           : "Nothing is close enough to price a stop against yet, so there is no full plan. These are the levels to watch, and how often price has historically reached them.",
         entries: [],
         watchLevels,
+        forward,
       },
       "basic",
       {
@@ -399,7 +404,7 @@ function buildNextEntry(
    * tier rises only when the reach rate and outcome of PLANNED entries are
    * scored against their own out-of-sample record.
    */
-  return available({ anchorPrice: view.anchorPrice, favoured: view.favoured, rationale: view.rationale, entries, watchLevels }, "basic", {
+  return available({ anchorPrice: view.anchorPrice, favoured: view.favoured, rationale: view.rationale, entries, watchLevels, forward }, "basic", {
     to: "advanced",
     when: "planned levels are scored on how often price actually reached them and what happened next, so a conditional entry carries its own hit rate rather than only its geometry",
   });

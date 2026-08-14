@@ -1085,6 +1085,40 @@ export function NextEntryPanel({ d }: { d: TickerDossier }) {
             </div>
           )}
 
+          {/* THE ONE OUT-OF-SAMPLE LINE ON THIS PAGE.
+              Everything else here was measured on a history that already
+              existed when the rule was written. This is the score of
+              predictions made BEFORE the outcome — and it says "nothing yet"
+              until it has earned the right to say anything else. */}
+          {s.data.forward && (
+            <p
+              className={`rounded-md border px-3 py-2 text-[11px] leading-relaxed ${
+                s.data.forward.resolved === 0
+                  ? "border-hairline bg-void/30 text-ink-muted"
+                  : "border-cyan/25 bg-cyan/[0.04] text-ink"
+              }`}
+            >
+              <span className="font-semibold uppercase tracking-[0.12em] text-cyan">Forward record</span> ·{" "}
+              {s.data.forward.resolved === 0 ? (
+                <>
+                  The rates above come from replayed history, which already existed when the rule was written.
+                  Live predictions are now being registered daily
+                  {s.data.forward.since && <> (since {s.data.forward.since})</>} and scored ten sessions later.
+                  None has finished its window yet — until they do, treat every number on this page as a
+                  hypothesis rather than a track record.
+                </>
+              ) : (
+                <>
+                  Of {s.data.forward.resolved.toLocaleString()} predictions registered before the outcome was
+                  known, this page promised{" "}
+                  <span className="font-semibold">{s.data.forward.predictedPct?.toFixed(1)}%</span> and delivered{" "}
+                  <span className="font-semibold">{s.data.forward.observedPct?.toFixed(1)}%</span>. That is the
+                  only number here measured out of sample.
+                </>
+              )}
+            </p>
+          )}
+
           <p className="text-[10px] leading-relaxed text-ink-faint">
             Distance is what decides whether a level gets revisited. How many times price has already turned
             there was measured and made no difference — at half a day&apos;s range away, levels with no prior

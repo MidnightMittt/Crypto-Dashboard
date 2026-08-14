@@ -28,6 +28,7 @@ import marketContextJson from "@/data/marketContext.json";
 import earningsCalendarJson from "@/data/earningsCalendar.json";
 import intelligenceJson from "@/data/marketIntelligence.json";
 import equityExecutionJson from "@/data/equityExecutionStats.json";
+import forwardReachJson from "@/data/forwardReachRecord.json";
 
 /**
  * SEARCH, END TO END — resolve, fetch, score.
@@ -264,6 +265,25 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
     rotation: intelligence.rotation ?? null,
     industries: intelligence.industries ?? [],
     plannedRecords: { long: recordFor("long"), short: recordFor("short") },
+    /*
+     * The only out-of-sample number on the page. Read once at module load
+     * like every other committed artefact; the daily job is what moves it.
+     */
+    forward: isCrypto
+      ? null
+      : (() => {
+          const r = forwardReachJson as unknown as {
+            totals: { resolved: number; predictedPct: number | null; observedPct: number | null };
+            predictions: Array<{ date: string }>;
+          };
+          const dates = r.predictions.map((p) => p.date).sort();
+          return {
+            resolved: r.totals.resolved,
+            predictedPct: r.totals.predictedPct,
+            observedPct: r.totals.observedPct,
+            since: dates[0] ?? null,
+          };
+        })(),
     reachOf: isCrypto
       ? null
       : (distanceAtr, touches, prefer) => {
