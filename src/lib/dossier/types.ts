@@ -48,8 +48,44 @@ export type BlockedBy =
    */
   | "not-measured-yet";
 
+/**
+ * HOW DEEP a section's intelligence currently goes.
+ *
+ * Availability is not binary and pretending it is couples the UI to today's
+ * data reality: the moment the equity replay lands, "expectations" for a
+ * stock would jump from a reason-for-absence to a full statistics table, and
+ * every such jump would be a page change. Instead each section climbs a
+ * ladder the contract already knows about:
+ *
+ *   basic          DESCRIPTIVE — computed from the asset's own price history
+ *                  at request time. True, checkable, no measured record.
+ *   advanced       MEASURED — backed by replayed trades, recorded
+ *                  fingerprints, or multi-instrument data. Numbers with an n.
+ *   institutional  VALIDATED — supported by a forward-tested record or by
+ *                  multiple independent sources agreeing. The tier a claim
+ *                  must reach before it deserves the word "edge".
+ *
+ * The tiers are claims about EVIDENCE QUALITY, not about feature polish — a
+ * beautifully rendered descriptive read is still basic, and a plain table of
+ * forward-validated numbers is still institutional.
+ */
+export type Depth = "basic" | "advanced" | "institutional";
+
+/**
+ * What would lift a section to its next tier. Present on available sections
+ * the way `blockedBy` is present on unavailable ones, and for the same
+ * reason: every section states its own growth path, so the roadmap stays
+ * self-documenting at every level rather than only at zero.
+ */
+export interface Upgrade {
+  /** The tier this would reach. */
+  to: Depth;
+  /** What has to be built or accumulated first, in plain words. */
+  when: string;
+}
+
 export type Section<T> =
-  | { status: "available"; data: T }
+  | { status: "available"; depth: Depth; data: T; upgrade: Upgrade | null }
   | { status: "unavailable"; reason: string; blockedBy: BlockedBy };
 
 export const unavailable = <T>(blockedBy: BlockedBy, reason: string): Section<T> => ({
@@ -58,7 +94,12 @@ export const unavailable = <T>(blockedBy: BlockedBy, reason: string): Section<T>
   blockedBy,
 });
 
-export const available = <T>(data: T): Section<T> => ({ status: "available", data });
+export const available = <T>(data: T, depth: Depth = "basic", upgrade: Upgrade | null = null): Section<T> => ({
+  status: "available",
+  depth,
+  data,
+  upgrade,
+});
 
 /** Convenience for rendering: the data, or null. Never throws, never fabricates. */
 export function dataOf<T>(section: Section<T>): T | null {

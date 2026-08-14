@@ -2,38 +2,56 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/Card";
 import { TickerSearch } from "@/components/search/TickerSearch";
-import { StructureLadder, LadderMarker } from "@/components/markets/StructureLadder";
 import {
   AnalogsPanel,
   EvidencePanel,
   GapsPanel,
   InvalidationPanel,
+  LevelsPanel,
   MacroPanel,
   PlanPanel,
   ReasonsPanel,
   TldrPanel,
   VerdictPanel,
 } from "@/components/dossier/DossierSections";
+import { DOSSIER_SECTIONS, SectionId } from "@/lib/dossier/sections";
+import { TickerDossier } from "@/lib/dossier/types";
 import { analyseTicker } from "@/lib/search/analyseTicker";
 import { formatPrice } from "@/lib/utils/format";
 
 /**
  * THE TICKER RESEARCH PAGE — the destination.
  *
- * The homepage says where to look. This says what to do. It is the page the
- * rest of the platform exists to feed, and its reading order is the product
- * thesis in layout form:
+ * The homepage says where to look. This says what to do.
  *
- *   DECIDE     verdict, ten-second summary, the plan
- *   UNDERSTAND why it exists, what fights it, what ends it
- *   VERIFY     historical analogs, the tape it trades in, every reading
- *   AUDIT      what this page cannot see, named rather than hidden
- *
- * Rendered dynamically because the bars are fetched when the page is asked
- * for — there is no build-time list of every symbol someone might type.
+ * The page renders the section MANIFEST, in manifest order, and nothing
+ * else. It never branches on what data a given asset happens to have —
+ * every section renders its own unavailable, descriptive, measured and
+ * validated states internally. That is the property that lets each slot
+ * deepen independently as data sources and replays land, while the page a
+ * user learned last month stays exactly where they learned it.
  */
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Every id the manifest can name has exactly one component. The Record type
+ * makes this exhaustive at compile time: adding a section to the manifest
+ * without a component (or vice versa) is a type error, not a blank spot
+ * discovered in production.
+ */
+const SECTION_COMPONENTS: Record<SectionId, (props: { d: TickerDossier }) => React.ReactNode> = {
+  verdict: VerdictPanel,
+  tldr: TldrPanel,
+  plan: PlanPanel,
+  reasons: ReasonsPanel,
+  invalidation: InvalidationPanel,
+  analogs: AnalogsPanel,
+  macro: MacroPanel,
+  levels: LevelsPanel,
+  evidence: EvidencePanel,
+  gaps: GapsPanel,
+};
 
 export default async function AssetPage({ params }: { params: Promise<{ symbol: string }> }) {
   const { symbol } = await params;
@@ -42,18 +60,9 @@ export default async function AssetPage({ params }: { params: Promise<{ symbol: 
   // An index ETF has a validated, daily-refreshed page already. Serving a
   // thinner live re-derivation of the same asset would be strictly worse.
   if (result.status === "redirect") redirect(result.href);
-
   if (result.status === "error") return <NoRead symbol={result.symbol} message={result.message} />;
 
   const d = result.dossier;
-  const markers: LadderMarker[] = d.plan.plan
-    ? [
-        { label: "Entry", price: d.plan.plan.entryRef, tone: "entry" },
-        { label: "Stop", price: d.plan.plan.stopPrice, tone: "stop" },
-        { label: "T1", price: d.plan.plan.target1Price, tone: "target" },
-        { label: "T2", price: d.plan.plan.target2Price, tone: "target" },
-      ]
-    : [];
 
   return (
     <div className="min-h-screen">
@@ -82,47 +91,10 @@ export default async function AssetPage({ params }: { params: Promise<{ symbol: 
           </Link>
         </div>
 
-        {/* ── DECIDE ──────────────────────────────────────────────────── */}
-        <VerdictPanel d={d} />
-        <TldrPanel d={d} />
-        <PlanPanel d={d} />
-
-        {/* ── UNDERSTAND ──────────────────────────────────────────────── */}
-        <ReasonsPanel d={d} />
-        <InvalidationPanel d={d} />
-
-        {/* ── VERIFY ──────────────────────────────────────────────────── */}
-        <AnalogsPanel d={d} />
-        <MacroPanel d={d} />
-
-        <Card>
-          <CardContent className="flex flex-col gap-3 py-5">
-            <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-ink-muted">
-              Price levels that matter
-            </h2>
-            <p className="text-[12px] leading-relaxed text-ink-muted">
-              Where price sits against the levels it has repeatedly reacted to. A level is only meaningful
-              because buyers or sellers have defended it before.
-            </p>
-            <StructureLadder
-              zones={d.zones}
-              currentPrice={d.identity.lastClose}
-              markers={markers}
-              atrPct={d.atrPct}
-            />
-            <p className="text-[11px] leading-relaxed text-ink-faint">
-              <span className="text-ink-muted">Typical daily move · </span>
-              {d.atrPct === null
-                ? "not measurable from the available history."
-                : `${d.atrPct.toFixed(2)}% of price. A stop closer than that would be hit by ordinary movement rather than by the idea being wrong.`}
-            </p>
-          </CardContent>
-        </Card>
-
-        <EvidencePanel d={d} />
-
-        {/* ── AUDIT ───────────────────────────────────────────────────── */}
-        <GapsPanel d={d} />
+        {DOSSIER_SECTIONS.map(({ id }) => {
+          const SectionComponent = SECTION_COMPONENTS[id];
+          return <SectionComponent key={id} d={d} />;
+        })}
 
         <Card>
           <CardContent className="py-5">

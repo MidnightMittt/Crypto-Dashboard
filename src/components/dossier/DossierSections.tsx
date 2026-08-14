@@ -3,7 +3,8 @@ import { Collapsible } from "@/components/ui/Collapsible";
 import { EvidenceModuleDetail } from "@/components/evidence/EvidenceModuleDetail";
 import { formatPrice } from "@/lib/utils/format";
 import { TRADE_PLAN_REFUSAL_SHORT, TRADE_PLAN_REFUSAL_TEXT } from "@/lib/signals/tradePlan";
-import { EvidenceBullet, InvalidationTrigger, Section, TickerDossier } from "@/lib/dossier/types";
+import { Depth, EvidenceBullet, InvalidationTrigger, Section, TickerDossier } from "@/lib/dossier/types";
+import { StructureLadder, LadderMarker } from "@/components/markets/StructureLadder";
 
 /**
  * THE RESEARCH PAGE, SECTION BY SECTION.
@@ -59,6 +60,41 @@ export function Unavailable({ section }: { section: Extract<Section<unknown>, { 
         {ours ? "Not built yet" : section.blockedBy === "not-applicable" ? "Not applicable" : "No data source"}
       </span>
       <p className="mt-1 text-[12px] leading-relaxed text-ink-muted">{section.reason}</p>
+    </div>
+  );
+}
+
+/**
+ * THE DEPTH FOOTER — how far a section's intelligence currently goes, and
+ * what would deepen it.
+ *
+ * Rendered identically under every available section that carries a tier, so
+ * "measured" versus "descriptive" is a property a reader learns once and
+ * recognises everywhere. The upgrade line is the forward-looking half of the
+ * honesty contract: the section says not only what it knows, but what it
+ * would take to know more — which keeps the page stable while the
+ * intelligence behind each slot deepens independently.
+ */
+const DEPTH_LABEL: Record<Depth, { word: string; meaning: string; tone: string }> = {
+  basic: { word: "Descriptive", meaning: "computed from price history; no measured record behind it", tone: "text-ink-faint" },
+  advanced: { word: "Measured", meaning: "backed by replayed or multi-instrument data", tone: "text-cyan" },
+  institutional: { word: "Validated", meaning: "supported by a forward-tested record", tone: "text-success" },
+};
+
+export function DepthMeta({ section }: { section: Extract<Section<unknown>, { status: "available" }> }) {
+  const d = DEPTH_LABEL[section.depth];
+  return (
+    <div className="flex flex-col gap-1 border-t border-hairline pt-2">
+      <span className="text-[10px] leading-relaxed text-ink-faint">
+        <span className={`font-semibold uppercase tracking-[0.12em] ${d.tone}`}>{d.word}</span>
+        <span> · {d.meaning}.</span>
+      </span>
+      {section.upgrade && (
+        <span className="text-[10px] leading-relaxed text-ink-faint">
+          <span className="uppercase tracking-[0.12em] text-ink-muted">Deepens when</span> ·{" "}
+          {section.upgrade.when}.
+        </span>
+      )}
     </div>
   );
 }
@@ -211,6 +247,7 @@ export function PlanPanel({ d }: { d: TickerDossier }) {
         ) : (
           <Unavailable section={expectations} />
         )}
+        {expectations.status === "available" && <DepthMeta section={expectations} />}
       </div>
     </Panel>
   );
@@ -340,6 +377,7 @@ export function AnalogsPanel({ d }: { d: TickerDossier }) {
           <p className="text-[11px] leading-relaxed text-ink-faint">
             <span className="text-ink-muted">Matched on ·</span> {a.data.matchBasis} {a.data.caveat}
           </p>
+          <DepthMeta section={a} />
         </>
       ) : (
         <Unavailable section={a} />
@@ -375,10 +413,45 @@ export function MacroPanel({ d }: { d: TickerDossier }) {
               </li>
             )}
           </ul>
+          <DepthMeta section={m} />
         </>
       ) : (
         <Unavailable section={m} />
       )}
+    </Panel>
+  );
+}
+
+/* ── PRICE LEVELS ────────────────────────────────────────────────────── */
+
+/**
+ * Extracted from the page so the page can be manifest-driven: every section
+ * the manifest names has a component here, and the page maps ids to
+ * components without knowing what any of them need.
+ */
+export function LevelsPanel({ d }: { d: TickerDossier }) {
+  const markers: LadderMarker[] = d.plan.plan
+    ? [
+        { label: "Entry", price: d.plan.plan.entryRef, tone: "entry" },
+        { label: "Stop", price: d.plan.plan.stopPrice, tone: "stop" },
+        { label: "T1", price: d.plan.plan.target1Price, tone: "target" },
+        { label: "T2", price: d.plan.plan.target2Price, tone: "target" },
+      ]
+    : [];
+
+  return (
+    <Panel title="Price levels that matter">
+      <p className="text-[12px] leading-relaxed text-ink-muted">
+        Where price sits against the levels it has repeatedly reacted to. A level is only meaningful because
+        buyers or sellers have defended it before.
+      </p>
+      <StructureLadder zones={d.zones} currentPrice={d.identity.lastClose} markers={markers} atrPct={d.atrPct} />
+      <p className="text-[11px] leading-relaxed text-ink-faint">
+        <span className="text-ink-muted">Typical daily move · </span>
+        {d.atrPct === null
+          ? "not measurable from the available history."
+          : `${d.atrPct.toFixed(2)}% of price. A stop closer than that would be hit by ordinary movement rather than by the idea being wrong.`}
+      </p>
     </Panel>
   );
 }

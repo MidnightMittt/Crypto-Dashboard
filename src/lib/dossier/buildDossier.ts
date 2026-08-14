@@ -156,7 +156,16 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
  * an equity plan would be borrowed authority of the worst kind.
  */
 function buildExpectations(expectations: PlanExpectations | null, isCrypto: boolean): Section<PlanExpectations> {
-  if (expectations) return available(expectations);
+  if (expectations) {
+    // Replay-backed numbers are MEASURED, not yet validated: the cells are
+    // in-sample and re-earn themselves each regeneration. Institutional
+    // requires the registered forward hypotheses to accumulate a real
+    // out-of-sample record first.
+    return available(expectations, "advanced", {
+      to: "institutional",
+      when: "the registered forward hypotheses accumulate enough out-of-sample days to condition expectations on a forward-tested record rather than an in-sample replay",
+    });
+  }
   return unavailable(
     "not-measured-yet",
     isCrypto
@@ -174,7 +183,12 @@ function buildExpectations(expectations: PlanExpectations | null, isCrypto: bool
  * so equities get the reason rather than a number.
  */
 function buildAnalogs(analogs: AnalogStats | null, isCrypto: boolean, barsUsed: number): Section<AnalogStats> {
-  if (analogs) return available(analogs);
+  if (analogs) {
+    return available(analogs, "advanced", {
+      to: "institutional",
+      when: "analog outcomes are scored against their own post-registration forward record, so the win rate quoted is out-of-sample rather than found in the same history it is measured on",
+    });
+  }
   if (barsUsed < MIN_BARS_FOR_ANALYSIS) {
     return unavailable(
       "insufficient-history",
@@ -203,14 +217,21 @@ function buildMoneyFlow(
 ): Section<EvidenceGroup> {
   const group = categories.find((c) => c.label === "Money Flow");
   if (group && group.metrics.length > 0) {
-    return available({
-      label: group.label,
-      score: group.score,
-      verdict: group.verdict,
-      confidence: group.confidence,
-      topReason: group.topReason,
-      metrics: group.metrics,
-    });
+    return available(
+      {
+        label: group.label,
+        score: group.score,
+        verdict: group.verdict,
+        confidence: group.confidence,
+        topReason: group.topReason,
+        metrics: group.metrics,
+      },
+      "advanced",
+      {
+        to: "institutional",
+        when: "options positioning and dealer exposure are ingested, so flow can be confirmed by a second independent source rather than read from one venue family",
+      }
+    );
   }
   return unavailable(
     isCrypto ? "no-provider" : "not-measured-yet",

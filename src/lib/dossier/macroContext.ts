@@ -75,8 +75,9 @@ export function buildMacroContext(inputs: MacroInputs): Section<MacroContext> {
   const industryState: RotationState | null = industry?.rotation.state ?? null;
   const sectorState: RotationState | null = sector?.state ?? industry?.sectorState ?? null;
 
-  return available({
-    regime: regimeLabel,
+  return available(
+    {
+      regime: regimeLabel,
     regimeDetail: regime
       ? `${regime.agreeing} of ${regime.total} independent risk pairs agree.`
       : "The risk regime could not be built this cycle.",
@@ -97,14 +98,26 @@ export function buildMacroContext(inputs: MacroInputs): Section<MacroContext> {
       : membership
         ? `${membership.name} is a tracked industry, but it could not be measured this cycle.`
         : null,
-    summary: composeMacroSummary({
-      regime: regimeLabel,
-      sectorName: membership?.sectorName ?? null,
-      sectorState,
-      industryName: membership?.name ?? null,
-      industryState,
-    }),
-  });
+      summary: composeMacroSummary({
+        regime: regimeLabel,
+        sectorName: membership?.sectorName ?? null,
+        sectorState,
+        industryName: membership?.name ?? null,
+        industryState,
+      }),
+    },
+    /*
+     * MEASURED, not merely descriptive: the regime is three independent
+     * instrument pairs and the rotation board spans twelve sectors, all from
+     * validated ingested bars. Institutional needs the missing macro legs —
+     * the dollar, rates and credit spreads as first-class per-ticker context.
+     */
+    "advanced",
+    {
+      to: "institutional",
+      when: "dollar, interest-rate and credit-spread reads are ingested as per-ticker context, so the tape is described by four independent macro forces rather than equity pairs alone",
+    }
+  );
 }
 
 /** What each rotation state means for someone deciding, in one clause. */
