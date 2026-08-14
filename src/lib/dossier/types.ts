@@ -440,6 +440,15 @@ export interface TickerDossier {
   news: Section<import("./providers/attention").NewsSummary>;
   socialSentiment: Section<import("./providers/attention").SocialSummary>;
   optionsFlow: Section<import("./providers/cboeOptions").OptionsSummary>;
+  /**
+   * What the options market is PRICING, as distinct from what it traded.
+   * Separate from `optionsFlow` on purpose: flow is a record of activity
+   * (who bought what), while this is a set of forward statements — the move
+   * being priced, where hedging sits, whether the chain agrees with the
+   * chart. They answer different questions and come from different venues,
+   * so merging them would blur which claim rests on which source.
+   */
+  optionsIntel: Section<import("./providers/optionsIntelligence").OptionsIntelligence>;
   insiderActivity: Section<import("./providers/edgarInsiders").InsiderSummary>;
   shortInterest: Section<import("./providers/finraShortVolume").ShortVolumeSummary>;
 }

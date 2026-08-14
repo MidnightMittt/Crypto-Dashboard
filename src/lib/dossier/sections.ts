@@ -42,6 +42,7 @@ export type SectionId =
   | "business"
   | "street"
   | "options"
+  | "optionsIntel"
   | "ownership"
   | "attention"
   | "levels"
@@ -78,6 +79,14 @@ export const DOSSIER_SECTIONS: readonly SectionDef[] = [
    */
   { id: "business", phase: "verify" },
   { id: "street", phase: "verify" },
+  /*
+   * The two options sections, interpretation before record. What the market
+   * is PRICING answers a question the reader has ("can my target even happen
+   * inside the move being priced?"); what it TRADED is the supporting
+   * activity. Ordering them the other way would present evidence before the
+   * claim it supports.
+   */
+  { id: "optionsIntel", phase: "verify" },
   { id: "options", phase: "verify" },
   { id: "ownership", phase: "verify" },
   { id: "attention", phase: "verify" },

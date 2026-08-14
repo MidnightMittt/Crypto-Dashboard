@@ -25,6 +25,10 @@ describe("the section manifest", () => {
       // analyst consensus landed.
       "business",
       "street",
+      // Deliberate addition, 2026-08-14: options INTELLIGENCE (what the chain
+      // prices) ahead of options FLOW (what it traded) — interpretation
+      // before the activity that supports it.
+      "optionsIntel",
       "options",
       "ownership",
       "attention",

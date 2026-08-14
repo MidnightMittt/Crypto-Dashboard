@@ -65,6 +65,7 @@ export interface DossierInputs {
    * below state why per asset class.
    */
   options?: TickerDossier["optionsFlow"];
+  optionsIntel?: TickerDossier["optionsIntel"];
   insiders?: TickerDossier["insiderActivity"];
   shortVolume?: TickerDossier["shortInterest"];
   newsSection?: TickerDossier["news"];
@@ -189,6 +190,14 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
         isCrypto ? "not-measured-yet" : "no-provider",
         isCrypto
           ? "Crypto options exist on Deribit for the majors and are not yet wired into this page — backlog, not a data limitation."
+          : "The options chain was not queried for this asset."
+      ),
+    optionsIntel:
+      inputs.optionsIntel ??
+      unavailable(
+        isCrypto ? "not-measured-yet" : "no-provider",
+        isCrypto
+          ? "Deribit carries crypto options for the majors; routing them through this module is backlog, not a data limitation."
           : "The options chain was not queried for this asset."
       ),
     insiderActivity:

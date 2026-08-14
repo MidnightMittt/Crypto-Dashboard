@@ -657,6 +657,7 @@ export function GapsPanel({ d }: { d: TickerDossier }) {
     { label: "News", section: d.news },
     { label: "Social & search interest", section: d.socialSentiment },
     { label: "Options & gamma", section: d.optionsFlow },
+    { label: "What the options market is pricing", section: d.optionsIntel },
     { label: "Insider buying", section: d.insiderActivity },
     { label: "Short interest", section: d.shortInterest },
   ].filter((g) => g.section.status === "unavailable");
@@ -777,6 +778,119 @@ export function OptionsPanel({ d }: { d: TickerDossier }) {
       )}
 
       <p className="text-[10px] leading-relaxed text-ink-faint">{o.gexCaveat}</p>
+      <DepthMeta section={s} />
+    </Panel>
+  );
+}
+
+/* ── WHAT THE OPTIONS MARKET IS PRICING ──────────────────────────────── */
+
+/**
+ * The chain read as a set of forward statements rather than a table.
+ *
+ * The lead is the expected move against the plan's own first target, because
+ * that is the one comparison that can change what a reader does: a target
+ * beyond what the whole chain prices for the period is not optimistic, it is
+ * a different bet — one that needs volatility to expand, not just direction
+ * to be right. Everything below it is ordered the same way, interpretation
+ * first and the number that produced it alongside.
+ */
+export function OptionsIntelPanel({ d }: { d: TickerDossier }) {
+  const s = d.optionsIntel;
+  if (s.status !== "available") return null;
+  const o = s.data;
+
+  return (
+    <Panel
+      title="What the options market is pricing"
+      subtitle={`${o.horizonExpiry ?? o.frontExpiry} · Tradier, delayed · ${o.confidence}% of the read available`}
+    >
+      <p className="text-[13px] font-medium leading-relaxed text-ink">{o.summary}</p>
+
+      <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
+        <PlanStat
+          label="Expected move"
+          value={o.expectedMovePct === null ? "—" : `±${o.expectedMovePct.toFixed(1)}%`}
+        />
+        {/* The realised figure shown is the one the verdict was MEASURED
+            against, so the stat and the sentence beneath it can never quote
+            different numbers. When a single session was set aside, the label
+            says so rather than showing a figure with no explanation. */}
+        <PlanStat
+          label={o.realizedVolJumpDominated ? "Implied vs realised (ex-gap)" : "Implied vs realised"}
+          value={
+            o.atmIvPct === null || o.realizedVolPct === null
+              ? "—"
+              : `${o.atmIvPct.toFixed(0)}% vs ${(o.realizedVolJumpDominated ? o.realizedVolExJumpPct! : o.realizedVolPct).toFixed(0)}%`
+          }
+          tone={o.ivMinusRvPct === null ? "text-ink" : o.ivMinusRvPct > 5 ? "text-amber" : "text-ink"}
+        />
+        <PlanStat
+          label="Put/call skew"
+          value={o.skewPct === null ? "—" : `${o.skewPct >= 0 ? "+" : "−"}${Math.abs(o.skewPct).toFixed(1)} pts`}
+        />
+        <PlanStat
+          label="Option liquidity"
+          value={o.liquidityScore === null ? "—" : `${o.liquidityScore}/100`}
+          tone={o.liquidityScore !== null && o.liquidityScore < 45 ? "text-amber" : "text-ink"}
+        />
+      </div>
+
+      {/* THE WHY. Each line names the figure it came from. */}
+      <ul className="flex flex-col gap-2">
+        {o.lines.map((line) => (
+          <li key={line} className="text-[12px] leading-relaxed text-ink-muted">
+            <span className="mr-1.5 text-ink-faint">·</span>
+            {line}
+          </li>
+        ))}
+      </ul>
+
+      {/* AGREEMENT — the only thing here that contests the decision above, so
+          it is the only thing here allowed to be loud. */}
+      {o.agreesWithEngine !== null && (
+        <p
+          className={`rounded-md border px-3 py-2 text-[12px] leading-relaxed ${
+            o.agreesWithEngine
+              ? "border-success/25 bg-success/[0.04] text-ink"
+              : "border-amber/25 bg-amber/[0.04] text-ink"
+          }`}
+        >
+          <span
+            className={`font-semibold uppercase tracking-[0.12em] ${o.agreesWithEngine ? "text-success" : "text-amber"}`}
+          >
+            {o.agreesWithEngine ? "Options agree" : "Options disagree"}
+          </span>{" "}
+          · Positioning leans {o.optionsLean} against the engine&rsquo;s read of the chart.
+        </p>
+      )}
+
+      {o.gammaWalls.length > 0 && (
+        <p className="text-[11px] leading-relaxed text-ink-muted">
+          <span className="text-ink">Where hedging concentrates · </span>
+          {o.gammaWalls
+            .map(
+              (w) =>
+                `${formatPrice(w.strike)} ${w.kind}s (${w.distancePct >= 0 ? "+" : ""}${w.distancePct.toFixed(1)}%)`
+            )
+            .join(" · ")}
+        </p>
+      )}
+
+      {/* THE HONEST BLANK. Named rather than approximated, because the
+          obvious approximation answers a different question in the same
+          words — see the module header. */}
+      <p className="text-[10px] leading-relaxed text-ink-faint">
+        <span className="uppercase tracking-[0.12em] text-ink-muted">Not measurable yet</span> · IV rank and IV
+        percentile. {o.ivHistoryRequirement}
+      </p>
+
+      {o.caveats.map((c) => (
+        <p key={c} className="text-[10px] leading-relaxed text-ink-faint">
+          {c}
+        </p>
+      ))}
+
       <DepthMeta section={s} />
     </Panel>
   );

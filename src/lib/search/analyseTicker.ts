@@ -6,7 +6,8 @@ import { EarningsCalendar } from "@/lib/markets/earningsVeto";
 import { buildDossier } from "@/lib/dossier/buildDossier";
 import { available, Section, TickerDossier, unavailable } from "@/lib/dossier/types";
 import { fetchOptionsSummary } from "@/lib/dossier/providers/cboeOptions";
-import { fetchTradierChain } from "@/lib/dossier/providers/tradierOptions";
+import { fetchTradierChains } from "@/lib/dossier/providers/tradierOptions";
+import { buildOptionsIntelligence } from "@/lib/dossier/providers/optionsIntelligence";
 import { crossConfirm } from "@/lib/dossier/providers/crossVenueOptions";
 import { fetchInsiderSummary } from "@/lib/dossier/providers/edgarInsiders";
 import { fetchShortVolume } from "@/lib/dossier/providers/finraShortVolume";
@@ -96,7 +97,7 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
     // The second timeframe, from the same keyless endpoint as the daily bars.
     fetchIntradayHistory(resolved.providerSymbol),
     isCrypto ? null : fetchOptionsSummary(resolved.symbol),
-    isCrypto ? null : fetchTradierChain(resolved.symbol),
+    isCrypto ? null : fetchTradierChains(resolved.symbol),
     isCrypto ? null : fetchInsiderSummary(resolved.symbol),
     isCrypto ? null : fetchShortVolume(resolved.symbol),
     fetchNews(resolved.providerSymbol),
@@ -115,10 +116,11 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
    * bad day) simply leaves crossVenue null and the section stands on CBOE.
    */
   if (options?.ok && tradier?.ok) {
+    const front = tradier.chains[0];
     const cross = crossConfirm(
       { spot: options.spot, contracts: options.contracts },
-      { spot: tradier.spot, contracts: tradier.contracts },
-      tradier.expiry
+      { spot: tradier.spot, contracts: front.contracts },
+      front.expiry
     );
     options.summary.crossVenue = cross;
   }
@@ -260,8 +262,57 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
     return equityAnalogsFor(dir, setup.plan, result.analysis.bias.metrics, snapshot);
   };
 
+  /*
+   * OPTIONS INTELLIGENCE. Built here rather than in the provider because it
+   * needs three things the provider cannot see: the price history (for
+   * realised volatility), the engine's own verdict (for the agreement check)
+   * and the plan's first target (for the expected-move comparison).
+   *
+   * The target falls back to the PLANNED setup when the EV gate refused a
+   * live plan. That is deliberate — on a waiting day the question "is the
+   * level I am waiting for even reachable inside what the options market is
+   * pricing?" is the most useful thing on the page, and it would be lost if
+   * the comparison only ran when a trade was already live.
+   */
+  const optionsIntel = (() => {
+    if (isCrypto || !tradier?.ok) return null;
+    const livePlan = result.analysis.plan;
+    const plannedPlan = plannedView?.setups.find((s) => s.primary)?.plan ?? plannedView?.setups[0]?.plan ?? null;
+    const forTarget = livePlan ?? plannedPlan;
+    const firstTargetPct =
+      forTarget && forTarget.entryRef > 0
+        ? (Math.abs(forTarget.target1Price - forTarget.entryRef) / forTarget.entryRef) * 100
+        : null;
+    return buildOptionsIntelligence({
+      chains: tradier.chains,
+      spot: tradier.spot,
+      closes: history.history.bars.map((b) => b.close),
+      engineVerdict:
+        result.analysis.bias.verdict === "bullish" || result.analysis.bias.verdict === "bearish"
+          ? result.analysis.bias.verdict
+          : "neutral",
+      firstTargetPct,
+      now: Date.now(),
+    });
+  })();
+
   const dossier = buildDossier({
     analysis: result.analysis,
+    optionsIntel: optionsIntel
+      ? available(optionsIntel, "advanced", {
+          to: "institutional" as const,
+          when: "a year of this symbol's own implied volatility is recorded, so IV rank and percentile become measurable and today's reading gains a distribution to sit in",
+        })
+      : isCrypto
+        ? unavailable(
+            "not-measured-yet",
+            "Deribit carries crypto options for the majors; routing them through this module is backlog, not a data limitation."
+          )
+        : unavailable(
+            // A missing key will never fix itself on a reload; a hiccup likely will.
+            tradier && !tradier.ok && !tradier.configured ? "no-provider" : "provider-error",
+            tradier && !tradier.ok ? tradier.reason : "The options chain was not queried for this asset."
+          ),
     regime: intelligence.regime ?? null,
     rotation: intelligence.rotation ?? null,
     industries: intelligence.industries ?? [],
