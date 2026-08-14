@@ -1,5 +1,5 @@
 import { resolveTicker, ResolvedTicker } from "./resolveTicker";
-import { fetchQuoteHistory } from "./fetchQuoteHistory";
+import { fetchIntradayHistory, fetchQuoteHistory } from "./fetchQuoteHistory";
 import { buildLiveAnalysis, LiveAnalysis } from "./liveAnalysis";
 import { MetricVerdict } from "@/lib/signals/types";
 import { EarningsCalendar } from "@/lib/markets/earningsVeto";
@@ -88,8 +88,10 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
    * section, never the page. Equity-only sources are skipped for crypto
    * with a typed null rather than a wasted request.
    */
-  const [history, options, tradier, insiders, shortVolume, news, social] = await Promise.all([
+  const [history, intradayBars, options, tradier, insiders, shortVolume, news, social] = await Promise.all([
     fetchQuoteHistory(resolved.providerSymbol),
+    // The second timeframe, from the same keyless endpoint as the daily bars.
+    fetchIntradayHistory(resolved.providerSymbol),
     isCrypto ? null : fetchOptionsSummary(resolved.symbol),
     isCrypto ? null : fetchTradierChain(resolved.symbol),
     isCrypto ? null : fetchInsiderSummary(resolved.symbol),
@@ -159,6 +161,7 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
     name: history.history.name,
     assetClass: isCrypto ? "crypto" : "equity",
     bars: history.history.bars,
+    intradayBars,
     benchmarkCloses: isCrypto ? null : context.benchmarkCloses,
     benchmarkSymbol: context.benchmarkSymbol,
     marketWide: isCrypto ? [] : context.marketWide,
@@ -196,6 +199,7 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
     name: history.history.name,
     assetClass: isCrypto ? "crypto" : "equity",
     bars: history.history.bars,
+    intradayBars,
     planConstraints,
     constraintsBySide,
     // Crypto is deliberately not measured against the S&P; see the coverage

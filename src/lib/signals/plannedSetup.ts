@@ -104,8 +104,10 @@ export interface PlannedSetupInputs {
   zones: SupportResistanceZone[];
   /** Absolute direction of the daily technical read. */
   dailyDirection: Verdict | null;
-  /** Absolute direction of the 4H technical read. */
+  /** Absolute direction of the faster technical read. */
   fourHourDirection: Verdict | null;
+  /** Display name for that faster timeframe. Defaults to 4H for crypto. */
+  fastLabel?: string;
   /** Star-rating inputs, shared with the thesis path so ratings agree. */
   quality: Omit<EntryQualityInputs, "price" | "atrPct" | "supportResistance" | "verdict">;
 }
@@ -119,28 +121,35 @@ export interface PlannedSetupInputs {
  */
 export function favouredDirection(
   daily: Verdict | null,
-  fourHour: Verdict | null
+  fourHour: Verdict | null,
+  /**
+   * What the faster timeframe is CALLED. Crypto runs 4H candles; equities
+   * have a 6.5-hour session, so their faster read is hourly. Printing "4H"
+   * on a page built from hourly bars would be a small, silent lie about
+   * the evidence — hence a parameter rather than a constant.
+   */
+  fastLabel = "4H"
 ): { direction: TradeDirection | null; rationale: string } {
   if (daily === null || daily === "neutral") {
     return { direction: null, rationale: "Daily has no clear direction — both levels are live until it picks a side." };
   }
   if (fourHour === null) {
     const direction = daily === "bullish" ? "long" : "short";
-    return { direction, rationale: `Daily is ${daily}; no 4H read available to confirm it.` };
+    return { direction, rationale: `Daily is ${daily}; no ${fastLabel} read available to confirm it.` };
   }
   if (fourHour === "neutral") {
     const direction = daily === "bullish" ? "long" : "short";
-    return { direction, rationale: `Daily is ${daily} and 4H is neutral — the daily sets the lean.` };
+    return { direction, rationale: `Daily is ${daily} and ${fastLabel} is neutral — the daily sets the lean.` };
   }
   if (daily !== fourHour) {
     return {
       direction: null,
-      rationale: `Daily is ${daily} but 4H is ${fourHour} — the timeframes conflict, so neither side is favoured yet.`,
+      rationale: `Daily is ${daily} but ${fastLabel} is ${fourHour} — the timeframes conflict, so neither side is favoured yet.`,
     };
   }
   return {
     direction: daily === "bullish" ? "long" : "short",
-    rationale: `Daily and 4H are both ${daily} — aligned.`,
+    rationale: `Daily and ${fastLabel} are both ${daily} — aligned.`,
   };
 }
 
@@ -177,7 +186,11 @@ export function buildPlannedSetups(inputs: PlannedSetupInputs): PlannedSetupsFro
   const short = plan("short");
   if (!long && !short) return null;
 
-  const { direction: favoured, rationale } = favouredDirection(inputs.dailyDirection, inputs.fourHourDirection);
+  const { direction: favoured, rationale } = favouredDirection(
+    inputs.dailyDirection,
+    inputs.fourHourDirection,
+    inputs.fastLabel
+  );
 
   /*
    * When the timeframes favour a side that structure can't actually price,

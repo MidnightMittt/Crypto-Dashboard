@@ -57,7 +57,15 @@ export function Unavailable({ section }: { section: Extract<Section<unknown>, { 
       <span
         className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${ours ? "text-amber" : "text-ink-faint"}`}
       >
-        {ours ? "Not built yet" : section.blockedBy === "not-applicable" ? "Not applicable" : "No data source"}
+        {ours
+          ? "Not built yet"
+          : section.blockedBy === "not-applicable"
+            ? "Not applicable"
+            : section.blockedBy === "insufficient-history"
+              ? "Not enough to go on"
+              : section.blockedBy === "provider-error"
+                ? "Source unavailable"
+                : "No data source"}
       </span>
       <p className="mt-1 text-[12px] leading-relaxed text-ink-muted">{section.reason}</p>
     </div>

@@ -108,3 +108,56 @@ export async function fetchQuoteHistory(providerSymbol: string): Promise<QuoteHi
   const name = result.meta?.longName || result.meta?.shortName || providerSymbol;
   return { ok: true, history: { bars, name, droppedRows } };
 }
+
+/**
+ * INTRADAY BARS — the second timeframe, from the same keyless endpoint.
+ *
+ * Yahoo serves hourly candles for equities on the identical chart URL the
+ * daily fetch already uses; only `interval` changes. That is the whole
+ * reason this page does not need a brokerage login to read more than one
+ * timeframe — the data was always a query parameter away.
+ *
+ * Sixty days is the window chosen: enough hourly bars (~420 on a US
+ * session) for every indicator the technical read computes, and short
+ * enough that the request stays fast. Yahoo caps hourly history at roughly
+ * two years regardless, so this is well inside what it will serve.
+ *
+ * A failure here is never fatal. The intraday read is confirmation, not
+ * foundation: without it the page says so in as many words rather than
+ * implying a second timeframe agreed.
+ */
+const INTRADAY_RANGE = "60d";
+const INTRADAY_INTERVAL = "1h";
+
+export async function fetchIntradayHistory(providerSymbol: string): Promise<Bar[] | null> {
+  try {
+    const url =
+      `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(providerSymbol)}` +
+      `?range=${INTRADAY_RANGE}&interval=${INTRADAY_INTERVAL}`;
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0", Accept: "application/json" },
+      // Hourly bars close hourly; half that is a sensible refresh.
+      next: { revalidate: 1800 },
+    });
+    if (!res.ok) return null;
+
+    const json = (await res.json()) as {
+      chart?: { result?: Array<{ timestamp?: number[]; indicators?: { quote?: Array<Record<string, Array<number | null>>> } }> };
+    };
+    const r = json.chart?.result?.[0];
+    const ts = r?.timestamp;
+    const q = r?.indicators?.quote?.[0];
+    if (!ts || !q) return null;
+
+    const bars: Bar[] = [];
+    for (let i = 0; i < ts.length; i++) {
+      const open = q.open?.[i], high = q.high?.[i], low = q.low?.[i], close = q.close?.[i];
+      // Yahoo pads gaps with nulls; a synthesised bar would be a fabricated candle.
+      if (open == null || high == null || low == null || close == null) continue;
+      bars.push({ t: ts[i] * 1000, open, high, low, close, volume: q.volume?.[i] ?? null });
+    }
+    return bars.length > 0 ? bars : null;
+  } catch {
+    return null;
+  }
+}

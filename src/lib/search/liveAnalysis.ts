@@ -96,6 +96,8 @@ export interface LiveAnalysis {
    * price deserves to know both where it is and what still has to improve.
    */
   plannedGate: { long: TradePlanRefusal | null; short: TradePlanRefusal | null };
+  /** The hourly read's own direction and strength, or null when unavailable. */
+  intraday: { direction: string; strength: number } | null;
 }
 
 export type LiveAnalysisResult =
@@ -123,6 +125,11 @@ export interface LiveAnalysisInputs {
    * measurement path never does.
    */
   planConstraints?: PlanConstraints | null;
+  /**
+   * Hourly bars for the second timeframe. Optional: absent means the page
+   * says no faster read was available rather than implying one agreed.
+   */
+  intradayBars?: Bar[] | null;
   /**
    * Constraints for BOTH sides, used only by the forward-looking planned
    * setups — which price a long-at-support and a short-at-resistance
@@ -315,6 +322,18 @@ export function buildLiveAnalysis(inputs: LiveAnalysisInputs): LiveAnalysisResul
    * than trades to take now. Both sides are priced when structure supports
    * them, so a reader learns where the opposite case would begin too.
    */
+  /*
+   * THE SECOND TIMEFRAME. Same indicator stack, run on hourly candles — so
+   * "the timeframes conflict" is a measured statement rather than a phrase.
+   * Labelled 1H honestly: a US session is 6.5 hours, so there is no real 4H
+   * candle to speak of, and borrowing crypto's label would misdescribe the
+   * evidence.
+   */
+  const intradayRead =
+    inputs.intradayBars && inputs.intradayBars.length >= 60
+      ? buildTechnicalRead(toCandles(inputs.intradayBars))
+      : null;
+
   const frozenSetups = buildPlannedSetups({
     /*
      * DELIBERATELY UNGATED. A level is a fact about structure; whether a
@@ -329,10 +348,8 @@ export function buildLiveAnalysis(inputs: LiveAnalysisInputs): LiveAnalysisResul
     atrPct,
     zones,
     dailyDirection: techRead?.direction ?? null,
-    // Searched equities carry daily bars only; the 4H read genuinely does not
-    // exist here, and claiming agreement between one timeframe and a missing
-    // one would be inventing confirmation.
-    fourHourDirection: null,
+    fourHourDirection: intradayRead?.direction ?? null,
+    fastLabel: "1H",
     quality: {
       confidence: bias.confidence,
       agreement: bias.agreement,
@@ -384,6 +401,7 @@ export function buildLiveAnalysis(inputs: LiveAnalysisInputs): LiveAnalysisResul
       barsUsed: bars.length,
       plannedSetups: readPlannedSetups(frozenSetups, lastClose),
       plannedGate,
+      intraday: intradayRead ? { direction: intradayRead.direction, strength: intradayRead.strength } : null,
       coverage: buildCoverage({
         assetClass,
         relativeStrength,

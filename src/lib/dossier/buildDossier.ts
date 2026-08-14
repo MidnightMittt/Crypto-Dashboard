@@ -324,9 +324,20 @@ function buildNextEntry(
 ): Section<PlannedEntryRead> {
   const view = analysis.plannedSetups;
   if (!view || view.setups.length === 0) {
+    /*
+     * Two genuinely different absences, and collapsing them into one message
+     * is the kind of blur this page exists to avoid. Having a live plan is
+     * not a missing feature — it is the answer.
+     */
+    if (analysis.plan) {
+      return unavailable(
+        "not-applicable",
+        "Price is already at a tradeable level, so the plan above IS the entry — there is nothing to wait for. Conditional levels appear here when price has moved away from structure and the next entry has to be waited for."
+      );
+    }
     return unavailable(
       "insufficient-history",
-      "No level within pullback range to build a conditional entry against. A planned entry needs a support or resistance zone close enough to trade against and a volatility reading to size the stop — inventing a level at a round number instead would be a guess wearing a plan's clothing."
+      "No support or resistance zone sits close enough to price to build a conditional entry against, so there is no level worth waiting for yet. A planned entry needs a zone within pullback range and a volatility reading to size the stop — inventing a level at a round number instead would be a guess wearing a plan's clothing."
     );
   }
 
