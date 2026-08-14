@@ -155,21 +155,31 @@ export function composeTldr(inputs: {
 }
 
 /**
- * WHY THIS TRADE EXISTS — the strongest supporting modules, as claims.
+ * THE BULL CASE — everything arguing price rises, strongest first.
  *
  * Ordered by the engine's own ranking (weight × confidence), so the list is
  * not "everything bullish" but "what actually moved the score". A module that
  * contributed nothing does not get to appear as a reason.
+ *
+ * ── Absolute, not relative to the verdict ─────────────────────────────
+ *
+ * These used to be "supports it" and "fights it", swapped by side so that
+ * the supporting column always matched the call. That made the same reading
+ * appear under opposite headings on two different tickers — rising volume
+ * "supports" a bullish name and "fights" a bearish one — so the labels
+ * carried no fixed meaning and could not be compared across the site.
+ *
+ * Bull and bear are properties of the evidence, not of the current call. The
+ * verdict is stated loudly enough three sections above; the reader can see
+ * which column it agrees with.
  */
-export function composeReasonsFor(bias: MarketBias): EvidenceBullet[] {
-  const side = bias.verdict === "bearish" ? bias.topBearish : bias.topBullish;
-  return side.map(toBullet);
+export function composeBullCase(bias: MarketBias): EvidenceBullet[] {
+  return bias.topBullish.map(toBullet);
 }
 
-/** WHAT IS FIGHTING IT — the same treatment, for the opposing side. */
-export function composeReasonsAgainst(bias: MarketBias): EvidenceBullet[] {
-  const side = bias.verdict === "bearish" ? bias.topBullish : bias.topBearish;
-  return side.map(toBullet);
+/** THE BEAR CASE — everything arguing price falls, same treatment. */
+export function composeBearCase(bias: MarketBias): EvidenceBullet[] {
+  return bias.topBearish.map(toBullet);
 }
 
 function toBullet(m: MetricVerdict): EvidenceBullet {

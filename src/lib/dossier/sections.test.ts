@@ -16,6 +16,8 @@ describe("the section manifest", () => {
       // entries, placed with the decision rather than the explanation.
       "nextEntry",
       "reasons",
+      // Deliberate addition, 2026-08-14: the category bars.
+      "engineBars",
       "invalidation",
       // Deliberate change, 2026-08-14: VERIFY was ten sections and is now
       // two. Only analogs and options intelligence contest the decision with

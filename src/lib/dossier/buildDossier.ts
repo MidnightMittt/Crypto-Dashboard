@@ -4,7 +4,7 @@ import { nearestWatchLevels, SupportResistanceZone, watchEdge } from "@/lib/tech
 import { TRADE_PLAN_REFUSAL_SHORT } from "@/lib/signals/tradePlan";
 import { describeAgreement, evidenceLevel, strengthStars } from "@/lib/signals/plainLanguage";
 import { buildMacroContext } from "./macroContext";
-import { composeInvalidation, composeReasonsAgainst, composeReasonsFor, composeTldr } from "./narrative";
+import { composeBearCase, composeBullCase, composeInvalidation, composeTldr } from "./narrative";
 import {
   AnalogStats,
   available,
@@ -120,8 +120,8 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
       expectations: buildExpectations(inputs.expectations ?? null, isCrypto),
     },
 
-    reasonsFor: composeReasonsFor(bias),
-    reasonsAgainst: composeReasonsAgainst(bias),
+    bullCase: composeBullCase(bias),
+    bearCase: composeBearCase(bias),
     invalidation: composeInvalidation({ bias, plan, earningsDate: analysis.earnings?.date ?? null }),
 
     analogs: buildAnalogs(inputs.analogs ?? null, isCrypto, analysis.barsUsed),

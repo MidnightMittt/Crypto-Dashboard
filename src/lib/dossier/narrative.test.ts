@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   composeInvalidation,
   composeMacroSummary,
-  composeReasonsAgainst,
-  composeReasonsFor,
+  composeBearCase,
+  composeBullCase,
   composeTldr,
 } from "./narrative";
 import { MarketBias, MetricVerdict, Verdict } from "@/lib/signals/types";
@@ -142,29 +142,35 @@ describe("composeTldr", () => {
   });
 });
 
-describe("composeReasonsFor / Against", () => {
+describe("composeBullCase / composeBearCase", () => {
   it("takes the engine's own ranking rather than re-sorting", () => {
     const b = bias({
       topBullish: [metric("a", "bullish", { label: "A" }), metric("b", "bullish", { label: "B" })],
       topBearish: [metric("c", "bearish", { label: "C" })],
     });
-    expect(composeReasonsFor(b).map((r) => r.label)).toEqual(["A", "B"]);
-    expect(composeReasonsAgainst(b).map((r) => r.label)).toEqual(["C"]);
+    expect(composeBullCase(b).map((r) => r.label)).toEqual(["A", "B"]);
+    expect(composeBearCase(b).map((r) => r.label)).toEqual(["C"]);
   });
 
-  it("swaps the sides for a bearish verdict, so 'for' always means 'for the trade'", () => {
+  /*
+   * THE POINT OF THE RENAME. These used to swap by side, so that the
+   * "supporting" column always matched the call — which meant a reading sat
+   * under opposite headings on two different tickers and the labels carried
+   * no fixed meaning. Bull is bull regardless of what the engine concluded.
+   */
+  it("does NOT swap sides for a bearish verdict", () => {
     const b = bias({
       verdict: "bearish",
       topBullish: [metric("a", "bullish", { label: "A" })],
       topBearish: [metric("c", "bearish", { label: "C" })],
     });
-    expect(composeReasonsFor(b).map((r) => r.label)).toEqual(["C"]);
-    expect(composeReasonsAgainst(b).map((r) => r.label)).toEqual(["A"]);
+    expect(composeBullCase(b).map((r) => r.label)).toEqual(["A"]);
+    expect(composeBearCase(b).map((r) => r.label)).toEqual(["C"]);
   });
 
   it("keeps every bullet traceable to the module it came from", () => {
     const b = bias({ topBullish: [metric("equityBreadth", "bullish", { label: "Market Breadth" })] });
-    const [bullet] = composeReasonsFor(b);
+    const [bullet] = composeBullCase(b);
     expect(bullet.metricId).toBe("equityBreadth");
     expect(bullet.detail).toBe("equityBreadth explanation");
   });

@@ -3,7 +3,8 @@ import { Collapsible } from "@/components/ui/Collapsible";
 import { EvidenceModuleDetail } from "@/components/evidence/EvidenceModuleDetail";
 import { formatPrice } from "@/lib/utils/format";
 import { TRADE_PLAN_REFUSAL_SHORT, TRADE_PLAN_REFUSAL_TEXT } from "@/lib/signals/tradePlan";
-import { Depth, EvidenceBullet, InvalidationTrigger, Section, TickerDossier } from "@/lib/dossier/types";
+import { Depth, EvidenceBullet, EvidenceGroup, InvalidationTrigger, Section, TickerDossier } from "@/lib/dossier/types";
+import { MetricVerdict } from "@/lib/signals/types";
 import { StructureLadder, LadderMarker } from "@/components/markets/StructureLadder";
 
 /**
@@ -369,28 +370,135 @@ function PlanStat({ label, value, tone = "text-ink" }: { label: string; value: s
   );
 }
 
-/* ── 4. WHY / WHAT FIGHTS IT ─────────────────────────────────────────── */
+/* ── 4. BULL CASE vs BEAR CASE ────────────────────────────────────────── */
 
+/**
+ * The two cases side by side, each absolute.
+ *
+ * Not "supports it" and "fights it": those were swapped by side so the
+ * supporting column always matched the call, which meant the same reading
+ * appeared under opposite headings depending on the ticker. Bull and bear are
+ * properties of the evidence. The verdict is stated three sections above, and
+ * the reader can see for themselves which column it went with.
+ */
 export function ReasonsPanel({ d }: { d: TickerDossier }) {
   return (
-    <Panel title="Why this trade exists">
+    <Panel title="The bull case and the bear case" subtitle="strongest first">
       <div className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2">
         <BulletList
-          title="Supports it"
-          mark="✓"
+          title="Bull case"
+          mark="↑"
           markClass="text-success"
-          bullets={d.reasonsFor}
-          empty="Nothing currently argues for this side."
+          bullets={d.bullCase}
+          empty="Nothing currently argues price rises."
         />
         <BulletList
-          title="Fights it"
-          mark="✕"
+          title="Bear case"
+          mark="↓"
           markClass="text-danger"
-          bullets={d.reasonsAgainst}
-          empty="Nothing material argues the other way."
+          bullets={d.bearCase}
+          empty="Nothing currently argues price falls."
         />
       </div>
     </Panel>
+  );
+}
+
+/* ── 4b. WHY THE ENGINE READS IT THIS WAY ─────────────────────────────── */
+
+/**
+ * The category rollups as bars — the engine in one glance.
+ *
+ * These are the SAME weighted rollups that produce `bias.score`, not a second
+ * opinion computed for display. Categories rather than individual readings:
+ * relative strength, breadth and momentum sit INSIDE these groups, and
+ * showing them as peers of Money Flow would misrepresent what actually
+ * carries the composite.
+ *
+ * The count is read from the data, not asserted. An equity has no Trader
+ * Positioning group at all — funding and open interest have no equity
+ * equivalent, so that category has no metrics and the engine drops it rather
+ * than showing an empty rollup. Hardcoding "four groups" here would have
+ * printed a number the page then contradicted three bars later.
+ *
+ * A category that carries readings but no VOTES still gets a row, labelled
+ * "context only" with no bar: a group describing the market without betting
+ * on it is a different thing from an absent one, and a zero-length bar would
+ * read as neutral — a claim it has not earned.
+ */
+export function EngineBarsPanel({ d }: { d: TickerDossier }) {
+  const groups = d.evidence.length;
+  return (
+    <Panel
+      title="What each group contributed"
+      subtitle={`${d.bias.metrics.length} readings · ${groups} ${groups === 1 ? "group" : "groups"}`}
+    >
+      <div className="flex flex-col gap-3">
+        {d.evidence.map((g) => (
+          <CategoryBar key={g.label} group={g} metrics={d.bias.metrics} basis={d.bias.basis} />
+        ))}
+      </div>
+    </Panel>
+  );
+}
+
+/**
+ * Score is -100..100 and the bar is centred on neutral, so a bar's DIRECTION
+ * is visible without reading the label. Mapping it to a 0-100 fill would make
+ * a strongly bearish category look identical to a strongly bullish one.
+ */
+function CategoryBar({
+  group,
+  metrics,
+  basis,
+}: {
+  group: EvidenceGroup;
+  metrics: MetricVerdict[];
+  basis: "edge" | "state";
+}) {
+  const tone =
+    group.verdict === "bullish" ? "text-success" : group.verdict === "bearish" ? "text-danger" : "text-ink-muted";
+  const fill =
+    group.verdict === "bullish" ? "bg-success/60" : group.verdict === "bearish" ? "bg-danger/60" : "bg-ink-faint/40";
+  const magnitude = group.score === null ? 0 : Math.min(100, Math.abs(group.score));
+
+  return (
+    <details className="group/bar rounded-md border border-hairline bg-void/30 px-3 py-2.5">
+      <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink">{group.label}</span>
+          <span className={`font-mono text-[11px] ${tone}`}>
+            {group.score === null ? "context only" : `${group.verdict} · ${group.score}`}
+          </span>
+        </div>
+
+        {/* Centre line at neutral; the bar grows left for bearish, right for bullish. */}
+        <div className="relative mt-2 h-1.5 w-full rounded-full bg-void/60">
+          <div className="absolute inset-y-0 left-1/2 w-px bg-hairline" aria-hidden />
+          {group.score !== null && (
+            <div
+              className={`absolute inset-y-0 rounded-full ${fill}`}
+              style={
+                group.score >= 0
+                  ? { left: "50%", width: `${magnitude / 2}%` }
+                  : { right: "50%", width: `${magnitude / 2}%` }
+              }
+            />
+          )}
+        </div>
+
+        <p className="mt-1.5 text-[11px] leading-relaxed text-ink-muted">{group.topReason}</p>
+      </summary>
+
+      <ul className="mt-3 flex flex-col gap-4 border-t border-hairline pt-3">
+        {group.metrics.map((m) => (
+          <li key={m.id} className="border-l border-hairline pl-3">
+            <h4 className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink">{m.label}</h4>
+            <EvidenceModuleDetail metric={m} allMetrics={metrics} basis={basis} />
+          </li>
+        ))}
+      </ul>
+    </details>
   );
 }
 
@@ -601,43 +709,30 @@ export function LevelsPanel({ d }: { d: TickerDossier }) {
 
 /* ── 8. THE EVIDENCE DASHBOARD ───────────────────────────────────────── */
 
+/**
+ * Every reading, flat and in full.
+ *
+ * The category grid that used to head this section now leads the page as
+ * `EngineBarsPanel` — keeping both would have shown the same four rollups
+ * twice, once as the summary and once as a duplicate below it. What remains
+ * is the thing this section is actually for: the complete list, in one place,
+ * for a reader who wants to audit rather than to decide.
+ */
 export function EvidencePanel({ d }: { d: TickerDossier }) {
   return (
-    <Panel title="The evidence" subtitle={`${d.bias.metrics.length} readings`}>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {d.evidence.map((g) => (
-          <div key={g.label} className="rounded-md border border-hairline bg-void/30 px-3 py-2.5">
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-muted">
-                {g.label}
-              </span>
-              {g.verdict !== null ? (
-                <span
-                  className={`font-mono text-xs ${
-                    g.verdict === "bullish" ? "text-success" : g.verdict === "bearish" ? "text-danger" : "text-ink-muted"
-                  }`}
-                >
-                  {g.score}
-                </span>
-              ) : (
-                <span className="font-mono text-xs text-ink-faint">context only</span>
-              )}
-            </div>
-            <p className="mt-1 text-[11px] leading-relaxed text-ink-muted">{g.topReason}</p>
-          </div>
+    <Panel title="Every reading in full" subtitle={`${d.bias.metrics.length} readings`}>
+      <p className="text-[11px] leading-relaxed text-ink-faint">
+        Each measurement, its confidence, and the level that would flip it. The four groups these roll up into
+        are above, under &ldquo;why the engine reads it this way&rdquo;.
+      </p>
+      <ul className="flex flex-col gap-5 pt-1">
+        {d.bias.metrics.map((m) => (
+          <li key={m.id} className="border-l border-hairline pl-4">
+            <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-ink">{m.label}</h4>
+            <EvidenceModuleDetail metric={m} allMetrics={d.bias.metrics} basis={d.bias.basis} />
+          </li>
         ))}
-      </div>
-
-      <Collapsible title="Every reading in full" summary="measurements, confidence and what would flip each one">
-        <ul className="flex flex-col gap-5 pt-2">
-          {d.bias.metrics.map((m) => (
-            <li key={m.id} className="border-l border-hairline pl-4">
-              <h4 className="mb-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-ink">{m.label}</h4>
-              <EvidenceModuleDetail metric={m} allMetrics={d.bias.metrics} basis={d.bias.basis} />
-            </li>
-          ))}
-        </ul>
-      </Collapsible>
+      </ul>
     </Panel>
   );
 }

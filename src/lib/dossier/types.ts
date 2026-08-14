@@ -411,8 +411,10 @@ export interface TickerDossier {
   verdict: VerdictSection;
   tldr: TldrSection;
   plan: PlanFieldsSection;
-  reasonsFor: EvidenceBullet[];
-  reasonsAgainst: EvidenceBullet[];
+  /** Everything arguing price RISES — absolute, never swapped to match the verdict. */
+  bullCase: EvidenceBullet[];
+  /** Everything arguing price FALLS. */
+  bearCase: EvidenceBullet[];
   invalidation: InvalidationTrigger[];
   analogs: Section<AnalogStats>;
   /** Where this becomes a trade, whether or not it is one today. */

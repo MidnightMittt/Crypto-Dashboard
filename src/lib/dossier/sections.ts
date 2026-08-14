@@ -50,6 +50,7 @@ export type SectionId =
   | "plan"
   | "nextEntry"
   | "reasons"
+  | "engineBars"
   | "invalidation"
   | "analogs"
   | "macro"
@@ -75,6 +76,12 @@ export const DOSSIER_SECTIONS: readonly SectionDef[] = [
    */
   { id: "nextEntry", phase: "decide" },
   { id: "reasons", phase: "understand" },
+  /*
+   * The four category rollups as bars — the engine in one glance, each
+   * expanding to the readings beneath it. Sits after the two cases because
+   * those say WHAT the evidence is; this says how much each group weighed.
+   */
+  { id: "engineBars", phase: "understand" },
   { id: "invalidation", phase: "understand" },
 
   /*
