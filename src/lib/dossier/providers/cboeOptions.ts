@@ -80,6 +80,43 @@ export interface OptionsSummary {
   gexCaveat: string;
   /** Today's flow read against the standing positions — the baseline that needs no history. */
   openingFlow: OpeningFlow;
+  /**
+   * Second-venue agreement, when a second options source is configured
+   * (Tradier). Null when only CBOE answered — the chain is still fully
+   * usable, it simply has not been corroborated. Attached after the fact by
+   * the caller so this module stays venue-agnostic.
+   */
+  crossVenue?: CrossVenueRead | null;
+}
+
+/**
+ * CROSS-VENUE CONFIRMATION — one venue's chain checked against another's.
+ *
+ * A single vendor's greeks are a model output, not a measurement: CBOE and
+ * ORATS (Tradier's greeks source) run different implied-vol solvers on
+ * different quote snapshots, so agreement between them is real evidence the
+ * read is not a one-vendor artefact, and disagreement is a reason to trust
+ * the single number less. Compared on the expiration BOTH venues list, so
+ * the comparison is apples-to-apples rather than front-month against
+ * full-chain.
+ */
+export interface CrossVenueRead {
+  /** The shared expiration the comparison is computed on. */
+  expiry: string;
+  atmIvPctPrimary: number | null;
+  atmIvPctSecondary: number | null;
+  ivAgree: boolean | null;
+  putCallOiPrimary: number | null;
+  putCallOiSecondary: number | null;
+  putCallAgree: boolean | null;
+  gexSignPrimary: number | null;
+  gexSignSecondary: number | null;
+  gexAgree: boolean | null;
+  /** How many of the checks that could be evaluated agreed. */
+  agreements: number;
+  comparisons: number;
+  /** The read as a sentence. */
+  line: string;
 }
 
 /**
@@ -153,9 +190,8 @@ export function detectOpeningFlow(parsed: ParsedContract[]): OpeningFlow {
 /** Contracts more than this far from spot are noise for ATM IV purposes. */
 const ATM_BAND_PCT = 0.05;
 
-export function summariseChain(contracts: CboeContract[], spot: number): OptionsSummary | null {
-  if (!Number.isFinite(spot) || spot <= 0 || contracts.length === 0) return null;
-
+/** Map a venue's raw rows onto the shared ParsedContract shape. */
+export function parseCboeContracts(contracts: CboeContract[]): ParsedContract[] {
   const parsed: ParsedContract[] = [];
   for (const c of contracts) {
     const p = parseContractSymbol(c.option);
@@ -168,7 +204,22 @@ export function summariseChain(contracts: CboeContract[], spot: number): Options
       volume: c.volume ?? 0,
     });
   }
-  if (parsed.length === 0) return null;
+  return parsed;
+}
+
+export function summariseChain(contracts: CboeContract[], spot: number): OptionsSummary | null {
+  return summariseParsed(parseCboeContracts(contracts), spot);
+}
+
+/**
+ * The chain summary, computed from already-parsed contracts. Split out from
+ * `summariseChain` so any venue — CBOE, Tradier — reaches the SAME summary
+ * through the same arithmetic, and so the cross-venue comparison can
+ * re-summarise a filtered subset (one shared expiry) without a second copy
+ * of this logic.
+ */
+export function summariseParsed(parsed: ParsedContract[], spot: number): OptionsSummary | null {
+  if (!Number.isFinite(spot) || spot <= 0 || parsed.length === 0) return null;
 
   let callOi = 0, putOi = 0, callVolume = 0, putVolume = 0;
   let gex = 0;
@@ -236,7 +287,9 @@ interface CboeResponse {
   data?: { current_price?: number; options?: CboeContract[] };
 }
 
-export type OptionsResult = { ok: true; summary: OptionsSummary } | { ok: false; reason: string };
+export type OptionsResult =
+  | { ok: true; summary: OptionsSummary; spot: number; contracts: ParsedContract[] }
+  | { ok: false; reason: string };
 
 export async function fetchOptionsSummary(symbol: string): Promise<OptionsResult> {
   let res: Response;
@@ -263,7 +316,9 @@ export async function fetchOptionsSummary(symbol: string): Promise<OptionsResult
 
   const spot = json.data?.current_price;
   const options = json.data?.options ?? [];
-  const summary = spot !== undefined ? summariseChain(options, spot) : null;
+  if (spot === undefined) return { ok: false, reason: `CBOE returned no price for ${symbol}.` };
+  const contracts = parseCboeContracts(options);
+  const summary = summariseParsed(contracts, spot);
   if (!summary) return { ok: false, reason: `CBOE returned no usable contracts for ${symbol}.` };
-  return { ok: true, summary };
+  return { ok: true, summary, spot, contracts };
 }

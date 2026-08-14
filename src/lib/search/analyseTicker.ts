@@ -6,6 +6,8 @@ import { EarningsCalendar } from "@/lib/markets/earningsVeto";
 import { buildDossier } from "@/lib/dossier/buildDossier";
 import { available, Section, TickerDossier, unavailable } from "@/lib/dossier/types";
 import { fetchOptionsSummary } from "@/lib/dossier/providers/cboeOptions";
+import { fetchTradierChain } from "@/lib/dossier/providers/tradierOptions";
+import { crossConfirm } from "@/lib/dossier/providers/crossVenueOptions";
 import { fetchInsiderSummary } from "@/lib/dossier/providers/edgarInsiders";
 import { fetchShortVolume } from "@/lib/dossier/providers/finraShortVolume";
 import { fetchNews, fetchSocial } from "@/lib/dossier/providers/attention";
@@ -79,9 +81,10 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
    * section, never the page. Equity-only sources are skipped for crypto
    * with a typed null rather than a wasted request.
    */
-  const [history, options, insiders, shortVolume, news, social] = await Promise.all([
+  const [history, options, tradier, insiders, shortVolume, news, social] = await Promise.all([
     fetchQuoteHistory(resolved.providerSymbol),
     isCrypto ? null : fetchOptionsSummary(resolved.symbol),
+    isCrypto ? null : fetchTradierChain(resolved.symbol),
     isCrypto ? null : fetchInsiderSummary(resolved.symbol),
     isCrypto ? null : fetchShortVolume(resolved.symbol),
     fetchNews(resolved.providerSymbol),
@@ -90,6 +93,22 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
 
   if (!history.ok) {
     return { status: "error", message: history.reason, symbol: resolved.symbol };
+  }
+
+  /*
+   * SECOND OPTIONS VENUE. When both CBOE and Tradier answered, compare them
+   * on the expiration both list and attach the result to the CBOE summary —
+   * so the options section gains a cross-venue confirmation line without the
+   * summariser knowing a second venue exists. Tradier absent (no key, or a
+   * bad day) simply leaves crossVenue null and the section stands on CBOE.
+   */
+  if (options?.ok && tradier?.ok) {
+    const cross = crossConfirm(
+      { spot: options.spot, contracts: options.contracts },
+      { spot: tradier.spot, contracts: tradier.contracts },
+      tradier.expiry
+    );
+    options.summary.crossVenue = cross;
   }
 
   /*
@@ -153,7 +172,7 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
     analogs: null,
     options: toSection(options, "advanced", {
       to: "institutional" as const,
-      when: "positioning is tracked over time and confirmed across venues, rather than read from one day's chain",
+      when: "positioning is tracked across sessions, so today's cross-venue snapshot becomes a trend rather than a single reading",
     }),
     insiders: toSection(insiders, "advanced", {
       to: "institutional" as const,

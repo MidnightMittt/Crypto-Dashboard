@@ -624,6 +624,22 @@ export function OptionsPanel({ d }: { d: TickerDossier }) {
         </p>
       )}
 
+      {/* SECOND VENUE — corroboration or contest, when a second chain answered. */}
+      {o.crossVenue && (
+        <p
+          className={`rounded-md border px-3 py-2 text-[12px] leading-relaxed ${
+            o.crossVenue.comparisons > 0 && o.crossVenue.agreements === o.crossVenue.comparisons
+              ? "border-success/25 bg-success/[0.04] text-ink"
+              : o.crossVenue.agreements === 0 && o.crossVenue.comparisons > 0
+                ? "border-amber/25 bg-amber/[0.04] text-ink"
+                : "border-hairline bg-void/30 text-ink-muted"
+          }`}
+        >
+          <span className="font-semibold uppercase tracking-[0.12em] text-cyan">Second venue</span> ·{" "}
+          {o.crossVenue.line}
+        </p>
+      )}
+
       <p className="text-[10px] leading-relaxed text-ink-faint">{o.gexCaveat}</p>
       <DepthMeta section={s} />
     </Panel>

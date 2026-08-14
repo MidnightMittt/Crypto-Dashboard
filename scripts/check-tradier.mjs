@@ -27,8 +27,13 @@ function loadEnv() {
     const eq = trimmed.indexOf("=");
     if (eq === -1) continue;
     const key = trimmed.slice(0, eq).trim();
-    const value = trimmed.slice(eq + 1).trim();
-    if (key && !process.env[key]) process.env[key] = value;
+    // Strip surrounding quotes so a placeholder like KEY="" reads as empty
+    // rather than as a two-character value of literal quote marks.
+    const value = trimmed
+      .slice(eq + 1)
+      .trim()
+      .replace(/^(["'])(.*)\1$/, "$2");
+    if (key && value && !process.env[key]) process.env[key] = value;
   }
 }
 loadEnv();
