@@ -263,12 +263,44 @@ export interface PlannedEntry {
   } | null;
 }
 
+/**
+ * A LEVEL WORTH WATCHING when no full plan can be priced yet.
+ *
+ * There is never "nothing to do" — there is always a nearest level and a
+ * measured likelihood of price getting there. What there is not, at
+ * distance, is honest stop-and-target geometry: volatility and structure
+ * both change on the way, so pricing a stop for a level six ATR away would
+ * be arithmetic pretending to be a plan. So this carries the price, the
+ * distance, the odds and the wait — and says plainly that the full plan
+ * prices itself when price arrives.
+ */
+export interface WatchLevel {
+  direction: "long" | "short";
+  /** The price to watch — the near edge of the zone. */
+  price: number;
+  /** How far away, as a percent of current price. */
+  distancePct: number;
+  /** The same distance in ATR, which is what the odds are bucketed on. */
+  distanceAtr: number;
+  /** Swing touches the zone has taken. */
+  touches: number;
+  reachRatePct: number | null;
+  medianSessionsToReach: number | null;
+  reachAttempts: number | null;
+}
+
 export interface PlannedEntryRead {
   anchorPrice: number;
   favoured: "long" | "short" | null;
   /** Why that side is favoured, or why neither is. */
   rationale: string;
   entries: PlannedEntry[];
+  /**
+   * Nearest structure either side, ALWAYS populated when zones exist — so a
+   * reader is never left without a price to watch, even when nothing is
+   * close enough to price a plan against.
+   */
+  watchLevels: WatchLevel[];
 }
 
 export interface AnalogStats {

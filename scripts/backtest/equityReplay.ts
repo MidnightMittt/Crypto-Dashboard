@@ -185,6 +185,37 @@ interface ResolvedRow {
   entryStyle: EquityEntryStyle;
 }
 
+interface ZoneWatch {
+  symbol: string;
+  t: number;
+  level: number;
+  dir: "up" | "down";
+  distanceAtr: number;
+  touches: number;
+}
+
+/** Ten sessions is the same window the planned-entry card quotes. */
+const ZONE_REACH_SESSIONS = 10;
+
+function buildZoneReachCells(watches: ZoneWatch[], all: Map<string, Loaded>): ReachCell[] {
+  const rows: ReachRow[] = [];
+  for (const w of watches) {
+    const bars = all.get(w.symbol)!.bars;
+    const from = firstIndexAfter(bars, w.t);
+    let reached = false;
+    let sessions: number | null = null;
+    for (let i = from; i < Math.min(bars.length, from + ZONE_REACH_SESSIONS); i++) {
+      const hit = w.dir === "down" ? bars[i].low <= w.level : bars[i].high >= w.level;
+      if (hit) { reached = true; sessions = i - from + 1; break; }
+    }
+    const distanceAtrMax = REACH_DISTANCE_ATR_BUCKETS.find((b) => w.distanceAtr <= b);
+    if (distanceAtrMax === undefined) continue;
+    const touchesMin = [...REACH_TOUCH_BUCKETS].reverse().find((t) => w.touches >= t) ?? 0;
+    rows.push({ distanceAtrMax, touchesMin, reached, sessions });
+  }
+  return buildReachCells(rows).map((c) => ({ ...c, source: "zone" as const }));
+}
+
 interface ReachRow {
   distanceAtrMax: number;
   touchesMin: number;
@@ -260,6 +291,7 @@ function main() {
   for (const k of all.keys()) ptr.set(k, 0);
 
   const pending: PendingTrade[] = [];
+  const zonePending: ZoneWatch[] = [];
   let evaluated = 0;
 
   for (let d = 0; d < dates.length; d++) {
@@ -296,6 +328,7 @@ function main() {
       if (bars.length < MIN_BARS_FOR_ANALYSIS) continue;
 
       evaluated++;
+      const close = bars[bars.length - 1].close;
       const res = buildLiveAnalysis({
         symbol: inst.symbol,
         name: inst.symbol,
@@ -309,7 +342,27 @@ function main() {
         hasDerivatives: false,
         now: asOf,
       });
-      if (!res.ok || !res.analysis.plan) continue;
+      if (!res.ok) continue;
+      const atrAbsAt = res.analysis.atrPct !== null ? (res.analysis.atrPct / 100) * close : 0;
+
+      /*
+       * ZONE REACH, measured for its own sake. The planner only prices
+       * levels within 1.5 ATR, so a reach table built from plans alone can
+       * never answer "will price get to that level six ATR away" — and that
+       * is exactly the question a reader has when nothing is close. So every
+       * nearest support and resistance is recorded here at every distance,
+       * whether or not it produced a plan.
+       */
+      if (atrAbsAt > 0) {
+        const below = res.analysis.zones
+          .filter((z) => z.kind === "support" && z.priceHigh < close)
+          .sort((a, b) => b.priceHigh - a.priceHigh)[0];
+        const above = res.analysis.zones
+          .filter((z) => z.kind === "resistance" && z.priceLow > close)
+          .sort((a, b) => a.priceLow - b.priceLow)[0];
+        if (below) zonePending.push({ symbol: inst.symbol, t: asOf, level: below.priceHigh, dir: "down", distanceAtr: (close - below.priceHigh) / atrAbsAt, touches: below.reactionCount });
+        if (above) zonePending.push({ symbol: inst.symbol, t: asOf, level: above.priceLow, dir: "up", distanceAtr: (above.priceLow - close) / atrAbsAt, touches: above.reactionCount });
+      }
 
       const vol = volRegimeFromMetrics(res.analysis.bias.metrics);
       if (!vol) continue;
@@ -318,6 +371,7 @@ function main() {
        * Direction is the bias verdict, exactly as liveAnalysis derives it —
        * the plan itself carries geometry, not a side.
        */
+      if (!res.analysis.plan) continue;
       const verdict = res.analysis.bias.verdict;
       if (verdict !== "bullish" && verdict !== "bearish") continue;
       const side: EquitySide = verdict === "bullish" ? "long" : "short";
@@ -482,12 +536,16 @@ function main() {
   const pct = (x: number) => ((x / Math.max(1, rows.length)) * 100).toFixed(1);
   console.log(`[replay] outcomes: target ${pct(mix.target)}%  stop ${pct(mix.stop)}%  timeout ${pct(mix.timeout)}%`);
 
-  const reachCells = buildReachCells(reachRows);
+  const reachCells = [
+    ...buildReachCells(reachRows).map((c) => ({ ...c, source: "plan" as const })),
+    ...buildZoneReachCells(zonePending, all),
+  ];
+  console.log(`[replay] ${zonePending.length.toLocaleString()} zone-watch observations`);
   console.log("\n[replay] REACH — does price actually get to a resting level?");
   for (const c of reachCells) {
-    const d = c.distanceAtrMax === Infinity ? ">4" : `<=${c.distanceAtrMax}`;
+    const d = c.distanceAtrMax === Infinity ? ">8" : `<=${c.distanceAtrMax}`;
     console.log(
-      `  ${d.padStart(4)} ATR away, ${String(c.touchesMin).padStart(1)}+ touches: ` +
+      `  [${c.source ?? "plan"}] ${d.padStart(4)} ATR away, ${String(c.touchesMin).padStart(1)}+ touches: ` +
         `${c.reachRatePct.toFixed(1)}% reached (${c.reached.toLocaleString()}/${c.attempts.toLocaleString()}) ` +
         `median ${c.medianSessionsToReach ?? "-"} sessions`
     );

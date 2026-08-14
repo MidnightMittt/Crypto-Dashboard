@@ -140,6 +140,13 @@ export interface EquityAnalogCell {
  * flattering split by construction.
  */
 export interface ReachCell {
+  /**
+   * "plan" cells come from levels the planner actually priced (<=1.5 ATR).
+   * "zone" cells are measured over EVERY support/resistance level at every
+   * distance, which is what lets a far-away level still quote real odds
+   * instead of shrugging.
+   */
+  source?: "plan" | "zone";
   /** Bucket bounds, in ATR of distance from price to the zone edge. */
   distanceAtrMax: number;
   /** Minimum swing touches on the zone. */
@@ -383,7 +390,7 @@ export function equityAnalogsFor(
 }
 
 /** Distance buckets in ATR, and touch buckets — both fixed before measurement. */
-export const REACH_DISTANCE_ATR_BUCKETS = [0.5, 1, 2, 4, Infinity];
+export const REACH_DISTANCE_ATR_BUCKETS = [0.5, 1, 2, 3, 5, 8, Infinity];
 export const REACH_TOUCH_BUCKETS = [0, 3, 6];
 
 /**
@@ -396,13 +403,24 @@ export const REACH_TOUCH_BUCKETS = [0, 3, 6];
 export function reachRateFor(
   distanceAtr: number,
   touches: number,
-  snapshot: EquityExecutionSnapshot | null
+  snapshot: EquityExecutionSnapshot | null,
+  /**
+   * Which population to quote. A PLANNED entry belongs to the levels the
+   * planner actually priced; a watch level belongs to all structure at any
+   * distance. The two tables share bucket keys, so picking whichever came
+   * first in the array would silently quote one population's rate for the
+   * other's question.
+   */
+  prefer: "plan" | "zone" = "plan"
 ): ReachCell | null {
   if (!snapshot?.reach || !Number.isFinite(distanceAtr)) return null;
   const distBucket = REACH_DISTANCE_ATR_BUCKETS.find((b) => distanceAtr <= b);
   if (distBucket === undefined) return null;
   const touchBucket = [...REACH_TOUCH_BUCKETS].reverse().find((t) => touches >= t) ?? 0;
-  return (
-    snapshot.reach.find((c) => c.distanceAtrMax === distBucket && c.touchesMin === touchBucket) ?? null
+  const matches = snapshot.reach.filter(
+    (c) => c.distanceAtrMax === distBucket && c.touchesMin === touchBucket
   );
+  // Fall back to the other population rather than returning nothing: a
+  // stated rate from a near-identical measurement beats a shrug.
+  return matches.find((c) => (c.source ?? "plan") === prefer) ?? matches[0] ?? null;
 }

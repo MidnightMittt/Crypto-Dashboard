@@ -1037,6 +1037,54 @@ export function NextEntryPanel({ d }: { d: TickerDossier }) {
             );
           })}
 
+          {/* ALWAYS A PRICE TO WATCH. Structure exists on both sides of price
+              at all times; only the ability to price a stop against it comes
+              and goes. These render whether or not a full plan could be
+              built, so the card never bottoms out in "nothing to do". */}
+          {s.data.watchLevels.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <h3 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
+                {s.data.entries.length > 0 ? "The next levels beyond these" : "The levels to watch"}
+              </h3>
+              {s.data.watchLevels.map((w) => (
+                <div
+                  key={w.direction}
+                  className="flex flex-col gap-1 rounded-md border border-hairline bg-void/30 px-3 py-2"
+                >
+                  <p className="text-[13px] leading-relaxed text-ink">
+                    <span className={`font-semibold ${w.direction === "long" ? "text-success" : "text-danger"}`}>
+                      {w.direction === "long" ? "Next support" : "Next resistance"} {formatPrice(w.price)}
+                    </span>{" "}
+                    — {w.distancePct.toFixed(1)}% {w.direction === "long" ? "below" : "above"} here (
+                    {w.distanceAtr.toFixed(1)}× a typical day&apos;s range)
+                    {w.touches > 0 && <>, held {w.touches} {w.touches === 1 ? "time" : "times"} before</>}.
+                  </p>
+                  {w.reachRatePct !== null ? (
+                    <p className="text-[11px] leading-relaxed text-ink-muted">
+                      Price reached levels this far{" "}
+                      <span className="font-semibold text-ink">{w.reachRatePct.toFixed(0)}%</span> of the time
+                      within ten sessions
+                      {w.medianSessionsToReach !== null && <>, typically after {w.medianSessionsToReach} sessions</>}
+                      {w.reachAttempts !== null && <> ({w.reachAttempts.toLocaleString()} historical attempts)</>}.
+                      {w.reachRatePct < 20 &&
+                        " At this distance price rarely arrives inside two weeks — this is a level to diary, not to wait at."}
+                    </p>
+                  ) : (
+                    <p className="text-[11px] leading-relaxed text-ink-faint">
+                      No measured hit rate at this distance — too few historical attempts that far out to quote
+                      one honestly.
+                    </p>
+                  )}
+                  <p className="text-[10px] leading-relaxed text-ink-faint">
+                    No stop or target is priced from here on purpose: volatility and structure both change on
+                    the way, so a stop placed for a level this far out would be arithmetic pretending to be a
+                    plan. The full plan prices itself when price arrives.
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+
           <p className="text-[10px] leading-relaxed text-ink-faint">
             Distance is what decides whether a level gets revisited. How many times price has already turned
             there was measured and made no difference — at half a day&apos;s range away, levels with no prior

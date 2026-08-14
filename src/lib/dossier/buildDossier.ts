@@ -9,6 +9,7 @@ import {
   available,
   PlannedEntry,
   PlannedEntryRead,
+  WatchLevel,
   EvidenceGroup,
   PlanExpectations,
   Section,
@@ -49,7 +50,7 @@ export interface DossierInputs {
    */
   plannedRecords?: { long: AnalogStats | null; short: AnalogStats | null } | null;
   /** Measured reach lookup, supplied by the caller (asset-class specific). */
-  reachOf?: ((distanceAtr: number, touches: number) => PlannedEntry["reach"]) | null;
+  reachOf?: ((distanceAtr: number, touches: number, prefer: "plan" | "zone") => PlannedEntry["reach"]) | null;
   /*
    * Provider-backed sections, already shaped by the caller (analyseTicker
    * maps each provider result to a Section with its depth and upgrade).
@@ -323,24 +324,40 @@ function buildMoneyFlow(
 function buildNextEntry(
   analysis: LiveAnalysis,
   records: { long: AnalogStats | null; short: AnalogStats | null } | null,
-  reachOf: ((distanceAtr: number, touches: number) => PlannedEntry["reach"]) | null
+  reachOf: ((distanceAtr: number, touches: number, prefer: "plan" | "zone") => PlannedEntry["reach"]) | null
 ): Section<PlannedEntryRead> {
+  /*
+   * NEVER "NOTHING TO DO". Structure exists on both sides of price at all
+   * times; what varies is whether it is close enough to price a stop
+   * against. So the watch levels are computed first and unconditionally,
+   * and the conditional entries layer on top when the geometry supports
+   * them. A reader always leaves with a price and an odds figure.
+   */
+  const watchLevels = buildWatchLevels(analysis, reachOf);
   const view = analysis.plannedSetups;
+
   if (!view || view.setups.length === 0) {
-    /*
-     * Two genuinely different absences, and collapsing them into one message
-     * is the kind of blur this page exists to avoid. Having a live plan is
-     * not a missing feature — it is the answer.
-     */
-    if (analysis.plan) {
+    if (watchLevels.length === 0) {
       return unavailable(
-        "not-applicable",
-        "Price is already at a tradeable level, so the plan above IS the entry — there is nothing to wait for. Conditional levels appear here when price has moved away from structure and the next entry has to be waited for."
+        "insufficient-history",
+        "This instrument has not printed enough swing structure to identify a support or resistance level yet — usually a recent listing. There is no level to watch because none has formed, not because none was looked for."
       );
     }
-    return unavailable(
-      "insufficient-history",
-      "No support or resistance zone sits close enough to price to build a conditional entry against, so there is no level worth waiting for yet. A planned entry needs a zone within pullback range and a volatility reading to size the stop — inventing a level at a round number instead would be a guess wearing a plan's clothing."
+    return available(
+      {
+        anchorPrice: analysis.lastClose,
+        favoured: null,
+        rationale: analysis.plan
+          ? "Price is already at a tradeable level — the plan above is the entry. The levels below are where the NEXT decision happens if it moves away."
+          : "Nothing is close enough to price a stop against yet, so there is no full plan. These are the levels to watch, and how often price has historically reached them.",
+        entries: [],
+        watchLevels,
+      },
+      "basic",
+      {
+        to: "advanced",
+        when: "planned levels are scored on how often price actually reached them and what happened next, so a conditional entry carries its own hit rate rather than only its geometry",
+      }
     );
   }
 
@@ -352,7 +369,7 @@ function buildNextEntry(
     return {
       qualifies: blocked === null,
       blockedReason: blocked ? TRADE_PLAN_REFUSAL_SHORT[blocked] : null,
-      reach: reachOf ? reachOf(s.distanceAtr, touches) : null,
+      reach: reachOf ? reachOf(s.distanceAtr, touches, "plan") : null,
       direction: s.direction,
       status: s.status,
       primary: s.primary,
@@ -382,8 +399,52 @@ function buildNextEntry(
    * tier rises only when the reach rate and outcome of PLANNED entries are
    * scored against their own out-of-sample record.
    */
-  return available({ anchorPrice: view.anchorPrice, favoured: view.favoured, rationale: view.rationale, entries }, "basic", {
+  return available({ anchorPrice: view.anchorPrice, favoured: view.favoured, rationale: view.rationale, entries, watchLevels }, "basic", {
     to: "advanced",
     when: "planned levels are scored on how often price actually reached them and what happened next, so a conditional entry carries its own hit rate rather than only its geometry",
   });
+}
+
+/**
+ * The nearest structure either side of price, at ANY distance.
+ *
+ * Deliberately unfiltered by the pullback window the planner uses: that
+ * window exists to decide whether a STOP can be placed sensibly, which is a
+ * different question from whether a level is worth watching. A support six
+ * ATR below is still the next place price would find buyers; it just cannot
+ * be planned yet, and the odds attached say how rarely price gets there.
+ */
+function buildWatchLevels(
+  analysis: LiveAnalysis,
+  reachOf: ((distanceAtr: number, touches: number, prefer: "plan" | "zone") => PlannedEntry["reach"]) | null
+): WatchLevel[] {
+  const price = analysis.lastClose;
+  const atrAbs = analysis.atrPct !== null && price > 0 ? (analysis.atrPct / 100) * price : 0;
+  if (price <= 0 || atrAbs <= 0) return [];
+
+  const nearestBelow = analysis.zones
+    .filter((z) => z.kind === "support" && z.priceHigh < price)
+    .sort((a, b) => b.priceHigh - a.priceHigh)[0];
+  const nearestAbove = analysis.zones
+    .filter((z) => z.kind === "resistance" && z.priceLow > price)
+    .sort((a, b) => a.priceLow - b.priceLow)[0];
+
+  const build = (zone: typeof nearestBelow, direction: "long" | "short"): WatchLevel | null => {
+    if (!zone) return null;
+    const level = direction === "long" ? zone.priceHigh : zone.priceLow;
+    const distanceAtr = Math.abs(price - level) / atrAbs;
+    const r = reachOf ? reachOf(distanceAtr, zone.reactionCount, "zone") : null;
+    return {
+      direction,
+      price: level,
+      distancePct: (Math.abs(price - level) / price) * 100,
+      distanceAtr,
+      touches: zone.reactionCount,
+      reachRatePct: r?.reachRatePct ?? null,
+      medianSessionsToReach: r?.medianSessionsToReach ?? null,
+      reachAttempts: r?.attempts ?? null,
+    };
+  };
+
+  return [build(nearestBelow, "long"), build(nearestAbove, "short")].filter((x): x is WatchLevel => x !== null);
 }

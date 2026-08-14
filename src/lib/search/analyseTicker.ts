@@ -266,8 +266,8 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
     plannedRecords: { long: recordFor("long"), short: recordFor("short") },
     reachOf: isCrypto
       ? null
-      : (distanceAtr, touches) => {
-          const c = reachRateFor(distanceAtr, touches, snapshot);
+      : (distanceAtr, touches, prefer) => {
+          const c = reachRateFor(distanceAtr, touches, snapshot, prefer);
           return c
             ? {
                 reachRatePct: c.reachRatePct,
