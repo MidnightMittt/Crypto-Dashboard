@@ -48,6 +48,8 @@ export interface DossierInputs {
    * attaches them.
    */
   plannedRecords?: { long: AnalogStats | null; short: AnalogStats | null } | null;
+  /** Measured reach lookup, supplied by the caller (asset-class specific). */
+  reachOf?: ((distanceAtr: number, touches: number) => PlannedEntry["reach"]) | null;
   /*
    * Provider-backed sections, already shaped by the caller (analyseTicker
    * maps each provider result to a Section with its depth and upgrade).
@@ -114,7 +116,7 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
 
     analogs: buildAnalogs(inputs.analogs ?? null, isCrypto, analysis.barsUsed),
 
-    nextEntry: buildNextEntry(analysis, inputs.plannedRecords ?? null),
+    nextEntry: buildNextEntry(analysis, inputs.plannedRecords ?? null, inputs.reachOf ?? null),
 
     macro: buildMacroContext({
       symbol: analysis.symbol,
@@ -320,7 +322,8 @@ function buildMoneyFlow(
  */
 function buildNextEntry(
   analysis: LiveAnalysis,
-  records: { long: AnalogStats | null; short: AnalogStats | null } | null
+  records: { long: AnalogStats | null; short: AnalogStats | null } | null,
+  reachOf: ((distanceAtr: number, touches: number) => PlannedEntry["reach"]) | null
 ): Section<PlannedEntryRead> {
   const view = analysis.plannedSetups;
   if (!view || view.setups.length === 0) {
@@ -344,9 +347,12 @@ function buildNextEntry(
   const entries: PlannedEntry[] = view.setups.map((s) => {
     const risk = Math.abs(s.plan.entryRef - s.plan.stopPrice);
     const blocked = analysis.plannedGate[s.direction];
+    const touches =
+      (s.direction === "long" ? s.plan.supportZone : s.plan.resistanceZone)?.reactionCount ?? 0;
     return {
       qualifies: blocked === null,
       blockedReason: blocked ? TRADE_PLAN_REFUSAL_SHORT[blocked] : null,
+      reach: reachOf ? reachOf(s.distanceAtr, touches) : null,
       direction: s.direction,
       status: s.status,
       primary: s.primary,

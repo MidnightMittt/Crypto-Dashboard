@@ -985,6 +985,31 @@ export function NextEntryPanel({ d }: { d: TickerDossier }) {
                   <span className="text-ink-muted">Entry ·</span> {e.entryBasis}. <span className="text-ink-muted">Stop ·</span> {e.stopBasis}.
                 </p>
 
+                {/* WILL PRICE EVEN GET THERE? The question a level to wait for
+                    lives or dies on — measured, not assumed. */}
+                {e.reach && (
+                  <p
+                    className={`rounded-md border px-2.5 py-1.5 text-[12px] leading-relaxed ${
+                      e.reach.reachRatePct >= 60
+                        ? "border-success/25 bg-success/[0.04] text-ink"
+                        : e.reach.reachRatePct >= 35
+                          ? "border-hairline bg-void/30 text-ink"
+                          : "border-amber/25 bg-amber/[0.04] text-ink"
+                    }`}
+                  >
+                    <span className="font-semibold uppercase tracking-[0.12em] text-cyan">Odds of getting there</span>{" "}
+                    · A level {e.reach.distanceAtr.toFixed(1)}× a typical day&apos;s range away was reached{" "}
+                    <span className="font-semibold">{e.reach.reachRatePct.toFixed(0)}%</span> of the time within
+                    ten sessions
+                    {e.reach.medianSessionsToReach !== null && (
+                      <>, typically in {e.reach.medianSessionsToReach}{" "}
+                        {e.reach.medianSessionsToReach === 1 ? "session" : "sessions"}</>
+                    )}
+                    , across {e.reach.attempts.toLocaleString()} historical attempts.
+                    {e.reach.reachRatePct < 35 && " Most setups like this never fill — plan for the wait to be wasted."}
+                  </p>
+                )}
+
                 {/* The record for entries taken THIS way — so a level to wait
                     for arrives with evidence rather than as a bare number. */}
                 {e.record && e.target1Pct > Math.abs(e.record.averageReturnPct) * 3 && (
@@ -1012,6 +1037,12 @@ export function NextEntryPanel({ d }: { d: TickerDossier }) {
             );
           })}
 
+          <p className="text-[10px] leading-relaxed text-ink-faint">
+            Distance is what decides whether a level gets revisited. How many times price has already turned
+            there was measured and made no difference — at half a day&apos;s range away, levels with no prior
+            touches were reached 87.7% of the time and levels with six or more 87.9%. A heavily-tested level is
+            not a more likely one; it is only a better-defined one.
+          </p>
           <p className="text-[10px] leading-relaxed text-ink-faint">
             These levels are frozen against the last daily close — they do not move as price does. Only the
             status and the distance change intraday, so an order placed from them stays the order that was

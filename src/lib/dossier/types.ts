@@ -248,6 +248,19 @@ export interface PlannedEntry {
    */
   qualifies: boolean;
   blockedReason: string | null;
+  /**
+   * How often price historically REACHED a level this far away with this
+   * many prior touches, and how long it took. The number that says whether
+   * waiting for this entry is realistic or wishful.
+   */
+  reach: {
+    reachRatePct: number;
+    attempts: number;
+    medianSessionsToReach: number | null;
+    /** Distance in ATR, so the reader can see what bucket this fell in. */
+    distanceAtr: number;
+    touches: number;
+  } | null;
 }
 
 export interface PlannedEntryRead {

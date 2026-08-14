@@ -18,6 +18,7 @@ import {
   equityAnalogsFor,
   equityExpectationsFor,
   equityPlanConstraints,
+  reachRateFor,
   EquityExecutionSnapshot,
 } from "@/lib/dossier/equityExpectations";
 import { RegimeRead } from "@/lib/markets/riskRegime";
@@ -263,6 +264,20 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
     rotation: intelligence.rotation ?? null,
     industries: intelligence.industries ?? [],
     plannedRecords: { long: recordFor("long"), short: recordFor("short") },
+    reachOf: isCrypto
+      ? null
+      : (distanceAtr, touches) => {
+          const c = reachRateFor(distanceAtr, touches, snapshot);
+          return c
+            ? {
+                reachRatePct: c.reachRatePct,
+                attempts: c.attempts,
+                medianSessionsToReach: c.medianSessionsToReach,
+                distanceAtr,
+                touches,
+              }
+            : null;
+        },
     expectations,
     /*
      * Analogs are looked up from the UNGATED probe's plan, not the gated one.

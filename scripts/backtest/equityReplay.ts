@@ -15,6 +15,9 @@ import {
   EquityVolRegime,
   equityAnalogKey,
   equityCellKey,
+  ReachCell,
+  REACH_DISTANCE_ATR_BUCKETS,
+  REACH_TOUCH_BUCKETS,
 } from "../../src/lib/dossier/equityExpectations";
 import { Bar, SessionModel } from "../../src/lib/research/types";
 import { MetricVerdict } from "../../src/lib/signals/types";
@@ -162,6 +165,10 @@ interface PendingTrade {
   /** At-market plans fill on the signal bar; pullbacks must be reached. */
   atMarket: boolean;
   anchorPrice: number;
+  /** How far the level sat from price when printed, in ATR — a pre-trade fact. */
+  distanceAtr: number;
+  /** Swing touches on the zone being traded against — also pre-trade. */
+  zoneTouches: number;
 }
 
 interface ResolvedRow {
@@ -176,6 +183,49 @@ interface ResolvedRow {
   win: boolean;
   outcome: "target" | "stop" | "timeout";
   entryStyle: EquityEntryStyle;
+}
+
+interface ReachRow {
+  distanceAtrMax: number;
+  touchesMin: number;
+  reached: boolean;
+  sessions: number | null;
+}
+
+/**
+ * At-market plans are excluded: they fill by construction, and folding a
+ * guaranteed fill into a reach rate would inflate every bucket it touches.
+ */
+function recordReach(out: ReachRow[], p: PendingTrade, reached: boolean, sessions: number | null): void {
+  if (p.atMarket) return;
+  const distanceAtrMax = REACH_DISTANCE_ATR_BUCKETS.find((b) => p.distanceAtr <= b);
+  if (distanceAtrMax === undefined) return;
+  const touchesMin = [...REACH_TOUCH_BUCKETS].reverse().find((t) => p.zoneTouches >= t) ?? 0;
+  out.push({ distanceAtrMax, touchesMin, reached, sessions });
+}
+
+/** Fewer attempts than this and the bucket is not published. */
+const MIN_REACH_N = 300;
+
+function buildReachCells(rows: ReachRow[]): ReachCell[] {
+  const cells: ReachCell[] = [];
+  for (const d of REACH_DISTANCE_ATR_BUCKETS) {
+    for (const t of REACH_TOUCH_BUCKETS) {
+      const bucket = rows.filter((r) => r.distanceAtrMax === d && r.touchesMin === t);
+      if (bucket.length < MIN_REACH_N) continue;
+      const hit = bucket.filter((r) => r.reached);
+      const sessions = hit.map((r) => r.sessions).filter((x): x is number => x !== null);
+      cells.push({
+        distanceAtrMax: d,
+        touchesMin: t,
+        attempts: bucket.length,
+        reached: hit.length,
+        reachRatePct: (hit.length / bucket.length) * 100,
+        medianSessionsToReach: sessions.length ? Math.round(quantile(sessions, 0.5)) : null,
+      });
+    }
+  }
+  return cells;
 }
 
 function main() {
@@ -293,6 +343,12 @@ function main() {
         target2Price: p.target2Price,
         atMarket,
         anchorPrice: p.anchorPrice,
+        distanceAtr: (() => {
+          if (atMarket || !p.atrAbs || p.atrAbs <= 0) return 0;
+          const edge = side === "long" ? p.entryHigh : p.entryLow;
+          return Math.abs(p.anchorPrice - edge) / p.atrAbs;
+        })(),
+        zoneTouches: (side === "long" ? p.supportZone : p.resistanceZone)?.reactionCount ?? 0,
       });
     }
 
@@ -316,6 +372,7 @@ function main() {
    * at the open, which is the price that genuinely existed.
    */
   const rows: ResolvedRow[] = [];
+  const reachRows: ReachRow[] = [];
   const maxHoldMs = MAX_HOLD_SESSIONS * 5 * SESSION_MS; // calendar slack for weekends/holidays
   let neverFilled = 0;
   let unresolved = 0;
@@ -325,6 +382,7 @@ function main() {
 
     let entryPrice: number | null = null;
     let entryT = p.signalT;
+    let sessionsToFill: number | null = null;
 
     if (p.atMarket) {
       // Bracketing the close means the plan was takeable that session.
@@ -334,21 +392,29 @@ function main() {
       const limit = p.side === "long" ? p.entryHigh : p.entryLow;
       const from = firstIndexAfter(inst.bars, p.signalT);
       const window = inst.bars.slice(from, from + ENTRY_VALID_SESSIONS);
-      for (const b of window) {
+      for (let wi = 0; wi < window.length; wi++) {
+        const b = window[wi];
         if (p.side === "long" && b.low <= limit) {
           entryPrice = Math.min(b.open, limit); // gapped below = filled better
           entryT = b.t;
+          sessionsToFill = wi + 1;
           break;
         }
         if (p.side === "short" && b.high >= limit) {
           entryPrice = Math.max(b.open, limit);
           entryT = b.t;
+          sessionsToFill = wi + 1;
           break;
         }
       }
     }
 
-    if (entryPrice === null || entryPrice <= 0) { neverFilled++; continue; }
+    if (entryPrice === null || entryPrice <= 0) {
+      neverFilled++;
+      recordReach(reachRows, p, false, null);
+      continue;
+    }
+    recordReach(reachRows, p, true, sessionsToFill);
 
     const from = firstIndexAfter(inst.bars, entryT);
     const future: Bar[] = [];
@@ -416,7 +482,19 @@ function main() {
   const pct = (x: number) => ((x / Math.max(1, rows.length)) * 100).toFixed(1);
   console.log(`[replay] outcomes: target ${pct(mix.target)}%  stop ${pct(mix.stop)}%  timeout ${pct(mix.timeout)}%`);
 
-  const snapshot = aggregate(rows, dates, equities, pending.length, reachRatePct, printedByStyle, filledByStyle);
+  const reachCells = buildReachCells(reachRows);
+  console.log("\n[replay] REACH — does price actually get to a resting level?");
+  for (const c of reachCells) {
+    const d = c.distanceAtrMax === Infinity ? ">4" : `<=${c.distanceAtrMax}`;
+    console.log(
+      `  ${d.padStart(4)} ATR away, ${String(c.touchesMin).padStart(1)}+ touches: ` +
+        `${c.reachRatePct.toFixed(1)}% reached (${c.reached.toLocaleString()}/${c.attempts.toLocaleString()}) ` +
+        `median ${c.medianSessionsToReach ?? "-"} sessions`
+    );
+  }
+  console.log("");
+
+  const snapshot = aggregate(rows, dates, equities, pending.length, reachRatePct, printedByStyle, filledByStyle, reachCells);
   fs.writeFileSync(OUT, JSON.stringify(snapshot, null, 0));
   console.log(`[replay] -> ${OUT}`);
   console.log("\n[replay] ENTRY STYLE — chase it, or wait for the retest?");
@@ -505,7 +583,8 @@ function aggregate(
   plansPrinted: number,
   reachRatePct: number,
   printedByStyle: Map<string, number>,
-  filledByStyle: Map<string, number>
+  filledByStyle: Map<string, number>,
+  reach: ReachCell[]
 ): EquityExecutionSnapshot {
   const cells: Record<string, EquityCell | undefined> = {};
   const symbolCount = instruments.length;
@@ -656,6 +735,7 @@ function aggregate(
     },
     cells,
     analogs,
+    reach,
     caveats: [
       "Trades overlap in time and across correlated names, so even the overlap-corrected effective sample is optimistic — the temporal correction does not remove cross-sectional correlation between simultaneous positions.",
       "Historical earnings dates were not available offline, so the replay could not apply the live engine's earnings veto. Some replayed trades are ones the live page would refuse to plan, which makes these numbers if anything noisier than the gated engine's.",

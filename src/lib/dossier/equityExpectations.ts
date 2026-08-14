@@ -125,6 +125,32 @@ export interface EquityAnalogCell {
   reachRatePct: number;
 }
 
+/**
+ * DOES PRICE ACTUALLY GET THERE?
+ *
+ * The question a conditional entry lives or dies on. A level 9% away that
+ * price reaches once in six tries is a different proposition from one 2%
+ * away it reaches four times in five, and quoting the geometry of both
+ * without that distinction is the blur this measurement removes.
+ *
+ * Bucketed on the two things a reader can see on the card before the fact:
+ * how far the level is (in ATR, because 3% means different things on a calm
+ * stock and a violent one) and how many times price has already turned at
+ * it. Both fixed a priori — a search over bucket definitions would find a
+ * flattering split by construction.
+ */
+export interface ReachCell {
+  /** Bucket bounds, in ATR of distance from price to the zone edge. */
+  distanceAtrMax: number;
+  /** Minimum swing touches on the zone. */
+  touchesMin: number;
+  attempts: number;
+  reached: number;
+  reachRatePct: number;
+  /** Median sessions to reach it, among those that did. */
+  medianSessionsToReach: number | null;
+}
+
 export interface EquityExecutionSnapshot {
   generatedAt: number;
   /** How the numbers were produced, carried with them rather than in a doc. */
@@ -154,6 +180,8 @@ export interface EquityExecutionSnapshot {
   cells: Record<string, EquityCell | undefined>;
   /** Setup-conditioned outcomes, keyed side:vol:entryStyle. */
   analogs?: Record<string, EquityAnalogCell | undefined>;
+  /** How often price reached a resting level, by distance and zone strength. */
+  reach?: ReachCell[];
   /** Stated limitations, published WITH the numbers so they travel together. */
   caveats: string[];
 }
@@ -352,4 +380,29 @@ export function equityAnalogsFor(
         ? "In-sample over one fixed history, with overlapping trades that are not independent observations."
         : `Averages ${cell.averageReturnPct >= 0 ? "+" : ""}${cell.averageReturnPct.toFixed(2)}% against a ${cell.driftNullPct !== null && cell.driftNullPct >= 0 ? "+" : ""}${cell.driftNullPct?.toFixed(2)}% baseline for simply being in the market that long — so the setup's own contribution is ${cell.excessReturnPct >= 0 ? "+" : ""}${cell.excessReturnPct.toFixed(2)}%. Overlapping trades mean the ${cell.occurrences.toLocaleString()} occurrences behave like roughly ${cell.effectiveN.toLocaleString()} independent ones, and this is in-sample over one fixed history.`,
   };
+}
+
+/** Distance buckets in ATR, and touch buckets — both fixed before measurement. */
+export const REACH_DISTANCE_ATR_BUCKETS = [0.5, 1, 2, 4, Infinity];
+export const REACH_TOUCH_BUCKETS = [0, 3, 6];
+
+/**
+ * The measured reach rate for a level this far away with this many touches.
+ *
+ * Picks the tightest distance bucket that contains the level and the highest
+ * touch bucket it qualifies for — never a neighbouring cell, and null when
+ * the sample is too thin to quote.
+ */
+export function reachRateFor(
+  distanceAtr: number,
+  touches: number,
+  snapshot: EquityExecutionSnapshot | null
+): ReachCell | null {
+  if (!snapshot?.reach || !Number.isFinite(distanceAtr)) return null;
+  const distBucket = REACH_DISTANCE_ATR_BUCKETS.find((b) => distanceAtr <= b);
+  if (distBucket === undefined) return null;
+  const touchBucket = [...REACH_TOUCH_BUCKETS].reverse().find((t) => touches >= t) ?? 0;
+  return (
+    snapshot.reach.find((c) => c.distanceAtrMax === distBucket && c.touchesMin === touchBucket) ?? null
+  );
 }
