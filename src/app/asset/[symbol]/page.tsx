@@ -21,7 +21,8 @@ import {
   TldrPanel,
   VerdictPanel,
 } from "@/components/dossier/DossierSections";
-import { DOSSIER_SECTIONS, SectionId } from "@/lib/dossier/sections";
+import { FoldedSection } from "@/components/ui/FoldedSection";
+import { DOSSIER_SECTIONS, SectionId, SectionPhase } from "@/lib/dossier/sections";
 import { TickerDossier } from "@/lib/dossier/types";
 import { analyseTicker } from "@/lib/search/analyseTicker";
 import { formatPrice } from "@/lib/utils/format";
@@ -37,9 +38,60 @@ import { formatPrice } from "@/lib/utils/format";
  * validated states internally. That is the property that lets each slot
  * deepen independently as data sources and replays land, while the page a
  * user learned last month stays exactly where they learned it.
+ *
+ * ── Hierarchy comes from the manifest, not from this file ─────────────
+ *
+ * Sections used to render in one flat loop, every card identical. Sixteen
+ * well-built sections at equal visual weight is a data dump: when nothing is
+ * emphasised, the reader has to assemble the trade themselves, which is the
+ * job the engine already did.
+ *
+ * So the page now groups by `phase` and gives each group a different voice.
+ * The order within a group is still the manifest's, and the page still knows
+ * nothing about any section's contents — it asks the manifest how loud each
+ * one should be and renders accordingly. Adding a section still means one
+ * manifest entry; its phase now also decides its prominence.
  */
 
 export const dynamic = "force-dynamic";
+
+/**
+ * How each phase is presented.
+ *
+ * `decide` gets no heading — it IS the answer, and titling it would be
+ * explaining the punchline. The later groups are labelled in the reader's
+ * own words ("Why the engine reads it this way") rather than the engine's
+ * internal phase names.
+ *
+ * `audit` folds. Everything in it corroborates a decision already made and
+ * none of it votes in the score, so it earns its space only for the reader
+ * who wants it — and `FoldedSection` keeps every word in the document while
+ * it is closed, so folding is layering rather than hiding.
+ */
+const PHASE_PRESENTATION: Record<
+  SectionPhase,
+  { heading: string | null; blurb: string | null; folded: boolean }
+> = {
+  decide: { heading: null, blurb: null, folded: false },
+  understand: {
+    heading: "Why the engine reads it this way",
+    blurb: null,
+    folded: false,
+  },
+  verify: {
+    heading: "Check it against something independent",
+    blurb: null,
+    folded: false,
+  },
+  audit: {
+    heading: "Show me the evidence",
+    blurb:
+      "Every reading behind the decision above, with its confidence, its sources and what would flip it — plus the fundamentals, analyst view, ownership, coverage and the gaps this page cannot see. Nothing here votes in the score; it is the workings.",
+    folded: true,
+  },
+};
+
+const PHASE_ORDER: SectionPhase[] = ["decide", "understand", "verify", "audit"];
 
 /**
  * Every id the manifest can name has exactly one component. The Record type
@@ -105,16 +157,40 @@ export default async function AssetPage({ params }: { params: Promise<{ symbol: 
           </Link>
         </div>
 
-        {DOSSIER_SECTIONS.map(({ id }) => {
-          const SectionComponent = SECTION_COMPONENTS[id];
-          return <SectionComponent key={id} d={d} />;
-        })}
+        {/* Search leads, because searching a ticker is the primary way this
+            platform is used. At the foot of the page it was a footnote to a
+            page you had already finished reading. Without its help text: the
+            verdict has to own the first screen. */}
+        <TickerSearch showHelp={false} />
 
-        <Card>
-          <CardContent className="py-5">
-            <TickerSearch />
-          </CardContent>
-        </Card>
+        {PHASE_ORDER.map((phase) => {
+          const ids = DOSSIER_SECTIONS.filter((s) => s.phase === phase).map((s) => s.id);
+          if (ids.length === 0) return null;
+          const { heading, blurb, folded } = PHASE_PRESENTATION[phase];
+          const panels = ids.map((id) => {
+            const SectionComponent = SECTION_COMPONENTS[id];
+            return <SectionComponent key={id} d={d} />;
+          });
+
+          if (folded) {
+            return (
+              <FoldedSection key={phase} title={heading ?? ""} summary={blurb ?? undefined}>
+                {panels}
+              </FoldedSection>
+            );
+          }
+
+          return (
+            <section key={phase} className="flex flex-col gap-5">
+              {heading && (
+                <h2 className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-ink-faint">
+                  {heading}
+                </h2>
+              )}
+              {panels}
+            </section>
+          );
+        })}
 
         <p className="text-[11px] text-ink-faint">
           {d.identity.provenance} Built on {d.identity.barsUsed} sessions of history. Not financial advice.

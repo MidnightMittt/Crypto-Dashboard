@@ -17,18 +17,15 @@ describe("the section manifest", () => {
       "nextEntry",
       "reasons",
       "invalidation",
+      // Deliberate change, 2026-08-14: VERIFY was ten sections and is now
+      // two. Only analogs and options intelligence contest the decision with
+      // independent evidence; the rest corroborate it and moved to AUDIT,
+      // where they fold. See the manifest for the argument.
       "analogs",
+      "optionsIntel",
       "macro",
-      // Deliberate addition, 2026-08-13: the provider-backed trio landed
-      // (CBOE options, EDGAR + FINRA ownership, news + social attention).
-      // Deliberate addition, 2026-08-13 (second wave): fundamentals and
-      // analyst consensus landed.
       "business",
       "street",
-      // Deliberate addition, 2026-08-14: options INTELLIGENCE (what the chain
-      // prices) ahead of options FLOW (what it traded) — interpretation
-      // before the activity that supports it.
-      "optionsIntel",
       "options",
       "ownership",
       "attention",
@@ -36,6 +33,21 @@ describe("the section manifest", () => {
       "evidence",
       "gaps",
     ]);
+  });
+
+  /*
+   * HIERARCHY IS A PROPERTY OF THE MANIFEST, and the page renders it. A
+   * change that quietly moved most sections back into the visible phases
+   * would restore the flat wall of equal-weight cards this structure exists
+   * to prevent — so the shape is pinned, not just the order.
+   */
+  it("keeps the deciding phases small enough to actually be a hierarchy", () => {
+    const count = (phase: string) => DOSSIER_SECTIONS.filter((s) => s.phase === phase).length;
+    expect(count("decide")).toBeLessThanOrEqual(5);
+    expect(count("understand")).toBeLessThanOrEqual(5);
+    expect(count("verify")).toBeLessThanOrEqual(4);
+    // The workings are the bulk, and they fold.
+    expect(count("audit")).toBeGreaterThan(count("decide"));
   });
 
   it("keeps ids unique", () => {

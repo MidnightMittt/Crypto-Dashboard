@@ -21,7 +21,20 @@ import { normaliseInput } from "@/lib/search/resolveTicker";
  * URL, so the client and server can never disagree about which symbol was
  * requested.
  */
-export function TickerSearch({ autoFocus = false }: { autoFocus?: boolean }) {
+export function TickerSearch({
+  autoFocus = false,
+  showHelp = true,
+}: {
+  autoFocus?: boolean;
+  /**
+   * The explanatory line below the box. Worth its space where search IS the
+   * screen (the scanner, the no-read page), and pure noise at the top of a
+   * dossier the reader is already looking at — where four lines of "here is
+   * what this engine does" push the verdict below the fold and cost exactly
+   * the first-screen attention the answer is supposed to own.
+   */
+  showHelp?: boolean;
+}) {
   const router = useRouter();
   const [value, setValue] = React.useState("");
   const [pending, setPending] = React.useState(false);
@@ -57,11 +70,13 @@ export function TickerSearch({ autoFocus = false }: { autoFocus?: boolean }) {
           {pending ? "Reading…" : "Analyse"}
         </button>
       </div>
-      <p className="text-[11px] leading-relaxed text-ink-faint">
-        Any US-listed stock or major crypto. The full engine runs on it — trend, volatility, support and
-        resistance, strength against the market, and a trade plan when the geometry supports one. Coverage
-        differs by asset, and the page says which parts were available.
-      </p>
+      {showHelp && (
+        <p className="text-[11px] leading-relaxed text-ink-faint">
+          Any US-listed stock or major crypto. The full engine runs on it — trend, volatility, support and
+          resistance, strength against the market, and a trade plan when the geometry supports one. Coverage
+          differs by asset, and the page says which parts were available.
+        </p>
+      )}
     </form>
   );
 }
