@@ -8,7 +8,7 @@ import {
   evaluateMarketStructure,
 } from "@/lib/markets/equityEvidence";
 import { buildMarketBias } from "@/lib/signals/marketBias";
-import { buildTradePlanOutcome, TradePlan, TradePlanRefusal } from "@/lib/signals/tradePlan";
+import { buildTradePlanOutcome, PlanConstraints, TradePlan, TradePlanRefusal } from "@/lib/signals/tradePlan";
 import {
   buildSupportResistanceZones,
   buildVolumeProfile,
@@ -98,6 +98,14 @@ export interface LiveAnalysisInputs {
   earningsCalendar: EarningsCalendar | null;
   /** True when this asset genuinely has a funding/open-interest picture. */
   hasDerivatives: boolean;
+  /**
+   * Measured planner constraints for this side and regime, when a caller has
+   * them. Deliberately OPTIONAL and deliberately absent in the execution
+   * replay: gating the replay with a threshold derived from the replay would
+   * starve the gate's own evidence. The live path supplies them; the
+   * measurement path never does.
+   */
+  planConstraints?: PlanConstraints | null;
   now: number;
 }
 
@@ -271,6 +279,7 @@ export function buildLiveAnalysis(inputs: LiveAnalysisInputs): LiveAnalysisResul
               historicalWinRatePct: null,
               historicalWinRateN: null,
             },
+            constraints: inputs.planConstraints ?? null,
           })
         : direction
           ? ({ plan: null, refusal: "no-structure" } as const)

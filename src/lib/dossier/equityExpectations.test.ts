@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  equityPlanConstraints,
   EquityCell,
   EquityExecutionSnapshot,
   equityCellKey,
@@ -126,5 +127,68 @@ describe("equityExpectationsFor", () => {
 describe("equityCellKey", () => {
   it("is the stable side:vol form the replay writes and the page reads", () => {
     expect(equityCellKey("short", "high-vol")).toBe("short:high-vol");
+  });
+});
+
+describe("equityPlanConstraints — the gate", () => {
+  /*
+   * The finding this gate exists for. Every replayed short cell lost money
+   * beyond the drift it was already fighting, so a short must not reach the
+   * page as a plan. Pinned with the real measured shape.
+   */
+  it("hands the gate a NEGATIVE number for a short, so tradePlan refuses it", () => {
+    const short = cell({
+      side: "short",
+      volRegime: "high-vol",
+      evLowerPct: -2.43,
+      driftNullPct: -0.68,
+      excessEvPct: -1.68,
+    });
+    const c = equityPlanConstraints(
+      "short",
+      [metric("equityVolatilityRegime", "bearish")],
+      snapshot({ "short:high-vol": short })
+    )!;
+    // -2.43 - (-0.68) = -1.75: the drift-adjusted pessimistic expectancy.
+    expect(c.evLowerPct).toBeCloseTo(-1.75, 5);
+    expect(c.evLowerPct).toBeLessThan(0);
+    expect(c.cellKey).toBe("short:high-vol");
+  });
+
+  it("subtracts the drift null for longs, so the market's own rise is not counted as edge", () => {
+    const c = equityPlanConstraints(
+      "long",
+      [metric("equityVolatilityRegime", "neutral")],
+      snapshot({ "long:normal-vol": cell({ evLowerPct: 1.21, driftNullPct: 0.83 }) })
+    )!;
+    expect(c.evLowerPct).toBeCloseTo(0.38, 5);
+    expect(c.evLowerPct).toBeGreaterThan(0); // still passes the gate
+  });
+
+  it("falls back to the raw bound when no drift null was measured", () => {
+    const c = equityPlanConstraints(
+      "long",
+      [metric("equityVolatilityRegime", "neutral")],
+      snapshot({ "long:normal-vol": cell({ evLowerPct: 0.95, driftNullPct: null }) })
+    )!;
+    expect(c.evLowerPct).toBeCloseTo(0.95, 5);
+  });
+
+  it("carries the winners' excursions so stops and targets are shaped by measurement", () => {
+    const c = equityPlanConstraints(
+      "long",
+      [metric("equityVolatilityRegime", "neutral")],
+      snapshot({ "long:normal-vol": cell() })
+    )!;
+    expect(c.winnersMaeP80Pct).toBeCloseTo(4.3, 5);
+    expect(c.winnersMfeP75Pct).toBeCloseTo(9.4, 5);
+    expect(c.n).toBe(400);
+  });
+
+  it("returns null with no cell, so an ungated plan builds exactly as before", () => {
+    expect(
+      equityPlanConstraints("long", [metric("equityVolatilityRegime", "bearish")], snapshot({}))
+    ).toBeNull();
+    expect(equityPlanConstraints("long", [], snapshot({ "long:normal-vol": cell() }))).toBeNull();
   });
 });

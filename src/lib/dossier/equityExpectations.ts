@@ -1,4 +1,5 @@
 import { MetricVerdict } from "@/lib/signals/types";
+import { PlanConstraints } from "@/lib/signals/tradePlan";
 import { PlanExpectations } from "./types";
 
 /**
@@ -173,5 +174,68 @@ export function equityExpectationsFor(
     driftNullPct: cell.driftNullPct,
     excessEvPct: cell.excessEvPct,
     cellKey: key,
+  };
+}
+
+/**
+ * THE EQUITY EV GATE — the same gate crypto already runs, now fed by
+ * equities' own measured record.
+ *
+ * `tradePlan.ts` has always refused a plan whose bucket loses money at the
+ * pessimistic bound; equities simply had no record to check, so they were
+ * never gated. The replay changed that, and it found something the page must
+ * act on rather than merely display: EVERY short cell loses money, and loses
+ * it by more than the drift it was already fighting.
+ *
+ * ── Why the gate is fed the DRIFT-ADJUSTED number ─────────────────────
+ *
+ * The raw expectancy of a long in a market that rose is mostly the market.
+ * A gate that accepted it would be approving trades for doing what buying
+ * and holding already did, at more cost and more risk. So the number handed
+ * to the gate is expectancy at its Wilson lower bound MINUS the drift null:
+ * the pessimistic estimate of what the signal itself contributed.
+ *
+ * Measured when this was wired (302,897 replayed trades):
+ *   long:high-vol    +2.75 − 0.98 = +1.77   passes
+ *   long:normal-vol  +1.21 − 0.83 = +0.38   passes
+ *   long:low-vol     +0.83 − 0.68 = +0.15   passes, barely
+ *   short:high-vol   −2.43 − (−0.68) = −1.75   REFUSED
+ *   short:normal-vol −1.49 − (−0.53) = −0.96   REFUSED
+ *   short:low-vol    −1.20 − (−0.46) = −0.74   REFUSED
+ *
+ * Policy, not measurement — and the split is load-bearing: the replay calls
+ * `buildLiveAnalysis` WITHOUT constraints, so the gate can never starve the
+ * evidence that justifies it. If a future regeneration turns a short cell
+ * positive, the gate re-opens on its own with no code change.
+ */
+export function equityPlanConstraints(
+  side: EquitySide,
+  metrics: MetricVerdict[],
+  snapshot: EquityExecutionSnapshot | null
+): PlanConstraints | null {
+  if (!snapshot) return null;
+  const vol = volRegimeFromMetrics(metrics);
+  if (!vol) return null;
+
+  const key = equityCellKey(side, vol);
+  const cell = snapshot.cells[key];
+  if (!cell) return null;
+
+  /*
+   * No drift null measured means no honest adjustment available. Falling
+   * back to the raw bound is the conservative choice for shorts (it is more
+   * negative than the adjusted one) and merely lenient for longs, which is
+   * the right direction for a gate that should refuse on evidence rather
+   * than on the absence of it.
+   */
+  const gateEv = cell.driftNullPct === null ? cell.evLowerPct : cell.evLowerPct - cell.driftNullPct;
+
+  return {
+    cellKey: key,
+    n: cell.n,
+    evLowerPct: gateEv,
+    winnersMaeP50Pct: cell.winners?.maeP50Pct ?? null,
+    winnersMaeP80Pct: cell.winners?.maeP80Pct ?? null,
+    winnersMfeP75Pct: cell.winners?.mfeP75Pct ?? null,
   };
 }

@@ -185,6 +185,36 @@ export function PlanPanel({ d }: { d: TickerDossier }) {
             <Collapsible title="The full reasoning" summary="why this bar exists at all">
               <p className="text-xs leading-relaxed text-ink-muted">{TRADE_PLAN_REFUSAL_TEXT[refusal]}</p>
             </Collapsible>
+
+            {/* THE EVIDENCE BEHIND THE REFUSAL.
+                A refusal that hides its own record asks to be taken on faith.
+                When the bar came from a measured bucket, that bucket's numbers
+                are the argument — so they are shown here rather than only on
+                the plans that survive the gate. */}
+            {expectations.status === "available" && (
+              <div className="flex flex-col gap-2 rounded-md border border-hairline bg-void/30 px-3 py-2.5">
+                <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
+                  What the record actually says
+                </span>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-3">
+                  <PlanStat label="Win rate" value={`${expectations.data.winRatePct.toFixed(0)}%`} />
+                  <PlanStat
+                    label="Edge over doing nothing"
+                    value={
+                      expectations.data.excessEvPct === null || expectations.data.excessEvPct === undefined
+                        ? `${expectations.data.evLowerPct.toFixed(2)}%`
+                        : `${expectations.data.excessEvPct >= 0 ? "+" : ""}${expectations.data.excessEvPct.toFixed(2)}%`
+                    }
+                    tone={
+                      (expectations.data.excessEvPct ?? expectations.data.evLowerPct) > 0
+                        ? "text-success"
+                        : "text-danger"
+                    }
+                  />
+                  <PlanStat label="Trades behind it" value={expectations.data.n.toLocaleString()} />
+                </div>
+              </div>
+            )}
           </>
         ) : (
           <p className="text-[14px] leading-relaxed text-ink">

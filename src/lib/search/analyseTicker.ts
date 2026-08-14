@@ -14,7 +14,7 @@ import { fetchNews, fetchSocial } from "@/lib/dossier/providers/attention";
 import { fetchFundamentals } from "@/lib/dossier/providers/secFundamentals";
 import { fetchStreet } from "@/lib/dossier/providers/nasdaqStreet";
 import { fetchBackdrop } from "@/lib/dossier/providers/macroBackdrop";
-import { equityExpectationsFor, EquityExecutionSnapshot } from "@/lib/dossier/equityExpectations";
+import { equityExpectationsFor, equityPlanConstraints, EquityExecutionSnapshot } from "@/lib/dossier/equityExpectations";
 import { RegimeRead } from "@/lib/markets/riskRegime";
 import { RotationRead } from "@/lib/markets/rotation";
 import { IndustryRead } from "@/lib/markets/industryIntelligence";
@@ -139,11 +139,50 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
     ? { ...staticCalendar, entries: [...staticCalendar.entries, { symbol: resolved.symbol, date: fetchedDate }] }
     : staticCalendar;
 
+  /*
+   * THE GATE NEEDS A SIDE, AND THE SIDE COMES FROM THE ENGINE — so the read
+   * is built once ungated to learn its direction and volatility regime, then
+   * rebuilt with that bucket's measured constraints applied. The first pass
+   * is a probe, never rendered; only the constrained result reaches the page.
+   *
+   * Rebuilding rather than patching keeps ONE construction path: a plan that
+   * survived the gate was built by the same function, with the same geometry,
+   * as a plan that never faced one.
+   */
+  const probe = buildLiveAnalysis({
+    symbol: resolved.symbol,
+    name: history.history.name,
+    assetClass: isCrypto ? "crypto" : "equity",
+    bars: history.history.bars,
+    benchmarkCloses: isCrypto ? null : context.benchmarkCloses,
+    benchmarkSymbol: context.benchmarkSymbol,
+    marketWide: isCrypto ? [] : context.marketWide,
+    earningsCalendar,
+    hasDerivatives: isCrypto ? resolved.hasDerivatives : false,
+    now: Date.now(),
+  });
+
+  const probeSide =
+    probe.ok && probe.analysis.bias.verdict === "bullish"
+      ? ("long" as const)
+      : probe.ok && probe.analysis.bias.verdict === "bearish"
+        ? ("short" as const)
+        : null;
+  const planConstraints =
+    isCrypto || !probe.ok || !probeSide
+      ? null
+      : equityPlanConstraints(
+          probeSide,
+          probe.analysis.bias.metrics,
+          equityExecutionJson as unknown as EquityExecutionSnapshot
+        );
+
   const result = buildLiveAnalysis({
     symbol: resolved.symbol,
     name: history.history.name,
     assetClass: isCrypto ? "crypto" : "equity",
     bars: history.history.bars,
+    planConstraints,
     // Crypto is deliberately not measured against the S&P; see the coverage
     // note in liveAnalysis.ts.
     benchmarkCloses: isCrypto ? null : context.benchmarkCloses,
