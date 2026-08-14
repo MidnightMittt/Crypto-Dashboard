@@ -38,6 +38,9 @@ export type SectionId =
   | "invalidation"
   | "analogs"
   | "macro"
+  | "options"
+  | "ownership"
+  | "attention"
   | "levels"
   | "evidence"
   | "gaps";
@@ -50,6 +53,17 @@ export const DOSSIER_SECTIONS: readonly SectionDef[] = [
   { id: "invalidation", phase: "understand" },
   { id: "analogs", phase: "verify" },
   { id: "macro", phase: "verify" },
+  /*
+   * The provider-backed trio, added when their data sources landed
+   * (CBOE options, EDGAR Form 4 + FINRA short volume, Yahoo news +
+   * StockTwits). Placed in the verify phase: they corroborate or contest a
+   * decision already presented, they do not make it — none of them votes in
+   * the score, and a page that led with options flow would be implying an
+   * integration the engine has not measured.
+   */
+  { id: "options", phase: "verify" },
+  { id: "ownership", phase: "verify" },
+  { id: "attention", phase: "verify" },
   { id: "levels", phase: "verify" },
   { id: "evidence", phase: "verify" },
   { id: "gaps", phase: "audit" },

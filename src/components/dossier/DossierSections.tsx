@@ -539,3 +539,174 @@ export function GapsPanel({ d }: { d: TickerDossier }) {
     </Panel>
   );
 }
+
+/* ── OPTIONS & GAMMA ─────────────────────────────────────────────────── */
+
+/**
+ * The provider-backed panels below render only when their section is
+ * AVAILABLE. Absence is deliberately not rendered here — it is the
+ * GapsPanel's job, so the page has exactly one place that speaks about
+ * missing data instead of five half-empty cards saying it five ways.
+ */
+export function OptionsPanel({ d }: { d: TickerDossier }) {
+  const s = d.optionsFlow;
+  if (s.status !== "available") return null;
+  const o = s.data;
+
+  const oiLean =
+    o.putCallOiRatio > 1.2
+      ? "put-heavy — more standing bets on downside than upside"
+      : o.putCallOiRatio < 0.7
+        ? "call-heavy — more standing bets on upside than downside"
+        : "roughly balanced between puts and calls";
+
+  return (
+    <Panel title="Options positioning" subtitle={`${o.contractCount.toLocaleString()} contracts · CBOE, delayed`}>
+      <p className="text-[13px] leading-relaxed text-ink">
+        Open interest is {oiLean} (put/call ratio {o.putCallOiRatio.toFixed(2)}).{" "}
+        {o.atmIvPct !== null &&
+          `Options nearest the current price imply a ${o.atmIvPct.toFixed(0)}% annualised move — the market's own volatility bet.`}{" "}
+        {o.netGexUsdPer1Pct !== null &&
+          (o.netGexUsdPer1Pct > 0
+            ? "Net dealer gamma is positive, which under the standard convention means hedging flows dampen moves — dips get bought, rips get sold."
+            : "Net dealer gamma is negative, which under the standard convention means hedging flows amplify moves in both directions.")}
+      </p>
+
+      <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
+        <PlanStat label="Put/call (open interest)" value={o.putCallOiRatio.toFixed(2)} />
+        <PlanStat
+          label="Put/call (today's volume)"
+          value={o.putCallVolumeRatio === null ? "—" : o.putCallVolumeRatio.toFixed(2)}
+        />
+        <PlanStat label="Implied move (ATM IV)" value={o.atmIvPct === null ? "—" : `${o.atmIvPct.toFixed(0)}%`} />
+        <PlanStat
+          label="Net gamma / 1% move"
+          value={
+            o.netGexUsdPer1Pct === null
+              ? "—"
+              : `${o.netGexUsdPer1Pct >= 0 ? "+" : "−"}$${Math.abs(o.netGexUsdPer1Pct / 1e6).toFixed(1)}m`
+          }
+        />
+      </div>
+
+      {o.largestOiStrikes.length > 0 && (
+        <p className="text-[11px] leading-relaxed text-ink-muted">
+          <span className="text-ink">Where positions concentrate · </span>
+          {o.largestOiStrikes
+            .map((x) => `${formatPrice(x.strike)} ${x.kind}s (${x.openInterest.toLocaleString()} contracts, ${x.expiry})`)
+            .join(" · ")}
+          . Heavy strikes act like magnets into expiry because hedging flows pin price near them.
+        </p>
+      )}
+
+      <p className="text-[10px] leading-relaxed text-ink-faint">{o.gexCaveat}</p>
+      <DepthMeta section={s} />
+    </Panel>
+  );
+}
+
+/* ── OWNERSHIP: INSIDERS + SHORT VOLUME ──────────────────────────────── */
+
+export function OwnershipPanel({ d }: { d: TickerDossier }) {
+  const ins = d.insiderActivity;
+  const sv = d.shortInterest;
+  if (ins.status !== "available" && sv.status !== "available") return null;
+
+  return (
+    <Panel title="Who is buying and who is betting against" subtitle="filings & regulatory data">
+      {ins.status === "available" && (
+        <div className="flex flex-col gap-2">
+          <h3 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
+            Insider trading · last {ins.data.windowDays} days · SEC filings
+          </h3>
+          {ins.data.buys.transactions === 0 && ins.data.sells.transactions === 0 ? (
+            <p className="text-[13px] leading-relaxed text-ink">
+              No open-market insider buys or sells were filed in the window — insiders are sitting still,
+              which is itself a fact worth more than silence.
+            </p>
+          ) : (
+            <>
+              <p className="text-[13px] leading-relaxed text-ink">
+                {ins.data.buys.transactions > 0
+                  ? `Insiders made ${ins.data.buys.transactions} open-market purchase${ins.data.buys.transactions === 1 ? "" : "s"} totalling ${ins.data.buys.shares.toLocaleString()} shares${ins.data.buys.valueUsd !== null ? ` (about $${Math.round(ins.data.buys.valueUsd).toLocaleString()})` : ""}.`
+                  : "No open-market insider purchases in the window."}{" "}
+                {ins.data.sells.transactions > 0
+                  ? `They sold ${ins.data.sells.shares.toLocaleString()} shares across ${ins.data.sells.transactions} sale${ins.data.sells.transactions === 1 ? "" : "s"}${ins.data.sells.valueUsd !== null ? ` (about $${Math.round(ins.data.sells.valueUsd).toLocaleString()})` : ""}.`
+                  : "No open-market sales either."}
+              </p>
+              <p className="text-[10px] leading-relaxed text-ink-faint">{ins.data.asymmetryNote}</p>
+            </>
+          )}
+          <DepthMeta section={ins} />
+        </div>
+      )}
+
+      {sv.status === "available" && (
+        <div className={`flex flex-col gap-2 ${ins.status === "available" ? "border-t border-hairline pt-3" : ""}`}>
+          <h3 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
+            Short-sale volume · FINRA · {sv.data.latest.date.replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3")}
+          </h3>
+          <p className="text-[13px] leading-relaxed text-ink">
+            {sv.data.latest.shortRatioPct.toFixed(0)}% of the day&apos;s FINRA-reported volume printed as short
+            sales ({Math.round(sv.data.latest.shortVolume).toLocaleString()} of{" "}
+            {Math.round(sv.data.latest.totalVolume).toLocaleString()} shares).
+          </p>
+          <p className="text-[10px] leading-relaxed text-ink-faint">{sv.data.meaningNote}</p>
+          <DepthMeta section={sv} />
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+/* ── ATTENTION: NEWS + SOCIAL ────────────────────────────────────────── */
+
+export function AttentionPanel({ d }: { d: TickerDossier }) {
+  const news = d.news;
+  const social = d.socialSentiment;
+  if (news.status !== "available" && social.status !== "available") return null;
+
+  return (
+    <Panel title="News & crowd attention" subtitle="reported, not judged">
+      {news.status === "available" && (
+        <div className="flex flex-col gap-2">
+          <h3 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
+            Recent coverage · {news.data.recentCount} of {news.data.items.length} stories in the last 48h
+          </h3>
+          <ul className="flex flex-col gap-1.5">
+            {news.data.items.slice(0, 6).map((n) => (
+              <li key={n.url} className="text-[12px] leading-relaxed">
+                <a href={n.url} target="_blank" rel="noopener noreferrer" className="text-ink hover:text-cyan">
+                  {n.title}
+                </a>
+                <span className="text-ink-faint">
+                  {" "}
+                  · {n.publisher} · {new Date(n.publishedAt).toISOString().slice(0, 10)}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-[10px] leading-relaxed text-ink-faint">{news.data.classificationNote}</p>
+          <DepthMeta section={news} />
+        </div>
+      )}
+
+      {social.status === "available" && (
+        <div className={`flex flex-col gap-2 ${news.status === "available" ? "border-t border-hairline pt-3" : ""}`}>
+          <h3 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-muted">
+            Trader chatter · {social.data.source}
+          </h3>
+          <p className="text-[13px] leading-relaxed text-ink">
+            {social.data.sampleSize} recent messages
+            {social.data.sampleSpanHours !== null && ` over about ${social.data.sampleSpanHours} hours`}.{" "}
+            {social.data.bullishPctOfTagged !== null
+              ? `Of the ${social.data.taggedCount} posters who tagged a direction, ${social.data.bullishPctOfTagged}% tagged bullish.`
+              : `Only ${social.data.taggedCount} posters tagged a direction — too few for a percentage to mean anything.`}
+          </p>
+          <p className="text-[10px] leading-relaxed text-ink-faint">{social.data.selfReportNote}</p>
+          <DepthMeta section={social} />
+        </div>
+      )}
+    </Panel>
+  );
+}

@@ -4,7 +4,11 @@ import { buildLiveAnalysis, LiveAnalysis } from "./liveAnalysis";
 import { MetricVerdict } from "@/lib/signals/types";
 import { EarningsCalendar } from "@/lib/markets/earningsVeto";
 import { buildDossier } from "@/lib/dossier/buildDossier";
-import { TickerDossier } from "@/lib/dossier/types";
+import { available, Section, TickerDossier, unavailable } from "@/lib/dossier/types";
+import { fetchOptionsSummary } from "@/lib/dossier/providers/cboeOptions";
+import { fetchInsiderSummary } from "@/lib/dossier/providers/edgarInsiders";
+import { fetchShortVolume } from "@/lib/dossier/providers/finraShortVolume";
+import { fetchNews, fetchSocial } from "@/lib/dossier/providers/attention";
 import { RegimeRead } from "@/lib/markets/riskRegime";
 import { RotationRead } from "@/lib/markets/rotation";
 import { IndustryRead } from "@/lib/markets/industryIntelligence";
@@ -64,12 +68,26 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
     return { status: "redirect", href: resolved.href, symbol: resolved.symbol };
   }
 
-  const history = await fetchQuoteHistory(resolved.providerSymbol);
+  const isCrypto = resolved.kind === "crypto";
+
+  /*
+   * Every source in one round trip. The providers never throw — each
+   * returns its own ok/reason — so one venue having a bad day costs one
+   * section, never the page. Equity-only sources are skipped for crypto
+   * with a typed null rather than a wasted request.
+   */
+  const [history, options, insiders, shortVolume, news, social] = await Promise.all([
+    fetchQuoteHistory(resolved.providerSymbol),
+    isCrypto ? null : fetchOptionsSummary(resolved.symbol),
+    isCrypto ? null : fetchInsiderSummary(resolved.symbol),
+    isCrypto ? null : fetchShortVolume(resolved.symbol),
+    fetchNews(resolved.providerSymbol),
+    isCrypto ? null : fetchSocial(resolved.symbol),
+  ]);
+
   if (!history.ok) {
     return { status: "error", message: history.reason, symbol: resolved.symbol };
   }
-
-  const isCrypto = resolved.kind === "crypto";
   const result = buildLiveAnalysis({
     symbol: resolved.symbol,
     name: history.history.name,
@@ -103,7 +121,44 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
     industries: intelligence.industries ?? [],
     expectations: null,
     analogs: null,
+    options: toSection(options, "advanced", {
+      to: "institutional" as const,
+      when: "positioning is tracked over time and confirmed across venues, rather than read from one day's chain",
+    }),
+    insiders: toSection(insiders, "advanced", {
+      to: "institutional" as const,
+      when: "cluster-buy patterns are scored against their own forward record instead of reported as raw filings",
+    }),
+    shortVolume: toSection(shortVolume, "basic", {
+      to: "advanced" as const,
+      when: "bi-monthly short interest is ingested, so the standing short position is measured rather than one day's flow",
+    }),
+    newsSection: toSection(news, "basic", {
+      to: "advanced" as const,
+      when: "coverage volume is measured against this symbol's own baseline, so unusual attention becomes detectable",
+    }),
+    social: toSection(social, "basic", {
+      to: "advanced" as const,
+      when: "message velocity is baselined per symbol, so a crowd arriving is distinguishable from a crowd that was always there",
+    }),
   });
 
   return { status: "ok", analysis: result.analysis, dossier, resolved };
+}
+
+/**
+ * Provider result -> dossier Section. One mapping for every provider, so the
+ * depth and failure semantics cannot drift between sources: success carries
+ * the tier and its upgrade path; failure is a stated, transient
+ * provider-error; null means the source was never queried and the dossier's
+ * per-asset-class default explains why.
+ */
+function toSection<T>(
+  result: { ok: true; summary: T } | { ok: false; reason: string } | null,
+  depth: "basic" | "advanced",
+  upgrade: { to: "advanced" | "institutional"; when: string }
+): Section<T> | undefined {
+  if (result === null) return undefined;
+  if (result.ok) return available(result.summary, depth, upgrade);
+  return unavailable("provider-error", result.reason);
 }

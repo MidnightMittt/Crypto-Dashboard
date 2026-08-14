@@ -46,7 +46,14 @@ export type BlockedBy =
    * distinct from "no-provider": this is our backlog, not the market's
    * limitation, and labelling it as anything else would be self-flattering.
    */
-  | "not-measured-yet";
+  | "not-measured-yet"
+  /**
+   * A provider exists and the call failed THIS request. Distinct from
+   * "no-provider" because the claims differ: one says we ingest nothing,
+   * the other says the source hiccuped and the section will likely be back
+   * on the next load.
+   */
+  | "provider-error";
 
 /**
  * HOW DEEP a section's intelligence currently goes.
@@ -258,11 +265,17 @@ export interface TickerDossier {
   atrPct: number | null;
   bias: MarketBias;
 
-  // ── Sections with no provider yet. Present, empty, and explained. ────
+  /*
+   * ── Provider-backed sections ─────────────────────────────────────────
+   * Each is a typed payload or a stated reason. These were Section<never>
+   * placeholders until their providers landed — the page rendered their
+   * absence from day one, which is exactly how the contract is meant to
+   * work: the slots existed before the data did.
+   */
   moneyFlow: Section<EvidenceGroup>;
-  news: Section<never>;
-  socialSentiment: Section<never>;
-  optionsFlow: Section<never>;
-  insiderActivity: Section<never>;
-  shortInterest: Section<never>;
+  news: Section<import("./providers/attention").NewsSummary>;
+  socialSentiment: Section<import("./providers/attention").SocialSummary>;
+  optionsFlow: Section<import("./providers/cboeOptions").OptionsSummary>;
+  insiderActivity: Section<import("./providers/edgarInsiders").InsiderSummary>;
+  shortInterest: Section<import("./providers/finraShortVolume").ShortVolumeSummary>;
 }

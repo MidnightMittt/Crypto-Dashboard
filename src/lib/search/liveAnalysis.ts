@@ -15,6 +15,9 @@ import {
   SupportResistanceZone,
 } from "@/lib/technicals/marketStructure";
 import { atr, Candle } from "@/lib/technicals/indicators";
+import { buildTechnicalRead } from "@/lib/sentiment/technicals";
+import { buildHarmonicEvidence, selectBestHarmonic } from "@/lib/signals/harmonicEvidence";
+import { harmonicMetric, technicalsMetric } from "./chartEvidence";
 import { earningsVeto, EarningsCalendar, EarningsVetoResult } from "@/lib/markets/earningsVeto";
 import { MarketBias } from "@/lib/signals/types";
 
@@ -154,8 +157,53 @@ export function buildLiveAnalysis(inputs: LiveAnalysisInputs): LiveAnalysisResul
   const prevClose = bars[bars.length - 2]?.close ?? lastClose;
   const instrument: EquityInstrumentInput = { symbol, bars };
 
+  /*
+   * ── Geometry FIRST ─────────────────────────────────────────────────
+   * Zones and ATR were previously computed after the evidence, which was
+   * fine while no evidence needed them. The harmonic engine does — its
+   * completion zones are checked for confluence against the structure
+   * engine's own levels, so geometry has to exist before evidence runs.
+   */
+  const candles = toCandles(bars);
+  const volumeProfile = buildVolumeProfile(candles);
+  const zones = buildSupportResistanceZones(candles, volumeProfile, "1D");
+  const atrAbs = atr(candles);
+  const atrPct = atrAbs !== null && lastClose > 0 ? (atrAbs / lastClose) * 100 : null;
+
   // ── Evidence, each module contributing only if its inputs exist ──────
   const metrics: MetricVerdict[] = [];
+
+  /*
+   * THE DEEP TECHNICAL LAYER — RSI, MACD, EMA alignment, ADX, Bollinger,
+   * supertrend, Ichimoku, divergence, combined into one vote by the same
+   * buildTechnicalRead the crypto page has always used. This was the
+   * platform's richest untapped module for searched tickers: fully built,
+   * fully tested, and simply never run on this path.
+   */
+  const techRead = buildTechnicalRead(candles);
+  if (techRead) metrics.push(technicalsMetric(techRead, asOf));
+
+  /*
+   * THE HARMONIC ENGINE — pattern completion zones from ratio-measured
+   * swings, confluence-checked against the structure zones above. Displayed
+   * evidence, deliberately non-voting: the incremental-value study measured
+   * limited extra edge over plain structure, and a module keeps only the
+   * weight its record earns.
+   */
+  if (techRead && atrAbs !== null && atrAbs > 0) {
+    const harmonics = buildHarmonicEvidence({
+      candles,
+      timeframe: "1D",
+      atrAbs,
+      price: lastClose,
+      zones,
+      biasVerdict: null,
+      metricVerdicts: new Map(),
+      currentDivergence: { rsi: techRead.rsiDivergence, macd: techRead.macdDivergence },
+    });
+    const best = selectBestHarmonic(harmonics, []);
+    if (best) metrics.push(harmonicMetric(best, asOf));
+  }
 
   const relativeStrength =
     benchmarkCloses && benchmarkCloses.length > 0
@@ -183,7 +231,9 @@ export function buildLiveAnalysis(inputs: LiveAnalysisInputs): LiveAnalysisResul
   const bias = buildMarketBias({
     asset: symbol,
     metrics,
-    technicals: null,
+    // The full TechnicalRead, not just its vote — the risk assessment reads
+    // ATR and squeeze character from it, and trendStrength surfaces from it.
+    technicals: techRead,
     squeezeScore: null,
     previous: null,
     now: asOf,
@@ -196,13 +246,6 @@ export function buildLiveAnalysis(inputs: LiveAnalysisInputs): LiveAnalysisResul
       reason: `${symbol} returned price history, but no evidence module could produce a reading from it. That usually means the series has gaps or is not actually traded.`,
     };
   }
-
-  // ── Geometry ────────────────────────────────────────────────────────
-  const candles = toCandles(bars);
-  const volumeProfile = buildVolumeProfile(candles);
-  const zones = buildSupportResistanceZones(candles, volumeProfile, "1D");
-  const atrAbs = atr(candles);
-  const atrPct = atrAbs !== null && lastClose > 0 ? (atrAbs / lastClose) * 100 : null;
 
   const earnings = assetClass === "equity" ? earningsVeto(symbol, earningsCalendar, now) : null;
   const direction = bias.verdict === "bullish" ? "long" : bias.verdict === "bearish" ? "short" : null;
@@ -249,7 +292,14 @@ export function buildLiveAnalysis(inputs: LiveAnalysisInputs): LiveAnalysisResul
       zones,
       atrPct,
       barsUsed: bars.length,
-      coverage: buildCoverage({ assetClass, relativeStrength, structure, hasDerivatives, marketWideCount: marketWide.length }),
+      coverage: buildCoverage({
+        assetClass,
+        relativeStrength,
+        structure,
+        hasDerivatives,
+        marketWideCount: marketWide.length,
+        hasTechnicals: techRead !== null,
+      }),
     },
   };
 }
@@ -268,6 +318,7 @@ function buildCoverage(o: {
   structure: MetricVerdict | null;
   hasDerivatives: boolean;
   marketWideCount: number;
+  hasTechnicals: boolean;
 }): CoverageFamily[] {
   const crypto = o.assetClass === "crypto";
   return [
@@ -275,6 +326,13 @@ function buildCoverage(o: {
       label: "Price trend & volatility",
       available: true,
       note: "Measured from this asset's own daily history.",
+    },
+    {
+      label: "Chart signals & patterns",
+      available: o.hasTechnicals,
+      note: o.hasTechnicals
+        ? "RSI, MACD, moving averages, volatility bands, trend structure and harmonic completion zones, from the same engine the crypto page uses."
+        : "Not enough continuous history for the indicator stack to compute.",
     },
     {
       label: "Support & resistance",

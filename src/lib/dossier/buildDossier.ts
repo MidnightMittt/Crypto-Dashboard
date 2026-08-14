@@ -39,6 +39,17 @@ export interface DossierInputs {
   expectations?: PlanExpectations | null;
   /** Historical analogs, when fingerprints exist for the asset. */
   analogs?: AnalogStats | null;
+  /*
+   * Provider-backed sections, already shaped by the caller (analyseTicker
+   * maps each provider result to a Section with its depth and upgrade).
+   * Undefined means the caller did not attempt the provider — the defaults
+   * below state why per asset class.
+   */
+  options?: TickerDossier["optionsFlow"];
+  insiders?: TickerDossier["insiderActivity"];
+  shortVolume?: TickerDossier["shortInterest"];
+  newsSection?: TickerDossier["news"];
+  social?: TickerDossier["socialSentiment"];
 }
 
 export function buildDossier(inputs: DossierInputs): TickerDossier {
@@ -114,35 +125,44 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
     atrPct: analysis.atrPct,
     bias,
 
-    // ── The declared gaps ───────────────────────────────────────────────
+    // ── Provider-backed sections, with per-asset-class defaults ─────────
     moneyFlow: buildMoneyFlow(bias.categories, isCrypto),
 
-    news: unavailable(
-      "no-provider",
-      "No news provider is ingested. Nothing on this page reflects headlines, filings coverage or analyst notes — stated rather than quietly omitted, because an empty news section and a calm news day look identical."
-    ),
-    socialSentiment: unavailable(
-      "no-provider",
-      "No social or search-trend provider is ingested, so Reddit, X, StockTwits and Google Trends activity are not measured here."
-    ),
-    optionsFlow: unavailable(
-      "no-provider",
-      isCrypto
-        ? "Crypto options are available from Deribit for the majors but are not yet wired into this page."
-        : "No equity options provider is ingested, so implied volatility, put/call skew, gamma exposure and dealer positioning cannot be measured."
-    ),
-    insiderActivity: unavailable(
-      "not-measured-yet",
-      isCrypto
-        ? "Insider filings have no crypto equivalent."
-        : "Form 4 insider transactions are published free by the SEC and are NOT yet ingested. This is our backlog, not a data limitation."
-    ),
-    shortInterest: unavailable(
-      "not-measured-yet",
-      isCrypto
-        ? "Exchange short interest has no direct equivalent; the crypto analogue is funding and open interest."
-        : "FINRA publishes short interest twice monthly, free, and it is NOT yet ingested. Our backlog, not a data limitation."
-    ),
+    news:
+      inputs.newsSection ??
+      unavailable("no-provider", "The news feed was not queried for this asset."),
+    socialSentiment:
+      inputs.social ??
+      unavailable(
+        isCrypto ? "not-measured-yet" : "no-provider",
+        isCrypto
+          ? "StockTwits carries crypto streams under .X symbols; wiring them is backlog, not a data limitation."
+          : "The social feed was not queried for this asset."
+      ),
+    optionsFlow:
+      inputs.options ??
+      unavailable(
+        isCrypto ? "not-measured-yet" : "no-provider",
+        isCrypto
+          ? "Crypto options exist on Deribit for the majors and are not yet wired into this page — backlog, not a data limitation."
+          : "The options chain was not queried for this asset."
+      ),
+    insiderActivity:
+      inputs.insiders ??
+      unavailable(
+        isCrypto ? "not-applicable" : "no-provider",
+        isCrypto
+          ? "Insider filings have no crypto equivalent — there is no issuer whose officers file."
+          : "Insider filings were not queried for this asset."
+      ),
+    shortInterest:
+      inputs.shortVolume ??
+      unavailable(
+        isCrypto ? "not-applicable" : "no-provider",
+        isCrypto
+          ? "Exchange short interest has no direct crypto equivalent; the analogue here is funding and open interest."
+          : "Short-sale volume was not queried for this asset."
+      ),
   };
 }
 

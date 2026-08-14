@@ -16,6 +16,11 @@ describe("the section manifest", () => {
       "invalidation",
       "analogs",
       "macro",
+      // Deliberate addition, 2026-08-13: the provider-backed trio landed
+      // (CBOE options, EDGAR + FINRA ownership, news + social attention).
+      "options",
+      "ownership",
+      "attention",
       "levels",
       "evidence",
       "gaps",
