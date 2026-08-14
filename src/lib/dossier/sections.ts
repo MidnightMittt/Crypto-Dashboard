@@ -34,6 +34,7 @@ export type SectionId =
   | "verdict"
   | "tldr"
   | "plan"
+  | "nextEntry"
   | "reasons"
   | "invalidation"
   | "analogs"
@@ -51,6 +52,13 @@ export const DOSSIER_SECTIONS: readonly SectionDef[] = [
   { id: "verdict", phase: "decide" },
   { id: "tldr", phase: "decide" },
   { id: "plan", phase: "decide" },
+  /*
+   * Deliberately in the DECIDE phase, immediately after the plan. Since the
+   * EV gate landed, most days have no trade — and on those days this is the
+   * decision: the level to wait for. Filing it under "understand" would bury
+   * the only actionable content on a page that just said no.
+   */
+  { id: "nextEntry", phase: "decide" },
   { id: "reasons", phase: "understand" },
   { id: "invalidation", phase: "understand" },
   { id: "analogs", phase: "verify" },

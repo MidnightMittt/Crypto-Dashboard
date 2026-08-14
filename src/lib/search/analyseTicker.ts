@@ -173,14 +173,23 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
       : probe.ok && probe.analysis.bias.verdict === "bearish"
         ? ("short" as const)
         : null;
+  const snapshot = equityExecutionJson as unknown as EquityExecutionSnapshot;
   const planConstraints =
-    isCrypto || !probe.ok || !probeSide
+    isCrypto || !probe.ok || !probeSide ? null : equityPlanConstraints(probeSide, probe.analysis.bias.metrics, snapshot);
+
+  /*
+   * The forward-looking setups price BOTH sides, so each needs its own
+   * measured record — a long-at-support and a short-at-resistance are
+   * different bets and must be gated separately. The short's cells are
+   * negative, so this is also what stops a planned short being drawn at all.
+   */
+  const constraintsBySide =
+    isCrypto || !probe.ok
       ? null
-      : equityPlanConstraints(
-          probeSide,
-          probe.analysis.bias.metrics,
-          equityExecutionJson as unknown as EquityExecutionSnapshot
-        );
+      : {
+          long: equityPlanConstraints("long", probe.analysis.bias.metrics, snapshot),
+          short: equityPlanConstraints("short", probe.analysis.bias.metrics, snapshot),
+        };
 
   const result = buildLiveAnalysis({
     symbol: resolved.symbol,
@@ -188,6 +197,7 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
     assetClass: isCrypto ? "crypto" : "equity",
     bars: history.history.bars,
     planConstraints,
+    constraintsBySide,
     // Crypto is deliberately not measured against the S&P; see the coverage
     // note in liveAnalysis.ts.
     benchmarkCloses: isCrypto ? null : context.benchmarkCloses,
@@ -229,11 +239,26 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
           equityExecutionJson as unknown as EquityExecutionSnapshot
         );
 
+  /*
+   * Planned entries are pullbacks by construction, so each side's record is
+   * the pullback cell for that side — looked up from the planned plan itself
+   * rather than assumed, so the style can never drift out of sync with the
+   * bucket being quoted.
+   */
+  const plannedView = result.analysis.plannedSetups;
+  const recordFor = (dir: "long" | "short") => {
+    if (isCrypto || !plannedView) return null;
+    const setup = plannedView.setups.find((x) => x.direction === dir);
+    if (!setup) return null;
+    return equityAnalogsFor(dir, setup.plan, result.analysis.bias.metrics, snapshot);
+  };
+
   const dossier = buildDossier({
     analysis: result.analysis,
     regime: intelligence.regime ?? null,
     rotation: intelligence.rotation ?? null,
     industries: intelligence.industries ?? [],
+    plannedRecords: { long: recordFor("long"), short: recordFor("short") },
     expectations,
     /*
      * Analogs are looked up from the UNGATED probe's plan, not the gated one.

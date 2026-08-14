@@ -12,6 +12,9 @@ describe("the section manifest", () => {
       "verdict",
       "tldr",
       "plan",
+      // Deliberate addition, 2026-08-14: the forward-looking conditional
+      // entries, placed with the decision rather than the explanation.
+      "nextEntry",
       "reasons",
       "invalidation",
       "analogs",

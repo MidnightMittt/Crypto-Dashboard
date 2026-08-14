@@ -1,11 +1,14 @@
 import { LiveAnalysis, MIN_BARS_FOR_ANALYSIS } from "@/lib/search/liveAnalysis";
 import { equityVerdict } from "@/lib/markets/equityVerdict";
+import { TRADE_PLAN_REFUSAL_SHORT } from "@/lib/signals/tradePlan";
 import { describeAgreement, evidenceLevel, strengthStars } from "@/lib/signals/plainLanguage";
 import { buildMacroContext } from "./macroContext";
 import { composeInvalidation, composeReasonsAgainst, composeReasonsFor, composeTldr } from "./narrative";
 import {
   AnalogStats,
   available,
+  PlannedEntry,
+  PlannedEntryRead,
   EvidenceGroup,
   PlanExpectations,
   Section,
@@ -39,6 +42,12 @@ export interface DossierInputs {
   expectations?: PlanExpectations | null;
   /** Historical analogs, when fingerprints exist for the asset. */
   analogs?: AnalogStats | null;
+  /**
+   * Per-planned-entry historical records, keyed by direction. Supplied by
+   * the caller because the lookup is asset-class specific; the dossier only
+   * attaches them.
+   */
+  plannedRecords?: { long: AnalogStats | null; short: AnalogStats | null } | null;
   /*
    * Provider-backed sections, already shaped by the caller (analyseTicker
    * maps each provider result to a Section with its depth and upgrade).
@@ -104,6 +113,8 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
     invalidation: composeInvalidation({ bias, plan, earningsDate: analysis.earnings?.date ?? null }),
 
     analogs: buildAnalogs(inputs.analogs ?? null, isCrypto, analysis.barsUsed),
+
+    nextEntry: buildNextEntry(analysis, inputs.plannedRecords ?? null),
 
     macro: buildMacroContext({
       symbol: analysis.symbol,
@@ -293,4 +304,69 @@ function buildMoneyFlow(
       ? "No flow module reported for this asset — the derivatives and stablecoin feeds cover the majors only."
       : "Single-name institutional flow needs data this platform does not ingest: 13F holdings, dark-pool prints and options positioning. What IS available is flow at the sector and industry level, in the macro section above — which is where rotation shows up first anyway."
   );
+}
+
+/**
+ * WHERE THIS BECOMES A TRADE.
+ *
+ * The section that makes a refusal useful. When the engine will not plan a
+ * trade today — which, since the EV gate landed, is most days — this is what
+ * a reader is actually left with: the level to wait for, the move required
+ * to reach it, the stop that would sit beyond it, and what entries taken
+ * that way have historically been worth.
+ *
+ * Both sides are shown when structure supports both, because knowing where
+ * the opposite case begins is how a reader recognises being wrong early.
+ */
+function buildNextEntry(
+  analysis: LiveAnalysis,
+  records: { long: AnalogStats | null; short: AnalogStats | null } | null
+): Section<PlannedEntryRead> {
+  const view = analysis.plannedSetups;
+  if (!view || view.setups.length === 0) {
+    return unavailable(
+      "insufficient-history",
+      "No level within pullback range to build a conditional entry against. A planned entry needs a support or resistance zone close enough to trade against and a volatility reading to size the stop — inventing a level at a round number instead would be a guess wearing a plan's clothing."
+    );
+  }
+
+  const entries: PlannedEntry[] = view.setups.map((s) => {
+    const risk = Math.abs(s.plan.entryRef - s.plan.stopPrice);
+    const blocked = analysis.plannedGate[s.direction];
+    return {
+      qualifies: blocked === null,
+      blockedReason: blocked ? TRADE_PLAN_REFUSAL_SHORT[blocked] : null,
+      direction: s.direction,
+      status: s.status,
+      primary: s.primary,
+      trigger: s.trigger,
+      triggerPrice: s.triggerPrice,
+      distancePct: s.distancePct,
+      entryLow: s.plan.entryLow,
+      entryHigh: s.plan.entryHigh,
+      entryBasis: s.plan.entryBasis,
+      stopPrice: s.plan.stopPrice,
+      stopBasis: s.plan.stopBasis,
+      target1Price: s.plan.target1Price,
+      target2Price: s.plan.target2Price,
+      target1Pct:
+        s.plan.entryRef > 0 ? (Math.abs(s.plan.target1Price - s.plan.entryRef) / s.plan.entryRef) * 100 : 0,
+      target2Pct:
+        s.plan.entryRef > 0 ? (Math.abs(s.plan.target2Price - s.plan.entryRef) / s.plan.entryRef) * 100 : 0,
+      riskRewardRatio: s.plan.riskRewardRatio,
+      riskPct: s.plan.entryRef > 0 ? (risk / s.plan.entryRef) * 100 : 0,
+      record: records?.[s.direction] ?? null,
+    };
+  });
+
+  /*
+   * Descriptive, and it stays descriptive: these are levels derived from
+   * structure, not a forward-tested record of levels being respected. The
+   * tier rises only when the reach rate and outcome of PLANNED entries are
+   * scored against their own out-of-sample record.
+   */
+  return available({ anchorPrice: view.anchorPrice, favoured: view.favoured, rationale: view.rationale, entries }, "basic", {
+    to: "advanced",
+    when: "planned levels are scored on how often price actually reached them and what happened next, so a conditional entry carries its own hit rate rather than only its geometry",
+  });
 }

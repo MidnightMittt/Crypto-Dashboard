@@ -907,3 +907,113 @@ export function StreetPanel({ d }: { d: TickerDossier }) {
     </Panel>
   );
 }
+
+/* ── WHERE THIS BECOMES A TRADE ──────────────────────────────────────── */
+
+const SETUP_STATUS: Record<string, { label: string; tone: string; ring: string }> = {
+  "at-entry": { label: "In the zone now", tone: "text-success", ring: "border-success/30 bg-success/[0.05]" },
+  approaching: { label: "Close — watch it", tone: "text-amber", ring: "border-amber/25 bg-amber/[0.04]" },
+  waiting: { label: "Waiting", tone: "text-ink-muted", ring: "border-hairline bg-void/30" },
+  invalidated: { label: "Level broken", tone: "text-danger", ring: "border-danger/25 bg-danger/[0.04]" },
+};
+
+export function NextEntryPanel({ d }: { d: TickerDossier }) {
+  const s = d.nextEntry;
+
+  return (
+    <Panel title="Where this becomes a trade" subtitle="levels to wait for">
+      {s.status === "available" ? (
+        <>
+          <p className="text-[13px] leading-relaxed text-ink-muted">{s.data.rationale}</p>
+
+          {s.data.entries.map((e) => {
+            const st = SETUP_STATUS[e.status] ?? SETUP_STATUS.waiting;
+            const isLong = e.direction === "long";
+            return (
+              <div key={e.direction} className={`flex flex-col gap-2.5 rounded-md border px-3 py-3 ${st.ring}`}>
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <span className={`text-[13px] font-semibold uppercase tracking-[0.1em] ${isLong ? "text-success" : "text-danger"}`}>
+                    {isLong ? "Buy the dip into support" : "Sell the rally into resistance"}
+                  </span>
+                  <span className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${st.tone}`}>{st.label}</span>
+                  {e.primary && (
+                    <span className="text-[9px] uppercase tracking-[0.14em] text-cyan">Favoured side</span>
+                  )}
+                </div>
+
+                {/* The level is real either way; whether the trade from it
+                    clears the quality bars is a separate, stated fact. */}
+                {!e.qualifies && e.blockedReason && (
+                  <p className="rounded-md border border-amber/20 bg-amber/[0.04] px-2.5 py-1.5 text-[11px] leading-relaxed text-ink">
+                    <span className="font-semibold uppercase tracking-[0.12em] text-amber">Not yet a trade</span> ·{" "}
+                    {e.blockedReason} The level below is still where to watch — it just has to improve before it
+                    is worth taking.
+                  </p>
+                )}
+
+                <p className="text-[13px] leading-relaxed text-ink">
+                  {e.trigger}
+                  {e.triggerPrice !== null && <> Level: <span className="font-semibold">{formatPrice(e.triggerPrice)}</span>.</>}
+                </p>
+
+                <div className="grid grid-cols-2 gap-x-5 gap-y-2 sm:grid-cols-3 lg:grid-cols-6">
+                  <PlanStat label={isLong ? "Buy zone" : "Sell zone"} value={`${formatPrice(e.entryLow)}–${formatPrice(e.entryHigh)}`} />
+                  <PlanStat label="Get out if it hits" value={formatPrice(e.stopPrice)} tone="text-danger" />
+                  <PlanStat label="Risk from entry" value={`${e.riskPct.toFixed(1)}%`} />
+                  <PlanStat
+                    label="First target"
+                    value={`${formatPrice(e.target1Price)} (+${e.target1Pct.toFixed(1)}%)`}
+                    tone="text-success"
+                  />
+                  <PlanStat
+                    label="Second target"
+                    value={`${formatPrice(e.target2Price)} (+${e.target2Pct.toFixed(1)}%)`}
+                    tone="text-success"
+                  />
+                  <PlanStat label="Reward vs risk" value={`${e.riskRewardRatio.toFixed(1)}×`} />
+                </div>
+
+                <p className="text-[11px] leading-relaxed text-ink-faint">
+                  <span className="text-ink-muted">Entry ·</span> {e.entryBasis}. <span className="text-ink-muted">Stop ·</span> {e.stopBasis}.
+                </p>
+
+                {/* The record for entries taken THIS way — so a level to wait
+                    for arrives with evidence rather than as a bare number. */}
+                {e.record && e.target1Pct > Math.abs(e.record.averageReturnPct) * 3 && (
+                  <p className="text-[11px] leading-relaxed text-amber">
+                    The first target is {e.target1Pct.toFixed(1)}% away, while comparable trades averaged{" "}
+                    {e.record.averageReturnPct >= 0 ? "+" : ""}
+                    {e.record.averageReturnPct.toFixed(1)}%. That level is where structure sits, not where
+                    trades like this one usually get to — treat it as a ceiling, not an expectation.
+                  </p>
+                )}
+
+                {e.record && (
+                  <p className="border-t border-hairline pt-2 text-[11px] leading-relaxed text-ink-muted">
+                    <span className="text-ink">If it gets there · </span>
+                    {e.record.occurrences.toLocaleString()} comparable entries historically won{" "}
+                    {e.record.winRatePct.toFixed(0)}% of the time, with a typical trade of{" "}
+                    {e.record.medianReturnPct >= 0 ? "+" : ""}
+                    {e.record.medianReturnPct.toFixed(1)}% and an average of{" "}
+                    {e.record.averageReturnPct >= 0 ? "+" : ""}
+                    {e.record.averageReturnPct.toFixed(1)}%
+                    {e.record.medianHoldSessions !== null && <> over about {e.record.medianHoldSessions} sessions</>}.
+                  </p>
+                )}
+              </div>
+            );
+          })}
+
+          <p className="text-[10px] leading-relaxed text-ink-faint">
+            These levels are frozen against the last daily close — they do not move as price does. Only the
+            status and the distance change intraday, so an order placed from them stays the order that was
+            described.
+          </p>
+          <DepthMeta section={s} />
+        </>
+      ) : (
+        <Unavailable section={s} />
+      )}
+    </Panel>
+  );
+}

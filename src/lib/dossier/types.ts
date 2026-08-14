@@ -205,6 +205,59 @@ export interface InvalidationTrigger {
   kind: "price" | "evidence" | "event";
 }
 
+/**
+ * A CONDITIONAL ENTRY — where this becomes a trade, whether or not it is one
+ * today.
+ *
+ * Every field is a concrete number or a stated sentence: the level, the move
+ * required to reach it, the stop beyond it, the targets, and the historical
+ * record of entries taken this way. Nothing here is a hint or a lean — a
+ * reader should be able to place a resting order from it and know in advance
+ * what the trade is worth and when it is void.
+ */
+export interface PlannedEntry {
+  direction: "long" | "short";
+  /** waiting | approaching | at-entry | invalidated. */
+  status: string;
+  /** True when the higher-timeframe read favours this side. */
+  primary: boolean;
+  /** What has to happen, in words, with the price kept separate for formatting. */
+  trigger: string;
+  triggerPrice: number | null;
+  /** How far price must travel to reach the zone, as a percent of price. */
+  distancePct: number;
+  entryLow: number;
+  entryHigh: number;
+  entryBasis: string;
+  stopPrice: number;
+  stopBasis: string;
+  target1Price: number;
+  target2Price: number;
+  /** How far each target sits from the entry, in percent — so a level is never a bare price. */
+  target1Pct: number;
+  target2Pct: number;
+  riskRewardRatio: number;
+  /** What the plan risks per unit, as a percent of the entry. */
+  riskPct: number;
+  /** The measured record for entries taken this way, when one exists. */
+  record: AnalogStats | null;
+  /**
+   * True when a trade from this level would clear the same quality bars a
+   * live plan must clear. False means the level is real but the trade from
+   * it is not yet worth taking — and `blockedReason` says which bar it fails.
+   */
+  qualifies: boolean;
+  blockedReason: string | null;
+}
+
+export interface PlannedEntryRead {
+  anchorPrice: number;
+  favoured: "long" | "short" | null;
+  /** Why that side is favoured, or why neither is. */
+  rationale: string;
+  entries: PlannedEntry[];
+}
+
 export interface AnalogStats {
   occurrences: number;
   winRatePct: number;
@@ -275,6 +328,8 @@ export interface TickerDossier {
   reasonsAgainst: EvidenceBullet[];
   invalidation: InvalidationTrigger[];
   analogs: Section<AnalogStats>;
+  /** Where this becomes a trade, whether or not it is one today. */
+  nextEntry: Section<PlannedEntryRead>;
   macro: Section<MacroContext>;
   evidence: EvidenceGroup[];
   /** Structural context the evidence groups do not cover. */

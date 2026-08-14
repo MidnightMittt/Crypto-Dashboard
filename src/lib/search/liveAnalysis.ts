@@ -9,6 +9,7 @@ import {
 } from "@/lib/markets/equityEvidence";
 import { buildMarketBias } from "@/lib/signals/marketBias";
 import { buildTradePlanOutcome, PlanConstraints, TradePlan, TradePlanRefusal } from "@/lib/signals/tradePlan";
+import { buildPlannedSetups, readPlannedSetups, PlannedSetupsView } from "@/lib/signals/plannedSetup";
 import {
   buildSupportResistanceZones,
   buildVolumeProfile,
@@ -79,6 +80,22 @@ export interface LiveAnalysis {
   coverage: CoverageFamily[];
   /** Sessions of history the read is built on. */
   barsUsed: number;
+  /**
+   * WHERE THIS BECOMES A TRADE, whether or not it is one today.
+   *
+   * A refusal that ends at "no trade" leaves a reader with nothing to do.
+   * These are the conditional entries built from the same structure the rest
+   * of the page uses — a level, a stop beyond it, targets, and the exact
+   * move required to get there. Null only when there is no volatility
+   * reading or no structure within pullback range to price against.
+   */
+  plannedSetups: PlannedSetupsView | null;
+  /**
+   * Why a trade from each planned level would NOT qualify today, or null
+   * when it would. The level is shown regardless — a reader waiting for a
+   * price deserves to know both where it is and what still has to improve.
+   */
+  plannedGate: { long: TradePlanRefusal | null; short: TradePlanRefusal | null };
 }
 
 export type LiveAnalysisResult =
@@ -106,6 +123,12 @@ export interface LiveAnalysisInputs {
    * measurement path never does.
    */
   planConstraints?: PlanConstraints | null;
+  /**
+   * Constraints for BOTH sides, used only by the forward-looking planned
+   * setups — which price a long-at-support and a short-at-resistance
+   * regardless of today's direction, and so need each side's own record.
+   */
+  constraintsBySide?: { long: PlanConstraints | null; short: PlanConstraints | null } | null;
   now: number;
 }
 
@@ -285,6 +308,64 @@ export function buildLiveAnalysis(inputs: LiveAnalysisInputs): LiveAnalysisResul
           ? ({ plan: null, refusal: "no-structure" } as const)
           : null;
 
+  /*
+   * THE FORWARD VIEW. Built from the same zones, the same ATR and the same
+   * plan geometry as everything above, with `requirePullbackEntry` on inside
+   * buildPlannedSetups — which is what makes these levels to wait for rather
+   * than trades to take now. Both sides are priced when structure supports
+   * them, so a reader learns where the opposite case would begin too.
+   */
+  const frozenSetups = buildPlannedSetups({
+    /*
+     * DELIBERATELY UNGATED. A level is a fact about structure; whether a
+     * trade from it currently clears the quality bars is a separate
+     * question, answered per-side below. Passing constraints here deletes
+     * the level entirely — which is how this page ended up telling a reader
+     * "no level in range" about a support zone sitting 1.4 ATR away.
+     */
+    constraintsBySide: null,
+    t: asOf,
+    closePrice: lastClose,
+    atrPct,
+    zones,
+    dailyDirection: techRead?.direction ?? null,
+    // Searched equities carry daily bars only; the 4H read genuinely does not
+    // exist here, and claiming agreement between one timeframe and a missing
+    // one would be inventing confirmation.
+    fourHourDirection: null,
+    quality: {
+      confidence: bias.confidence,
+      agreement: bias.agreement,
+      historicalWinRatePct: null,
+      historicalWinRateN: null,
+    },
+  });
+
+  /*
+   * Would a trade from each planned level actually qualify today? Same
+   * geometry, same constraints, same function the live plan uses — so a
+   * "does not qualify yet" here means exactly what a refusal means there.
+   */
+  const gateFor = (dir: "long" | "short"): TradePlanRefusal | null => {
+    const c = inputs.constraintsBySide?.[dir] ?? null;
+    if (!c || atrPct === null) return null;
+    return buildTradePlanOutcome({
+      direction: dir,
+      anchorPrice: lastClose,
+      atrPct,
+      zones,
+      quality: {
+        confidence: bias.confidence,
+        agreement: bias.agreement,
+        historicalWinRatePct: null,
+        historicalWinRateN: null,
+      },
+      requirePullbackEntry: true,
+      constraints: c,
+    }).refusal;
+  };
+  const plannedGate = { long: gateFor("long"), short: gateFor("short") };
+
   return {
     ok: true,
     analysis: {
@@ -301,6 +382,8 @@ export function buildLiveAnalysis(inputs: LiveAnalysisInputs): LiveAnalysisResul
       zones,
       atrPct,
       barsUsed: bars.length,
+      plannedSetups: readPlannedSetups(frozenSetups, lastClose),
+      plannedGate,
       coverage: buildCoverage({
         assetClass,
         relativeStrength,
