@@ -14,7 +14,12 @@ import { fetchNews, fetchSocial } from "@/lib/dossier/providers/attention";
 import { fetchFundamentals } from "@/lib/dossier/providers/secFundamentals";
 import { fetchStreet } from "@/lib/dossier/providers/nasdaqStreet";
 import { fetchBackdrop } from "@/lib/dossier/providers/macroBackdrop";
-import { equityExpectationsFor, equityPlanConstraints, EquityExecutionSnapshot } from "@/lib/dossier/equityExpectations";
+import {
+  equityAnalogsFor,
+  equityExpectationsFor,
+  equityPlanConstraints,
+  EquityExecutionSnapshot,
+} from "@/lib/dossier/equityExpectations";
 import { RegimeRead } from "@/lib/markets/riskRegime";
 import { RotationRead } from "@/lib/markets/rotation";
 import { IndustryRead } from "@/lib/markets/industryIntelligence";
@@ -230,7 +235,22 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
     rotation: intelligence.rotation ?? null,
     industries: intelligence.industries ?? [],
     expectations,
-    analogs: null,
+    /*
+     * Analogs are looked up from the UNGATED probe's plan, not the gated one.
+     * The setup's historical record is exactly what justifies a refusal, so
+     * hiding it whenever the gate fires would remove the evidence at the
+     * moment it matters most. The entry style comes from the probe's geometry
+     * because that is the entry the setup was asking for.
+     */
+    analogs:
+      isCrypto || !expectationsSide || !probe.ok || !probe.analysis.plan
+        ? null
+        : equityAnalogsFor(
+            expectationsSide,
+            probe.analysis.plan,
+            probe.analysis.bias.metrics,
+            equityExecutionJson as unknown as EquityExecutionSnapshot
+          ),
     options: toSection(options, "advanced", {
       to: "institutional" as const,
       when: "positioning is tracked across sessions, so today's cross-venue snapshot becomes a trend rather than a single reading",

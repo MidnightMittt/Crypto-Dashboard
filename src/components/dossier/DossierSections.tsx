@@ -413,10 +413,25 @@ export function AnalogsPanel({ d }: { d: TickerDossier }) {
     <Panel title="Similar historical setups">
       {a.status === "available" ? (
         <>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 lg:grid-cols-6">
             <PlanStat label="Times seen" value={`${a.data.occurrences}`} />
             <PlanStat label="Win rate" value={`${a.data.winRatePct.toFixed(0)}%`} />
-            <PlanStat label="Median return" value={`${a.data.medianReturnPct >= 0 ? "+" : ""}${a.data.medianReturnPct.toFixed(1)}%`} />
+            {/* MEDIAN AND AVERAGE TOGETHER, always.
+                These setups are skewed: the typical trade loses a little and
+                the profit lives in the tail. Showing the median alone reads as
+                a losing strategy; showing the average alone hides that most
+                individual trades disappoint. Both, side by side, is the only
+                honest summary of a distribution shaped like this. */}
+            <PlanStat
+              label="Typical (median)"
+              value={`${a.data.medianReturnPct >= 0 ? "+" : ""}${a.data.medianReturnPct.toFixed(1)}%`}
+              tone={a.data.medianReturnPct >= 0 ? "text-success" : "text-danger"}
+            />
+            <PlanStat
+              label="Average"
+              value={`${a.data.averageReturnPct >= 0 ? "+" : ""}${a.data.averageReturnPct.toFixed(1)}%`}
+              tone={a.data.averageReturnPct >= 0 ? "text-success" : "text-danger"}
+            />
             <PlanStat
               label="Typical dip first"
               value={a.data.averageDrawdownPct === null ? "—" : `${a.data.averageDrawdownPct.toFixed(1)}%`}
@@ -426,6 +441,15 @@ export function AnalogsPanel({ d }: { d: TickerDossier }) {
               value={a.data.medianHoldSessions === null ? "—" : `${a.data.medianHoldSessions} days`}
             />
           </div>
+          {a.data.medianReturnPct < 0 && a.data.averageReturnPct > 0 && (
+            <p className="rounded-md border border-amber/20 bg-amber/[0.04] px-3 py-2 text-[12px] leading-relaxed text-ink">
+              <span className="font-semibold uppercase tracking-[0.12em] text-amber">Read this carefully</span> ·
+              The typical setup like this one LOST {Math.abs(a.data.medianReturnPct).toFixed(1)}%, yet the
+              average came out positive. That means the profit lives in a minority of large winners, not in most
+              trades working. Position for a run of small losses, and do not size as though the average is what
+              usually happens.
+            </p>
+          )}
           <p className="text-[11px] leading-relaxed text-ink-faint">
             <span className="text-ink-muted">Matched on ·</span> {a.data.matchBasis} {a.data.caveat}
           </p>

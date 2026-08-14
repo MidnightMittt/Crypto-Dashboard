@@ -5,7 +5,17 @@ import { buildLiveAnalysis, MIN_BARS_FOR_ANALYSIS } from "../../src/lib/search/l
 import { buildEquityEvidence, EquityInstrumentInput } from "../../src/lib/markets/equityEvidence";
 import { resolveTrade, TradePlan as ExecPlan } from "../../src/lib/research/tradeExecution";
 import { effectiveSampleSize } from "../../src/lib/research/overlap";
-import { volRegimeFromMetrics, EquityCell, EquityExecutionSnapshot, EquitySide, EquityVolRegime, equityCellKey } from "../../src/lib/dossier/equityExpectations";
+import {
+  volRegimeFromMetrics,
+  EquityAnalogCell,
+  EquityCell,
+  EquityEntryStyle,
+  EquityExecutionSnapshot,
+  EquitySide,
+  EquityVolRegime,
+  equityAnalogKey,
+  equityCellKey,
+} from "../../src/lib/dossier/equityExpectations";
 import { Bar, SessionModel } from "../../src/lib/research/types";
 import { MetricVerdict } from "../../src/lib/signals/types";
 
@@ -165,6 +175,7 @@ interface ResolvedRow {
   holdSessions: number;
   win: boolean;
   outcome: "target" | "stop" | "timeout";
+  entryStyle: EquityEntryStyle;
 }
 
 function main() {
@@ -375,7 +386,24 @@ function main() {
       holdSessions,
       win: net > 0,
       outcome: r.outcome,
+      entryStyle: p.atMarket ? "at-market" : "pullback",
     });
+  }
+
+  /*
+   * Reach rate must be computed PER ENTRY STYLE: at-market plans fill by
+   * construction, so blending them into one number would hide the only place
+   * the question is live — how often a resting pullback actually gets hit.
+   */
+  const printedByStyle = new Map<string, number>();
+  const filledByStyle = new Map<string, number>();
+  for (const p of pending) {
+    const k = equityAnalogKey(p.side, p.volRegime, p.atMarket ? "at-market" : "pullback");
+    printedByStyle.set(k, (printedByStyle.get(k) ?? 0) + 1);
+  }
+  for (const r of rows) {
+    const k = equityAnalogKey(r.side, r.volRegime, r.entryStyle);
+    filledByStyle.set(k, (filledByStyle.get(k) ?? 0) + 1);
   }
 
   const reachRatePct = pending.length > 0 ? ((pending.length - neverFilled) / pending.length) * 100 : 0;
@@ -388,9 +416,20 @@ function main() {
   const pct = (x: number) => ((x / Math.max(1, rows.length)) * 100).toFixed(1);
   console.log(`[replay] outcomes: target ${pct(mix.target)}%  stop ${pct(mix.stop)}%  timeout ${pct(mix.timeout)}%`);
 
-  const snapshot = aggregate(rows, dates, equities, pending.length, reachRatePct);
+  const snapshot = aggregate(rows, dates, equities, pending.length, reachRatePct, printedByStyle, filledByStyle);
   fs.writeFileSync(OUT, JSON.stringify(snapshot, null, 0));
   console.log(`[replay] -> ${OUT}`);
+  console.log("\n[replay] ENTRY STYLE — chase it, or wait for the retest?");
+  for (const [k, a] of Object.entries(snapshot.analogs ?? {})) {
+    if (!a) continue;
+    console.log(
+      `  ${k.padEnd(28)} n=${String(a.occurrences).padStart(6)} win=${a.winRatePct.toFixed(1)}% ` +
+        `avg=${a.averageReturnPct >= 0 ? "+" : ""}${a.averageReturnPct.toFixed(2)}% ` +
+        `excess=${a.excessReturnPct === null ? "-" : (a.excessReturnPct >= 0 ? "+" : "") + a.excessReturnPct.toFixed(2) + "%"} ` +
+        `reach=${a.reachRatePct.toFixed(0)}% hold=${a.medianHoldSessions ?? "-"}`
+    );
+  }
+  console.log("");
   for (const [k, c] of Object.entries(snapshot.cells)) {
     if (!c) continue;
     console.log(
@@ -455,6 +494,8 @@ function quantile(xs: number[], q: number): number {
 
 /** Fewer than this and the cell is not published — thin cells mislead. */
 const MIN_CELL_N = 100;
+/** Analog cells split three ways, so they get their own floor. */
+const MIN_ANALOG_N = 200;
 const MIN_WINNERS = 40;
 
 function aggregate(
@@ -462,7 +503,9 @@ function aggregate(
   dates: number[],
   instruments: Loaded[],
   plansPrinted: number,
-  reachRatePct: number
+  reachRatePct: number,
+  printedByStyle: Map<string, number>,
+  filledByStyle: Map<string, number>
 ): EquityExecutionSnapshot {
   const cells: Record<string, EquityCell | undefined> = {};
   const symbolCount = instruments.length;
@@ -477,7 +520,56 @@ function aggregate(
       if (h.length) holdsNeeded.add(Math.round(quantile(h, 0.5)));
     }
   }
+  // Analog cells need their own holding periods too.
+  for (const side of ["long", "short"] as EquitySide[]) {
+    for (const vol of ["high-vol", "normal-vol", "low-vol"] as EquityVolRegime[]) {
+      for (const st of ["at-market", "pullback"] as EquityEntryStyle[]) {
+        const c = rows.filter((r) => r.side === side && r.volRegime === vol && r.entryStyle === st);
+        if (c.length < MIN_ANALOG_N) continue;
+        const h = c.map((r) => r.holdSessions).filter((x) => x > 0);
+        if (h.length) holdsNeeded.add(Math.round(quantile(h, 0.5)));
+      }
+    }
+  }
   const drift = driftNullByHorizon(instruments, REPLAY_START, [...holdsNeeded]);
+
+  const analogs: Record<string, EquityAnalogCell | undefined> = {};
+  for (const side of ["long", "short"] as EquitySide[]) {
+    for (const vol of ["high-vol", "normal-vol", "low-vol"] as EquityVolRegime[]) {
+      for (const st of ["at-market", "pullback"] as EquityEntryStyle[]) {
+        const c = rows.filter((r) => r.side === side && r.volRegime === vol && r.entryStyle === st);
+        if (c.length < MIN_ANALOG_N) continue;
+
+        const rets = c.map((r) => r.netReturnPct);
+        const holds = c.map((r) => r.holdSessions).filter((x) => x > 0);
+        const medianHoldSessions = holds.length ? Math.round(quantile(holds, 0.5)) : null;
+        const rawDrift = medianHoldSessions !== null ? (drift.get(medianHoldSessions) ?? null) : null;
+        const driftNullPct = rawDrift === null ? null : side === "long" ? rawDrift : -rawDrift;
+        const averageReturnPct = rets.reduce((a, b) => a + b, 0) / rets.length;
+
+        const key = equityAnalogKey(side, vol, st);
+        const printed = printedByStyle.get(key) ?? 0;
+        const filled = filledByStyle.get(key) ?? 0;
+
+        analogs[key] = {
+          side,
+          volRegime: vol,
+          entryStyle: st,
+          occurrences: c.length,
+          effectiveN: Math.round(effectiveSampleSize(c.length, Math.max(1, medianHoldSessions ?? 1))),
+          winRatePct: (c.filter((r) => r.win).length / c.length) * 100,
+          medianReturnPct: quantile(rets, 0.5),
+          averageReturnPct,
+          averageDrawdownPct:
+            c.reduce((a, r) => a + Math.abs(Math.min(0, r.maePct)), 0) / c.length,
+          medianHoldSessions,
+          driftNullPct,
+          excessReturnPct: driftNullPct === null ? null : averageReturnPct - driftNullPct,
+          reachRatePct: printed > 0 ? (filled / printed) * 100 : 0,
+        };
+      }
+    }
+  }
 
   for (const side of ["long", "short"] as EquitySide[]) {
     for (const vol of ["high-vol", "normal-vol", "low-vol"] as EquityVolRegime[]) {
@@ -563,6 +655,7 @@ function aggregate(
       trades: rows.length,
     },
     cells,
+    analogs,
     caveats: [
       "Trades overlap in time and across correlated names, so even the overlap-corrected effective sample is optimistic — the temporal correction does not remove cross-sectional correlation between simultaneous positions.",
       "Historical earnings dates were not available offline, so the replay could not apply the live engine's earnings veto. Some replayed trades are ones the live page would refuse to plan, which makes these numbers if anything noisier than the gated engine's.",

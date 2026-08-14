@@ -243,11 +243,17 @@ function buildAnalogs(analogs: AnalogStats | null, isCrypto: boolean, barsUsed: 
       "This asset has too little history for its current setup to have occurred before in any measurable way."
     );
   }
+  /*
+   * Equity analogs now EXIST, so the reason narrows: a null means this
+   * particular combination of direction, volatility regime and entry style
+   * had too few replayed occurrences to quote, or there is no plan geometry
+   * to read an entry style from.
+   */
   return unavailable(
     "not-measured-yet",
     isCrypto
       ? "No sufficiently similar historical setup was found for this asset. A thin match is worse than none — a win rate from six occurrences is noise with a decimal point."
-      : "Historical setup matching runs on recorded daily fingerprints, and those exist only for the crypto majors so far. There is no equity fingerprint history yet, so no win rate, median return or holding time can be quoted for this ticker. Quoting one from a different asset class would be fabrication."
+      : "Too few replayed setups match this one on all three counts — direction, volatility regime and entry style — to quote a win rate honestly, or there is no plan geometry to read an entry style from. Widening the match until a number appeared would be choosing the definition that flatters the answer."
   );
 }
 

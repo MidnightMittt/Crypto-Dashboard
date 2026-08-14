@@ -1,6 +1,6 @@
 import { MetricVerdict } from "@/lib/signals/types";
-import { PlanConstraints } from "@/lib/signals/tradePlan";
-import { PlanExpectations } from "./types";
+import { PlanConstraints, TradePlan } from "@/lib/signals/tradePlan";
+import { AnalogStats, PlanExpectations } from "./types";
 
 /**
  * EQUITY EXPECTATIONS — the runtime half of the equity execution replay.
@@ -34,6 +34,16 @@ import { PlanExpectations } from "./types";
 
 export type EquityVolRegime = "high-vol" | "normal-vol" | "low-vol";
 export type EquitySide = "long" | "short";
+
+/**
+ * How the plan asked to be entered.
+ *
+ * `at-market` brackets the signal close — takeable immediately. `pullback`
+ * rests at a support/resistance zone away from price and only becomes a
+ * trade if price returns. The distinction is the entry decision itself, which
+ * is why it earns a dimension of its own rather than being averaged away.
+ */
+export type EquityEntryStyle = "at-market" | "pullback";
 
 /** Excursion percentiles over WINNING trades, in positive percent. */
 export interface EquityWinnerExcursions {
@@ -79,6 +89,42 @@ export interface EquityCell {
   winners: EquityWinnerExcursions | null;
 }
 
+/**
+ * ANALOGS — outcomes conditioned on the SETUP, not just the side.
+ *
+ * ── The match basis is declared a priori, and here is the declaration ──
+ *
+ * Two setups count as comparable when they share three things: direction,
+ * volatility regime, and how the plan asked to be entered. That list was
+ * fixed BEFORE any outcome was examined, and it is deliberately short.
+ * Every extra dimension both divides the sample and adds a degree of freedom
+ * to fish with — and "find the setup definition whose win rate looks best"
+ * is precisely how a backtest manufactures an edge that does not exist.
+ *
+ * Each of the three earns its place by answering a question a trader
+ * actually asks at the moment of entry: which way, how violent is this tape,
+ * and do I take it here or wait for the retest.
+ */
+export interface EquityAnalogCell {
+  side: EquitySide;
+  volRegime: EquityVolRegime;
+  entryStyle: EquityEntryStyle;
+  occurrences: number;
+  effectiveN: number;
+  winRatePct: number;
+  medianReturnPct: number;
+  averageReturnPct: number;
+  /** Average adverse excursion across ALL trades, as a positive percent. */
+  averageDrawdownPct: number;
+  medianHoldSessions: number | null;
+  /** Baseline for this cell's own holding period, side-adjusted. */
+  driftNullPct: number | null;
+  /** Average return minus that baseline — the setup's own contribution. */
+  excessReturnPct: number | null;
+  /** Share of printed plans of this kind that price actually reached. */
+  reachRatePct: number;
+}
+
 export interface EquityExecutionSnapshot {
   generatedAt: number;
   /** How the numbers were produced, carried with them rather than in a doc. */
@@ -106,8 +152,18 @@ export interface EquityExecutionSnapshot {
     trades: number;
   };
   cells: Record<string, EquityCell | undefined>;
+  /** Setup-conditioned outcomes, keyed side:vol:entryStyle. */
+  analogs?: Record<string, EquityAnalogCell | undefined>;
   /** Stated limitations, published WITH the numbers so they travel together. */
   caveats: string[];
+}
+
+export function equityAnalogKey(
+  side: EquitySide,
+  vol: EquityVolRegime,
+  entry: EquityEntryStyle
+): string {
+  return `${side}:${vol}:${entry}`;
 }
 
 /**
@@ -237,5 +293,63 @@ export function equityPlanConstraints(
     winnersMaeP50Pct: cell.winners?.maeP50Pct ?? null,
     winnersMaeP80Pct: cell.winners?.maeP80Pct ?? null,
     winnersMfeP75Pct: cell.winners?.mfeP75Pct ?? null,
+  };
+}
+
+/**
+ * Which entry a live plan is asking for.
+ *
+ * Inferred from the geometry exactly as the replay infers it: a zone that
+ * brackets the anchor close is takeable now; one that sits away from it is a
+ * retest that price has to come back to. Same rule on both sides of the
+ * measurement, or the live page would be looking up a bucket it does not
+ * belong to.
+ */
+export function entryStyleOf(plan: TradePlan): EquityEntryStyle {
+  return plan.anchorPrice >= plan.entryLow && plan.anchorPrice <= plan.entryHigh
+    ? "at-market"
+    : "pullback";
+}
+
+/**
+ * HOW SETUPS LIKE THIS ONE RESOLVED — the analog card, from measurement.
+ *
+ * Returns null rather than a thin or borrowed cell. The `matchBasis` is
+ * carried in the payload so the reader can judge what "similar" was allowed
+ * to mean, and the caveat carries the limits that matter most: overlap, and
+ * the fact that a market which rose lends every long a tailwind the setup
+ * did not earn.
+ */
+export function equityAnalogsFor(
+  side: EquitySide,
+  plan: TradePlan,
+  metrics: MetricVerdict[],
+  snapshot: EquityExecutionSnapshot | null
+): AnalogStats | null {
+  if (!snapshot?.analogs) return null;
+  const vol = volRegimeFromMetrics(metrics);
+  if (!vol) return null;
+
+  const style = entryStyleOf(plan);
+  const cell = snapshot.analogs[equityAnalogKey(side, vol, style)];
+  if (!cell) return null;
+
+  const styleWords =
+    style === "at-market"
+      ? "taken at market rather than on a retest"
+      : "entered on a pullback into structure rather than at market";
+
+  return {
+    occurrences: cell.occurrences,
+    winRatePct: cell.winRatePct,
+    medianReturnPct: cell.medianReturnPct,
+    averageReturnPct: cell.averageReturnPct,
+    averageDrawdownPct: cell.averageDrawdownPct,
+    medianHoldSessions: cell.medianHoldSessions,
+    matchBasis: `Same direction (${side}), same volatility regime (${vol.replace("-vol", " volatility")}), and ${styleWords}. Those three were fixed before any outcome was looked at — a wider net would have meant choosing a definition after seeing which one flattered the result.`,
+    caveat:
+      cell.excessReturnPct === null
+        ? "In-sample over one fixed history, with overlapping trades that are not independent observations."
+        : `Averages ${cell.averageReturnPct >= 0 ? "+" : ""}${cell.averageReturnPct.toFixed(2)}% against a ${cell.driftNullPct !== null && cell.driftNullPct >= 0 ? "+" : ""}${cell.driftNullPct?.toFixed(2)}% baseline for simply being in the market that long — so the setup's own contribution is ${cell.excessReturnPct >= 0 ? "+" : ""}${cell.excessReturnPct.toFixed(2)}%. Overlapping trades mean the ${cell.occurrences.toLocaleString()} occurrences behave like roughly ${cell.effectiveN.toLocaleString()} independent ones, and this is in-sample over one fixed history.`,
   };
 }
