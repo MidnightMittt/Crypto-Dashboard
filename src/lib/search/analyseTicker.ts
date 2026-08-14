@@ -14,12 +14,14 @@ import { fetchNews, fetchSocial } from "@/lib/dossier/providers/attention";
 import { fetchFundamentals } from "@/lib/dossier/providers/secFundamentals";
 import { fetchStreet } from "@/lib/dossier/providers/nasdaqStreet";
 import { fetchBackdrop } from "@/lib/dossier/providers/macroBackdrop";
+import { equityExpectationsFor, EquityExecutionSnapshot } from "@/lib/dossier/equityExpectations";
 import { RegimeRead } from "@/lib/markets/riskRegime";
 import { RotationRead } from "@/lib/markets/rotation";
 import { IndustryRead } from "@/lib/markets/industryIntelligence";
 import marketContextJson from "@/data/marketContext.json";
 import earningsCalendarJson from "@/data/earningsCalendar.json";
 import intelligenceJson from "@/data/marketIntelligence.json";
+import equityExecutionJson from "@/data/equityExecutionStats.json";
 
 /**
  * SEARCH, END TO END — resolve, fetch, score.
@@ -157,18 +159,38 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
   }
 
   /*
-   * Expectations and analogs are passed as null for now: neither exists for
-   * equities, and the crypto replay is keyed to the BTC/ETH aggregator rather
-   * than to this search path. The dossier turns each null into a stated
-   * reason rather than a blank, so the page is honest today and gains the
-   * numbers the moment the equity replay lands.
+   * MEASURED EXPECTATIONS. The equity execution replay walks the committed
+   * daily history point-in-time with this same engine and resolves every plan
+   * it printed, so a stock now carries a real win rate, expectancy, drawdown
+   * and holding time for its side and volatility regime — the numbers this
+   * section spent its whole life stating it did NOT have.
+   *
+   * Only computed when the read is directional: a neutral verdict has no
+   * side, and a side picked for the sake of filling a field would be a
+   * fabricated bucket. Analogs remain null — setup-similarity fingerprints
+   * exist only for the crypto majors, and the dossier still says so.
    */
+  const expectationsSide =
+    result.analysis.bias.verdict === "bullish"
+      ? ("long" as const)
+      : result.analysis.bias.verdict === "bearish"
+        ? ("short" as const)
+        : null;
+  const expectations =
+    isCrypto || !expectationsSide
+      ? null
+      : equityExpectationsFor(
+          expectationsSide,
+          result.analysis.bias.metrics,
+          equityExecutionJson as unknown as EquityExecutionSnapshot
+        );
+
   const dossier = buildDossier({
     analysis: result.analysis,
     regime: intelligence.regime ?? null,
     rotation: intelligence.rotation ?? null,
     industries: intelligence.industries ?? [],
-    expectations: null,
+    expectations,
     analogs: null,
     options: toSection(options, "advanced", {
       to: "institutional" as const,

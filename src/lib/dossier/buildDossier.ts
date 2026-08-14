@@ -208,11 +208,17 @@ function buildExpectations(expectations: PlanExpectations | null, isCrypto: bool
       when: "the registered forward hypotheses accumulate enough out-of-sample days to condition expectations on a forward-tested record rather than an in-sample replay",
     });
   }
+  /*
+   * The equity replay now EXISTS, so this reason can no longer say it does
+   * not. A null here for a stock means something narrower and truer: either
+   * the read is not directional (no side, so no bucket), or the replay
+   * declined to publish this side-and-volatility cell for thin sample.
+   */
   return unavailable(
     "not-measured-yet",
     isCrypto
       ? "No replayed trades match this asset and volatility regime yet, so no expectancy is claimed for it."
-      : "There is no equity execution replay yet, so win rate, expected drawdown, how far comparable trades ran and how long they took are NOT measured for stocks. The geometry below is sound; the expectations around it are simply not yet earned. Building this replay is the next major piece of work."
+      : "The equity replay has no publishable record for this particular side and volatility regime — either the read is not directional, or too few comparable trades exist in that bucket to quote a win rate honestly. Borrowing a neighbouring bucket's number would be worse than saying so."
   );
 }
 

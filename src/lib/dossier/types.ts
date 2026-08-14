@@ -169,6 +169,17 @@ export interface PlanExpectations {
   expectedRunPct: number | null;
   /** Median sessions to resolution. */
   medianHoldSessions: number | null;
+  /**
+   * Average return of a RANDOM entry over the same holding period, on the
+   * same universe and window. The baseline expectancy must be judged
+   * against; null where no baseline was measured.
+   */
+  driftNullPct?: number | null;
+  /**
+   * Expectancy minus that baseline — what the signal actually added. This,
+   * not `evLowerPct`, is what the word "edge" is allowed to describe.
+   */
+  excessEvPct?: number | null;
   /** Which measured bucket produced these. */
   cellKey: string;
 }

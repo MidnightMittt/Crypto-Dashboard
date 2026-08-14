@@ -229,7 +229,17 @@ export function PlanPanel({ d }: { d: TickerDossier }) {
         {expectations.status === "available" ? (
           <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 lg:grid-cols-5">
             <PlanStat label="Win rate" value={`${expectations.data.winRatePct.toFixed(0)}%`} />
-            <PlanStat label="Edge per trade" value={`${expectations.data.evLowerPct.toFixed(2)}%`} />
+            {/* The EXCESS is the edge. Labelling raw expectancy "edge" would
+                credit the signal with the market's own drift — measured at
+                roughly +0.8% over a two-week hold in this sample. */}
+            <PlanStat
+              label="Edge over doing nothing"
+              value={
+                expectations.data.excessEvPct === null || expectations.data.excessEvPct === undefined
+                  ? `${expectations.data.evLowerPct.toFixed(2)}%`
+                  : `${expectations.data.excessEvPct >= 0 ? "+" : ""}${expectations.data.excessEvPct.toFixed(2)}%`
+              }
+            />
             <PlanStat label="Typical dip first" value={`${expectations.data.expectedDrawdownPct.toFixed(1)}%`} />
             <PlanStat
               label="How far winners ran"
@@ -247,6 +257,18 @@ export function PlanPanel({ d }: { d: TickerDossier }) {
         ) : (
           <Unavailable section={expectations} />
         )}
+        {expectations.status === "available" &&
+          expectations.data.driftNullPct !== null &&
+          expectations.data.driftNullPct !== undefined && (
+            <p className="text-[10px] leading-relaxed text-ink-faint">
+              Measured over {expectations.data.n.toLocaleString()} comparable historical trades in the same
+              direction and volatility regime. &quot;Edge over doing nothing&quot; already subtracts the{" "}
+              {expectations.data.driftNullPct >= 0 ? "+" : ""}
+              {expectations.data.driftNullPct.toFixed(2)}% a random entry earned over the same holding period —
+              in a market that rose, most of a raw expectancy is the market rather than the signal, and only
+              what is left over is edge.
+            </p>
+          )}
         {expectations.status === "available" && <DepthMeta section={expectations} />}
       </div>
     </Panel>
