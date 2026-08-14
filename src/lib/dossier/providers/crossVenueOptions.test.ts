@@ -4,10 +4,9 @@ import { crossConfirm } from "./crossVenueOptions";
 import { toParsedContract } from "./tradierOptions";
 
 /**
- * A chain built to hand-set the three cross-venue checks. Two ATM calls and
- * two ATM puts on one expiry, spot 100 — enough for summariseParsed to
- * compute ATM IV (needs ≥2 in-band nonzero-IV contracts), put/call OI, and a
- * gamma sign.
+ * A chain built to hand-set the cross-venue checks. Two ATM calls and two ATM
+ * puts on one expiry, spot 100 — enough for summariseParsed to compute ATM IV
+ * (needs ≥2 in-band nonzero-IV contracts), put/call OI, and a gamma sign.
  */
 function chain(o: {
   expiry?: string;
@@ -32,33 +31,59 @@ function chain(o: {
 }
 
 describe("crossConfirm", () => {
-  it("reports full agreement when both venues match on IV, positioning and gamma sign", () => {
+  it("counts only the INDEPENDENT checks — the shared-source put/call ratio is not a vote", () => {
     const r = crossConfirm(
       { spot: 100, contracts: chain({ iv: 0.3, callOi: 200, putOi: 100 }) },
-      { spot: 100, contracts: chain({ iv: 0.31, callOi: 220, putOi: 90 }) },
+      { spot: 100, contracts: chain({ iv: 0.305, callOi: 200, putOi: 100 }) },
       "2026-08-14"
     )!;
-    expect(r.comparisons).toBe(3);
-    expect(r.agreements).toBe(3);
-    expect(r.ivAgree).toBe(true);
-    expect(r.putCallAgree).toBe(true); // both call-heavy (P/C < 1)
-    expect(r.gexAgree).toBe(true);
-    expect(r.line).toContain("agrees on all 3");
+    // Two independent checks (IV, gamma sign) — NOT three.
+    expect(r.comparisons).toBe(2);
+    expect(r.agreements).toBe(2);
+    expect(r.openInterestIdentical).toBe(true);
+    expect(r.line).toContain("data-integrity check rather than a second opinion");
   });
 
-  it("flags an implied-vol disagreement loudly and names both numbers", () => {
+  it("reports the implied-vol gap in points, not just a verdict", () => {
     const r = crossConfirm(
       { spot: 100, contracts: chain({ iv: 0.3 }) },
-      { spot: 100, contracts: chain({ iv: 0.9 }) }, // 30% vs 90% — far outside tolerance
+      { spot: 100, contracts: chain({ iv: 0.313 }) },
       "2026-08-14"
     )!;
+    expect(r.ivGapPoints).toBeCloseTo(1.3, 5);
+    expect(r.line).toContain("1.3 implied-vol points");
+  });
+
+  /*
+   * THE REGRESSION THIS FILE EXISTS FOR. Measured live: AAPL priced 32.1% at
+   * CBOE against 38.3% at Tradier — a 6.1-point gap that the original
+   * 5-point/20%-relative tolerance passed as "agrees on all 3". A materially
+   * different option price must not read as corroboration.
+   */
+  it("calls AAPL's real 6.1-point venue gap a DISAGREEMENT, not agreement", () => {
+    const r = crossConfirm(
+      { spot: 100, contracts: chain({ iv: 0.3211 }) },
+      { spot: 100, contracts: chain({ iv: 0.3825 }) },
+      "2026-08-14"
+    )!;
+    expect(r.ivGapPoints).toBeCloseTo(6.14, 2);
     expect(r.ivAgree).toBe(false);
-    expect(r.line).toContain("30%");
-    expect(r.line).toContain("90%");
+    expect(r.line).toContain("6.1 implied-vol points away");
+    expect(r.line).toContain("disagree materially");
+    expect(r.line).not.toContain("same place");
+  });
+
+  it("still tolerates a few points on a high-vol name, where they are noise", () => {
+    // IREN-like: ~104% IV. A 3-point gap there is under 5% relative.
+    const r = crossConfirm(
+      { spot: 100, contracts: chain({ iv: 1.04 }) },
+      { spot: 100, contracts: chain({ iv: 1.07 }) },
+      "2026-08-14"
+    )!;
+    expect(r.ivAgree).toBe(true);
   });
 
   it("catches opposite dealer-gamma signs across venues", () => {
-    // Primary: puts dominate gamma (net negative). Secondary: calls dominate (net positive).
     const r = crossConfirm(
       { spot: 100, contracts: chain({ callGamma: 0.001, putGamma: 0.05 }) },
       { spot: 100, contracts: chain({ callGamma: 0.05, putGamma: 0.001 }) },
@@ -67,7 +92,17 @@ describe("crossConfirm", () => {
     expect(r.gexSignPrimary).toBe(-1);
     expect(r.gexSignSecondary).toBe(1);
     expect(r.gexAgree).toBe(false);
-    expect(r.line).toContain("sign of dealer gamma");
+    expect(r.line).toContain("OPPOSITE sides");
+  });
+
+  it("flags mismatched open interest as a stale feed, since OCC data cannot legitimately differ", () => {
+    const r = crossConfirm(
+      { spot: 100, contracts: chain({ callOi: 200, putOi: 100 }) },
+      { spot: 100, contracts: chain({ callOi: 200, putOi: 180 }) },
+      "2026-08-14"
+    )!;
+    expect(r.openInterestIdentical).toBe(false);
+    expect(r.line).toContain("stale or partial");
   });
 
   it("returns null when the venues share no contracts on the requested expiry", () => {

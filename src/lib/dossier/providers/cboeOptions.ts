@@ -94,25 +94,49 @@ export interface OptionsSummary {
  *
  * A single vendor's greeks are a model output, not a measurement: CBOE and
  * ORATS (Tradier's greeks source) run different implied-vol solvers on
- * different quote snapshots, so agreement between them is real evidence the
- * read is not a one-vendor artefact, and disagreement is a reason to trust
- * the single number less. Compared on the expiration BOTH venues list, so
+ * different quote snapshots. Compared on the expiration BOTH venues list, so
  * the comparison is apples-to-apples rather than front-month against
  * full-chain.
+ *
+ * ── WHAT IS AND IS NOT INDEPENDENT ────────────────────────────────────
+ *
+ * Measured, not assumed: open interest is IDENTICAL across the two venues to
+ * three decimals on every symbol checked (NVDA 0.673/0.673, AAPL
+ * 0.518/0.518, IREN 0.800/0.800). It must be — open interest is published by
+ * the OCC, one clearinghouse, and both venues redistribute it. So a
+ * put/call-ratio "agreement" is a number agreeing with itself, and counting
+ * it as corroboration would inflate the evidence. It is kept as a
+ * DATA-INTEGRITY check (did both venues ingest the same OCC feed intact?)
+ * and excluded from the agreement count.
+ *
+ * That leaves implied vol as the one genuinely independent check, and the
+ * gamma SIGN as a coarse second one (each vendor's own gamma, weighted by
+ * the shared open interest). The IV gap is reported in POINTS rather than as
+ * a bare boolean, because magnitude is the information: the same measurement
+ * pass found AAPL 6.1 points apart across venues while IREN agreed to 0.5.
  */
 export interface CrossVenueRead {
   /** The shared expiration the comparison is computed on. */
   expiry: string;
   atmIvPctPrimary: number | null;
   atmIvPctSecondary: number | null;
+  /** The gap itself — the number worth reading, in vol points. */
+  ivGapPoints: number | null;
   ivAgree: boolean | null;
+  /**
+   * Shared-source integrity, NOT independent confirmation: both venues
+   * redistribute OCC open interest, so these should match exactly.
+   */
   putCallOiPrimary: number | null;
   putCallOiSecondary: number | null;
-  putCallAgree: boolean | null;
+  openInterestIdentical: boolean | null;
   gexSignPrimary: number | null;
   gexSignSecondary: number | null;
   gexAgree: boolean | null;
-  /** How many of the checks that could be evaluated agreed. */
+  /**
+   * Counts over the INDEPENDENT checks only (implied vol, gamma sign) —
+   * deliberately excluding the shared-source put/call ratio.
+   */
   agreements: number;
   comparisons: number;
   /** The read as a sentence. */

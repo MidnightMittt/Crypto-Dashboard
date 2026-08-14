@@ -624,14 +624,19 @@ export function OptionsPanel({ d }: { d: TickerDossier }) {
         </p>
       )}
 
-      {/* SECOND VENUE — corroboration or contest, when a second chain answered. */}
+      {/* SECOND VENUE — corroboration or contest, when a second chain answered.
+          Amber on ANY substantive disagreement (a materially different implied
+          vol, opposed gamma signs, or a mismatched OCC feed), because a
+          disagreement rendered in neutral grey is a disagreement nobody reads. */}
       {o.crossVenue && (
         <p
           className={`rounded-md border px-3 py-2 text-[12px] leading-relaxed ${
-            o.crossVenue.comparisons > 0 && o.crossVenue.agreements === o.crossVenue.comparisons
-              ? "border-success/25 bg-success/[0.04] text-ink"
-              : o.crossVenue.agreements === 0 && o.crossVenue.comparisons > 0
-                ? "border-amber/25 bg-amber/[0.04] text-ink"
+            o.crossVenue.ivAgree === false ||
+            o.crossVenue.gexAgree === false ||
+            o.crossVenue.openInterestIdentical === false
+              ? "border-amber/25 bg-amber/[0.04] text-ink"
+              : o.crossVenue.comparisons > 0 && o.crossVenue.agreements === o.crossVenue.comparisons
+                ? "border-success/25 bg-success/[0.04] text-ink"
                 : "border-hairline bg-void/30 text-ink-muted"
           }`}
         >
