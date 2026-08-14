@@ -12,6 +12,15 @@ import {
   summarise,
 } from "../../src/lib/research/forwardReach";
 import {
+  EMPTY_FORWARD_VERDICT,
+  ForwardVerdictRecord,
+  VerdictPrediction,
+  pruneVerdicts,
+  registerVerdicts,
+  resolveVerdicts,
+  summariseVerdicts,
+} from "../../src/lib/research/forwardVerdict";
+import {
   EquityExecutionSnapshot,
   REACH_DISTANCE_ATR_BUCKETS,
   REACH_TOUCH_BUCKETS,
@@ -36,12 +45,19 @@ import { nearestWatchLevels, watchEdge } from "../../src/lib/technicals/marketSt
  * out-of-sample one — and if the published rate turns out to be optimistic,
  * this is what will say so.
  *
- *   npx tsx scripts/ingest/forwardReach.ts
+ * Two claims are scored from ONE pass over the universe, because both read
+ * the same `buildLiveAnalysis` output: the reach rate (does price get to the
+ * level we named) and the VERDICT itself (does bullish actually beat the
+ * market). Splitting them into two jobs would double the work and let the
+ * two records drift onto different analyses of the same day.
+ *
+ *   npx tsx scripts/ingest/forwardScoring.ts
  */
 
 const __dirname_ = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname_, "data");
 const OUT = path.join(__dirname_, "..", "..", "src", "data", "forwardReachRecord.json");
+const OUT_VERDICT = path.join(__dirname_, "..", "..", "src", "data", "forwardVerdictRecord.json");
 const STATS = path.join(__dirname_, "..", "..", "src", "data", "equityExecutionStats.json");
 
 /** Same five-year view the live page runs on — fidelity, not convenience. */
@@ -77,6 +93,7 @@ function load(): Map<string, Loaded> {
 function verify(all: Map<string, Loaded>, snapshot: EquityExecutionSnapshot, asOfIso: string): void {
   const cutoff = Date.parse(`${asOfIso}T23:59:59Z`);
   const fresh: ReachPrediction[] = [];
+  const freshVerdicts: VerdictPrediction[] = [];
 
   for (const inst of [...all.values()].filter((x) => x.assetClass === "equity-etf")) {
     const end = inst.bars.findLastIndex((b) => b.t <= cutoff);
@@ -96,6 +113,16 @@ function verify(all: Map<string, Loaded>, snapshot: EquityExecutionSnapshot, asO
     const price = res.analysis.lastClose;
     const atrAbs = res.analysis.atrPct !== null && price > 0 ? (res.analysis.atrPct / 100) * price : 0;
     if (atrAbs <= 0) continue;
+
+    freshVerdicts.push({
+      date: new Date(asOf).toISOString().slice(0, 10),
+      symbol: inst.symbol,
+      verdict: res.analysis.bias.verdict === "bullish" ? "bullish" : res.analysis.bias.verdict === "bearish" ? "bearish" : "neutral",
+      confidence: res.analysis.bias.confidence,
+      closePrice: price,
+      forwardReturnPct: null,
+      resolvedDate: null,
+    });
 
     const near = nearestWatchLevels(res.analysis.zones, price);
     for (const [zone, direction] of [[near.support, "long"], [near.resistance, "short"]] as const) {
@@ -120,6 +147,23 @@ function verify(all: Map<string, Loaded>, snapshot: EquityExecutionSnapshot, asO
     const c = Date.parse(`${dateIso}T23:59:59Z`);
     return inst.bars.filter((b) => b.t > c).map((b) => ({ t: b.t, high: b.high, low: b.low }));
   };
+  const closesAfter = (symbol: string, dateIso: string) => {
+    const inst = all.get(symbol);
+    if (!inst) return [];
+    const c = Date.parse(`${dateIso}T23:59:59Z`);
+    return inst.bars.filter((b) => b.t > c).map((b) => ({ t: b.t, close: b.close }));
+  };
+  const rv = resolveVerdicts(freshVerdicts, closesAfter);
+  const vs = summariseVerdicts(rv);
+  console.log(`[verify] VERDICT: ${vs.totals.resolved} resolved, sample baseline ${vs.baselineReturnPct?.toFixed(2)}%`);
+  for (const c of vs.cells) {
+    console.log(
+      `  ${c.verdict.padEnd(8)} n=${String(c.n).padStart(4)} hit=${c.hitRatePct === null ? "n/a" : c.hitRatePct.toFixed(1) + "%"} ` +
+        `mean=${c.meanReturnPct >= 0 ? "+" : ""}${c.meanReturnPct.toFixed(2)}% median=${c.medianReturnPct >= 0 ? "+" : ""}${c.medianReturnPct.toFixed(2)}% ` +
+        `EDGE=${c.edgeVsBaselinePct === null ? "n/a" : (c.edgeVsBaselinePct >= 0 ? "+" : "") + c.edgeVsBaselinePct.toFixed(2) + "%"}`
+    );
+  }
+
   const resolved = resolvePredictions(fresh, barsAfter);
   const { calibration, totals } = summarise(resolved);
 
@@ -157,8 +201,13 @@ function main() {
     ? (JSON.parse(fs.readFileSync(OUT, "utf8")) as ForwardReachRecord)
     : EMPTY_FORWARD_REACH;
 
+  const verdictRecord: ForwardVerdictRecord = fs.existsSync(OUT_VERDICT)
+    ? (JSON.parse(fs.readFileSync(OUT_VERDICT, "utf8")) as ForwardVerdictRecord)
+    : EMPTY_FORWARD_VERDICT;
+
   const equities = [...all.values()].filter((x) => x.assetClass === "equity-etf");
   const fresh: ReachPrediction[] = [];
+  const freshVerdicts: VerdictPrediction[] = [];
 
   for (const inst of equities) {
     const end = inst.bars.length - 1;
@@ -192,6 +241,21 @@ function main() {
      * The SAME rule the dossier's watch levels use — now literally the same
      * function, not a copy with a warning comment attached to it.
      */
+    /*
+     * THE HEADLINE CLAIM. Registered for every instrument, including neutral
+     * — a verdict record that only kept the confident calls would measure a
+     * different engine from the one the page runs.
+     */
+    freshVerdicts.push({
+      date: dateIso,
+      symbol: inst.symbol,
+      verdict: res.analysis.bias.verdict === "bullish" ? "bullish" : res.analysis.bias.verdict === "bearish" ? "bearish" : "neutral",
+      confidence: res.analysis.bias.confidence,
+      closePrice: price,
+      forwardReturnPct: null,
+      resolvedDate: null,
+    });
+
     const near = nearestWatchLevels(res.analysis.zones, price);
 
     const register = (zone: typeof near.support, direction: "long" | "short") => {
@@ -239,6 +303,42 @@ function main() {
     totals,
   };
   fs.writeFileSync(OUT, JSON.stringify(out, null, 0));
+
+  // ── The verdict record, same horizon, same discipline ──
+  const closesAfter = (symbol: string, dateIso: string) => {
+    const inst = all.get(symbol);
+    if (!inst) return [];
+    const c = Date.parse(`${dateIso}T23:59:59Z`);
+    return inst.bars.filter((b) => b.t > c).map((b) => ({ t: b.t, close: b.close }));
+  };
+  const resolvedVerdicts = resolveVerdicts(registerVerdicts(verdictRecord.predictions, freshVerdicts), closesAfter);
+  const vSummary = summariseVerdicts(resolvedVerdicts);
+  const verdictOut: ForwardVerdictRecord = {
+    version: 1,
+    horizonSessions: verdictRecord.horizonSessions || 10,
+    generatedAt: Date.now(),
+    predictions: pruneVerdicts(resolvedVerdicts),
+    cells: vSummary.cells,
+    baselineReturnPct: vSummary.baselineReturnPct,
+    totals: vSummary.totals,
+  };
+  fs.writeFileSync(OUT_VERDICT, JSON.stringify(verdictOut, null, 0));
+
+  console.log(
+    `[verdict] ${freshVerdicts.length} registered today · ${vSummary.totals.resolved} resolved · ${vSummary.totals.open} open`
+  );
+  if (vSummary.baselineReturnPct !== null) {
+    console.log(`[verdict] sample baseline (all calls, same window): ${vSummary.baselineReturnPct >= 0 ? "+" : ""}${vSummary.baselineReturnPct.toFixed(2)}%`);
+    for (const c of vSummary.cells) {
+      console.log(
+        `  ${c.verdict.padEnd(8)} n=${String(c.n).padStart(5)} ` +
+          `hit=${c.hitRatePct === null ? "n/a" : c.hitRatePct.toFixed(1) + "%"} ` +
+          `mean=${c.meanReturnPct >= 0 ? "+" : ""}${c.meanReturnPct.toFixed(2)}% ` +
+          `median=${c.medianReturnPct >= 0 ? "+" : ""}${c.medianReturnPct.toFixed(2)}% ` +
+          `EDGE=${c.edgeVsBaselinePct === null ? "n/a" : (c.edgeVsBaselinePct >= 0 ? "+" : "") + c.edgeVsBaselinePct.toFixed(2) + "%"}`
+      );
+    }
+  }
 
   const open = resolved.filter((p) => p.reached === null).length;
   console.log(

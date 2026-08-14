@@ -9,6 +9,7 @@ import {
   AnalogStats,
   available,
   ForwardRecordSummary,
+  VerdictForwardRecord,
   PlannedEntry,
   PlannedEntryRead,
   WatchLevel,
@@ -55,6 +56,8 @@ export interface DossierInputs {
   reachOf?: ((distanceAtr: number, touches: number, prefer: "plan" | "zone") => PlannedEntry["reach"]) | null;
   /** Out-of-sample scorecard for the reach numbers, when one exists. */
   forward?: ForwardRecordSummary | null;
+  /** Out-of-sample record for the verdict word itself. */
+  verdictForward?: VerdictForwardRecord | null;
   /*
    * Provider-backed sections, already shaped by the caller (analyseTicker
    * maps each provider result to a Section with its depth and upgrade).
@@ -105,6 +108,7 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
       stars: strengthStars(bias.score),
       evidence: evidenceLevel(bias.confidence),
       agreementLine: describeAgreement(bias.agreement),
+      forward: inputs.verdictForward ?? null,
     },
 
     tldr: composeTldr({ bias, plan, symbol: analysis.symbol, name: analysis.name }),

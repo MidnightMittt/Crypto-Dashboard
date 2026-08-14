@@ -150,6 +150,53 @@ export function VerdictPanel({ d }: { d: TickerDossier }) {
             <span className="text-sm text-ink-muted">{v.agreementLine}</span>
           </Stat>
         </div>
+
+        {/* THE HEADLINE'S OWN TRACK RECORD.
+            A verdict that never reports how its past verdicts did is asking
+            to be believed on presentation alone. Until the record fills it
+            says so plainly, which is the more useful state of the two. */}
+        {v.forward && (
+          <p className="rounded-md border border-hairline bg-void/30 px-3 py-2 text-[11px] leading-relaxed text-ink-muted">
+            <span className="font-semibold uppercase tracking-[0.12em] text-cyan">Track record</span> ·{" "}
+            {v.forward.mine ? (
+              <>
+                Across {v.forward.mine.n.toLocaleString()} past {v.forward.mine.verdict} calls scored{" "}
+                {v.forward.horizonSessions} sessions later, price moved the called way{" "}
+                {v.forward.mine.hitRatePct !== null && (
+                  <span className="font-semibold text-ink">{v.forward.mine.hitRatePct.toFixed(0)}%</span>
+                )}{" "}
+                of the time, averaging{" "}
+                <span className="font-semibold text-ink">
+                  {v.forward.mine.meanReturnPct >= 0 ? "+" : ""}
+                  {v.forward.mine.meanReturnPct.toFixed(2)}%
+                </span>
+                {v.forward.mine.edgeVsBaselinePct !== null && v.forward.baselineReturnPct !== null && (
+                  <>
+                    {" "}against{" "}
+                    {v.forward.baselineReturnPct >= 0 ? "+" : ""}
+                    {v.forward.baselineReturnPct.toFixed(2)}% for every call in the same windows — an edge of{" "}
+                    <span
+                      className={`font-semibold ${
+                        v.forward.mine.edgeVsBaselinePct > 0 ? "text-success" : "text-danger"
+                      }`}
+                    >
+                      {v.forward.mine.edgeVsBaselinePct >= 0 ? "+" : ""}
+                      {v.forward.mine.edgeVsBaselinePct.toFixed(2)}%
+                    </span>
+                  </>
+                )}
+                .
+              </>
+            ) : (
+              <>
+                This verdict has no scored record yet. {v.forward.open.toLocaleString()} calls are registered and
+                waiting out their {v.forward.horizonSessions}-session window; each is scored against what every
+                other call did over the same period, so a bullish read only counts as right if it beat the
+                market rather than merely rose with it. Until then the word above is a hypothesis.
+              </>
+            )}
+          </p>
+        )}
       </CardContent>
     </Card>
   );

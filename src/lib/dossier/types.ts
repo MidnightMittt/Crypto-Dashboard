@@ -125,6 +125,8 @@ export interface VerdictSection {
   stars: number;
   evidence: "thin" | "moderate" | "strong";
   agreementLine: string;
+  /** How this verdict has actually done since forward scoring began. */
+  forward: VerdictForwardRecord | null;
 }
 
 /**
@@ -287,6 +289,30 @@ export interface WatchLevel {
   reachRatePct: number | null;
   medianSessionsToReach: number | null;
   reachAttempts: number | null;
+}
+
+/**
+ * The out-of-sample record for the WORD at the top of the page.
+ *
+ * Carried on the verdict itself rather than tucked into a research section,
+ * because a claim and its track record belong in the same place. Until it
+ * fills, it says so — and a page that admits its headline is unscored is
+ * more trustworthy than one that quietly implies otherwise.
+ */
+export interface VerdictForwardRecord {
+  resolved: number;
+  open: number;
+  /** Mean forward return of every resolved call — the sample's own drift. */
+  baselineReturnPct: number | null;
+  /** This verdict's own cell, when enough of them have resolved. */
+  mine: {
+    verdict: string;
+    n: number;
+    hitRatePct: number | null;
+    meanReturnPct: number;
+    edgeVsBaselinePct: number | null;
+  } | null;
+  horizonSessions: number;
 }
 
 export interface ForwardRecordSummary {

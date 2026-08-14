@@ -29,6 +29,7 @@ import earningsCalendarJson from "@/data/earningsCalendar.json";
 import intelligenceJson from "@/data/marketIntelligence.json";
 import equityExecutionJson from "@/data/equityExecutionStats.json";
 import forwardReachJson from "@/data/forwardReachRecord.json";
+import forwardVerdictJson from "@/data/forwardVerdictRecord.json";
 
 /**
  * SEARCH, END TO END — resolve, fetch, score.
@@ -282,6 +283,32 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
             predictedPct: r.totals.predictedPct,
             observedPct: r.totals.observedPct,
             since: dates[0] ?? null,
+          };
+        })(),
+    /*
+     * The verdict's own out-of-sample record. A claim and its track record
+     * belong together, so this rides on the verdict rather than hiding in a
+     * research section — including when the honest answer is "unscored".
+     */
+    verdictForward: isCrypto
+      ? null
+      : (() => {
+          const r = forwardVerdictJson as unknown as {
+            horizonSessions: number;
+            baselineReturnPct: number | null;
+            totals: { resolved: number; open: number };
+            cells: Array<{
+              verdict: string; n: number; hitRatePct: number | null;
+              meanReturnPct: number; edgeVsBaselinePct: number | null;
+            }>;
+          };
+          const want = result.analysis.bias.verdict;
+          return {
+            resolved: r.totals.resolved,
+            open: r.totals.open,
+            baselineReturnPct: r.baselineReturnPct,
+            mine: r.cells.find((c) => c.verdict === want) ?? null,
+            horizonSessions: r.horizonSessions,
           };
         })(),
     reachOf: isCrypto
