@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/Card";
 import { Collapsible } from "@/components/ui/Collapsible";
 import { EvidenceModuleDetail } from "@/components/evidence/EvidenceModuleDetail";
 import { formatPrice, ordinal } from "@/lib/utils/format";
+import { Sparkline } from "@/components/charts/Sparkline";
 import { TRADE_PLAN_REFUSAL_SHORT, TRADE_PLAN_REFUSAL_TEXT } from "@/lib/signals/tradePlan";
 import { Depth, EvidenceBullet, EvidenceGroup, InvalidationTrigger, Section, TickerDossier } from "@/lib/dossier/types";
 import { MetricVerdict } from "@/lib/signals/types";
@@ -747,6 +748,18 @@ export function InvalidationPanel({ d }: { d: TickerDossier }) {
  * remembering the number and forgetting the qualifier — which is precisely
  * the failure mode of every backtest ever put on a marketing page.
  */
+/**
+ * Converts a count of real SESSIONS into a count of DRAWN POINTS.
+ *
+ * The trail is downsampled for drawing, so "252 sessions" is not 252 points
+ * on the chart. Shading 252 points of a 220-point trail would shade the whole
+ * thing and quietly claim the rank was measured over five years.
+ */
+function scaled(sessions: number, trail: { closes: number[]; sessions: number }): number {
+  if (trail.sessions <= 0) return 0;
+  return Math.max(1, Math.round((sessions / trail.sessions) * trail.closes.length));
+}
+
 export function ValidatedSignalPanel({ d }: { d: TickerDossier }) {
   const s = d.validatedSignal;
   if (s.status !== "available") {
@@ -802,6 +815,27 @@ export function ValidatedSignalPanel({ d }: { d: TickerDossier }) {
       )}
 
       <p className="text-[12px] leading-relaxed text-ink-muted">{m.detail}</p>
+
+      {/* THE RANKING WINDOW, drawn. Twelve months ending one month ago — the
+          shaded band is what produced the return above, and the clear strip
+          at the right edge is the skipped month that removes short-horizon
+          reversal. Three sentences of prose, or one picture. */}
+      {d.priceTrail && d.priceTrail.closes.length >= 30 && (
+        <div className="flex flex-col gap-1">
+          <Sparkline
+            values={d.priceTrail.closes}
+            windowSessions={scaled(252, d.priceTrail)}
+            windowOffset={scaled(21, d.priceTrail)}
+            tone={m.momentumPct >= 0 ? "up" : "down"}
+            label={`${d.identity.symbol} price over ${d.priceTrail.sessions} sessions, with the twelve-month ranking window shaded and the skipped final month clear`}
+          />
+          <p className="text-[10px] leading-relaxed text-ink-faint">
+            <span className="text-ink-muted">Shaded ·</span> the twelve months this rank was measured over. The
+            clear strip at the right is the skipped final month, excluded because short-horizon reversal points
+            the other way and would cancel part of the effect.
+          </p>
+        </div>
+      )}
 
       <div className="grid gap-x-6 gap-y-3 sm:grid-cols-3">
         <PlanStat label="12-1 return" value={`${m.momentumPct >= 0 ? "+" : ""}${m.momentumPct.toFixed(0)}%`} />

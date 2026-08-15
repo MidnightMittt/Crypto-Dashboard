@@ -468,6 +468,15 @@ export interface TickerDossier {
    * fraction of an edge.
    */
   validatedSignal: Section<import("@/lib/signals/equityMomentum").MomentumRead>;
+  /**
+   * Downsampled closes, oldest first, for the evidence sparklines.
+   *
+   * Carried on the dossier rather than refetched by a component because the
+   * bars are already in hand at assembly time and a second fetch would be a
+   * second opinion about the same prices. Null when the history is too short
+   * to draw honestly.
+   */
+  priceTrail: { closes: number[]; sessions: number } | null;
   macro: Section<MacroContext>;
   evidence: EvidenceGroup[];
   /** Structural context the evidence groups do not cover. */

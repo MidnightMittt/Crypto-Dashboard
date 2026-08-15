@@ -4,6 +4,7 @@ import { nearestWatchLevels, SupportResistanceZone, watchEdge } from "@/lib/tech
 import { TRADE_PLAN_REFUSAL_SHORT } from "@/lib/signals/tradePlan";
 import { describeAgreement, evidenceLevel, strengthStars } from "@/lib/signals/plainLanguage";
 import { buildMacroContext } from "./macroContext";
+import { downsample } from "@/lib/charts/sparkline";
 import { composeBearCase, composeBullCase, composeInvalidation, composeTldr } from "./narrative";
 import { NeighbourhoodStats } from "@/lib/research/neighbourhood";
 import { buildChecklist } from "./checklist";
@@ -43,6 +44,9 @@ import { IndustryRead } from "@/lib/markets/industryIntelligence";
  * "no-provider" is a sourcing decision someone has to make.
  */
 
+/** Drawing budget for the price trail. See priceTrail. */
+const SPARKLINE_POINTS = 220;
+
 export interface DossierInputs {
   analysis: LiveAnalysis;
   regime: RegimeRead | null;
@@ -76,6 +80,8 @@ export interface DossierInputs {
    * LiveAnalysis deliberately does not carry.
    */
   momentum?: import("@/lib/signals/equityMomentum").MomentumOutcome | null;
+  /** Raw closes, oldest first. Downsampled here so callers need no chart knowledge. */
+  closes?: number[] | null;
   /*
    * Provider-backed sections, already shaped by the caller (analyseTicker
    * maps each provider result to a Section with its depth and upgrade).
@@ -230,6 +236,17 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
     nextEntry: buildNextEntry(analysis, inputs.plannedRecords ?? null, inputs.reachOf ?? null, inputs.forward ?? null),
 
     validatedSignal: buildValidatedSignal(inputs.momentum ?? null),
+
+    /*
+     * SPARKLINE_POINTS is a drawing budget, not a data decision: 220px of
+     * chart cannot resolve more than a couple of hundred points, and shipping
+     * five years of closes to the client to draw 200 of them would be paying
+     * bandwidth for pixels that do not exist.
+     */
+    priceTrail:
+      inputs.closes && inputs.closes.length >= 2
+        ? { closes: downsample(inputs.closes, SPARKLINE_POINTS), sessions: inputs.closes.length }
+        : null,
 
     macro: buildMacroContext({
       symbol: analysis.symbol,

@@ -330,6 +330,7 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
   const dossier = buildDossier({
     analysis: result.analysis,
     momentum,
+    closes: history.history.bars.map((b) => b.close),
     optionsIntel: optionsIntel
       ? available(optionsIntel, "advanced", {
           to: "institutional" as const,
