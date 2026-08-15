@@ -18,6 +18,7 @@
     "check-dossier": "tsx scripts/check-dossier.ts",
     "refresh-reference-bars": "tsx scripts/refresh-reference-bars.ts",
     "edge-gate": "tsx scripts/edgeGateReport.ts",
+    "study:momentum": "tsx scripts/research/momentumStudy.ts",
     "backtest:fetch": "node scripts/backtest/fetchHistory.mjs",
     "backtest": "tsx scripts/backtest/run.ts && tsx scripts/backtest/report.ts && tsx scripts/backtest/executionReport.ts",
     "backtest:rolling": "tsx scripts/backtest/rolling.ts",
