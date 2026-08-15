@@ -65,8 +65,15 @@ export interface OptionsIntelligence {
   putCallVolumeRatio: number | null;
   maxPainStrike: number | null;
   netGexUsdPer1Pct: number | null;
+  /*
+   * Open-interest concentration used to sit beside this, listing the three
+   * largest CONTRACTS. Nothing ever read it. Rendering it would have shipped
+   * the defect gammaWalls was fixed for a few lines below — the same strike
+   * named three times (calls, puts, next expiry) crowding out the second and
+   * third real levels. If a level list is wanted here, aggregate by strike
+   * the way the walls do; do not restore the per-contract form.
+   */
   gammaWalls: GammaWall[];
-  oiConcentrations: Array<{ strike: number; kind: "call" | "put"; openInterest: number; distancePct: number }>;
 
   // ── Activity ──
   chainVolume: number;
@@ -386,17 +393,6 @@ export function buildOptionsIntelligence(inputs: IntelligenceInputs): OptionsInt
     }))
     .sort((a, b) => b.weight - a.weight);
 
-  const oiConcentrations = [...all]
-    .filter((r) => r.openInterest > 0)
-    .sort((a, b) => b.openInterest - a.openInterest)
-    .slice(0, 3)
-    .map((r) => ({
-      strike: r.strike,
-      kind: r.kind,
-      openInterest: r.openInterest,
-      distancePct: ((r.strike - spot) / spot) * 100,
-    }));
-
   const chainVolume = all.reduce((s, r) => s + r.volume, 0);
   const chainAverageVolume = all.reduce((s, r) => s + r.averageVolume, 0);
   const volumeVsAverage = chainAverageVolume > 0 ? chainVolume / chainAverageVolume : null;
@@ -457,7 +453,6 @@ export function buildOptionsIntelligence(inputs: IntelligenceInputs): OptionsInt
     maxPainStrike: maxPain(hRows),
     netGexUsdPer1Pct: sawGamma ? gex : null,
     gammaWalls: walls.slice(0, 3),
-    oiConcentrations,
     chainVolume,
     chainAverageVolume,
     volumeVsAverage,
