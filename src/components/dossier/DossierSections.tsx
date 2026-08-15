@@ -939,8 +939,16 @@ export function OptionsPanel({ d }: { d: TickerDossier }) {
     <Panel title="Options positioning" subtitle={`${o.contractCount.toLocaleString()} contracts · CBOE, delayed`}>
       <p className="text-[13px] leading-relaxed text-ink">
         Open interest is {oiLean} (put/call ratio {o.putCallOiRatio.toFixed(2)}).{" "}
+        {/* The sentence carries the tenor too, and says why it runs hot on a
+            short expiry — otherwise a 300% reading looks like an error. */}
         {o.atmIvPct !== null &&
-          `Options nearest the current price imply a ${o.atmIvPct.toFixed(0)}% annualised move — the market's own volatility bet.`}{" "}
+          `Contracts nearest the money on the ${
+            o.atmIvDaysToExpiry === null
+              ? "nearest"
+              : o.atmIvDaysToExpiry === 0
+                ? "expiring-today"
+                : `${o.atmIvDaysToExpiry}-day`
+          } expiry imply ${o.atmIvPct.toFixed(0)}% annualised volatility. Short-dated contracts routinely price well above the longer expiries, so read this against the expected move above rather than as one number.`}{" "}
         {o.netGexUsdPer1Pct !== null &&
           (o.netGexUsdPer1Pct > 0
             ? "Net dealer gamma is positive, which under the standard convention means hedging flows dampen moves — dips get bought, rips get sold."
@@ -953,7 +961,21 @@ export function OptionsPanel({ d }: { d: TickerDossier }) {
           label="Put/call (today's volume)"
           value={o.putCallVolumeRatio === null ? "—" : o.putCallVolumeRatio.toFixed(2)}
         />
-        <PlanStat label="Implied move (ATM IV)" value={o.atmIvPct === null ? "—" : `${o.atmIvPct.toFixed(0)}%`} />
+        {/* THE TENOR IS PART OF THE NUMBER. Annualised vol on a three-day
+            option is a different quantity from the same figure on a monthly,
+            and this page shows both — the options-intelligence card above
+            quotes a ~monthly expected move. Without the horizon on this one,
+            the two look like a contradiction rather than a term structure. */}
+        <PlanStat
+          label={
+            o.atmIvDaysToExpiry === null
+              ? "Annualised IV (nearest expiry)"
+              : o.atmIvDaysToExpiry === 0
+                ? "Annualised IV (expires today)"
+                : `Annualised IV (${o.atmIvDaysToExpiry}d expiry)`
+          }
+          value={o.atmIvPct === null ? "—" : `${o.atmIvPct.toFixed(0)}%`}
+        />
         <PlanStat
           label="Net gamma / 1% move"
           value={

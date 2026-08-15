@@ -94,6 +94,38 @@ describe("summariseChain", () => {
     expect(s.atmIvPct).toBeNull();
   });
 
+  /*
+   * THE CLIFF, found live rather than in a test. This used to read
+   * `mean < 3 ? mean * 100 : mean`, inferring whether the figure had already
+   * been scaled. Every source feeding ParsedContract delivers a decimal, so
+   * the guess bought nothing — and above 300% it silently divided by a
+   * hundred. HUT's nearest-expiry ATM IV was 3.345 on the day this was
+   * found: the page reported "3%" for a stock implying 335%, in the one
+   * direction that makes options look free.
+   */
+  it("reports vol above 300% at full size instead of collapsing it", () => {
+    const s = summariseChain(
+      [contract("XX260814C00100000", { iv: 3.3 }), contract("XX260814P00100000", { iv: 3.39 })],
+      100
+    )!;
+    expect(s.atmIvPct).toBeCloseTo(334.5, 6);
+  });
+
+  /*
+   * An annualised vol without its tenor is not a usable number — the same
+   * figure means different things on a three-day and a monthly expiry, and
+   * this page shows both.
+   */
+  it("carries the tenor alongside the figure", () => {
+    const s = summariseChain(
+      [contract("XX260814C00100000", { iv: 0.28 }), contract("XX260814P00100000", { iv: 0.32 })],
+      100
+    )!;
+    expect(s.nearestExpiry).toBe("2026-08-14");
+    expect(s.atmIvDaysToExpiry).not.toBeNull();
+    expect(s.atmIvDaysToExpiry).toBeGreaterThanOrEqual(0);
+  });
+
   it("returns null GEX when the feed carries no greeks, never zero", () => {
     // Zero would read as "perfectly balanced dealers", which is a claim.
     const s = summariseChain([contract("XX260814C00100000", { gamma: 0 })], 100)!;

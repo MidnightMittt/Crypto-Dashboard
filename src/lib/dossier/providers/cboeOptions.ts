@@ -69,6 +69,12 @@ export interface OptionsSummary {
   atmIvPct: number | null;
   nearestExpiry: string | null;
   /**
+   * Calendar days to that expiry. Carried WITH the figure because an
+   * annualised vol is meaningless without its tenor — a three-day number and
+   * a monthly one are different quantities wearing the same units.
+   */
+  atmIvDaysToExpiry: number | null;
+  /**
    * Net gamma exposure in dollars per 1% move, under the stated dealer
    * convention: +call gamma, −put gamma, × OI × 100 shares × spot × 1%.
    * Positive = dealers dampen moves; negative = dealers amplify them.
@@ -265,7 +271,24 @@ export function summariseParsed(parsed: ParsedContract[], spot: number): Options
     }
   }
 
-  // ATM IV: nearest expiry, contracts within the band, average of nonzero IVs.
+  /*
+   * ATM IV: nearest expiry, contracts within the band, average of nonzero
+   * IVs.
+   *
+   * ── The unit is known, so it is not inferred ──────────────────────────
+   *
+   * This used to read `mean < 3 ? mean * 100 : mean`, guessing whether the
+   * figure had already been scaled. Every source feeding `ParsedContract`
+   * delivers a decimal — CBOE's own rows and Tradier's `toParsedContract`
+   * alike — so the guess bought nothing and cost correctness above 300%.
+   *
+   * It was not hypothetical. HUT's nearest-expiry ATM IV is 3.345 today:
+   * over the threshold, so the page reported "3%" for a stock implying 335%.
+   * CIFR sits at 2.996 — four thousandths from the same failure. These are
+   * exactly the names where implied vol is the number a reader most needs,
+   * and the error is a factor of a hundred in the direction that makes
+   * options look free.
+   */
   const expiries = [...new Set(parsed.map((p) => p.expiry))].sort();
   const nearestExpiry = expiries[0] ?? null;
   let atmIvPct: number | null = null;
@@ -274,11 +297,29 @@ export function summariseParsed(parsed: ParsedContract[], spot: number): Options
       (p) => p.expiry === nearestExpiry && Math.abs(p.strike - spot) / spot <= ATM_BAND_PCT && p.iv > 0
     );
     if (atm.length >= 2) {
-      const mean = atm.reduce((s, p) => s + p.iv, 0) / atm.length;
-      // CBOE reports IV as a decimal (0.28) — normalise to percent.
-      atmIvPct = mean < 3 ? mean * 100 : mean;
+      atmIvPct = (atm.reduce((s, p) => s + p.iv, 0) / atm.length) * 100;
     }
   }
+
+  /*
+   * HOW FAR OUT THAT EXPIRY IS — the missing half of the number above.
+   *
+   * "Implied move 272%" is not usable without a horizon: annualised vol on a
+   * three-day option is a different quantity from the same figure on a
+   * monthly, and short-dated vol on a volatile name runs far above the term
+   * structure's long end. The page carried the figure without its tenor
+   * while ALSO showing a monthly expected move a few cards below — two IV
+   * numbers with no way to tell why they disagreed.
+   *
+   * Computed here rather than in the component because this module already
+   * runs per request on the server; deriving it at render time would make
+   * the same summary produce different output depending on when it was
+   * displayed.
+   */
+  const atmIvDaysToExpiry =
+    nearestExpiry === null
+      ? null
+      : Math.max(0, Math.round((Date.parse(`${nearestExpiry}T00:00:00Z`) - Date.now()) / 86_400_000));
 
   const largestOiStrikes = [...parsed]
     .filter((p) => p.openInterest > 0)
@@ -297,6 +338,7 @@ export function summariseParsed(parsed: ParsedContract[], spot: number): Options
     putCallVolumeRatio: callVolume > 0 ? putVolume / callVolume : null,
     atmIvPct,
     nearestExpiry,
+    atmIvDaysToExpiry,
     netGexUsdPer1Pct: sawGamma ? gex : null,
     largestOiStrikes,
     openingFlow: detectOpeningFlow(parsed),
