@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appendEntry, currentRun, episodesOf, emptyLedger, Ledger, LedgerEntry, guardEntry } from "./historyLedger";
+import { appendEntry, currentRun, episodesOf, emptyLedger, Ledger, LedgerEntry, guardEntry, diffEntries, latestDiff } from "./historyLedger";
 
 /**
  * The ledger is the substrate for every future "risk-off for N days, Kth
@@ -138,5 +138,134 @@ describe("guardEntry — the pipeline noticing that it stopped", () => {
     expect(g.ok).toBe(false);
     if (g.ok) return;
     expect(g.reason).toMatch(/BACKWARDS/);
+  });
+});
+
+describe("diffEntries — what changed overnight", () => {
+  const base = (over: Partial<LedgerEntry> = {}): LedgerEntry => ({
+    date: "2026-08-13",
+    regime: { regime: "risk-on", agreeing: 3, total: 3 },
+    rotation: [
+      { symbol: "XLE", state: "leading", shortRelPct: 4.42 },
+      { symbol: "XLK", state: "lagging", shortRelPct: -1.1 },
+    ],
+    dispersionPct: 2.1,
+    industries: [{ slug: "gold-miners", state: "improving", shortRelPct: 1.2, breadthPct: 60 }],
+    equity: [{ symbol: "SPY", verdict: "bullish", score: 70, confidence: 40 }],
+    ...over,
+  });
+
+  it("reports a regime flip", () => {
+    const d = diffEntries(base(), base({ regime: { regime: "risk-off", agreeing: 2, total: 3 } }));
+    expect(d.changes).toContainEqual({
+      kind: "regime",
+      subject: "risk environment",
+      from: "risk-on",
+      to: "risk-off",
+    });
+  });
+
+  /*
+   * THE RULE THAT KEEPS THE FEED WORTH READING. Both sectors moved — XLE by
+   * 9 basis points — and neither crossed anything. A feed that reports the
+   * measurement breathing teaches the reader to ignore the feed.
+   */
+  it("ignores numeric drift that crosses no boundary", () => {
+    const after = base({
+      rotation: [
+        { symbol: "XLE", state: "leading", shortRelPct: 4.51 },
+        { symbol: "XLK", state: "lagging", shortRelPct: -1.4 },
+      ],
+      dispersionPct: 2.9,
+    });
+    expect(diffEntries(base(), after).changes).toEqual([]);
+  });
+
+  it("reports a rotation state crossing", () => {
+    const after = base({
+      rotation: [
+        { symbol: "XLE", state: "lagging", shortRelPct: -0.2 },
+        { symbol: "XLK", state: "lagging", shortRelPct: -1.1 },
+      ],
+    });
+    expect(diffEntries(base(), after).changes).toEqual([
+      { kind: "rotation", subject: "XLE", from: "leading", to: "lagging" },
+    ]);
+  });
+
+  it("reports industry and equity crossings under their own kinds", () => {
+    const after = base({
+      industries: [{ slug: "gold-miners", state: "leading", shortRelPct: 3.0, breadthPct: 80 }],
+      equity: [{ symbol: "SPY", verdict: "neutral", score: 52, confidence: 30 }],
+    });
+    const kinds = diffEntries(base(), after).changes.map((c) => c.kind);
+    expect(kinds).toEqual(["industry", "equity"]);
+  });
+
+  /*
+   * "Nothing happened" and "we stopped looking" must not read alike. A
+   * subject that appears or vanishes is a change in what the platform can
+   * see, and silence about it would make the feed's silence ambiguous.
+   */
+  it("reports a subject appearing", () => {
+    const after = base({
+      rotation: [...base().rotation, { symbol: "XLV", state: "improving", shortRelPct: 0.8 }],
+    });
+    expect(diffEntries(base(), after).changes).toEqual([
+      { kind: "rotation", subject: "XLV", from: null, to: "improving" },
+    ]);
+  });
+
+  it("reports a subject disappearing", () => {
+    const after = base({ rotation: [{ symbol: "XLE", state: "leading", shortRelPct: 4.42 }] });
+    expect(diffEntries(base(), after).changes).toEqual([
+      { kind: "rotation", subject: "XLK", from: "lagging", to: null },
+    ]);
+  });
+
+  it("carries both dates so a reader knows what span this covers", () => {
+    const d = diffEntries(base({ date: "2026-08-12" }), base());
+    expect(d.from).toBe("2026-08-12");
+    expect(d.to).toBe("2026-08-13");
+  });
+
+  it("returns no changes for an identical session rather than inventing one", () => {
+    expect(diffEntries(base(), base()).changes).toEqual([]);
+  });
+});
+
+describe("latestDiff", () => {
+  const entry = (date: string, regime: string): LedgerEntry => ({
+    date,
+    regime: { regime, agreeing: 2, total: 3 },
+    rotation: [],
+    dispersionPct: null,
+    industries: [],
+    equity: [],
+  });
+
+  /*
+   * A one-entry ledger cannot say what changed, and must not answer with an
+   * empty feed — that reads as "a quiet session", which is the opposite
+   * claim. Null is the difference between "nothing moved" and "we have no
+   * yesterday to compare against".
+   */
+  it("returns null rather than an empty diff when there is no yesterday", () => {
+    expect(latestDiff({ entries: [] })).toBeNull();
+    expect(latestDiff({ entries: [entry("2026-08-12", "risk-on")] })).toBeNull();
+  });
+
+  it("compares the last two entries", () => {
+    const d = latestDiff({
+      entries: [
+        entry("2026-08-11", "risk-off"),
+        entry("2026-08-12", "risk-on"),
+        entry("2026-08-13", "risk-off"),
+      ],
+    })!;
+    expect(d.from).toBe("2026-08-12");
+    expect(d.to).toBe("2026-08-13");
+    expect(d.changes).toHaveLength(1);
+    expect(d.changes[0].to).toBe("risk-off");
   });
 });

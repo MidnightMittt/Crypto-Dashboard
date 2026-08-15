@@ -6,6 +6,9 @@ import { Collapsible } from "@/components/ui/Collapsible";
 import { RegimeRead } from "@/lib/markets/riskRegime";
 import { RotationRead } from "@/lib/markets/rotation";
 import snapshot from "@/data/marketIntelligence.json";
+import ledgerJson from "@/data/signalLedger.json";
+import { WhatChanged } from "@/components/intelligence/WhatChanged";
+import { Ledger, latestDiff } from "@/lib/markets/historyLedger";
 
 /**
  * MARKET INTELLIGENCE — the top of the hierarchy, and now the front door.
@@ -35,6 +38,9 @@ const data = snapshot as unknown as {
   rotation: RotationRead | null;
   rotationNarrative: string | null;
 };
+
+/** Committed data, read once at module load like every other snapshot here. */
+const ledger = ledgerJson as Ledger;
 
 export const metadata = { title: "Market Intelligence — Leverage Terminal" };
 
@@ -75,6 +81,21 @@ export default function MarketIntelligencePage() {
         </div>
 
         <FreshnessBanner generatedAt={data.generatedAt} />
+
+        {/*
+          WHAT CHANGED, above the state itself.
+          A returning reader already knows the regime; the delta is the part
+          they do not have. This is also the signal ledger's FIRST consumer —
+          it had been write-only since it was built, accumulating for nobody.
+        */}
+        <section className="rounded-xl border border-hairline bg-panel/40 px-5 py-4 sm:px-6">
+          <h2 className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-muted">
+            Since the last session
+          </h2>
+          <div className="mt-2">
+            <WhatChanged diff={latestDiff(ledger)} entries={ledger.entries.length} />
+          </div>
+        </section>
 
         {/* ── LEVEL 1: THE REGIME ────────────────────────────────────────── */}
         {regime && style ? (

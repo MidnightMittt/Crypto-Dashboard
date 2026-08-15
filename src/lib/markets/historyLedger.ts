@@ -175,3 +175,109 @@ export function guardEntry(
 
   return { ok: true, kind: previous !== null && ledger.entries.some((e) => e.date === entry.date) ? "replaced" : "appended" };
 }
+
+/**
+ * ── WHAT CHANGED ─────────────────────────────────────────────────────
+ *
+ * Roadmap Phase 2 item 2, and the input to The Brief's overnight section.
+ * A reader returning after a day does not want the state re-read to them;
+ * they want the DELTA, because the state they already know.
+ *
+ * ── Only categorical transitions, never numeric drift ────────────────
+ *
+ * The ledger stores states AND the numbers behind them, and it is tempting
+ * to report both. It would be a mistake. XLE's relative strength moving from
+ * 4.42% to 4.51% is not news — it is the measurement breathing, and a feed
+ * that reports it teaches the reader to ignore the feed. Only a crossing
+ * gets reported: leading → lagging, risk-on → risk-off, bullish → neutral.
+ *
+ * The numbers still travel with each change so a caller can show how far past
+ * the boundary the reading went. They just never CREATE one.
+ *
+ * ── Appearances and disappearances are changes too ───────────────────
+ *
+ * A sector that stops being tracked, or an industry that gains enough
+ * constituents to be measured, is a change in what the platform can see.
+ * Silently omitting it would make the feed's silence ambiguous: "nothing
+ * happened" and "we stopped looking" would read identically.
+ */
+
+export type LedgerChangeKind = "regime" | "rotation" | "industry" | "equity";
+
+export interface LedgerChange {
+  kind: LedgerChangeKind;
+  /** The thing that changed: a sector symbol, an industry slug, "risk environment". */
+  subject: string;
+  /** Null when the subject is newly present. */
+  from: string | null;
+  /** Null when the subject stopped being reported. */
+  to: string | null;
+}
+
+export interface LedgerDiff {
+  from: string;
+  to: string;
+  changes: LedgerChange[];
+}
+
+/**
+ * Categorical changes between two entries, newest state last.
+ *
+ * Returns an empty `changes` for a quiet session, which is a real and common
+ * answer — "nothing crossed a boundary overnight" is information, and a feed
+ * that manufactures an item to avoid looking empty is worse than a quiet one.
+ */
+export function diffEntries(previous: LedgerEntry, latest: LedgerEntry): LedgerDiff {
+  const changes: LedgerChange[] = [];
+
+  if (previous.regime?.regime !== latest.regime?.regime) {
+    changes.push({
+      kind: "regime",
+      subject: "risk environment",
+      from: previous.regime?.regime ?? null,
+      to: latest.regime?.regime ?? null,
+    });
+  }
+
+  pushStateChanges(changes, "rotation", previous.rotation, latest.rotation, (x) => x.symbol, (x) => x.state);
+  pushStateChanges(changes, "industry", previous.industries, latest.industries, (x) => x.slug, (x) => x.state);
+  pushStateChanges(changes, "equity", previous.equity, latest.equity, (x) => x.symbol, (x) => x.verdict);
+
+  return { from: previous.date, to: latest.date, changes };
+}
+
+/** Compares two keyed collections on one categorical field. */
+function pushStateChanges<T>(
+  out: LedgerChange[],
+  kind: LedgerChangeKind,
+  before: readonly T[],
+  after: readonly T[],
+  keyOf: (x: T) => string,
+  stateOf: (x: T) => string
+): void {
+  const prior = new Map(before.map((x) => [keyOf(x), stateOf(x)]));
+  const now = new Map(after.map((x) => [keyOf(x), stateOf(x)]));
+
+  for (const [key, state] of now) {
+    const was = prior.get(key);
+    if (was === undefined) out.push({ kind, subject: key, from: null, to: state });
+    else if (was !== state) out.push({ kind, subject: key, from: was, to: state });
+  }
+  for (const [key, state] of prior) {
+    if (!now.has(key)) out.push({ kind, subject: key, from: state, to: null });
+  }
+}
+
+/**
+ * The most recent diff the ledger can support, or null.
+ *
+ * Null for a one-entry ledger, and that is the honest answer rather than a
+ * diff against nothing: a platform whose memory has one day in it cannot say
+ * what changed, and should say so instead of showing an empty feed that looks
+ * like a quiet session. The two are opposite claims.
+ */
+export function latestDiff(ledger: Ledger): LedgerDiff | null {
+  const n = ledger.entries.length;
+  if (n < 2) return null;
+  return diffEntries(ledger.entries[n - 2], ledger.entries[n - 1]);
+}
