@@ -136,8 +136,14 @@ export function composeTldr(inputs: {
   plan: TradePlan | null;
   symbol: string;
   name: string;
+  /**
+   * Which way the options market is positioned, when it is leaning at all.
+   * Null covers both "no chain" and "no lean" — neither of which is an
+   * opinion, and neither may be printed as one.
+   */
+  optionsLean?: "bullish" | "bearish" | null;
 }): TldrSection {
-  const { bias, plan, symbol, name } = inputs;
+  const { bias, plan, symbol, name, optionsLean = null } = inputs;
   const display = name && name !== symbol ? name : symbol;
 
   const { text: state, conflicts } = stateClause(bias, display);
@@ -148,10 +154,33 @@ export function composeTldr(inputs: {
    * clause has already carried it, so this one is dropped.
    */
   const tension = conflicts ? null : tensionClause(bias, plan);
+  const options = optionsClause(bias, optionsLean);
   const invalidation = invalidationClause(plan, bias.verdict);
 
-  const full = [state, support, tension, invalidation].filter(Boolean).join(" ");
-  return { state, support, tension, invalidation, full };
+  const full = [state, support, tension, options, invalidation].filter(Boolean).join(" ");
+  return { state, support, tension, options, invalidation, full };
+}
+
+/**
+ * Clause 4 — WHAT AN INDEPENDENT MARKET THINKS.
+ *
+ * Earns a sentence in the ten-second read only because it is sourced
+ * elsewhere: every other clause above is derived from the price history this
+ * engine already scored, while this one comes from what other people are
+ * paying for optionality. A second source agreeing is worth a line; a second
+ * source DISAGREEING is worth more than that, and is the case this clause
+ * mostly exists for.
+ *
+ * Null when there is no chain, when positioning is not leaning either way,
+ * or when the engine itself has no direction to compare against — in each
+ * case there is no comparison to report, and manufacturing one would be the
+ * kind of reassuring filler the composer exists to prevent.
+ */
+function optionsClause(bias: MarketBias, lean: "bullish" | "bearish" | null): string | null {
+  if (lean === null || bias.verdict === "neutral") return null;
+  return lean === bias.verdict
+    ? "The options market is positioned the same way, which is a second and independently sourced read agreeing with this one."
+    : `The options market is positioned the OTHER way — ${lean} against this ${bias.verdict} read. Independent sources disagreeing is a reason to size smaller, not a reason to pick the one you prefer.`;
 }
 
 /**

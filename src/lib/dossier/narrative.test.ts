@@ -126,6 +126,46 @@ describe("composeTldr", () => {
     expect(t.state).toContain("sideways");
   });
 
+  /*
+   * The options clause earns its place in a ten-second read only because it
+   * is INDEPENDENTLY SOURCED — every other clause derives from the same
+   * price history. A second source disagreeing is the case it mostly exists
+   * for, and it must not be softened into agreement.
+   */
+  it("names an options disagreement rather than smoothing it", () => {
+    const t = composeTldr({
+      bias: bias({ verdict: "bullish", metrics: [metric("marketStructure", "bullish")] }),
+      plan,
+      symbol: "AAPL",
+      name: "AAPL",
+      optionsLean: "bearish",
+    });
+    expect(t.options).toContain("OTHER way");
+    expect(t.options).toContain("size smaller");
+    expect(t.full).toContain("size smaller");
+  });
+
+  it("reports agreement as the independent corroboration it is", () => {
+    const t = composeTldr({
+      bias: bias({ verdict: "bullish", metrics: [metric("marketStructure", "bullish")] }),
+      plan,
+      symbol: "AAPL",
+      name: "AAPL",
+      optionsLean: "bullish",
+    });
+    expect(t.options).toContain("independently sourced");
+  });
+
+  it("omits the options clause with no chain, no lean, or no call to compare", () => {
+    const base = { plan, symbol: "AAPL", name: "AAPL" };
+    // No chain at all.
+    expect(composeTldr({ ...base, bias: bias({ metrics: [metric("marketStructure", "bullish")] }) }).options).toBeNull();
+    // A lean, but the engine has no direction to compare it against.
+    expect(
+      composeTldr({ ...base, bias: bias({ verdict: "neutral" }), optionsLean: "bullish" }).options
+    ).toBeNull();
+  });
+
   it("ties the counter-evidence to the entry, which is what makes it a decision", () => {
     const t = composeTldr({
       bias: bias({

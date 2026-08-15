@@ -49,9 +49,11 @@ export type SectionId =
   | "tldr"
   | "plan"
   | "nextEntry"
+  | "checklist"
   | "reasons"
   | "engineBars"
   | "invalidation"
+  | "passRules"
   | "analogs"
   | "macro"
   | "business"
@@ -75,6 +77,13 @@ export const DOSSIER_SECTIONS: readonly SectionDef[] = [
    * the only actionable content on a page that just said no.
    */
   { id: "nextEntry", phase: "decide" },
+  /*
+   * The checklist closes the DECIDE group: after the verdict, the plan and
+   * the level to wait for, it is the three-second answer to "is this
+   * actually worth taking". It rates nothing of its own — the headline is
+   * the plan's existing backtested star rating.
+   */
+  { id: "checklist", phase: "decide" },
   { id: "reasons", phase: "understand" },
   /*
    * The four category rollups as bars — the engine in one glance, each
@@ -83,6 +92,12 @@ export const DOSSIER_SECTIONS: readonly SectionDef[] = [
    */
   { id: "engineBars", phase: "understand" },
   { id: "invalidation", phase: "understand" },
+  /*
+   * Reasons to stand aside, as distinct from reasons to exit. Placed after
+   * invalidation so the pair reads "what ends this once I am in" then "what
+   * stops me getting in at all".
+   */
+  { id: "passRules", phase: "understand" },
 
   /*
    * VERIFY holds only the two sections that CONTEST the decision with

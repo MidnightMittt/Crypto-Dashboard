@@ -15,10 +15,14 @@ describe("the section manifest", () => {
       // Deliberate addition, 2026-08-14: the forward-looking conditional
       // entries, placed with the decision rather than the explanation.
       "nextEntry",
+      // Deliberate addition, 2026-08-14: the setup checklist closes DECIDE.
+      "checklist",
       "reasons",
       // Deliberate addition, 2026-08-14: the category bars.
       "engineBars",
       "invalidation",
+      // Reasons to stand aside, after reasons to exit.
+      "passRules",
       // Deliberate change, 2026-08-14: VERIFY was ten sections and is now
       // two. Only analogs and options intelligence contest the decision with
       // independent evidence; the rest corroborate it and moved to AUDIT,

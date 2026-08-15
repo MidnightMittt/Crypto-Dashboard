@@ -5,6 +5,8 @@ import { TRADE_PLAN_REFUSAL_SHORT } from "@/lib/signals/tradePlan";
 import { describeAgreement, evidenceLevel, strengthStars } from "@/lib/signals/plainLanguage";
 import { buildMacroContext } from "./macroContext";
 import { composeBearCase, composeBullCase, composeInvalidation, composeTldr } from "./narrative";
+import { buildChecklist } from "./checklist";
+import { buildPassRules } from "./passRules";
 import {
   AnalogStats,
   available,
@@ -81,6 +83,13 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
   const { bias, plan } = analysis;
   const isCrypto = analysis.assetClass === "crypto";
 
+  /*
+   * The options read, when one exists. Taken from the section the caller
+   * already built rather than re-derived, so the checklist and the options
+   * panel can never disagree about what the chain said.
+   */
+  const intel = inputs.optionsIntel?.status === "available" ? inputs.optionsIntel.data : null;
+
   const verdict = equityVerdict({
     bias,
     plan,
@@ -112,13 +121,45 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
       forward: inputs.verdictForward ?? null,
     },
 
-    tldr: composeTldr({ bias, plan, symbol: analysis.symbol, name: analysis.name }),
+    tldr: composeTldr({
+      bias,
+      plan,
+      symbol: analysis.symbol,
+      name: analysis.name,
+      // "neutral" is not a lean, so it is passed through as no opinion.
+      optionsLean: intel && intel.optionsLean !== "neutral" ? intel.optionsLean : null,
+    }),
 
     plan: {
       plan,
       refusal: analysis.planRefusal,
       expectations: buildExpectations(inputs.expectations ?? null, isCrypto),
     },
+
+    checklist: buildChecklist({
+      bias,
+      plan,
+      refusal: analysis.planRefusal,
+      earnings: analysis.earnings,
+      /*
+       * Only a genuine lean counts. `agreesWithEngine` is already null when
+       * the chain has no opinion, and passing that through unchanged is what
+       * keeps "no options data" from rendering as "options agree".
+       */
+      optionsAgrees: intel?.agreesWithEngine ?? null,
+    }),
+
+    passRules: buildPassRules({
+      plan,
+      refusal: analysis.planRefusal,
+      earnings: analysis.earnings,
+      direction: bias.verdict === "bearish" ? "bearish" : bias.verdict === "bullish" ? "bullish" : "neutral",
+      expectedMovePct: intel?.expectedMovePct ?? null,
+      firstTargetPct:
+        plan && plan.entryRef > 0
+          ? (Math.abs(plan.target1Price - plan.entryRef) / plan.entryRef) * 100
+          : null,
+    }),
 
     bullCase: composeBullCase(bias),
     bearCase: composeBearCase(bias),

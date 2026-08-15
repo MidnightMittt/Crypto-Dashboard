@@ -141,6 +141,11 @@ export interface TldrSection {
   support: string | null;
   /** What argues against it, and what that implies for entry. Null when nothing does. */
   tension: string | null;
+  /**
+   * What the options market is positioned for. Null when there is no chain,
+   * no lean, or no directional call to compare it against.
+   */
+  options: string | null;
   /** The level that ends the idea. Null when there is no plan to invalidate. */
   invalidation: string | null;
   /** All present clauses joined — the ten-second read. */
@@ -411,6 +416,16 @@ export interface TickerDossier {
   verdict: VerdictSection;
   tldr: TldrSection;
   plan: PlanFieldsSection;
+  /**
+   * The setup checklist. Not a score — a selection over values the engine
+   * already measured, headlined by the plan's own backtested star rating.
+   */
+  checklist: import("./checklist").Checklist;
+  /**
+   * Conditions under which NOT trading is the decision. Distinct from
+   * `invalidation`, which is about exiting a position already taken.
+   */
+  passRules: import("./passRules").PassRule[];
   /** Everything arguing price RISES — absolute, never swapped to match the verdict. */
   bullCase: EvidenceBullet[];
   /** Everything arguing price FALLS. */

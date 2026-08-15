@@ -5,6 +5,7 @@ import { formatPrice } from "@/lib/utils/format";
 import { TRADE_PLAN_REFUSAL_SHORT, TRADE_PLAN_REFUSAL_TEXT } from "@/lib/signals/tradePlan";
 import { Depth, EvidenceBullet, EvidenceGroup, InvalidationTrigger, Section, TickerDossier } from "@/lib/dossier/types";
 import { MetricVerdict } from "@/lib/signals/types";
+import { CheckState } from "@/lib/dossier/checklist";
 import { StructureLadder, LadderMarker } from "@/components/markets/StructureLadder";
 
 /**
@@ -370,6 +371,59 @@ function PlanStat({ label, value, tone = "text-ink" }: { label: string; value: s
   );
 }
 
+/* ── 3b. THE SETUP CHECKLIST ──────────────────────────────────────────── */
+
+const CHECK_MARK: Record<CheckState, { glyph: string; tone: string }> = {
+  pass: { glyph: "✅", tone: "text-ink" },
+  caution: { glyph: "⚠️", tone: "text-ink" },
+  fail: { glyph: "❌", tone: "text-ink" },
+};
+
+/**
+ * Pass, caution or fail on every check, in three seconds.
+ *
+ * The headline is the plan's OWN star rating rather than a 0-10 number
+ * computed here: a second composite beside `bias.score` would carry no
+ * record of its own, and a decimal would imply resolution a five-point
+ * rating does not have. When the gate refused a plan there is nothing to
+ * rate, and the card says that instead of printing a low score — a low score
+ * would claim a bad trade exists, which is precisely what the gate denied.
+ */
+export function ChecklistPanel({ d }: { d: TickerDossier }) {
+  const c = d.checklist;
+  return (
+    <Panel title="Setup quality" subtitle={`${c.passed} of ${c.total} checks pass`}>
+      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        {c.stars !== null ? (
+          <span className="font-mono text-xl leading-none text-ink" aria-label={`${c.stars} out of 5`}>
+            {"★".repeat(c.stars)}
+            <span className="text-ink-faint">{"☆".repeat(5 - c.stars)}</span>
+          </span>
+        ) : (
+          <span className="text-sm font-semibold uppercase tracking-[0.14em] text-amber">No setup to rate</span>
+        )}
+        <span className="text-[13px] leading-relaxed text-ink-muted">{c.summary}</span>
+      </div>
+
+      {c.starRationale && <p className="text-[12px] leading-relaxed text-ink-muted">{c.starRationale}</p>}
+
+      <ul className="flex flex-col gap-2 border-t border-hairline pt-3">
+        {c.rows.map((r) => (
+          <li key={r.label} className="flex items-start gap-2.5">
+            <span aria-hidden className="mt-px shrink-0 text-[13px] leading-relaxed">
+              {CHECK_MARK[r.state].glyph}
+            </span>
+            <span className="text-[12px] leading-relaxed">
+              <span className={CHECK_MARK[r.state].tone}>{r.label}</span>
+              <span className="text-ink-faint"> · {r.detail}</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </Panel>
+  );
+}
+
 /* ── 4. BULL CASE vs BEAR CASE ────────────────────────────────────────── */
 
 /**
@@ -536,6 +590,72 @@ function BulletList({
         </ul>
       )}
     </div>
+  );
+}
+
+/* ── 4c. WHAT WOULD MAKE ME PASS ──────────────────────────────────────── */
+
+/**
+ * The conditions under which standing aside is the decision.
+ *
+ * Distinct from the invalidation section below, and the distinction is the
+ * point: that one is about exiting a position already taken, this one is
+ * about never opening it. Rules already met are marked and lead, because a
+ * reason to pass that applies RIGHT NOW is not a thing to watch for — it is
+ * the answer.
+ */
+export function PassRulesPanel({ d }: { d: TickerDossier }) {
+  /*
+   * Never returns null. A section that vanishes when empty is
+   * indistinguishable from one that broke — the exact failure this page's
+   * contract exists to prevent, and one that happened here in review: on a
+   * neutral ticker the list came back empty and the whole card silently
+   * disappeared.
+   */
+  if (d.passRules.length === 0) {
+    return (
+      <Panel title="What would make me pass" subtitle="nothing measured">
+        <p className="text-[12px] leading-relaxed text-ink-muted">
+          No condition on this page currently argues for standing aside. That is not a green light — it means the
+          expectancy gate did not fire, no event sits inside the holding period, and no independent source
+          contests the read. Every rule here is derived from a measurement, so an empty list means nothing
+          measured triggered one, never that nothing could.
+        </p>
+      </Panel>
+    );
+  }
+
+  const active = d.passRules.filter((r) => r.active);
+  const watch = d.passRules.filter((r) => !r.active);
+
+  return (
+    <Panel
+      title="What would make me pass"
+      subtitle={active.length > 0 ? `${active.length} already met` : "none currently met"}
+    >
+      <ul className="flex flex-col gap-3">
+        {[...active, ...watch].map((r) => (
+          <li
+            key={r.rule}
+            className={`rounded-md border px-3 py-2.5 ${
+              r.active ? "border-amber/25 bg-amber/[0.04]" : "border-hairline bg-void/30"
+            }`}
+          >
+            <div className="flex items-baseline gap-2">
+              <span
+                className={`shrink-0 text-[9px] font-semibold uppercase tracking-[0.14em] ${
+                  r.active ? "text-amber" : "text-ink-faint"
+                }`}
+              >
+                {r.active ? "Applies now" : "Watch for"}
+              </span>
+              <span className="text-[13px] leading-relaxed text-ink">{r.rule}</span>
+            </div>
+            <p className="mt-1 text-[11px] leading-relaxed text-ink-muted">{r.because}</p>
+          </li>
+        ))}
+      </ul>
+    </Panel>
   );
 }
 
