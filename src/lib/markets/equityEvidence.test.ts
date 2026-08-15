@@ -116,46 +116,120 @@ describe("evaluateRelativeStrength", () => {
   });
 });
 
+/*
+ * Breadth needs a real universe now — individual companies, enough of them to
+ * be a participation count, with enough history to know what is normal.
+ * Passing four index series used to be enough and no longer is, which is the
+ * intended consequence of the change rather than a fixture chore.
+ */
+const universeOf = (n = 40) =>
+  Array.from({ length: n }, (_, i) =>
+    flatThenMove(`CO${i}`, 600, 20, i % 3 === 0 ? -12 : 12)
+  );
+
 describe("evaluateBreadth", () => {
-  const above = (s: string) => flatThenMove(s, 200, 20, 10); // ends above its own 50d average
-  const below = (s: string) => flatThenMove(s, 200, 20, -10);
+  /*
+   * Breadth is now a PARTICIPATION COUNT over individual companies, banded
+   * against the panel's own history — not a share of five ETFs against fixed
+   * 65/35 cuts. So these fixtures build a panel large enough to be one
+   * (MIN_BREADTH_UNIVERSE is 20) with enough sessions to have a history
+   * (percentileOf needs 60).
+   *
+   * The key property under test is the one the old thresholds got wrong:
+   * a level is directional because it is UNUSUAL FOR THIS PANEL, not because
+   * it crossed a number. A panel that always runs at 70% participation must
+   * read neutral at 70%, or the composition tilt becomes a permanent vote.
+   */
+  const DEPTH = 400;
 
-  it("returns null when too few instruments report", () => {
-    expect(evaluateBreadth([above("SPY"), above("QQQ")], ASOF)).toBeNull();
+  /** `n` names, of which `upCount` end above their own 50-session average. */
+  function panelOf(upCount: number, n = 40): EquityInstrumentInput[] {
+    return Array.from({ length: n }, (_, i) =>
+      i < upCount
+        ? flatThenMove(`UP${i}`, DEPTH, 20, 12)
+        : flatThenMove(`DN${i}`, DEPTH, 20, -12)
+    );
+  }
+
+  it("returns null below a universe that could support a participation count", () => {
+    expect(evaluateBreadth(panelOf(10, 15), ASOF)).toBeNull();
   });
 
-  it("reads bullish when most of the complex is above its own average", () => {
-    const v = evaluateBreadth([above("SPY"), above("QQQ"), above("DIA"), above("IWM"), below("XLF")], ASOF)!;
-    expect(v.verdict).toBe("bullish"); // 4/5 = 80%
-    expect(v.explanation).toMatch(/80%/);
+  it("returns null when there is not enough history to say what is normal", () => {
+    // 40 names but only 80 sessions: past the universe floor, short of the
+    // history floor. Refusing is the point — without a distribution there is
+    // no way to know whether today's level is unusual.
+    const shallow = Array.from({ length: 40 }, (_, i) => flatThenMove(`S${i}`, 80, 20, 12));
+    expect(evaluateBreadth(shallow, ASOF)).toBeNull();
   });
 
-  it("reads bearish when most of the complex is below", () => {
-    const v = evaluateBreadth([below("SPY"), below("QQQ"), below("DIA"), below("IWM"), above("XLF")], ASOF)!;
-    expect(v.verdict).toBe("bearish"); // 1/5 = 20%
+  it("counts individual companies and reports the share it measured", () => {
+    const v = evaluateBreadth(panelOf(30), ASOF)!;
+    expect(v.explanation).toMatch(/75% of 40 companies/);
+    expect(v.confidenceBasis).toMatch(/40 individual companies/);
+    expect(v.label).toBe("Market Breadth");
   });
 
-  it("flags split participation as a conflict rather than smoothing it", () => {
-    const v = evaluateBreadth([above("SPY"), above("QQQ"), below("DIA"), below("IWM")], ASOF)!;
-    expect(v.verdict).toBe("neutral"); // 50%
+  /*
+   * THE PROPERTY THE OLD THRESHOLDS GOT WRONG.
+   *
+   * `panelOf` is flat for most of its history and then moves, so a name in it
+   * sits BELOW its own 50-session average for most of the past — participation
+   * is low throughout and today's 85% is genuinely unusual. That is a real
+   * signal and it should read bullish.
+   *
+   * `persistentPanel` is the opposite and the interesting one: names in steady
+   * trends, so 85% of them have been above their averages every day for years.
+   * The fixed 65/35 rule read any such panel as permanently bullish, turning
+   * how the instrument list was assembled into a standing vote. Banding
+   * against the panel's own history reads it as what it is — ordinary.
+   */
+  const persistentPanel = (upCount: number, n = 40) =>
+    Array.from({ length: n }, (_, i) =>
+      i < upCount ? series(`UP${i}`, DEPTH, 0.05) : series(`DN${i}`, DEPTH, -0.05)
+    );
+
+  it("reads an unusual level as directional", () => {
+    const v = evaluateBreadth(panelOf(34), ASOF)!;
+    expect(v.explanation).toMatch(/85% of 40 companies/);
+    expect(v.verdict).toBe("bullish");
+  });
+
+  it("reads a structurally high level as neutral, not bullish", () => {
+    const v = evaluateBreadth(persistentPanel(34), ASOF)!;
+    expect(v.explanation).toMatch(/85% of 40 companies/);
+    expect(v.verdict).toBe("neutral");
     expect(v.conflicts.length).toBeGreaterThan(0);
   });
 
-  it("caps confidence and DISCLOSES that it is a proxy, not an advance/decline line", () => {
-    /*
-     * The disclosure moved OUT of the label and into the reasoning, because
-     * "Breadth (proxy)" made a two-word heading do explanatory work and left
-     * a reader parsing parentheses before they had the concept. What must
-     * never move is the disclosure itself: this reads five ETFs, not the
-     * constituents of an index, and anything that implies otherwise is
-     * overclaiming. Confidence stays capped and the caveat stays stated.
-     */
-    const v = evaluateBreadth([above("SPY"), above("QQQ"), above("DIA"), above("IWM"), above("XLF")], ASOF)!;
-    expect(v.confidence).toBeLessThanOrEqual(60);
-    expect(v.confidenceBasis).toMatch(/PROXY/);
+  it("states where the reading sits in its own history rather than a bare share", () => {
+    const v = evaluateBreadth(panelOf(30), ASOF)!;
+    expect(v.explanation).toMatch(/its own past readings/);
+    expect(v.nextTrigger).toMatch(/own past readings/);
+  });
+
+  it("caps confidence, because a large-cap panel is not an advance/decline line", () => {
+    const v = evaluateBreadth(panelOf(40), ASOF)!;
+    expect(v.confidence).toBeLessThanOrEqual(75);
     expect(v.confidenceBasis).toMatch(/advance\/decline/i);
-    // The label names the concept; it must not claim more than the module is.
-    expect(v.label).toBe("Market Breadth");
+  });
+
+  /*
+   * ALIGNMENT BY DATE. One name trades a session the others miss. Counting
+   * back N bars per series independently would compare that name's Tuesday
+   * with everyone else's Monday; aligning by timestamp keeps the odd session
+   * as its own thinly-populated date, which the history filter then drops.
+   */
+  it("aligns the panel by date, so a missing session cannot shift a name's reading", () => {
+    const panel = panelOf(30);
+    const gapped = { ...panel[0], bars: panel[0].bars.filter((_, i) => i !== DEPTH - 40) };
+    const withGap = [gapped, ...panel.slice(1)];
+
+    const base = evaluateBreadth(panel, ASOF)!;
+    const gappedRead = evaluateBreadth(withGap, ASOF)!;
+    // The final session is unaffected: both still count all 40 names.
+    expect(gappedRead.explanation).toMatch(/of 40 companies/);
+    expect(gappedRead.verdict).toBe(base.verdict);
   });
 });
 
@@ -191,7 +265,7 @@ describe("buildEquityEvidence", () => {
     const evidence = buildEquityEvidence({
       instrument: inst,
       benchmark: bench,
-      universe: [inst, bench, series("DIA", 600, 0), series("IWM", 600, 0)],
+      universe: universeOf(),
       asOf: ASOF,
     });
     const ids = evidence.map((e) => e.id);
@@ -206,7 +280,7 @@ describe("buildEquityEvidence", () => {
     const [first] = buildEquityEvidence({
       instrument: inst,
       benchmark: bench,
-      universe: [inst, bench, series("DIA", 600, 0), series("IWM", 600, 0)],
+      universe: universeOf(),
       credit: flatThenMove("HYG", 600, 20, 8),
       duration: series("TLT", 600, 0),
       asOf: ASOF,
@@ -229,7 +303,7 @@ describe("buildEquityEvidence", () => {
     const evidence = buildEquityEvidence({
       instrument: inst,
       benchmark: bench,
-      universe: [inst, bench, series("DIA", 600, 0), series("IWM", 600, 0)],
+      universe: universeOf(),
       credit: flatThenMove("HYG", 600, 20, 8),
       duration: series("TLT", 600, 0),
       asOf: ASOF,
@@ -440,7 +514,7 @@ describe("contributionOf — derived by the engine, never declared", () => {
     const bench = series("SPY", 600, 0);
     const all = buildEquityEvidence({
       instrument: inst, benchmark: bench,
-      universe: [inst, bench, series("DIA", 600, 0), series("IWM", 600, 0)],
+      universe: universeOf(),
       credit: flatThenMove("HYG", 600, 20, 8), duration: series("TLT", 600, 0),
       asOf: ASOF,
     });

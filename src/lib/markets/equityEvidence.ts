@@ -1,3 +1,4 @@
+import { ordinal } from "@/lib/utils/format";
 import { Bar } from "@/lib/research/types";
 import { MetricVerdict, Verdict } from "@/lib/signals/types";
 // Market structure is SHARED, not equity-specific — see its own doc comment.
@@ -82,17 +83,6 @@ function percentileOf(value: number, history: number[]): number | null {
   return (below + 0.5 * equal) / history.length;
 }
 
-/** Correct English ordinal — "71st", not "71th". User-facing copy, so it matters. */
-function ordinal(n: number): string {
-  const rem100 = n % 100;
-  if (rem100 >= 11 && rem100 <= 13) return `${n}th`;
-  switch (n % 10) {
-    case 1: return `${n}st`;
-    case 2: return `${n}nd`;
-    case 3: return `${n}rd`;
-    default: return `${n}th`;
-  }
-}
 
 function verdictFromPercentile(p: number): Verdict {
   if (p >= UPPER_PERCENTILE) return "bullish";
@@ -198,59 +188,173 @@ function benchmarkReturnAt(benchmark: Bar[], endT: number, startT: number): numb
 }
 
 /**
- * BREADTH — how much of the equity complex is participating?
+ * BREADTH — how much of the market is actually participating?
  *
- * Honest scope note, stated in the output rather than buried here: this is
- * the share of a handful of broad ETFs trading above their own 50-session
- * average. That is a PROXY. Real breadth is the advance/decline line of index
- * constituents, which needs constituent data this platform does not ingest.
- * The proxy is directionally useful and is labelled as a proxy everywhere it
- * appears; it is not presented as the real thing.
+ * This used to be the share of FIVE broad ETFs above their own 50-session
+ * average, self-described as a proxy with confidence capped at 60. It was
+ * honest about being thin and it was still wrong in two ways.
+ *
+ * ── Why five ETFs could not answer the question ───────────────────────
+ *
+ * Breadth exists to catch the case an index level hides: a tape carried by a
+ * few names while most fall. SPY, QQQ, DIA, IWM and XLF are all
+ * capitalisation-weighted baskets of largely the same companies, so when
+ * megacaps carry the market, every one of them is above its average and the
+ * proxy reads 100% — maximum breadth, precisely in the situation breadth was
+ * built to flag. It could not fail in the direction that mattered.
+ *
+ * The universe is now the declared equity panel: individual operating
+ * companies, each counted once (src/lib/markets/equityPanel.ts). That is a
+ * real participation count rather than five views of the same aggregate.
+ *
+ * ── Why the 65/35 thresholds had to go with it ────────────────────────
+ *
+ * Over five instruments the share can only take six values, and 65/35 was a
+ * sensible cut through that. Over ~90 names it is continuous and, more
+ * importantly, the panel's own resting level is not 50%: a survivorship-
+ * shaped list of large caps sits above its averages most of the time. Reading
+ * a structurally normal 70% as "bullish" would have manufactured a permanent
+ * bull vote out of how the list was assembled.
+ *
+ * So the reading is banded against the PANEL'S OWN HISTORY, like every other
+ * percentile metric here. If 70% is ordinary for this panel, 70% is neutral.
+ * That absorbs the composition tilt instead of pretending it away.
  */
 const BREADTH_MA = 50;
+/** Below this, a participation count is not a breadth reading. */
+const MIN_BREADTH_UNIVERSE = 20;
+/**
+ * Representativeness, not statistical confidence — `confidenceFrom` already
+ * handles the latter. ~90 large-cap names, tilted by how the ingest grew, is
+ * a genuine participation count but it is not the market's advance/decline
+ * line, and it should not be able to claim the certainty of one.
+ */
+const BREADTH_CONFIDENCE_CAP = 75;
 
 export function evaluateBreadth(universe: EquityInstrumentInput[], asOf: number): MetricVerdict | null {
-  const readings = universe
-    .map((u) => aboveOwnAverage(u.bars, BREADTH_MA))
-    .filter((v): v is boolean => v !== null);
+  const series = breadthSeries(universe, BREADTH_MA, BAND_HISTORY);
+  if (series === null) return null;
 
-  if (readings.length < 3) return null;
+  const { current, history, counted } = series;
+  const p = percentileOf(current, history);
+  if (p === null) return null;
 
-  const share = readings.filter(Boolean).length / readings.length;
-  const verdict: Verdict = share >= 0.65 ? "bullish" : share <= 0.35 ? "bearish" : "neutral";
-
-  // Confidence is capped hard because the universe is small. Five instruments
-  // cannot support the confidence a real advance/decline line would.
-  const capped = Math.min(60, Math.round(Math.abs(share - 0.5) * 2 * 100));
+  const verdict = verdictFromPercentile(p);
+  const confidence = Math.min(BREADTH_CONFIDENCE_CAP, confidenceFrom(p, history.length));
+  const pct = Math.round(current * 100);
 
   return {
     id: "equityBreadth",
     label: "Market Breadth",
     verdict,
-    confidence: capped,
-    confidenceBasis: `${readings.length} broad ETFs, a PROXY for breadth rather than a constituent advance/decline line. Confidence is capped at 60 for that reason.`,
-    explanation: `${Math.round(share * 100)}% of the ${readings.length} tracked equity ETFs are trading above their own ${BREADTH_MA}-session average.`,
+    confidence,
+    confidenceBasis:
+      `${counted} individual companies, each counted once, against ${history.length} sessions of this panel's own ` +
+      `breadth history. A participation count rather than an index proxy — but still a large-cap panel, not a ` +
+      `full advance/decline line, so confidence is capped at ${BREADTH_CONFIDENCE_CAP}.`,
+    explanation:
+      `${pct}% of ${counted} companies are trading above their own ${BREADTH_MA}-session average. That is ` +
+      `${describeBand(p)} for this group, whose typical session reads ${Math.round(median(history) * 100)}%.`,
     whyItMatters:
       "A rally carried by one or two names is fragile in a way the index level does not show. Broad participation is what separates a durable advance from a narrow one.",
     asOf,
     conflicts:
-      share > 0.35 && share < 0.65
-        ? ["Participation is split — neither broad enough to confirm strength nor narrow enough to warn."]
+      verdict === "neutral"
+        ? ["Participation is ordinary for this panel — neither unusually broad nor unusually narrow."]
         : [],
-    nextTrigger:
-      verdict === "bullish"
-        ? "turns neutral below 65% participation"
-        : verdict === "bearish"
-          ? "turns neutral above 35% participation"
-          : "turns directional outside 35-65% participation",
+    nextTrigger: triggerText(p, verdict),
   };
 }
 
-function aboveOwnAverage(bars: Bar[], n: number): boolean | null {
-  if (bars.length < n + 1) return null;
-  const window = bars.slice(-n);
-  const avg = window.reduce((a, b) => a + b.close, 0) / window.length;
-  return bars[bars.length - 1].close > avg;
+/**
+ * The panel's own resting level, printed beside today's.
+ *
+ * Without it a reader sees "71%" and applies the folk rule that half is
+ * neutral — which is wrong here, and wrong in the direction that matters: a
+ * large-cap panel sits above its averages most of the time, so 71% can be
+ * ordinary. Stating the median makes the band visible instead of asking the
+ * reader to trust the word "unusual".
+ */
+function median(xs: number[]): number {
+  if (xs.length === 0) return 0;
+  const sorted = [...xs].sort((a, b) => a - b);
+  const m = sorted.length >> 1;
+  return sorted.length % 2 ? sorted[m] : (sorted[m - 1] + sorted[m]) / 2;
+}
+
+/** How a percentile reads in words, so the explanation never ships a bare number. */
+function describeBand(p: number): string {
+  if (p >= UPPER_PERCENTILE) return `unusually broad — higher than ${Math.round(p * 100)}% of its own past readings`;
+  if (p <= LOWER_PERCENTILE) return `unusually narrow — higher than only ${Math.round(p * 100)}% of its own past readings`;
+  return `about typical — higher than ${Math.round(p * 100)}% of its own past readings`;
+}
+
+interface BreadthSeries {
+  /** Share above own average at the latest session, 0-1. */
+  current: number;
+  /** The same share on each prior session, most recent first. */
+  history: number[];
+  /** Instruments that contributed to the current reading. */
+  counted: number;
+}
+
+/**
+ * Share of the universe above its own `ma`-session average, now and for each
+ * of the previous `depth` sessions.
+ *
+ * ALIGNED BY DATE, not by index from the end. Instruments halt, list late and
+ * miss sessions; walking back N bars in each series independently would
+ * silently compare Tuesday's reading for one name with Monday's for another,
+ * and the error would grow with every gap.
+ *
+ * Rolling sums rather than a fresh mean per session — this runs once per
+ * replayed date over the whole panel, and the naive form is what makes a
+ * breadth history too slow to compute and therefore too tempting to skip.
+ */
+function breadthSeries(
+  universe: EquityInstrumentInput[],
+  ma: number,
+  depth: number
+): BreadthSeries | null {
+  const above = new Map<number, number>();
+  const total = new Map<number, number>();
+
+  for (const u of universe) {
+    const bars = u.bars;
+    if (bars.length < ma + 1) continue;
+
+    // Seed the window on the earliest session we will report.
+    const first = Math.max(ma - 1, bars.length - 1 - depth);
+    let sum = 0;
+    for (let i = first - ma + 1; i <= first; i++) sum += bars[i].close;
+
+    for (let i = first; i < bars.length; i++) {
+      if (i > first) sum += bars[i].close - bars[i - ma].close;
+      const avg = sum / ma;
+      if (!(avg > 0) || !(bars[i].close > 0)) continue;
+      const t = bars[i].t;
+      total.set(t, (total.get(t) ?? 0) + 1);
+      if (bars[i].close > avg) above.set(t, (above.get(t) ?? 0) + 1);
+    }
+  }
+
+  const dates = [...total.keys()].sort((a, b) => b - a);
+  if (dates.length === 0) return null;
+
+  const shareAt = (t: number) => (above.get(t) ?? 0) / (total.get(t) ?? 1);
+  const counted = total.get(dates[0]) ?? 0;
+  if (counted < MIN_BREADTH_UNIVERSE) return null;
+
+  return {
+    current: shareAt(dates[0]),
+    // Sessions with a thin panel are dropped rather than diluted: an early
+    // date where only fifteen names had listed is not a breadth observation.
+    history: dates
+      .slice(1, depth + 1)
+      .filter((t) => (total.get(t) ?? 0) >= MIN_BREADTH_UNIVERSE)
+      .map(shareAt),
+    counted,
+  };
 }
 
 /**

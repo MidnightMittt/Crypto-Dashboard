@@ -3,6 +3,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { buildLiveAnalysis, MIN_BARS_FOR_ANALYSIS } from "../../src/lib/search/liveAnalysis";
 import { buildEquityEvidence, EquityInstrumentInput } from "../../src/lib/markets/equityEvidence";
+import { EQUITY_PANEL } from "../../src/lib/markets/equityPanel";
 import { resolveTrade, TradePlan as ExecPlan } from "../../src/lib/research/tradeExecution";
 import { effectiveSampleSize } from "../../src/lib/research/overlap";
 import { RollingStandardiser, standardise } from "../../src/lib/research/fingerprintInputs";
@@ -124,7 +125,13 @@ const REPLAY_START = process.env.EQUITY_REPLAY_FROM
   ? Date.parse(`${process.env.EQUITY_REPLAY_FROM}T00:00:00Z`)
   : Date.UTC(2008, 5, 1);
 
-const BREADTH_SET = ["SPY", "QQQ", "DIA", "IWM", "XLF"];
+/**
+ * Index instruments, excluded from the SCORED set: they are the benchmark and
+ * its close relatives, not opportunities. Distinct from the breadth universe,
+ * which is now the declared company panel — see evaluateBreadth for why five
+ * overlapping baskets could not measure participation.
+ */
+const BENCHMARK_SET = ["SPY", "QQQ", "DIA", "IWM", "XLF"];
 /** The real US equity session: it gaps, and the resolver must know. */
 const EQUITY_SESSION: SessionModel = {
   kind: "session-based",
@@ -310,15 +317,16 @@ function main() {
   if (!spy) throw new Error("SPY is required as the benchmark and breadth anchor.");
 
   let equities = [...all.values()].filter(
-    (x) => x.assetClass === "equity-etf" && !BREADTH_SET.includes(x.symbol)
+    (x) => x.assetClass === "equity-etf" && !BENCHMARK_SET.includes(x.symbol)
   );
   // Smoke-test knobs, so a bug costs seconds rather than a full run.
   const limit = Number(process.env.EQUITY_REPLAY_SYMBOLS ?? 0);
   if (limit > 0) equities = equities.slice(0, limit);
-  console.log(`[replay] ${equities.length} equity instruments, benchmark SPY, breadth ${BREADTH_SET.join("/")}`);
+  console.log(`[replay] ${equities.length} equity instruments, benchmark SPY`);
 
   // Market-wide inputs, all truncated per date below.
-  const breadthInstruments = BREADTH_SET.map((s) => all.get(s)).filter((x): x is Loaded => !!x);
+  const breadthInstruments = [...EQUITY_PANEL].map((s) => all.get(s)).filter((x): x is Loaded => !!x);
+  console.log(`[replay] breadth over ${breadthInstruments.length} of ${EQUITY_PANEL.length} declared companies`);
   const credit = all.get("HYG");
   const duration = all.get("TLT");
 

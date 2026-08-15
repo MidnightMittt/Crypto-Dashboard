@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { buildEquityEvidence, EquityInstrumentInput } from "../../src/lib/markets/equityEvidence";
+import { EQUITY_PANEL } from "../../src/lib/markets/equityPanel";
 import { buildMarketBias } from "../../src/lib/signals/marketBias";
 import { MarketBias } from "../../src/lib/signals/types";
 import { buildTradePlanOutcome, TradePlan, TradePlanRefusal } from "../../src/lib/signals/tradePlan";
@@ -45,8 +46,6 @@ const DATA_DIR = path.join(__dirname, "data");
  * evidence modules of their own (real yields, DXY, term structure).
  */
 const MARKETS = ["SPY", "QQQ", "DIA", "IWM"];
-/** The equity complex breadth is measured over. */
-const BREADTH_SET = ["SPY", "QQQ", "DIA", "IWM", "XLF"];
 
 function load(symbol: string): EquityInstrumentInput | null {
   const f = path.join(DATA_DIR, `${symbol}.US.json`);
@@ -86,7 +85,15 @@ function main() {
   const spy = load("SPY");
   if (!spy) throw new Error("SPY is the benchmark and is required — run scripts/ingest/yahoo.ts first");
 
-  const universe = BREADTH_SET.map(load).filter((x): x is EquityInstrumentInput => x !== null);
+  /*
+   * Breadth counts INDIVIDUAL COMPANIES. It used to count five broad ETFs,
+   * which are capitalisation-weighted baskets of largely the same names — so
+   * when megacaps carried the tape all five sat above their averages and the
+   * measure read maximum breadth in exactly the situation it exists to flag.
+   */
+  const universe = [...EQUITY_PANEL]
+    .map(load)
+    .filter((x): x is EquityInstrumentInput => x !== null);
   const credit = load("HYG") ?? undefined;
   const duration = load("TLT") ?? undefined;
 
