@@ -918,6 +918,7 @@ export function metricPerformanceSection(
         winRate: stat.winRate,
         baseRate: stat.significance?.nullWinRate ?? null,
         significant: stat.significance?.significant ?? null,
+        pValue: stat.significance?.pValue ?? null,
       };
     }
 

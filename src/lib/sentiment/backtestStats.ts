@@ -169,6 +169,13 @@ export interface HorizonRecord {
   /** The drift-matched null this horizon must beat, never a bare 50%. */
   baseRate: number | null;
   significant: boolean | null;
+  /**
+   * Tested against the DRIFT null, not a fair coin. Carried so the family of
+   * candidate modules can be FDR-corrected — nine modules each tested at four
+   * horizons is thirty-six looks, and an uncorrected "one of them cleared" is
+   * roughly what chance alone produces.
+   */
+  pValue: number | null;
 }
 
 export interface MetricPerformanceSummary {

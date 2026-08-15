@@ -3,6 +3,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { assessEdge, EdgeAssessment, EdgeRecord, wilsonLowerBound } from "../src/lib/research/edgeGate";
 import { METRIC_ROLES, METRIC_WEIGHTS } from "../src/lib/signals/scoring";
+import { benjaminiHochberg } from "../src/lib/research/multipleTesting";
 
 /**
  * APPLIES THE ROADMAP'S OWN EDGE GATE TO THE MODULES THAT ARE SHIPPING.
@@ -53,7 +54,14 @@ interface MetricSnapshot {
   winRate7d?: number;
   byHoldingPeriod?: Record<
     string,
-    { n: number; effectiveN: number; blockLength: number; winRate: number | null; baseRate: number | null }
+    {
+      n: number;
+      effectiveN: number;
+      blockLength: number;
+      winRate: number | null;
+      baseRate: number | null;
+      pValue?: number | null;
+    }
   >;
   bestHoldingPeriod?: { holdingPeriod: string; winRate: number } | null;
   stableAcrossWindows?: boolean | null;
@@ -144,6 +152,42 @@ function main(): void {
     );
   }
 
+  /*
+   * FDR ACROSS THE WHOLE CANDIDATE FAMILY.
+   *
+   * Nine modules tested at four horizons each is up to thirty-six looks at
+   * the same replay. At q = 0.05 an uncorrected "one of them cleared" is
+   * roughly what pure chance hands you, so the single surviving Edge verdict
+   * is not evidence until it survives this. Benjamini-Hochberg rather than
+   * Bonferroni: these tests are positively dependent (same tape, overlapping
+   * horizons), which is exactly the regime BH is built for, and Bonferroni
+   * would be so conservative here it could not detect a real edge either.
+   *
+   * The family is every (module, horizon) cell that produced a p-value —
+   * including the ones that failed. Correcting only over the survivors would
+   * be the selection this is meant to undo.
+   */
+  const family: Array<{ id: string; hp: string; p: number }> = [];
+  for (const m of metrics) {
+    for (const [hp, r] of Object.entries(m.byHoldingPeriod ?? {})) {
+      if (r && typeof r.pValue === "number" && Number.isFinite(r.pValue)) {
+        family.push({ id: m.metricId, hp, p: r.pValue });
+      }
+    }
+  }
+  const fdr = benjaminiHochberg(family.map((f) => f.p), 0.05);
+  const survives = new Set(
+    family.filter((_, i) => fdr[i]?.significant).map((f) => `${f.id}:${f.hp}`)
+  );
+
+  console.log(`\n${"─".repeat(78)}`);
+  console.log(`FDR across the candidate family — ${family.length} (module, horizon) tests, q = 0.05`);
+  const survivors = family.filter((f) => survives.has(`${f.id}:${f.hp}`));
+  console.log(
+    `  surviving cells: ${survivors.length}` +
+      (survivors.length ? ` — ${survivors.map((s) => `${s.id}@${s.hp}`).join(", ")}` : " — none")
+  );
+
   const cleared = voting.filter((v) => v.a.verdict === "edge");
   const totalWeight = voting.reduce((s, v) => s + v.weight, 0);
   const clearedWeight = cleared.reduce((s, v) => s + v.weight, 0);
@@ -151,6 +195,11 @@ function main(): void {
   console.log(`\n${"─".repeat(78)}`);
   console.log(`Modules voting as Edge: ${voting.length}`);
   console.log(`  clearing the gate:    ${cleared.length}  (${cleared.map((c) => c.id).join(", ") || "none"})`);
+  const clearedAndCorrected = cleared.filter((c) => survives.has(`${c.id}:${c.a.holdingPeriod}`));
+  console.log(
+    `  ...AND surviving FDR: ${clearedAndCorrected.length}  ` +
+      `(${clearedAndCorrected.map((c) => c.id).join(", ") || "none"})`
+  );
   console.log(
     `  share of voting weight that clears: ` +
       `${totalWeight > 0 ? ((clearedWeight / totalWeight) * 100).toFixed(0) : "0"}%`
