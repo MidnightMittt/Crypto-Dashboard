@@ -154,7 +154,23 @@ function toRow(o: TradierOption): TradierOptionRow | null {
     volume: o.volume ?? 0,
     averageVolume: o.average_volume ?? 0,
     openInterest: o.open_interest ?? 0,
-    iv: o.greeks?.mid_iv ?? null,
+    /*
+     * NORMALISED HERE, where the unit is known. ORATS mid IV arrives as a
+     * decimal (0.67 = 67%), always, so the conversion is a fact rather than
+     * a guess.
+     *
+     * It used to be guessed downstream with `v < 3 ? v * 100 : v`, which is
+     * correct for ordinary equities and catastrophic for the names this
+     * platform actually covers: a genuine 300% IV arrives as 3.0, fails the
+     * test, and renders as "3%" — a hundredfold understatement, on exactly
+     * the tickers where implied vol matters most. The datacenter miners sit
+     * at 272-300% today, one tick from that cliff.
+     *
+     * `toParsedContract` above deliberately keeps the raw decimal: it feeds
+     * the CBOE-shaped summariser, which does its own normalisation, and
+     * converting in both places would multiply by 100 twice.
+     */
+    iv: o.greeks?.mid_iv === undefined ? null : o.greeks.mid_iv * 100,
     gamma: o.greeks?.gamma ?? null,
     delta: o.greeks?.delta ?? null,
   };

@@ -166,12 +166,30 @@ export function liquidityScore(rows: TradierOptionRow[], spot: number): { score:
   return { score, label };
 }
 
-/** Implied vol of the contracts nearest the money, in percent. */
-export function atmIv(rows: TradierOptionRow[], spot: number): number | null {
-  const near = rows.filter((r) => Math.abs(r.strike - spot) / spot <= 0.05 && r.iv !== null && r.iv > 0);
+/**
+ * Implied vol of the contracts nearest the money, in percent.
+ *
+ * ── One expiry, enforced rather than assumed ──────────────────────────
+ *
+ * Implied vol has a TERM STRUCTURE: short-dated ATM vol on a volatile name
+ * runs far above the long end, so an unweighted mean across expiries is
+ * dominated by whichever tenor happens to contribute the most rows — a
+ * number with no meaning, since "implied move" is undefined without a
+ * horizon.
+ *
+ * Callers pass single-expiry chains today, so this was never wrong in
+ * practice; but a signature that ACCEPTS mixed rows is a bug waiting for its
+ * second caller. Taking the expiry explicitly makes the guarantee the
+ * function's own rather than the caller's to remember.
+ *
+ * Units are already percent — normalised in the Tradier adapter, where the
+ * unit is known. See `toRow`.
+ */
+export function atmIv(rows: TradierOptionRow[], spot: number, expiry?: string): number | null {
+  const scoped = expiry === undefined ? rows : rows.filter((r) => r.expiry === expiry);
+  const near = scoped.filter((r) => Math.abs(r.strike - spot) / spot <= 0.05 && r.iv !== null && r.iv > 0);
   if (near.length < 2) return null;
-  const mean = near.reduce((s, r) => s + (r.iv ?? 0), 0) / near.length;
-  return mean < 3 ? mean * 100 : mean;
+  return near.reduce((s, r) => s + (r.iv ?? 0), 0) / near.length;
 }
 
 /**
@@ -180,9 +198,17 @@ export function atmIv(rows: TradierOptionRow[], spot: number): number | null {
  * Compared at roughly equal distance either side of spot, because comparing
  * a 5%-out put with a 15%-out call would measure the distance, not the skew.
  */
-export function skew(rows: TradierOptionRow[], spot: number, targetPct = 0.07): number | null {
+export function skew(
+  rows: TradierOptionRow[],
+  spot: number,
+  targetPct = 0.07,
+  expiry?: string
+): number | null {
+  // Same term-structure argument as `atmIv`: a put from one expiry against a
+  // call from another measures the calendar, not the skew.
+  const scoped = expiry === undefined ? rows : rows.filter((r) => r.expiry === expiry);
   const pick = (kind: "call" | "put") => {
-    const side = rows.filter(
+    const side = scoped.filter(
       (r) => r.kind === kind && r.iv !== null && r.iv > 0 && (kind === "call" ? r.strike > spot : r.strike < spot)
     );
     if (side.length === 0) return null;
@@ -192,8 +218,9 @@ export function skew(rows: TradierOptionRow[], spot: number, targetPct = 0.07): 
   const c = pick("call");
   const p = pick("put");
   if (!c || !p || c.iv === null || p.iv === null) return null;
-  const norm = (v: number) => (v < 3 ? v * 100 : v);
-  return norm(p.iv) - norm(c.iv);
+  // Both already percent, normalised in the adapter. The `< 3` guess that
+  // used to live here is gone — see `toRow` for why it was dangerous.
+  return p.iv - c.iv;
 }
 
 const annualise = (rets: number[]): number => {
@@ -305,7 +332,7 @@ export function buildOptionsIntelligence(inputs: IntelligenceInputs): OptionsInt
   const expectedMoveAbs = atmStraddlePrice;
   const expectedMovePct = atmStraddlePrice !== null ? (atmStraddlePrice / spot) * 100 : null;
 
-  const atmIvPct = atmIv(hRows, spot) ?? atmIv(front.rows, spot);
+  const atmIvPct = atmIv(hRows, spot, horizon.expiry) ?? atmIv(front.rows, spot, front.expiry);
   const rv = realizedVol(closes);
   const realizedVolPct = rv?.pct ?? null;
   /*
@@ -317,7 +344,7 @@ export function buildOptionsIntelligence(inputs: IntelligenceInputs): OptionsInt
    */
   const rvForComparison = rv === null ? null : rv.jumpDominated ? rv.exJumpPct : rv.pct;
   const ivMinusRvPct = atmIvPct !== null && rvForComparison !== null ? atmIvPct - rvForComparison : null;
-  const skewPct = skew(hRows, spot) ?? skew(front.rows, spot);
+  const skewPct = skew(hRows, spot, undefined, horizon.expiry) ?? skew(front.rows, spot, undefined, front.expiry);
 
   // ── Positioning across every fetched expiry ──
   const all = chains.flatMap((c) => c.rows);

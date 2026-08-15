@@ -17,7 +17,7 @@ const row = (over: Partial<TradierOptionRow> & { strike: number; kind: "call" | 
   volume: 100,
   averageVolume: 100,
   openInterest: 1000,
-  iv: 0.3,
+  iv: 30,
   gamma: 0.01,
   delta: 0.5,
   ...over,
@@ -67,22 +67,30 @@ describe("skew", () => {
    */
   it("compares puts and calls at comparable distance from spot", () => {
     const rows = [
-      row({ strike: 93, kind: "put", iv: 0.4 }), // ~7% out — the one to use
-      row({ strike: 70, kind: "put", iv: 0.9 }), // far out, must not dominate
-      row({ strike: 107, kind: "call", iv: 0.3 }), // ~7% out
-      row({ strike: 130, kind: "call", iv: 0.1 }),
+      row({ strike: 93, kind: "put", iv: 40 }), // ~7% out — the one to use
+      row({ strike: 70, kind: "put", iv: 90 }), // far out, must not dominate
+      row({ strike: 107, kind: "call", iv: 30 }), // ~7% out
+      row({ strike: 130, kind: "call", iv: 10 }),
     ];
     expect(skew(rows, 100)).toBeCloseTo(10, 5); // 40 - 30, not 90 - 10
   });
 
-  it("normalises decimals and percents to the same unit", () => {
-    const decimals = [row({ strike: 93, kind: "put", iv: 0.4 }), row({ strike: 107, kind: "call", iv: 0.3 })];
-    const percents = [row({ strike: 93, kind: "put", iv: 40 }), row({ strike: 107, kind: "call", iv: 30 })];
-    expect(skew(decimals, 100)).toBeCloseTo(skew(percents, 100)!, 5);
+  /*
+   * THE CLIFF. Implied vol used to be guessed downstream with
+   * `v < 3 ? v * 100 : v`, which is right for ordinary equities and
+   * catastrophic above 300%: a genuine 300% IV arrives from ORATS as 3.0,
+   * fails the test, and renders as "3%". The datacenter miners trade at
+   * 272-300% today — one tick from a hundredfold understatement, on exactly
+   * the names where implied vol matters most. Units are now normalised in
+   * the adapter, where they are known rather than inferred.
+   */
+  it("handles vol above the old 300% cliff without collapsing it", () => {
+    const rows = [row({ strike: 93, kind: "put", iv: 320 }), row({ strike: 107, kind: "call", iv: 300 })];
+    expect(skew(rows, 100)).toBeCloseTo(20, 5);
   });
 
   it("returns null when one side has no implied vol at all", () => {
-    expect(skew([row({ strike: 93, kind: "put", iv: 0.4 })], 100)).toBeNull();
+    expect(skew([row({ strike: 93, kind: "put", iv: 40 })], 100)).toBeNull();
   });
 });
 
@@ -146,9 +154,9 @@ describe("liquidityScore", () => {
 describe("atmIv", () => {
   it("ignores strikes far from the money", () => {
     const rows = [
-      row({ strike: 100, kind: "call", iv: 0.3 }),
-      row({ strike: 101, kind: "put", iv: 0.32 }),
-      row({ strike: 200, kind: "call", iv: 5 }),
+      row({ strike: 100, kind: "call", iv: 30 }),
+      row({ strike: 101, kind: "put", iv: 32 }),
+      row({ strike: 200, kind: "call", iv: 500 }),
     ];
     expect(atmIv(rows, 100)).toBeCloseTo(31, 5);
   });
@@ -222,8 +230,8 @@ describe("buildOptionsIntelligence", () => {
       if (r.kind === "put" && r.strike === 93) r.iv = 0.5;
     }
     // ...but puts are bid 20 vol points over calls: fear, not enthusiasm.
-    chain.rows.push(row({ strike: 93, kind: "put", iv: 0.5, volume: 100 }));
-    chain.rows.push(row({ strike: 107, kind: "call", iv: 0.3, volume: 5000 }));
+    chain.rows.push(row({ strike: 93, kind: "put", iv: 50, volume: 100 }));
+    chain.rows.push(row({ strike: 107, kind: "call", iv: 30, volume: 5000 }));
     const out = buildOptionsIntelligence({ ...base, chains: [chain] })!;
     expect(out.skewPct!).toBeGreaterThan(3);
     expect(out.optionsLean).toBe("neutral");
