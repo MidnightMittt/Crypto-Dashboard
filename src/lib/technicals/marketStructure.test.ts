@@ -110,6 +110,33 @@ describe("clusterTouches", () => {
   it("returns nothing for empty input", () => {
     expect(clusterTouches([], 5)).toEqual([]);
   });
+
+  /*
+   * Tolerance is checked against the running MEAN, so a cluster may span more
+   * than `tolerance` in total — the mean sits at most span/k below the top,
+   * making the real bound k×tolerance. This pins that the cap holds the span
+   * regardless, on input deliberately built to drift: touches keep arriving
+   * just inside tolerance of a mean that keeps rising behind them.
+   */
+  it("holds cluster span to the cap even as the running mean drifts", () => {
+    const drifting: { price: number; index: number }[] = [];
+    let price = 100;
+    for (let i = 0; i < 30; i++) {
+      drifting.push({ price, index: i });
+      price += 0.9;
+    }
+
+    const span = (c: { price: number }[]) => c[c.length - 1].price - c[0].price;
+
+    // Uncapped, clusters reach 2.7 on a tolerance of 2 — more than tolerance,
+    // which is the whole reason a separate width bound is needed.
+    const uncapped = clusterTouches(drifting, 2);
+    expect(Math.max(...uncapped.map(span))).toBeCloseTo(2.7, 6);
+
+    const capped = clusterTouches(drifting, 2, 1.5);
+    expect(Math.max(...capped.map(span))).toBeLessThanOrEqual(1.5);
+    expect(capped.length).toBeGreaterThan(uncapped.length);
+  });
 });
 
 describe("zonesFromClusters", () => {
@@ -177,6 +204,40 @@ describe("mergeOverlappingZones", () => {
     const a = zone({ priceLow: 100, priceHigh: 102, kind: "support" });
     const b = zone({ priceLow: 110, priceHigh: 112, kind: "support" });
     expect(mergeOverlappingZones([a, b], 2)).toHaveLength(2);
+  });
+
+  /*
+   * THE SITE THAT ACTUALLY PRODUCED THE DEGENERATE BANDS. Capping
+   * clusterTouches alone left the real zone output byte-identical, because
+   * this merge runs after clustering and re-chains: each zone starting within
+   * tolerance of the RUNNING priceHigh extends it, so a row of tight,
+   * individually-reasonable levels folds into one band of unbounded width.
+   *
+   * Six 2-wide zones spaced 1 apart span 17 when uncapped.
+   */
+  it("chains a row of tight zones into one wide band when uncapped, and stops at the cap", () => {
+    const row = Array.from({ length: 6 }, (_, i) =>
+      zone({ priceLow: 100 + i * 3, priceHigh: 102 + i * 3, kind: "support" })
+    );
+
+    const uncapped = mergeOverlappingZones(row, 2);
+    expect(uncapped).toHaveLength(1);
+    expect(uncapped[0].priceHigh - uncapped[0].priceLow).toBe(17);
+
+    const capped = mergeOverlappingZones(row, 2, 8);
+    expect(capped.length).toBeGreaterThan(1);
+    for (const z of capped) expect(z.priceHigh - z.priceLow).toBeLessThanOrEqual(8);
+  });
+
+  /*
+   * The cap must never split a zone that arrived wider than it — the guard
+   * declines to WIDEN, it does not rewrite evidence it was handed.
+   */
+  it("passes through an already-oversized zone rather than truncating it", () => {
+    const wide = zone({ priceLow: 100, priceHigh: 130, kind: "support" });
+    const merged = mergeOverlappingZones([wide], 2, 8);
+    expect(merged).toHaveLength(1);
+    expect(merged[0]).toMatchObject({ priceLow: 100, priceHigh: 130 });
   });
 });
 

@@ -148,6 +148,32 @@ export interface SupportResistanceZone {
 
 /** Swing touches within this many ATRs of a cluster's running mean join that cluster — adapts to the asset's own volatility rather than a flat percentage. */
 const CLUSTER_TOLERANCE_ATR_MULT = 0.5;
+/**
+ * A zone may span at most this many ATRs, end to end.
+ *
+ * ── Why a cap is needed at all ────────────────────────────────────────
+ *
+ * The tolerance above bounds each STEP, not the total extent, and it is
+ * measured against the cluster's RUNNING MEAN — which moves toward every
+ * touch that joins. So a chain of touches, each individually within half an
+ * ATR of a drifting centre, walks the cluster across an unbounded range.
+ * Classic single-linkage chaining.
+ *
+ * It reached production: CIFR carried a "support" spanning $11.01–$19.39 —
+ * 3.3 ATR, 50% of the share price, straddling spot — built from 22 touches
+ * on a 0.5 ATR tolerance. A band that wide is not a level. You cannot place
+ * an entry at it, you cannot place a stop beyond it, and price moving from
+ * one edge to the other is a multi-day move.
+ *
+ * ── Why 1.0 ────────────────────────────────────────────────────────────
+ *
+ * Not tuned. The tolerance is a RADIUS of 0.5 ATR around a level's centre,
+ * so the widest thing that tolerance can honestly describe is 2 x 0.5 = 1.0
+ * ATR end to end. This constant makes `CLUSTER_TOLERANCE_ATR_MULT` mean what
+ * its name already claimed; picking anything larger would be choosing a
+ * number because it changed fewer zones.
+ */
+const MAX_ZONE_WIDTH_ATR_MULT = 1.0;
 const ZONE_SWING_LOOKBACK = 3;
 /** Reaction count saturates the strength contribution at this many touches — a 5th touch shouldn't keep mattering as much as the jump from 1 to 4 did. */
 const STRENGTH_TOUCH_SATURATION = 4;
@@ -175,15 +201,51 @@ interface SwingTouch {
   index: number;
 }
 
-/** Greedy 1D clustering by running-cluster-mean: a touch joins the current cluster if it's within `tolerance` of that cluster's mean so far, otherwise it starts a new one. Input must already be sorted by price. */
-export function clusterTouches(sortedByPrice: SwingTouch[], tolerance: number): SwingTouch[][] {
+/**
+ * Greedy 1D clustering by running-cluster-mean, BOUNDED IN TOTAL EXTENT.
+ *
+ * A touch joins the current cluster when it is both within `tolerance` of
+ * that cluster's mean so far AND close enough that the cluster's full span
+ * stays inside `maxWidth`. Otherwise it starts a new one. Input must already
+ * be sorted by price.
+ *
+ * The second condition is the one that matters. Without it the tolerance
+ * bounds each step while the mean drifts toward every new member, so touches
+ * chain outward indefinitely — see `MAX_ZONE_WIDTH_ATR_MULT` for the zone
+ * this produced in production.
+ *
+ * `maxWidth` is optional so the existing tests, which pass a bare tolerance,
+ * keep describing the clustering rule rather than the cap. Callers inside
+ * this module always supply it.
+ */
+export function clusterTouches(
+  sortedByPrice: SwingTouch[],
+  tolerance: number,
+  maxWidth = Infinity
+): SwingTouch[][] {
   if (sortedByPrice.length === 0) return [];
   const clusters: SwingTouch[][] = [[sortedByPrice[0]]];
   for (let i = 1; i < sortedByPrice.length; i++) {
     const touch = sortedByPrice[i];
     const cluster = clusters[clusters.length - 1];
     const clusterMean = cluster.reduce((sum, t) => sum + t.price, 0) / cluster.length;
-    if (Math.abs(touch.price - clusterMean) <= tolerance) {
+
+    /*
+     * Sorted ascending, so the cluster's low is its first member and the
+     * candidate is always the new high. No need to scan.
+     *
+     * Tolerance is checked against the running MEAN, which admits more than
+     * `tolerance` of total span: the mean sits at most span/k below the top,
+     * so the bound is k×tolerance, growing with cluster size. Reaching it
+     * needs mass piled at the leading edge, which separated swing pivots do
+     * not produce — capping this alone left the real 60-instrument panel
+     * byte-identical. It is kept as the bound on that path, not as the fix.
+     * The fix is the identical cap in mergeOverlappingZones, which is where
+     * the degenerate widths were actually being manufactured.
+     */
+    const spanIfJoined = touch.price - cluster[0].price;
+
+    if (Math.abs(touch.price - clusterMean) <= tolerance && spanIfJoined <= maxWidth) {
       cluster.push(touch);
     } else {
       clusters.push([touch]);
@@ -230,7 +292,11 @@ export function zonesFromClusters(
  * has moved through that area since the swing formed, which is real,
  * distinct information (surfaced via status, not hidden by merging).
  */
-export function mergeOverlappingZones(zones: SupportResistanceZone[], tolerance: number): SupportResistanceZone[] {
+export function mergeOverlappingZones(
+  zones: SupportResistanceZone[],
+  tolerance: number,
+  maxWidth = Infinity
+): SupportResistanceZone[] {
   const bySupport = zones.filter((z) => z.kind === "support").sort((a, b) => a.priceLow - b.priceLow);
   const byResistance = zones.filter((z) => z.kind === "resistance").sort((a, b) => a.priceLow - b.priceLow);
 
@@ -238,7 +304,19 @@ export function mergeOverlappingZones(zones: SupportResistanceZone[], tolerance:
     const merged: SupportResistanceZone[] = [];
     for (const zone of group) {
       const last = merged[merged.length - 1];
-      if (last && zone.priceLow <= last.priceHigh + tolerance) {
+      /*
+       * THE SECOND CHAINING SITE, and the one that actually produced the
+       * degenerate bands. Capping `clusterTouches` alone changed nothing,
+       * because this merge runs afterwards and re-widens: each zone starting
+       * within `tolerance` of the running `priceHigh` extends it, so a row of
+       * adjacent levels folds into one band of unbounded width.
+       *
+       * When merging would breach the cap the zones stay SEPARATE, which is
+       * the honest reading — two levels close together are two levels, not
+       * one wide one.
+       */
+      const spanIfMerged = last ? Math.max(last.priceHigh, zone.priceHigh) - Math.min(last.priceLow, zone.priceLow) : 0;
+      if (last && zone.priceLow <= last.priceHigh + tolerance && spanIfMerged <= maxWidth) {
         last.priceLow = Math.min(last.priceLow, zone.priceLow);
         last.priceHigh = Math.max(last.priceHigh, zone.priceHigh);
         last.reactionCount += zone.reactionCount;
@@ -396,9 +474,10 @@ export function buildSupportResistanceZones(
     .map((s): SwingTouch => ({ price: s.value, index: s.index }))
     .sort((a, b) => a.price - b.price);
 
+  const maxWidth = atrValue * MAX_ZONE_WIDTH_ATR_MULT;
   let zones: SupportResistanceZone[] = [
-    ...zonesFromClusters(clusterTouches(highSwings, tolerance), "resistance", candles.length, timeframe),
-    ...zonesFromClusters(clusterTouches(lowSwings, tolerance), "support", candles.length, timeframe),
+    ...zonesFromClusters(clusterTouches(highSwings, tolerance, maxWidth), "resistance", candles.length, timeframe),
+    ...zonesFromClusters(clusterTouches(lowSwings, tolerance, maxWidth), "support", candles.length, timeframe),
   ];
 
   if (profile) {
@@ -417,7 +496,7 @@ export function buildSupportResistanceZones(
     });
   }
 
-  zones = mergeOverlappingZones(zones, tolerance);
+  zones = mergeOverlappingZones(zones, tolerance, maxWidth);
 
   if (profile) {
     for (const zone of zones) {
@@ -465,9 +544,17 @@ export function mergeTimeframeZones(
   // Daily first: mergeOverlappingZones folds later zones into earlier ones,
   // so leading with daily keeps the daily range as the anchor a 4H zone
   // widens, rather than the other way round.
+  //
+  // That widening is capped for the same reason it is inside a single
+  // timeframe. Both inputs already respect the cap, so a merge is only
+  // declined when the union genuinely exceeds it — meaning the two barely
+  // overlap and folding them would manufacture a band wider than either
+  // chart found. Declining costs the multi-timeframe tag on that pair, which
+  // is the right trade: they were not the same level.
   const merged = mergeOverlappingZones(
     [...dailyZones, ...fourHourZones],
-    atrValue * CLUSTER_TOLERANCE_ATR_MULT
+    atrValue * CLUSTER_TOLERANCE_ATR_MULT,
+    atrValue * MAX_ZONE_WIDTH_ATR_MULT
   );
 
   for (const zone of merged) {
