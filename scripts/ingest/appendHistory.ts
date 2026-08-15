@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { Ledger, LedgerEntry, appendEntry, emptyLedger } from "../../src/lib/markets/historyLedger";
+import { Ledger, LedgerEntry, appendEntry, emptyLedger, guardEntry } from "../../src/lib/markets/historyLedger";
 
 /**
  * Appends today's intelligence reads to the signal history ledger.
@@ -76,14 +76,28 @@ function main() {
     ? JSON.parse(fs.readFileSync(LEDGER_PATH, "utf8"))
     : emptyLedger();
 
+  /*
+   * Staleness and ordering are decided by `guardEntry`, which is pure and
+   * tested. This script's only job is to refuse loudly on a refusal — see
+   * historyLedger.ts for why a silent no-op here left the platform's memory
+   * frozen for three days behind a green pipeline.
+   */
+  const guard = guardEntry(ledger, entry, asOf, Date.now());
+  if (!guard.ok) throw new Error(`[ledger] ${guard.reason}`);
+
   const next = appendEntry(ledger, entry);
   fs.writeFileSync(LEDGER_PATH, JSON.stringify(next, null, 0));
 
-  const replaced = ledger.entries.some((e) => e.date === date);
   console.log(
-    `[ledger] ${replaced ? "replaced" : "appended"} ${date} — ${next.entries.length} entr${next.entries.length === 1 ? "y" : "ies"}, ` +
+    `[ledger] ${guard.kind} ${date} — ${next.entries.length} entr${next.entries.length === 1 ? "y" : "ies"}, ` +
       `regime=${entry.regime?.regime ?? "none"}, ${entry.rotation.length} sectors, ${entry.industries.length} industries, ${entry.equity.length} equities`
   );
+  if (guard.kind === "replaced") {
+    console.log(
+      `[ledger] this was a RE-RUN of ${date}, so the ledger did not grow. That is expected on a manual re-dispatch ` +
+        `and is not expected on a scheduled run — if the schedule keeps reporting this, the ingest has stopped advancing.`
+    );
+  }
 }
 
 main();

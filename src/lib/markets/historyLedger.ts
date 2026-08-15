@@ -109,3 +109,69 @@ export function episodesOf<T>(
   }
   return out;
 }
+
+/**
+ * ── THE SPINE HAS TO NOTICE WHEN IT STOPS ────────────────────────────
+ *
+ * Measured 2026-08-15: the ledger held ONE entry, dated 2026-08-12, and the
+ * pipeline had been reporting success. Its single committed run refreshed
+ * marketIntelligence.json and equityMarkets.json and never touched
+ * signalLedger.json — the snapshot's as-of had not advanced, the append
+ * idempotently rewrote the same entry, the file did not change, and the
+ * commit step said "no data changes, nothing to deploy" and exited 0.
+ *
+ * Every green light was accurate about its own step. The platform's memory
+ * had stopped accumulating and nothing anywhere said so — which is exactly
+ * the "looks live while standing still" failure this project refuses to ship
+ * to users, turned inward on the pipeline itself.
+ *
+ * ── The distinction this makes ───────────────────────────────────────
+ *
+ * A RE-RUN of today is legitimate, and idempotency is the feature that makes
+ * it safe. Data that has stopped advancing is a broken ingest wearing a
+ * re-run's clothes. They are told apart by the DATA'S OWN DATE, never by
+ * whether the file happened to change — which is the signal the pipeline was
+ * using, and the reason it stayed quiet.
+ *
+ * Pure and injected-clock so the rules are testable; the script that calls
+ * this does nothing but throw on a refusal.
+ */
+
+/** Weekdays-after-close means today's or yesterday's data. Four days absorbs a long weekend plus a holiday. */
+export const MAX_LEDGER_DATA_AGE_DAYS = 4;
+
+export type LedgerGuard =
+  | { ok: true; kind: "appended" | "replaced" }
+  | { ok: false; reason: string };
+
+export function guardEntry(
+  ledger: Ledger,
+  entry: LedgerEntry,
+  asOfMs: number,
+  nowMs: number
+): LedgerGuard {
+  const previous = ledger.entries.at(-1)?.date ?? null;
+
+  if (previous !== null && entry.date < previous) {
+    return {
+      ok: false,
+      reason:
+        `refusing to record ${entry.date}: the ledger already holds ${previous}, so the snapshot went BACKWARDS. ` +
+        `The ingest served older bars than the ones already recorded, and appending would corrupt every duration ` +
+        `count derived from this file. Fix the ingest; do not rerun.`,
+    };
+  }
+
+  const ageDays = Math.floor((nowMs - asOfMs) / 86_400_000);
+  if (ageDays > MAX_LEDGER_DATA_AGE_DAYS) {
+    return {
+      ok: false,
+      reason:
+        `refusing to record ${entry.date}: that snapshot is ${ageDays} days old and the limit is ` +
+        `${MAX_LEDGER_DATA_AGE_DAYS}. The pipeline rebuilt its outputs from bars that never advanced, so every ` +
+        `"since when" answer built on this file would be wrong.`,
+    };
+  }
+
+  return { ok: true, kind: previous !== null && ledger.entries.some((e) => e.date === entry.date) ? "replaced" : "appended" };
+}
