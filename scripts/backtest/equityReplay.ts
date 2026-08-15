@@ -5,6 +5,12 @@ import { buildLiveAnalysis, MIN_BARS_FOR_ANALYSIS } from "../../src/lib/search/l
 import { buildEquityEvidence, EquityInstrumentInput } from "../../src/lib/markets/equityEvidence";
 import { resolveTrade, TradePlan as ExecPlan } from "../../src/lib/research/tradeExecution";
 import { effectiveSampleSize } from "../../src/lib/research/overlap";
+import { RollingStandardiser, standardise } from "../../src/lib/research/fingerprintInputs";
+import { rawReadings } from "../../src/lib/research/fingerprintReadings";
+import { DIMENSIONS, FINGERPRINT_VERSION } from "../../src/lib/research/fingerprint";
+
+/** Positional order for the columnar library encoding. Frozen with the artefact. */
+const DIMENSION_IDS = DIMENSIONS.map((d) => d.id);
 import {
   volRegimeFromMetrics,
   EquityAnalogCell,
@@ -66,6 +72,33 @@ import { nearestWatchLevels, watchEdge } from "../../src/lib/technicals/marketSt
 const __dirname_ = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname_, "..", "ingest", "data");
 const OUT = path.join(__dirname_, "..", "..", "src", "data", "equityExecutionStats.json");
+const FINGERPRINT_OUT = path.join(__dirname_, "..", "..", "src", "data", "fingerprintLibrary.json");
+
+/*
+ * The horizon every fingerprint outcome is measured over.
+ *
+ * Fixed rather than "until the trade resolves", because a fingerprint
+ * describes an ENVIRONMENT, not a trade: it has no stop and no target to
+ * resolve against. A fixed window makes every neighbour's outcome measured
+ * the same way, which is what lets them be pooled at all.
+ */
+const FINGERPRINT_HORIZON_SESSIONS = 20;
+
+/*
+ * The library keeps one row in ten, and it costs almost nothing.
+ *
+ * The neighbour search accepts at most one match per instrument per 21-day
+ * window, so days closer together than that were never going to be returned
+ * together — sampling below that resolution discards rows the search would
+ * have dropped anyway. Ten SESSIONS is about fourteen calendar days, comfortably
+ * inside the window, so every window still offers at least one candidate.
+ *
+ * At stride 5 with verbose JSON the artefact was 44.7MB, which the server
+ * would parse on every cold start to answer one lookup. Declared here rather
+ * than beside its writer because main() runs at module load and would hit
+ * the temporal dead zone otherwise.
+ */
+const LIBRARY_STRIDE_SESSIONS = 10;
 
 /** Exactly what fetchQuoteHistory requests: 5 * 365 calendar days. */
 const LOOKBACK_MS = 5 * 365 * 24 * 3600 * 1000;
@@ -217,6 +250,16 @@ function buildZoneReachCells(watches: ZoneWatch[], all: Map<string, Loaded>): Re
   return buildReachCells(rows).map((c) => ({ ...c, source: "zone" as const }));
 }
 
+/** One market day as a standardised vector, plus what happened next. */
+interface FingerprintRow {
+  symbol: string;
+  date: string;
+  values: Record<string, number>;
+  forwardReturnPct: number;
+  maxAdversePct: number;
+  maxFavourablePct: number;
+}
+
 interface ReachRow {
   distanceAtrMax: number;
   touchesMin: number;
@@ -293,6 +336,17 @@ function main() {
 
   const pending: PendingTrade[] = [];
   const zonePending: ZoneWatch[] = [];
+
+  /*
+   * FINGERPRINTS. One standardiser per instrument, because every dimension
+   * is z-scored against THAT instrument's own past — which is what makes a
+   * biotech and a utility comparable at all. The standardiser enforces
+   * read-before-write internally, so walking dates forward here is the only
+   * discipline this loop has to keep.
+   */
+  const scalers = new Map<string, RollingStandardiser>();
+  const fingerprintsPending: Array<{ symbol: string; t: number; values: Record<string, number> }> = [];
+  const unknownDimensions = new Set<string>();
   let evaluated = 0;
 
   for (let d = 0; d < dates.length; d++) {
@@ -345,6 +399,34 @@ function main() {
       });
       if (!res.ok) continue;
       const atrAbsAt = res.analysis.atrPct !== null ? (res.analysis.atrPct / 100) * close : 0;
+
+      /*
+       * The fingerprint for this (instrument, date), from the analysis just
+       * built. Recorded for EVERY evaluated session, not only the ones that
+       * produced a plan — the library describes environments, and restricting
+       * it to days the planner liked would select the sample on the very
+       * property the neighbourhood is later asked about.
+       */
+      {
+        let scaler = scalers.get(inst.symbol);
+        if (!scaler) {
+          scaler = new RollingStandardiser();
+          scalers.set(inst.symbol, scaler);
+        }
+        const raw = rawReadings({
+          closes: bars.map((b) => b.close),
+          volumes: bars.map((b) => b.volume ?? 0),
+          metrics: [...res.analysis.bias.metrics, ...marketWide],
+          zones: res.analysis.zones,
+          atrPct: res.analysis.atrPct,
+        });
+        const { values, unknown } = standardise(raw, scaler);
+        for (const u of unknown) unknownDimensions.add(u);
+        // A vector too thin to be compared is not worth storing.
+        if (Object.keys(values).length >= 6) {
+          fingerprintsPending.push({ symbol: inst.symbol, t: asOf, values: values as Record<string, number> });
+        }
+      }
 
       /*
        * ZONE REACH, measured for its own sake. The planner only prices
@@ -417,6 +499,69 @@ function main() {
   }
 
   console.log(`[replay] ${pending.length.toLocaleString()} plans from ${evaluated.toLocaleString()} evaluated sessions`);
+
+  if (unknownDimensions.size > 0) {
+    /*
+     * A dimension renamed in the readings module but not in the definition
+     * would silently never match, which reads as "no similar days" rather
+     * than as a bug. Loud on purpose.
+     */
+    throw new Error(
+      `[replay] readings produced dimensions the fingerprint definition does not know: ${[...unknownDimensions].join(", ")}`
+    );
+  }
+
+  /*
+   * ── Fingerprint outcomes ──────────────────────────────────────────────
+   *
+   * A fixed 20-session window, measured the same way for every environment
+   * so they can be pooled. Anything without a full window ahead of it is
+   * DROPPED rather than measured over a shorter one: the most recent months
+   * would otherwise be scored on partial horizons and, being the days most
+   * like today, would dominate exactly the neighbourhoods a live reader
+   * sees.
+   */
+  const fingerprintRows: FingerprintRow[] = [];
+  let unresolvedFingerprints = 0;
+  for (const f of fingerprintsPending) {
+    const inst = all.get(f.symbol)!;
+    const from = firstIndexAfter(inst.bars, f.t);
+    const window = inst.bars.slice(from, from + FINGERPRINT_HORIZON_SESSIONS);
+    if (window.length < FINGERPRINT_HORIZON_SESSIONS) {
+      unresolvedFingerprints++;
+      continue;
+    }
+    const entry = inst.bars[from - 1]?.close ?? window[0].open;
+    if (!(entry > 0)) continue;
+
+    let low = window[0].low;
+    let high = window[0].high;
+    for (const b of window) {
+      if (b.low < low) low = b.low;
+      if (b.high > high) high = b.high;
+    }
+    fingerprintRows.push({
+      symbol: f.symbol,
+      date: new Date(f.t).toISOString().slice(0, 10),
+      values: f.values,
+      forwardReturnPct: ((window[window.length - 1].close - entry) / entry) * 100,
+      /*
+       * Clamped so the field names stay true. A stock that gaps up and never
+       * trades back to the entry close has a lowest low ABOVE it — a real
+       * situation, and one where the adverse excursion is zero rather than
+       * positive. Left unclamped, a consumer taking the magnitude would
+       * report a drawdown that never happened, which is precisely what
+       * `summariseNeighbourhood` was doing on 9% of rows.
+       */
+      maxAdversePct: Math.min(0, ((low - entry) / entry) * 100),
+      maxFavourablePct: Math.max(0, ((high - entry) / entry) * 100),
+    });
+  }
+  console.log(
+    `[replay] ${fingerprintRows.length.toLocaleString()} fingerprints resolved ` +
+      `(${unresolvedFingerprints.toLocaleString()} dropped for want of a full ${FINGERPRINT_HORIZON_SESSIONS}-session window)`
+  );
+  writeFingerprintLibrary(fingerprintRows, scalers);
 
   /*
    * ── FILL, then resolve ────────────────────────────────────────────────
@@ -808,3 +953,114 @@ function aggregate(
 }
 
 main();
+
+/**
+ * THE FINGERPRINT LIBRARY, on disk.
+ *
+ * Emitted as its own artefact rather than folded into the execution stats:
+ * it is a different KIND of thing (one row per market day, not per trade),
+ * it is far larger, and the page loads it for a different purpose. Keeping
+ * them separate means a change to one never silently invalidates the other.
+ *
+ * ── Why the panel is thinned ──────────────────────────────────────────
+ *
+ * Every evaluated session across 120 instruments and eighteen years is on
+ * the order of half a million rows — a JSON file the Next bundle would have
+ * to parse on every request to serve one neighbourhood lookup. So the
+ * library is SUBSAMPLED by date, and the reason it costs nothing is the
+ * de-clustering already built into the search: neighbours are limited to one
+ * per instrument per 21-day window, so days closer together than that were
+ * never going to be returned together anyway. Sampling below that resolution
+ * removes rows the search would have discarded.
+ */
+function writeFingerprintLibrary(rows: FingerprintRow[], scalers: Map<string, RollingStandardiser>): void {
+  /*
+   * Thinned per instrument, not globally — a global stride would keep every
+   * instrument's rows on the same dates and destroy the cross-sectional
+   * variety that makes a neighbourhood span different names.
+   */
+  const bySymbol = new Map<string, FingerprintRow[]>();
+  for (const r of rows) {
+    const list = bySymbol.get(r.symbol) ?? [];
+    list.push(r);
+    bySymbol.set(r.symbol, list);
+  }
+
+  const kept: FingerprintRow[] = [];
+  for (const list of bySymbol.values()) {
+    list.sort((a, b) => a.date.localeCompare(b.date));
+    for (let i = 0; i < list.length; i += LIBRARY_STRIDE_SESSIONS) kept.push(list[i]);
+  }
+  kept.sort((a, b) => a.date.localeCompare(b.date) || a.symbol.localeCompare(b.symbol));
+
+  const returns = kept.map((r) => r.forwardReturnPct);
+  /*
+   * The drift null. Every neighbourhood's median is later reported against
+   * this, never against zero — a +6% median in a library that returned +6%
+   * anyway is not an edge, and this is the number that says so.
+   */
+  const baselineReturnPct = returns.length > 0 ? returns.reduce((a, b) => a + b, 0) / returns.length : 0;
+
+  /*
+   * Per-instrument moments, so the LIVE page can standardise today's reading
+   * without replaying that instrument's whole history on every request. They
+   * are the moments as of the ingest's last session — strictly before any
+   * live date — so using them to score today is not a leak.
+   */
+  const moments: Record<string, Record<string, { mean: number; sd: number; n: number }>> = {};
+  for (const symbol of bySymbol.keys()) {
+    const m = scalers.get(symbol)?.moments();
+    if (m && Object.keys(m).length > 0) moments[symbol] = m;
+  }
+
+  /*
+   * COLUMNAR, NOT VERBOSE. Repeating nine dimension names and a symbol
+   * string on 50,000 rows is most of the file; the numbers are a minority of
+   * it. Rows become positional arrays against a declared `dimensions` order,
+   * symbols become indices, and every figure is rounded — three decimals on
+   * a z-score and two on a percent are far below the resolution any of this
+   * supports, so the precision being dropped was noise being stored.
+   */
+  const symbols = [...bySymbol.keys()].sort();
+  const symbolIndex = new Map(symbols.map((s2, i) => [s2, i]));
+  const dimensionOrder = DIMENSION_IDS;
+  const r3 = (x: number) => Math.round(x * 1000) / 1000;
+  const r2 = (x: number) => Math.round(x * 100) / 100;
+
+  const encoded = kept.map((row) => [
+    symbolIndex.get(row.symbol)!,
+    row.date,
+    // null holds the slot for a dimension this row never measured.
+    dimensionOrder.map((d) => (row.values[d] === undefined ? null : r3(row.values[d]))),
+    r2(row.forwardReturnPct),
+    r2(row.maxAdversePct),
+    r2(row.maxFavourablePct),
+  ]);
+
+  const payload = {
+    generatedAt: Date.now(),
+    version: FINGERPRINT_VERSION,
+    horizonSessions: FINGERPRINT_HORIZON_SESSIONS,
+    strideSessions: LIBRARY_STRIDE_SESSIONS,
+    baselineReturnPct: r2(baselineReturnPct),
+    instruments: bySymbol.size,
+    symbols,
+    dimensions: dimensionOrder,
+    moments,
+    rows: encoded,
+    notes: [
+      "One row per sampled market day, per instrument. Dimensions are z-scores against that instrument's own trailing history, computed strictly before the row's own date (see RollingStandardiser).",
+      "Nine of the eleven declared dimensions are present: the replay loads price series, not the sector and industry membership map, so sectorLeadership and industryLeadership are absent rather than approximated.",
+      "macroBackdrop here is the volatility-regime reading, narrower than the live page's volatility/rates/dollar/credit backdrop.",
+      "moments holds each instrument's per-dimension mean and spread as of the last ingested session, so the live page can score today's reading without replaying its history. Absent for an instrument means no fingerprint can be built for it live.",
+      `Outcomes are measured over a fixed ${FINGERPRINT_HORIZON_SESSIONS}-session window. Rows without a full window ahead of them are dropped, so the most recent months are absent by design rather than measured on a partial horizon.`,
+    ],
+  };
+
+  fs.writeFileSync(FINGERPRINT_OUT, JSON.stringify(payload));
+  const mb = (fs.statSync(FINGERPRINT_OUT).size / 1e6).toFixed(1);
+  console.log(
+    `[replay] fingerprint library: ${kept.length.toLocaleString()} rows from ${rows.length.toLocaleString()} ` +
+      `(1 in ${LIBRARY_STRIDE_SESSIONS}), ${bySymbol.size} instruments, baseline ${baselineReturnPct.toFixed(2)}%, ${mb}MB`
+  );
+}

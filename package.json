@@ -15,6 +15,7 @@
     "check-drift": "node scripts/check-drift.mjs",
     "check-robinhood": "node scripts/check-robinhood.mjs",
     "check-tradier": "node scripts/check-tradier.mjs",
+    "check-dossier": "tsx scripts/check-dossier.ts",
     "backtest:fetch": "node scripts/backtest/fetchHistory.mjs",
     "backtest": "tsx scripts/backtest/run.ts && tsx scripts/backtest/report.ts && tsx scripts/backtest/executionReport.ts",
     "backtest:rolling": "tsx scripts/backtest/rolling.ts",

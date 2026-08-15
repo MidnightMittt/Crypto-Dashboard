@@ -5,6 +5,7 @@ import { TRADE_PLAN_REFUSAL_SHORT } from "@/lib/signals/tradePlan";
 import { describeAgreement, evidenceLevel, strengthStars } from "@/lib/signals/plainLanguage";
 import { buildMacroContext } from "./macroContext";
 import { composeBearCase, composeBullCase, composeInvalidation, composeTldr } from "./narrative";
+import { NeighbourhoodStats } from "@/lib/research/neighbourhood";
 import { buildChecklist } from "./checklist";
 import { buildPassRules } from "./passRules";
 import {
@@ -46,8 +47,14 @@ export interface DossierInputs {
   industries: IndustryRead[];
   /** Replay-derived expectations, when the asset class has an execution replay. */
   expectations?: PlanExpectations | null;
-  /** Historical analogs, when fingerprints exist for the asset. */
-  analogs?: AnalogStats | null;
+  /** Similar historical environments, from fingerprint matching. */
+  analogs?: NeighbourhoodStats | null;
+  /**
+   * Why there are none, when the caller knows. "Outside the panel" and "no
+   * close match" are different facts, and one message covering both is the
+   * kind of blurry absence this page exists to avoid.
+   */
+  analogsBlockedReason?: string | null;
   /**
    * Per-planned-entry historical records, keyed by direction. Supplied by
    * the caller because the lookup is asset-class specific; the dossier only
@@ -165,7 +172,7 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
     bearCase: composeBearCase(bias),
     invalidation: composeInvalidation({ bias, plan, earningsDate: analysis.earnings?.date ?? null }),
 
-    analogs: buildAnalogs(inputs.analogs ?? null, isCrypto, analysis.barsUsed),
+    analogs: buildAnalogs(inputs.analogs ?? null, isCrypto, analysis.barsUsed, inputs.analogsBlockedReason ?? null),
 
     nextEntry: buildNextEntry(analysis, inputs.plannedRecords ?? null, inputs.reachOf ?? null, inputs.forward ?? null),
 
@@ -302,11 +309,16 @@ function buildExpectations(expectations: PlanExpectations | null, isCrypto: bool
  * recorded over a replayed history; nothing equivalent exists for equities,
  * so equities get the reason rather than a number.
  */
-function buildAnalogs(analogs: AnalogStats | null, isCrypto: boolean, barsUsed: number): Section<AnalogStats> {
+function buildAnalogs(
+  analogs: NeighbourhoodStats | null,
+  isCrypto: boolean,
+  barsUsed: number,
+  blockedReason: string | null
+): Section<NeighbourhoodStats> {
   if (analogs) {
     return available(analogs, "advanced", {
       to: "institutional",
-      when: "analog outcomes are scored against their own post-registration forward record, so the win rate quoted is out-of-sample rather than found in the same history it is measured on",
+      when: "these neighbourhoods are scored against their own post-registration forward record, so the distribution quoted is out-of-sample rather than found in the same history it was measured on",
     });
   }
   if (barsUsed < MIN_BARS_FOR_ANALYSIS) {
@@ -324,8 +336,9 @@ function buildAnalogs(analogs: AnalogStats | null, isCrypto: boolean, barsUsed: 
   return unavailable(
     "not-measured-yet",
     isCrypto
-      ? "No sufficiently similar historical setup was found for this asset. A thin match is worse than none — a win rate from six occurrences is noise with a decimal point."
-      : "Too few replayed setups match this one on all three counts — direction, volatility regime and entry style — to quote a win rate honestly, or there is no plan geometry to read an entry style from. Widening the match until a number appeared would be choosing the definition that flatters the answer."
+      ? "Fingerprints are built from the equity replay panel; the crypto equivalent is not ingested yet. Backlog, not a data limitation."
+      : (blockedReason ??
+        "No environment in the fingerprint library sits close enough to today's to be called similar. Widening the match until a number appeared would be choosing the definition that flatters the answer.")
   );
 }
 

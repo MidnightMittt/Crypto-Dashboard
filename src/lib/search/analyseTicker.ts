@@ -31,6 +31,11 @@ import intelligenceJson from "@/data/marketIntelligence.json";
 import equityExecutionJson from "@/data/equityExecutionStats.json";
 import forwardReachJson from "@/data/forwardReachRecord.json";
 import forwardVerdictJson from "@/data/forwardVerdictRecord.json";
+import fingerprintLibraryJson from "@/data/fingerprintLibrary.json";
+import { rawReadings } from "@/lib/research/fingerprintReadings";
+import { standardiseAgainst } from "@/lib/research/fingerprintInputs";
+import { FingerprintLibrary, lookupNeighbourhood } from "@/lib/research/fingerprintLookup";
+import { FINGERPRINT_VERSION } from "@/lib/research/fingerprint";
 
 /**
  * SEARCH, END TO END — resolve, fetch, score.
@@ -384,15 +389,53 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
      * moment it matters most. The entry style comes from the probe's geometry
      * because that is the entry the setup was asking for.
      */
-    analogs:
-      isCrypto || !expectationsSide || !probe.ok || !probe.analysis.plan
+    /*
+     * SIMILAR ENVIRONMENTS, by fingerprint.
+     *
+     * Today's reading is standardised against the moments the ingest
+     * published for THIS instrument, not recomputed from its history — the
+     * library stores z-scores, which cannot be inverted, and replaying an
+     * instrument's whole history per request would cost thousands of engine
+     * runs. Those moments end at the last ingested session, so scoring today
+     * against them is strictly backward-looking.
+     *
+     * An instrument outside the 120-name replay panel has no moments, and
+     * the section says so rather than comparing it on a scale built from
+     * somebody else's history.
+     */
+    analogsBlockedReason:
+      isCrypto || (fingerprintLibraryJson as unknown as FingerprintLibrary).moments?.[resolved.symbol]
         ? null
-        : equityAnalogsFor(
-            expectationsSide,
-            probe.analysis.plan,
-            probe.analysis.bias.metrics,
-            equityExecutionJson as unknown as EquityExecutionSnapshot
-          ),
+        : `${resolved.symbol} is outside the ${(fingerprintLibraryJson as unknown as FingerprintLibrary).instruments}-instrument panel the fingerprint library is built from, so there is no scale of its own history to standardise today's reading against. Comparing it on another instrument's scale would produce a number, and the number would be meaningless. Widening the panel is ingest work, not a market limitation.`,
+
+    analogs: (() => {
+      if (isCrypto) return null;
+      const lib = fingerprintLibraryJson as unknown as FingerprintLibrary;
+      const moments = lib.moments?.[resolved.symbol];
+      if (!moments) return null;
+
+
+      const bars = history.history.bars;
+      const values = standardiseAgainst(
+        rawReadings({
+          closes: bars.map((b) => b.close),
+          volumes: bars.map((b) => b.volume ?? 0),
+          metrics: result.analysis.bias.metrics,
+          zones: result.analysis.zones,
+          atrPct: result.analysis.atrPct,
+        }),
+        moments
+      );
+      return lookupNeighbourhood(
+        {
+          symbol: resolved.symbol,
+          date: new Date(result.analysis.asOf).toISOString().slice(0, 10),
+          version: FINGERPRINT_VERSION,
+          values,
+        },
+        lib
+      );
+    })(),
     options: toSection(options, "advanced", {
       to: "institutional" as const,
       when: "positioning is tracked across sessions, so today's cross-venue snapshot becomes a trend rather than a single reading",

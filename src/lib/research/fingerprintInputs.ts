@@ -75,6 +75,50 @@ export class RollingStandardiser {
   seen(dimension: string): number {
     return this.prior.get(dimension)?.length ?? 0;
   }
+
+  /**
+   * The accumulated mean and spread per dimension.
+   *
+   * Exists so the LIVE page can standardise today's reading without
+   * re-deriving an instrument's entire history: the library stores z-scores,
+   * which cannot be inverted back into the moments that produced them, so
+   * the moments have to be published alongside. Using yesterday's moments to
+   * score today is not a leak — they are, by construction, built entirely
+   * from data before today.
+   */
+  moments(): Record<string, { mean: number; sd: number; n: number }> {
+    const out: Record<string, { mean: number; sd: number; n: number }> = {};
+    for (const [dim, history] of this.prior) {
+      if (history.length < MIN_HISTORY) continue;
+      const mean = history.reduce((a, b) => a + b, 0) / history.length;
+      const variance = history.reduce((s, x) => s + (x - mean) ** 2, 0) / (history.length - 1);
+      out[dim] = { mean, sd: Math.sqrt(variance), n: history.length };
+    }
+    return out;
+  }
+}
+
+/**
+ * Score today's raw readings against previously published moments.
+ *
+ * The live counterpart to `RollingStandardiser`. It cannot accumulate —
+ * scoring one day gives it nothing to learn from — so it takes the moments
+ * the ingest measured and applies them. Clipping matches the ingest exactly,
+ * because a live vector clipped differently from the library it is compared
+ * against would be measuring distance in two different units.
+ */
+export function standardiseAgainst(
+  raw: RawReadings,
+  moments: Record<string, { mean: number; sd: number; n: number }>
+): Partial<Record<string, number>> {
+  const values: Partial<Record<string, number>> = {};
+  for (const dim of DIMENSIONS) {
+    const v = raw[dim.id];
+    const m = moments[dim.id];
+    if (v === undefined || !Number.isFinite(v) || !m) continue;
+    values[dim.id] = m.sd > 1e-9 ? Math.max(-CLIP, Math.min(CLIP, (v - m.mean) / m.sd)) : 0;
+  }
+  return values;
 }
 
 /**

@@ -431,7 +431,12 @@ export interface TickerDossier {
   /** Everything arguing price FALLS. */
   bearCase: EvidenceBullet[];
   invalidation: InvalidationTrigger[];
-  analogs: Section<AnalogStats>;
+  /**
+   * Similar historical ENVIRONMENTS, from fingerprint matching. Replaced the
+   * broad-bucket analogs, whose "71,585 times seen" counted the same
+   * environments thousands of times over.
+   */
+  analogs: Section<import("@/lib/research/neighbourhood").NeighbourhoodStats>;
   /** Where this becomes a trade, whether or not it is one today. */
   nextEntry: Section<PlannedEntryRead>;
   macro: Section<MacroContext>;

@@ -690,51 +690,67 @@ export function InvalidationPanel({ d }: { d: TickerDossier }) {
 
 /* ── 6. SIMILAR HISTORICAL SETUPS ────────────────────────────────────── */
 
+/**
+ * The environments most like this one, and what happened next.
+ *
+ * The headline number is the INDEPENDENT count, not the match count. The
+ * broad-bucket version this replaced led with "71,585 times seen" — the same
+ * environments counted thousands of times, once per correlated name and once
+ * per overlapping window — and five figures reads as settled science. The raw
+ * count still appears, beside its correction rather than instead of it.
+ */
 export function AnalogsPanel({ d }: { d: TickerDossier }) {
   const a = d.analogs;
   return (
-    <Panel title="Similar historical setups">
+    <Panel title="Similar historical environments" subtitle={a.status === "available" ? "fingerprint-matched" : undefined}>
       {a.status === "available" ? (
         <>
+          <p className="text-[13px] leading-relaxed text-ink">{a.data.summary}</p>
+
           <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 lg:grid-cols-6">
-            <PlanStat label="Times seen" value={`${a.data.occurrences}`} />
-            <PlanStat label="Win rate" value={`${a.data.winRatePct.toFixed(0)}%`} />
-            {/* MEDIAN AND AVERAGE TOGETHER, always.
-                These setups are skewed: the typical trade loses a little and
-                the profit lives in the tail. Showing the median alone reads as
-                a losing strategy; showing the average alone hides that most
-                individual trades disappoint. Both, side by side, is the only
-                honest summary of a distribution shaped like this. */}
+            {/* The count that any confidence statement is allowed to use. */}
+            <PlanStat
+              label="Independent"
+              value={a.data.effectiveN.toFixed(1)}
+              tone={a.data.effectiveN < 8 ? "text-amber" : "text-ink"}
+            />
+            <PlanStat label="Raw matches" value={`${a.data.matches}`} tone="text-ink-faint" />
             <PlanStat
               label="Typical (median)"
               value={`${a.data.medianReturnPct >= 0 ? "+" : ""}${a.data.medianReturnPct.toFixed(1)}%`}
               tone={a.data.medianReturnPct >= 0 ? "text-success" : "text-danger"}
             />
+            {/* Never shown alone. A median means nothing until you know what a
+                random day over the same horizon returned. */}
             <PlanStat
-              label="Average"
-              value={`${a.data.averageReturnPct >= 0 ? "+" : ""}${a.data.averageReturnPct.toFixed(1)}%`}
-              tone={a.data.averageReturnPct >= 0 ? "text-success" : "text-danger"}
+              label="Random day"
+              value={`${a.data.baselineReturnPct >= 0 ? "+" : ""}${a.data.baselineReturnPct.toFixed(1)}%`}
+              tone="text-ink-faint"
             />
-            <PlanStat
-              label="Typical dip first"
-              value={a.data.averageDrawdownPct === null ? "—" : `${a.data.averageDrawdownPct.toFixed(1)}%`}
-            />
-            <PlanStat
-              label="Typical hold"
-              value={a.data.medianHoldSessions === null ? "—" : `${a.data.medianHoldSessions} days`}
-            />
+            <PlanStat label="Ended positive" value={`${a.data.positiveRatePct.toFixed(0)}%`} />
+            <PlanStat label="Typical dip first" value={`−${a.data.typicalDrawdownPct.toFixed(1)}%`} />
           </div>
-          {a.data.medianReturnPct < 0 && a.data.averageReturnPct > 0 && (
-            <p className="rounded-md border border-amber/20 bg-amber/[0.04] px-3 py-2 text-[12px] leading-relaxed text-ink">
-              <span className="font-semibold uppercase tracking-[0.12em] text-amber">Read this carefully</span> ·
-              The typical setup like this one LOST {Math.abs(a.data.medianReturnPct).toFixed(1)}%, yet the
-              average came out positive. That means the profit lives in a minority of large winners, not in most
-              trades working. Position for a run of small losses, and do not size as though the average is what
-              usually happens.
-            </p>
-          )}
+
+          {/* THE GAP, when there is one. Stated in the loudest available voice
+              because a reader who takes `matches` at face value is being
+              misled by a number that is technically correct. */}
+          <p
+            className={`rounded-md border px-3 py-2 text-[12px] leading-relaxed ${
+              a.data.effectiveN < a.data.matches * 0.5
+                ? "border-amber/25 bg-amber/[0.04] text-ink"
+                : "border-hairline bg-void/30 text-ink-muted"
+            }`}
+          >
+            <span className="font-semibold uppercase tracking-[0.12em] text-amber">Sample</span> ·{" "}
+            {a.data.independenceLine}
+          </p>
+
           <p className="text-[11px] leading-relaxed text-ink-faint">
-            <span className="text-ink-muted">Matched on ·</span> {a.data.matchBasis} {a.data.caveat}
+            <span className="text-ink-muted">Matched on ·</span> eleven declared dimensions, each standardised
+            against the instrument&rsquo;s own history and fixed before any of this was measured. Closest match
+            sat at distance {a.data.nearestDistance.toFixed(2)}, furthest accepted at{" "}
+            {a.data.furthestDistance.toFixed(2)}. At most one day per instrument per three weeks, so a single
+            regime cannot appear twenty times.
           </p>
           <DepthMeta section={a} />
         </>
