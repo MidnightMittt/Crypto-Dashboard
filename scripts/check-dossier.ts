@@ -153,6 +153,27 @@ function toNumber(s: string): number {
 // ─────────────────────────── independent recompute ───────────────────────────
 // See the header note. Do not replace these with the shared helpers.
 
+/*
+ * INDEPENDENT OF THE IMPLEMENTATION, NOT OF THE DEFINITION.
+ *
+ * This used to average the last 14 true ranges. That is a real estimator,
+ * but it is not the one the page computes — the app uses Wilder's smoothing,
+ * which the charter settled on as the single ATR after measuring both across
+ * 60 instruments (c1c221c). Comparing a simple mean against a Wilder mean
+ * measures the gap between two definitions, and reports it as a defect in
+ * the page. It failed CIFR by 0.89pp and HUT by 0.65pp on exactly that,
+ * while IREN and WULF happened to fall inside tolerance.
+ *
+ * The header note above still stands: do not import the app's `atr`. The
+ * point of an independent instrument is that a bug in the app's arithmetic
+ * cannot hide by moving both sides. But independence has to be of the CODE,
+ * not of the quantity — otherwise every run reports a difference that no
+ * change to the page could ever fix, and a real regression would be
+ * indistinguishable from the permanent offset.
+ *
+ * So: Wilder, reimplemented here from the definition, sharing nothing with
+ * src/lib/technicals/indicators.ts.
+ */
 function atrPercent(bars: Bar[], period = 14): number {
   const trueRanges: number[] = [];
   for (let i = 1; i < bars.length; i++) {
@@ -162,8 +183,15 @@ function atrPercent(bars: Bar[], period = 14): number {
       Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose))
     );
   }
-  const window = trueRanges.slice(-period);
-  const atr = window.reduce((a, b) => a + b, 0) / window.length;
+  if (trueRanges.length < period) {
+    const all = trueRanges.reduce((a, b) => a + b, 0) / trueRanges.length;
+    return (all / bars[bars.length - 1][3]) * 100;
+  }
+  // Seed with the mean of the first `period` ranges, then smooth by 1/period.
+  let atr = trueRanges.slice(0, period).reduce((a, b) => a + b, 0) / period;
+  for (let i = period; i < trueRanges.length; i++) {
+    atr = (atr * (period - 1) + trueRanges[i]) / period;
+  }
   return (atr / bars[bars.length - 1][3]) * 100;
 }
 
