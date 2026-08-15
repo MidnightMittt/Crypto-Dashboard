@@ -277,19 +277,42 @@ function checkTypicalMove(symbol: string, html: string): void {
   );
 }
 
+/*
+ * THE GATE MUST NOT PASS ON ABSENT DATA.
+ *
+ * The checklist row used to render a green tick whenever no earnings date
+ * came back, so "we never found out" and "confirmed clear" were the same
+ * pixel — on a safeguard that exists to keep a position out of a gap. This
+ * was a WARN here for exactly that reason; it is now assertable, because the
+ * page states which of the two it means.
+ *
+ * The veto itself still does not fire on a silent calendar, deliberately: a
+ * keyless endpoint failing from CI must not block every equity plan. What is
+ * checked here is only that the PAGE stops claiming a check it never made.
+ */
 function checkEarningsGate(symbol: string, html: string): void {
   const date = first(html, PATTERNS.earningsDate);
+  const unconfirmed = /Earnings date could not be confirmed/.test(html);
   const claimsNone = first(html, PATTERNS.noEarnings);
+
   if (date) {
     record(symbol, "internal", "earnings gate has real data", "PASS", `date known: ${date[1]}`);
+  } else if (unconfirmed) {
+    record(
+      symbol,
+      "internal",
+      "earnings gate has real data",
+      "PASS",
+      "no date retrieved, and the page says so rather than ticking the check"
+    );
   } else if (claimsNone) {
     record(
       symbol,
       "internal",
       "earnings gate has real data",
-      "WARN",
-      "claims no earnings, but no date was retrieved — cannot distinguish " +
-        "'confirmed none' from 'lookup failed'"
+      "FAIL",
+      "page asserts no earnings in the window, but no date was retrieved — " +
+        "a missing lookup is being rendered as a satisfied safety check"
     );
   } else {
     record(symbol, "internal", "earnings gate has real data", "SKIP", "pattern not found");

@@ -1,6 +1,6 @@
 import { MarketBias, MetricVerdict } from "@/lib/signals/types";
 import { TradePlan, TradePlanRefusal, TRADE_PLAN_REFUSAL_SHORT } from "@/lib/signals/tradePlan";
-import { EarningsVetoResult } from "@/lib/markets/earningsVeto";
+import { EarningsVetoResult, EARNINGS_VETO_SESSIONS } from "@/lib/markets/earningsVeto";
 import { agreementLevel, evidenceLevel } from "@/lib/signals/plainLanguage";
 
 /**
@@ -60,6 +60,18 @@ export interface ChecklistInputs {
   refusal: TradePlanRefusal | null;
   earnings: EarningsVetoResult | null;
   /**
+   * The symbol's next earnings date, and the three cases have to stay
+   * distinguishable because they mean opposite things to a reader:
+   *
+   *   string    — a date came back. The window claim is verifiable.
+   *   null      — we looked and got nothing. NOT the same as "clear".
+   *   undefined — the asset has no earnings at all (crypto). Row omitted.
+   *
+   * `earnings` above only says whether a veto FIRED, so on its own it
+   * cannot separate "confirmed clear" from "never found out".
+   */
+  nextEarningsDate: string | null | undefined;
+  /**
    * Whether the options market's positioning agrees with the engine's read.
    * Null when there is no chain, or when positioning is not leaning either
    * way — both of which mean "no opinion", not "agrees".
@@ -112,7 +124,7 @@ function rowsWorthShowing(bias: MarketBias): MetricVerdict[] {
 }
 
 export function buildChecklist(inputs: ChecklistInputs): Checklist {
-  const { bias, plan, refusal, earnings, optionsAgrees } = inputs;
+  const { bias, plan, refusal, earnings, nextEarningsDate, optionsAgrees } = inputs;
   const rows: ChecklistRow[] = [];
 
   // ── 1. Does the evidence line up? (see rowsWorthShowing) ──
@@ -171,25 +183,45 @@ export function buildChecklist(inputs: ChecklistInputs): Checklist {
     });
   }
 
-  // ── 5. Is there an event inside the hold? ──
-  rows.push(
-    earnings
-      ? {
-          state: "fail",
-          label: "No earnings inside the holding period",
-          detail: `Earnings on ${earnings.date}, ${earnings.sessions} ${earnings.sessions === 1 ? "session" : "sessions"} away. A gap jumps stops rather than trading through them, so the plan's printed risk is not the risk actually available across that date.`,
-        }
-      : {
-          state: "pass",
-          label: "No earnings inside the holding period",
-          /*
-           * The asymmetry matters and is stated. A missing calendar entry and
-           * a genuinely clear calendar are indistinguishable here, so this
-           * row says what it actually knows.
-           */
-          detail: "No report is known inside the veto window. A date this platform never received would look the same, so this is 'nothing scheduled that we know of' rather than a guarantee.",
-        }
-  );
+  /*
+   * ── 5. Is there an event inside the hold? ──
+   *
+   * A GREEN TICK HERE USED TO MEAN "we did not find a date", and a missing
+   * date looks exactly like a clear calendar. The prose said so honestly,
+   * but prose is not what a reader scans under time pressure — the tick is,
+   * and the tick fed the "N of 9 checks pass" headline, so an unanswered
+   * question was counted as a satisfied safeguard. On HUT, CIFR and WULF
+   * that is the live case: no date is retrieved, and the row read PASS.
+   *
+   * The engine is right to keep building plans when the calendar is silent
+   * (see earningsVeto.ts — a free keyless endpoint that fails from CI must
+   * not block every equity plan). Nothing about the veto changes here. What
+   * changes is that the checklist stops claiming a check it never made.
+   *
+   * Omitted entirely where earnings are not a concept, following the
+   * options row above: a question that does not apply is not a pass.
+   */
+  if (nextEarningsDate !== undefined) {
+    rows.push(
+      earnings
+        ? {
+            state: "fail",
+            label: "No earnings inside the holding period",
+            detail: `Earnings on ${earnings.date}, ${earnings.sessions} ${earnings.sessions === 1 ? "session" : "sessions"} away. A gap jumps stops rather than trading through them, so the plan's printed risk is not the risk actually available across that date.`,
+          }
+        : nextEarningsDate !== null
+          ? {
+              state: "pass",
+              label: "No earnings inside the holding period",
+              detail: `Next report is ${nextEarningsDate}, outside the ${EARNINGS_VETO_SESSIONS}-session window. A date was retrieved, so this is a confirmed clear rather than an absence of information.`,
+            }
+          : {
+              state: "caution",
+              label: "Earnings date could not be confirmed",
+              detail: `No earnings date came back for this symbol, so the holding period cannot be checked against one. This is an unanswered question, not a clear calendar — the plan still builds, because a calendar outage must not veto every equity, but do not read it as "no report scheduled".`,
+            }
+    );
+  }
 
   // ── 6. Does an independent market agree? ──
   if (optionsAgrees !== null) {

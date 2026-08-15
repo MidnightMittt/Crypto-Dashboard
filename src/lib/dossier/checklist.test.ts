@@ -55,6 +55,9 @@ const inputs = (over: Partial<ChecklistInputs> = {}): ChecklistInputs => ({
   plan: plan(),
   refusal: null,
   earnings: null,
+  // A known date by default, so the earnings row exercises its verified path
+  // unless a case deliberately withholds it.
+  nextEarningsDate: "2026-12-01",
   optionsAgrees: null,
   ...over,
 });
@@ -158,15 +161,41 @@ describe("buildChecklist", () => {
     expect(row.detail).toContain("6 sessions");
   });
 
-  /*
-   * A missing calendar entry and a genuinely clear calendar look identical
-   * from here, so the passing row has to say which claim it is making.
-   */
-  it("does not promise a clear calendar it cannot verify", () => {
-    const c = buildChecklist(inputs({ earnings: null }));
+  it("passes only when a date was actually retrieved, and cites it", () => {
+    const c = buildChecklist(inputs({ earnings: null, nextEarningsDate: "2026-12-01" }));
     const row = c.rows.find((r) => r.label.includes("earnings"))!;
     expect(row.state).toBe("pass");
-    expect(row.detail).toContain("would look the same");
+    expect(row.detail).toContain("2026-12-01");
+  });
+
+  /*
+   * THE FAIL-OPEN GATE. This row used to render a green tick whenever the
+   * calendar was silent, and a missing date looks exactly like a clear one.
+   * The prose hedged honestly, but prose is not what gets scanned under time
+   * pressure — the tick is, and it also fed the "N of 9 passed" headline, so
+   * an unanswered question was counted as a satisfied safeguard. HUT, CIFR
+   * and WULF are all live in this state.
+   *
+   * The veto deliberately still does not fire (a calendar outage must not
+   * block every equity plan); what changed is that the checklist no longer
+   * claims a check it never made.
+   */
+  it("does not count an unconfirmed earnings date as a passed check", () => {
+    const c = buildChecklist(inputs({ earnings: null, nextEarningsDate: null }));
+    const row = c.rows.find((r) => r.label.toLowerCase().includes("earnings"))!;
+    expect(row.state).toBe("caution");
+    expect(row.state).not.toBe("pass");
+    expect(row.label).toContain("could not be confirmed");
+
+    // And it must not inflate the headline count.
+    const withDate = buildChecklist(inputs({ earnings: null, nextEarningsDate: "2026-12-01" }));
+    expect(c.passed).toBe(withDate.passed - 1);
+  });
+
+  it("omits the earnings row where earnings are not a concept", () => {
+    // Crypto: no issuer, no report. A question that does not apply is not a pass.
+    const c = buildChecklist(inputs({ earnings: null, nextEarningsDate: undefined }));
+    expect(c.rows.some((r) => r.label.toLowerCase().includes("earnings"))).toBe(false);
   });
 
   it("omits the options row entirely when the chain has no opinion", () => {

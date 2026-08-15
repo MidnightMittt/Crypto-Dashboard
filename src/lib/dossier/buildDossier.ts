@@ -91,6 +91,20 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
   const isCrypto = analysis.assetClass === "crypto";
 
   /*
+   * Hoisted because the checklist needs the earnings date too, and reading it
+   * from anywhere else would let the tick and the Wall Street panel disagree
+   * about the same report.
+   */
+  const streetSection =
+    inputs.street ??
+    unavailable(
+      isCrypto ? "not-applicable" : "no-provider",
+      isCrypto
+        ? "Sell-side analyst coverage in the equity sense does not exist for crypto assets."
+        : "Analyst coverage was not queried for this asset."
+    );
+
+  /*
    * The options read, when one exists. Taken from the section the caller
    * already built rather than re-derived, so the checklist and the options
    * panel can never disagree about what the chain said.
@@ -148,6 +162,21 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
       plan,
       refusal: analysis.planRefusal,
       earnings: analysis.earnings,
+      /*
+       * Three states that must not collapse into two. `undefined` for crypto
+       * drops the row — a token has no report to sit inside a hold. A real
+       * date lets the row claim a CONFIRMED clear. `null` means the lookup
+       * came back empty, which the checklist now shows as an open question
+       * instead of a tick.
+       *
+       * Read off the street section so there is one date on the page: the
+       * same one the Wall Street panel renders.
+       */
+      nextEarningsDate: isCrypto
+        ? undefined
+        : streetSection.status === "available"
+          ? streetSection.data.nextEarningsDate
+          : null,
       /*
        * Only a genuine lean counts. `agreesWithEngine` is already null when
        * the chain has no opinion, and passing that through unchanged is what
@@ -212,14 +241,7 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
           ? "A crypto asset has no issuer filing audited financials — there is no business underneath the token in the corporate sense."
           : "Company financials were not queried for this asset."
       ),
-    street:
-      inputs.street ??
-      unavailable(
-        isCrypto ? "not-applicable" : "no-provider",
-        isCrypto
-          ? "Sell-side analyst coverage in the equity sense does not exist for crypto assets."
-          : "Analyst coverage was not queried for this asset."
-      ),
+    street: streetSection,
 
     news:
       inputs.newsSection ??
