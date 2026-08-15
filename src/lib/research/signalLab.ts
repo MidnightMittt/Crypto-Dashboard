@@ -51,6 +51,12 @@ export interface RankContext {
   i: number;
 }
 
+/** Market-wide state at one decision date, for a regime gate. */
+export interface PeriodContext {
+  panel: LabSeries[];
+  decisionTime: number;
+}
+
 export interface Hypothesis {
   id: string;
   /** What is claimed, in one sentence, in the direction it is claimed. */
@@ -88,6 +94,18 @@ export interface Hypothesis {
    */
   requires?: string[];
   /**
+   * Decides whether to trade a PERIOD at all, given the market's own state.
+   *
+   * Distinct from `rank`, which chooses names within a period. A regime gate
+   * answers "should this strategy be on right now", and momentum is the
+   * canonical case: its worst outcomes cluster in bear-to-bull reversals,
+   * where yesterday's losers rip and the short leg is run over.
+   *
+   * Receives only the panel and the decision index, so the state must be
+   * derived from data at or before the decision — same discipline as rank.
+   */
+  periodGate?: (ctx: PeriodContext) => boolean;
+  /**
    * Higher = more attractive to be LONG. The long-short spread is always
    * top-decile minus bottom-decile of this number, so the sign convention
    * lives in the hypothesis rather than in the engine.
@@ -105,6 +123,19 @@ export interface HypothesisResult {
   meanSpread: number;
   /** Median, because a single period can dominate a mean. */
   medianSpread: number;
+  /**
+   * The left tail, which is what actually ends a strategy.
+   *
+   * A hit rate says how OFTEN you win; these say what happens when you do
+   * not. momentum-12-1 wins 55% of months with a +0.91% median and a +0.13%
+   * mean — the entire gap is a handful of periods, and a trader sizing on
+   * the hit rate alone would be sized for the wrong distribution.
+   */
+  worstSpread: number;
+  p05Spread: number;
+  p95Spread: number;
+  /** Periods skipped because the regime gate was closed. */
+  periodsGatedOut: number;
   assessment: EdgeAssessment;
   pValue: number;
   /** Filled in by the caller once the whole family is corrected. */
@@ -140,6 +171,13 @@ export function indexAsOf(t: number[], time: number): number {
 }
 
 const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
+/** Nearest-rank percentile. Small samples do not deserve interpolation. */
+function percentile(xs: number[], q: number): number {
+  if (!xs.length) return 0;
+  const s = [...xs].sort((a, b) => a - b);
+  return s[Math.min(s.length - 1, Math.max(0, Math.ceil(q * s.length) - 1))];
+}
+
 const median = (xs: number[]) => {
   if (!xs.length) return 0;
   const s = [...xs].sort((a, b) => a - b);
@@ -162,8 +200,13 @@ export function runHypothesis(series: LabSeries[], h: Hypothesis): HypothesisRes
   const spreads: number[] = [];
 
   const offset = h.entryOffset ?? 0;
+  let gatedOut = 0;
   for (let c = h.warmup; c + h.hold + offset < calendar.length; c += h.hold) {
     const decisionTime = calendar[c];
+    if (h.periodGate && !h.periodGate({ panel: series, decisionTime })) {
+      gatedOut++;
+      continue;
+    }
     const entryTime = calendar[c + offset];
     const exitTime = calendar[c + h.hold + offset];
     const scored: Array<{ score: number; fwd: number }> = [];
@@ -218,6 +261,10 @@ export function runHypothesis(series: LabSeries[], h: Hypothesis): HypothesisRes
     winRate,
     meanSpread: mean(spreads),
     medianSpread: median(spreads),
+    worstSpread: spreads.length ? Math.min(...spreads) : 0,
+    p05Spread: percentile(spreads, 0.05),
+    p95Spread: percentile(spreads, 0.95),
+    periodsGatedOut: gatedOut,
     assessment,
     pValue: signTestP(wins, n),
     survivesFdr: false,
@@ -319,4 +366,91 @@ export function resolveDependencies(
     r.retiredBy = retiredBy;
     r.earnsEdge = passes(r) && retiredBy === null;
   }
+}
+
+/**
+ * Market state from the panel itself: the share of instruments trading above
+ * their own 200-session average, at the decision date.
+ *
+ * Derived from the panel rather than an index series so it needs no new data
+ * and cannot disagree with the universe being traded. Breadth rather than a
+ * single index level, because the question a momentum gate is really asking
+ * is "are most things going up", which an index can answer wrongly when a
+ * few mega-caps carry it.
+ */
+export function panelBreadth(panel: LabSeries[], decisionTime: number): number | null {
+  let above = 0;
+  let counted = 0;
+  for (const s of panel) {
+    const i = indexAsOf(s.t, decisionTime);
+    if (i < 200) continue;
+    let sum = 0;
+    for (let k = i - 199; k <= i; k++) sum += s.close[k];
+    const ma = sum / 200;
+    if (ma > 0 && s.close[i] > 0) {
+      counted++;
+      if (s.close[i] > ma) above++;
+    }
+  }
+  return counted >= 40 ? above / counted : null;
+}
+
+/**
+ * Instruments whose history contains an impossible single-session move.
+ *
+ * NVR prints 0.38 -> 10.25 on 1993-09-30, a +2,633% session. MARA shows
+ * 53.04 -> 104 on two different dates with identical values. These are
+ * unadjusted corporate actions and stale duplicated bars, not market events,
+ * and one of them is enough to produce a -370% decile spread — which is what
+ * exposed them.
+ *
+ * ── Why exclude the INSTRUMENT rather than clip the BAR ───────────────
+ *
+ * Clipping is a silent repair, and the roadmap forbids those: it would turn
+ * a +2,633% print into a plausible-looking number and hide that the series
+ * is unreliable everywhere around that date. Excluding the whole instrument
+ * is a statement about the DATA.
+ *
+ * ── Why this is not look-ahead ────────────────────────────────────────
+ *
+ * The decision uses the instrument's ENTIRE history and is identical for
+ * every period, so it cannot depend on any period's outcome. Filtering a
+ * name out of a specific period because its FORWARD return looked wrong
+ * would be look-ahead; this is not that. The cost is real and stated: a
+ * genuine 60% session — a takeover, a biotech readout — also removes its
+ * instrument, so the panel is biased slightly toward the uneventful.
+ */
+const IMPLAUSIBLE_SESSION_MOVE = 0.6;
+
+export interface PanelIntegrity {
+  clean: LabSeries[];
+  excluded: Array<{ symbol: string; worstMovePct: number; date: string }>;
+}
+
+export function excludeCorruptSeries(panel: LabSeries[]): PanelIntegrity {
+  const clean: LabSeries[] = [];
+  const excluded: PanelIntegrity["excluded"] = [];
+
+  for (const s of panel) {
+    let worst = 0;
+    let worstAt = 0;
+    for (let i = 1; i < s.close.length; i++) {
+      const a = s.close[i - 1];
+      const b = s.close[i];
+      if (!(a > 0) || !(b > 0)) continue;
+      const r = Math.abs(b / a - 1);
+      if (r > worst) {
+        worst = r;
+        worstAt = s.t[i];
+      }
+    }
+    if (worst > IMPLAUSIBLE_SESSION_MOVE) {
+      excluded.push({
+        symbol: s.symbol,
+        worstMovePct: worst * 100,
+        date: new Date(worstAt).toISOString().slice(0, 10),
+      });
+    } else clean.push(s);
+  }
+  return { clean, excluded };
 }

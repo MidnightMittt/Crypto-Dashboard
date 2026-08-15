@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { LabSeries, runHypothesis, HypothesisResult, resolveDependencies } from "../../src/lib/research/signalLab";
+import { LabSeries, runHypothesis, HypothesisResult, resolveDependencies, excludeCorruptSeries } from "../../src/lib/research/signalLab";
 import { benjaminiHochberg } from "../../src/lib/research/multipleTesting";
 import { FAMILY } from "./hypotheses";
 
@@ -40,8 +40,19 @@ function load(): LabSeries[] {
 }
 
 function main(): void {
-  const series = load();
-  console.log(`Signal lab — ${series.length} instruments, ${FAMILY.length} declared hypotheses\n`);
+  const raw = load();
+  const { clean: series, excluded } = excludeCorruptSeries(raw);
+  console.log(`Signal lab — ${series.length} instruments, ${FAMILY.length} declared hypotheses`);
+  if (excluded.length) {
+    console.log(
+      `Excluded ${excluded.length} for impossible sessions (corporate-action artifacts):\n  ` +
+        excluded
+          .sort((a, b) => b.worstMovePct - a.worstMovePct)
+          .map((e) => `${e.symbol} ${e.worstMovePct.toFixed(0)}% on ${e.date}`)
+          .join("\n  ")
+    );
+  }
+  console.log();
 
   const results: HypothesisResult[] = FAMILY.map((h) => {
     const r = runHypothesis(series, h);
@@ -49,6 +60,7 @@ function main(): void {
       `${r.id.padEnd(24)} n=${String(r.n).padStart(4)}  win=${(r.winRate * 100).toFixed(1)}%  ` +
         `LB=${r.assessment.lowerBound === null ? "--" : (r.assessment.lowerBound * 100).toFixed(1) + "%"}  ` +
         `mean=${(r.meanSpread * 100).toFixed(2)}%  med=${(r.medianSpread * 100).toFixed(2)}%  ` +
+        `worst=${(r.worstSpread * 100).toFixed(1)}%  p05=${(r.p05Spread * 100).toFixed(2)}%  ` +
         `p=${r.pValue.toExponential(1)}  ${r.assessment.verdict}`
     );
     return r;
@@ -102,6 +114,10 @@ function main(): void {
             winRate: r.winRate,
             meanSpread: r.meanSpread,
             medianSpread: r.medianSpread,
+            worstSpread: r.worstSpread,
+            p05Spread: r.p05Spread,
+            p95Spread: r.p95Spread,
+            periodsGatedOut: r.periodsGatedOut,
             lowerBound: r.assessment.lowerBound,
             pValue: r.pValue,
             survivesFdr: r.survivesFdr,

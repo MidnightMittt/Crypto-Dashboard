@@ -1,6 +1,7 @@
 import {
   Hypothesis,
   meanVolume,
+  panelBreadth,
   realisedVol,
   ret,
   trailingHigh,
@@ -40,6 +41,55 @@ export const FAMILY: Hypothesis[] = [
     costPp: COST_PP,
     killCriteria:
       "Retire if the Wilson lower bound fails to clear 50% + costs, or if it does not survive FDR across this family.",
+    rank: ({ series, i }) => ret(series, i - 252, i - 21),
+  },
+
+
+  /*
+   * THE REGIME PAIR. Both halves are declared, and that is not politeness —
+   * testing only the up-regime and reporting it is the selection this whole
+   * apparatus exists to prevent. Together they partition every period, so
+   * whatever the answer is, it is on the record.
+   *
+   * The prior: momentum's worst outcomes cluster in bear-to-bull reversals,
+   * where yesterday's losers rip and the short leg is run over. If that is
+   * what drags the unconditional mean (+0.13%) so far below its median
+   * (+0.91%), gating on breadth should recover it. If the two halves look
+   * alike, the tail is not a regime phenomenon and this idea is dead.
+   */
+  {
+    id: "momentum-12-1-broad-up",
+    statement:
+      "12-1 momentum outperforms when MORE than half the panel trades above its own 200-session average.",
+    rationale:
+      "Momentum crashes are concentrated in reversals off broad weakness. Breadth measured from the panel itself rather than an index, because an index can be carried by a few mega-caps while most names fall — and it is the many that the short leg holds.",
+    hold: 21,
+    warmup: 273,
+    costPp: COST_PP,
+    killCriteria:
+      "Retire if it fails the gate. If BOTH regime halves look like the unconditional result, the tail is not a regime effect and conditioning is not the answer.",
+    periodGate: ({ panel, decisionTime }) => {
+      const b = panelBreadth(panel, decisionTime);
+      return b !== null && b > 0.5;
+    },
+    rank: ({ series, i }) => ret(series, i - 252, i - 21),
+  },
+
+  {
+    id: "momentum-12-1-broad-down",
+    statement:
+      "12-1 momentum outperforms when HALF OR FEWER of the panel trades above its own 200-session average.",
+    rationale:
+      "The complement, declared so the pair partitions all periods. The prior says this is where momentum should be weakest or negative; if it is instead the stronger half, the received explanation for momentum crashes is wrong on this panel and that is worth knowing.",
+    hold: 21,
+    warmup: 273,
+    costPp: COST_PP,
+    killCriteria:
+      "Retire if it fails the gate. A NEGATIVE spread here is a finding rather than a failure — it would locate the crash risk precisely.",
+    periodGate: ({ panel, decisionTime }) => {
+      const b = panelBreadth(panel, decisionTime);
+      return b !== null && b <= 0.5;
+    },
     rank: ({ series, i }) => ret(series, i - 252, i - 21),
   },
 
