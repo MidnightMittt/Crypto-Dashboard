@@ -50,14 +50,21 @@ export interface VenueChain {
 export function crossConfirm(
   primary: VenueChain,
   secondary: VenueChain,
-  sharedExpiry: string
+  sharedExpiry: string,
+  /*
+   * Threaded into summariseParsed so the 0DTE exclusion reaches here too.
+   * Two venues agreeing on an expiring-today implied vol are agreeing about
+   * an annualisation artefact, and agreement between artefacts is not
+   * corroboration. Injectable so this does not read the wall clock.
+   */
+  now: number = Date.now()
 ): CrossVenueRead | null {
   const p = primary.contracts.filter((c) => c.expiry === sharedExpiry);
   const s = secondary.contracts.filter((c) => c.expiry === sharedExpiry);
   if (p.length === 0 || s.length === 0) return null;
 
-  const ps = summariseParsed(p, primary.spot);
-  const ss = summariseParsed(s, secondary.spot);
+  const ps = summariseParsed(p, primary.spot, now);
+  const ss = summariseParsed(s, secondary.spot, now);
   if (!ps || !ss) return null;
 
   // ── Independent check 1: implied vol, with the gap kept ──

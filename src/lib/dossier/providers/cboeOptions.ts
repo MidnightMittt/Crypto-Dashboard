@@ -237,8 +237,12 @@ export function parseCboeContracts(contracts: CboeContract[]): ParsedContract[] 
   return parsed;
 }
 
-export function summariseChain(contracts: CboeContract[], spot: number): OptionsSummary | null {
-  return summariseParsed(parseCboeContracts(contracts), spot);
+export function summariseChain(
+  contracts: CboeContract[],
+  spot: number,
+  now: number = Date.now()
+): OptionsSummary | null {
+  return summariseParsed(parseCboeContracts(contracts), spot, now);
 }
 
 /**
@@ -248,7 +252,19 @@ export function summariseChain(contracts: CboeContract[], spot: number): Options
  * re-summarise a filtered subset (one shared expiry) without a second copy
  * of this logic.
  */
-export function summariseParsed(parsed: ParsedContract[], spot: number): OptionsSummary | null {
+/**
+ * Expiries closer than this are excluded from the ATM implied-vol read.
+ * Mirrors `MIN_DAYS_TO_EXPIRY` in optionsIntelligence.ts deliberately — the
+ * two venues must not disagree about what counts as a measurable tenor.
+ */
+const MIN_DAYS_TO_EXPIRY = 1;
+
+/** `now` is injectable so the 0DTE rule is testable rather than clock-dependent. */
+export function summariseParsed(
+  parsed: ParsedContract[],
+  spot: number,
+  now: number = Date.now()
+): OptionsSummary | null {
   if (!Number.isFinite(spot) || spot <= 0 || parsed.length === 0) return null;
 
   let callOi = 0, putOi = 0, callVolume = 0, putVolume = 0;
@@ -289,8 +305,27 @@ export function summariseParsed(parsed: ParsedContract[], spot: number): Options
    * and the error is a factor of a hundred in the direction that makes
    * options look free.
    */
+  /*
+   * SAME 0DTE EXCLUSION THE TRADIER PATH ALREADY APPLIES, and for the same
+   * reason — this is the module that actually renders on the equity dossier,
+   * so the rule was only half-enforced.
+   *
+   * Annualising a contract with hours left divides a small move by a
+   * near-zero sqrt(T), and the quotient pins high regardless of what the
+   * market thinks. On 2026-08-14 every symbol checked sat on an expiring
+   * -today chain and reported 216-300%: CIFR 300, HUT 299, IREN 272, WULF
+   * 216, against realised vol nearer 90-120%. The clustering is the tell —
+   * that is the annualisation, not four independent opinions about risk.
+   *
+   * "Options are implying a 300% move" is a conclusion a reader would act
+   * on, and it would be wrong. When the whole chain is 0DTE we report null
+   * rather than fall back to it: no number beats a fabricated one.
+   */
+  const daysOut = (expiry: string) =>
+    (Date.parse(`${expiry}T00:00:00Z`) - now) / 86_400_000;
+
   const expiries = [...new Set(parsed.map((p) => p.expiry))].sort();
-  const nearestExpiry = expiries[0] ?? null;
+  const nearestExpiry = expiries.find((e) => daysOut(e) >= MIN_DAYS_TO_EXPIRY) ?? null;
   let atmIvPct: number | null = null;
   if (nearestExpiry) {
     const atm = parsed.filter(
@@ -319,7 +354,7 @@ export function summariseParsed(parsed: ParsedContract[], spot: number): Options
   const atmIvDaysToExpiry =
     nearestExpiry === null
       ? null
-      : Math.max(0, Math.round((Date.parse(`${nearestExpiry}T00:00:00Z`) - Date.now()) / 86_400_000));
+      : Math.max(0, Math.round(daysOut(nearestExpiry)));
 
   const largestOiStrikes = [...parsed]
     .filter((p) => p.openInterest > 0)

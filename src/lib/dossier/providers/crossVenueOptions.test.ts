@@ -30,12 +30,20 @@ function chain(o: {
   ];
 }
 
+/*
+ * The fixtures below expire 2026-08-14. Pinned to a fixed as-of date two
+ * weeks earlier, because summariseParsed now excludes expiring-today chains
+ * — without this the whole suite silently changes meaning on that date.
+ */
+const AS_OF = Date.UTC(2026, 6, 31);
+
 describe("crossConfirm", () => {
   it("counts only the INDEPENDENT checks — the shared-source put/call ratio is not a vote", () => {
     const r = crossConfirm(
       { spot: 100, contracts: chain({ iv: 0.3, callOi: 200, putOi: 100 }) },
       { spot: 100, contracts: chain({ iv: 0.305, callOi: 200, putOi: 100 }) },
-      "2026-08-14"
+      "2026-08-14",
+      AS_OF
     )!;
     // Two independent checks (IV, gamma sign) — NOT three.
     expect(r.comparisons).toBe(2);
@@ -48,7 +56,8 @@ describe("crossConfirm", () => {
     const r = crossConfirm(
       { spot: 100, contracts: chain({ iv: 0.3 }) },
       { spot: 100, contracts: chain({ iv: 0.313 }) },
-      "2026-08-14"
+      "2026-08-14",
+      AS_OF
     )!;
     expect(r.ivGapPoints).toBeCloseTo(1.3, 5);
     expect(r.line).toContain("1.3 implied-vol points");
@@ -64,7 +73,8 @@ describe("crossConfirm", () => {
     const r = crossConfirm(
       { spot: 100, contracts: chain({ iv: 0.3211 }) },
       { spot: 100, contracts: chain({ iv: 0.3825 }) },
-      "2026-08-14"
+      "2026-08-14",
+      AS_OF
     )!;
     expect(r.ivGapPoints).toBeCloseTo(6.14, 2);
     expect(r.ivAgree).toBe(false);
@@ -78,7 +88,8 @@ describe("crossConfirm", () => {
     const r = crossConfirm(
       { spot: 100, contracts: chain({ iv: 1.04 }) },
       { spot: 100, contracts: chain({ iv: 1.07 }) },
-      "2026-08-14"
+      "2026-08-14",
+      AS_OF
     )!;
     expect(r.ivAgree).toBe(true);
   });
@@ -87,7 +98,8 @@ describe("crossConfirm", () => {
     const r = crossConfirm(
       { spot: 100, contracts: chain({ callGamma: 0.001, putGamma: 0.05 }) },
       { spot: 100, contracts: chain({ callGamma: 0.05, putGamma: 0.001 }) },
-      "2026-08-14"
+      "2026-08-14",
+      AS_OF
     )!;
     expect(r.gexSignPrimary).toBe(-1);
     expect(r.gexSignSecondary).toBe(1);
@@ -99,7 +111,8 @@ describe("crossConfirm", () => {
     const r = crossConfirm(
       { spot: 100, contracts: chain({ callOi: 200, putOi: 100 }) },
       { spot: 100, contracts: chain({ callOi: 200, putOi: 180 }) },
-      "2026-08-14"
+      "2026-08-14",
+      AS_OF
     )!;
     expect(r.openInterestIdentical).toBe(false);
     expect(r.line).toContain("stale or partial");
@@ -109,7 +122,8 @@ describe("crossConfirm", () => {
     const r = crossConfirm(
       { spot: 100, contracts: chain({ expiry: "2026-08-14" }) },
       { spot: 100, contracts: chain({ expiry: "2026-09-18" }) },
-      "2026-08-14"
+      "2026-08-14",
+      AS_OF
     );
     expect(r).toBeNull();
   });
