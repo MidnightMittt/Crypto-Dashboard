@@ -843,7 +843,29 @@ function evaluateMacroLiquidity(data: AggregateMarketData, ctx: SignalContext): 
 // ── ETF flows ──────────────────────────────────────────────────────────
 
 function evaluateEtfFlows(data: AggregateMarketData): MetricVerdict | null {
-  const etf = data.etfFlows;
+  return etfFlowsMetric(data.etfFlows ?? null, data.updatedAt);
+}
+
+/**
+ * ETF FLOWS, EVALUATED FROM THE SUMMARY ALONE.
+ *
+ * Split out of `evaluateEtfFlows` so the searched-ticker dossier can use the
+ * SAME judgement as the dashboard rather than growing a second opinion about
+ * the same numbers. That matters more here than for most modules: as of
+ * 2026-08-15 this is the only signal in the platform that clears the Wilson
+ * gate AND survives FDR across the candidate family, so it is the one module
+ * whose reading is allowed to move a decision. Two implementations of it
+ * would be two answers to the question the platform is actually built to
+ * answer.
+ *
+ * `asOf` is passed rather than read from a blob because the two callers
+ * timestamp differently — the aggregate has its own update clock, a dossier
+ * request has the moment it was served.
+ */
+export function etfFlowsMetric(
+  etf: AggregateMarketData["etfFlows"] | null,
+  asOf: number
+): MetricVerdict | null {
   if (!etf) return null;
 
   /*
@@ -883,7 +905,7 @@ function evaluateEtfFlows(data: AggregateMarketData): MetricVerdict | null {
     explanation: `US spot ETFs saw ${usd(etf.netFlowUsd)} on ${etf.latestDate} (${usd(etf.netFlow5dUsd)} over 5 sessions) against a typical day of $${(etf.typicalAbsFlowUsd / 1e6).toFixed(0)}M.`,
     whyItMatters:
       "ETF flows are the only read here on money arriving from traditional finance rather than from crypto-native traders.",
-    asOf: data.updatedAt,
+    asOf,
     conflicts,
     nextTrigger: `Counts as directional past half a typical day's flow, i.e. around ${usd(etf.typicalAbsFlowUsd * 0.5)} either way.`,
   };

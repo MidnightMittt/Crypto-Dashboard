@@ -8,6 +8,7 @@ import { available, Section, TickerDossier, unavailable } from "@/lib/dossier/ty
 import { fetchOptionsSummary } from "@/lib/dossier/providers/cboeOptions";
 import { fetchTradierChains } from "@/lib/dossier/providers/tradierOptions";
 import { buildOptionsIntelligence } from "@/lib/dossier/providers/optionsIntelligence";
+import { fetchEtfFlows } from "@/lib/providers/etfFlows";
 import { crossConfirm } from "@/lib/dossier/providers/crossVenueOptions";
 import { fetchInsiderSummary } from "@/lib/dossier/providers/edgarInsiders";
 import { fetchShortVolume } from "@/lib/dossier/providers/finraShortVolume";
@@ -97,10 +98,18 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
    * section, never the page. Equity-only sources are skipped for crypto
    * with a typed null rather than a wasted request.
    */
-  const [history, intradayBars, options, tradier, insiders, shortVolume, news, social] = await Promise.all([
+  const [history, intradayBars, etfFlows, options, tradier, insiders, shortVolume, news, social] = await Promise.all([
     fetchQuoteHistory(resolved.providerSymbol),
     // The second timeframe, from the same keyless endpoint as the daily bars.
     fetchIntradayHistory(resolved.providerSymbol),
+    /*
+     * The one module that has cleared the Wilson gate AND survived FDR
+     * correction (2026-08-15). The provider returns null for anything
+     * without a US spot-ETF complex, which is everything except BTC and
+     * ETH — so the guard is the asset class, and the provider handles the
+     * rest without this file needing to know which tickers qualify.
+     */
+    isCrypto ? fetchEtfFlows(resolved.symbol as Parameters<typeof fetchEtfFlows>[0]) : null,
     isCrypto ? null : fetchOptionsSummary(resolved.symbol),
     isCrypto ? null : fetchTradierChains(resolved.symbol),
     isCrypto ? null : fetchInsiderSummary(resolved.symbol),
@@ -177,6 +186,7 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
     marketWide: isCrypto ? [] : context.marketWide,
     earningsCalendar,
     hasDerivatives: isCrypto ? resolved.hasDerivatives : false,
+    etfFlows,
     now: Date.now(),
   });
 
@@ -219,6 +229,7 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
     marketWide: isCrypto ? [] : context.marketWide,
     earningsCalendar,
     hasDerivatives: isCrypto ? resolved.hasDerivatives : false,
+    etfFlows,
     now: Date.now(),
   });
 

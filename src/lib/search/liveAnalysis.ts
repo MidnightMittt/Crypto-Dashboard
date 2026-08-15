@@ -8,6 +8,8 @@ import {
   evaluateMarketStructure,
 } from "@/lib/markets/equityEvidence";
 import { buildMarketBias } from "@/lib/signals/marketBias";
+import { etfFlowsMetric } from "@/lib/signals/evaluators";
+import { AggregateMarketData } from "@/types/market";
 import { buildTradePlanOutcome, PlanConstraints, TradePlan, TradePlanRefusal } from "@/lib/signals/tradePlan";
 import { buildPlannedSetups, readPlannedSetups, PlannedSetupsView } from "@/lib/signals/plannedSetup";
 import {
@@ -118,6 +120,19 @@ export interface LiveAnalysisInputs {
   /** True when this asset genuinely has a funding/open-interest picture. */
   hasDerivatives: boolean;
   /**
+   * US spot-ETF flow summary, when the asset has one (BTC and ETH only).
+   *
+   * Threaded in rather than fetched here because this module is pure and is
+   * also driven by the execution replay, which must never reach the network.
+   * Supplied by the live path, always null in the replay.
+   *
+   * This is the ONLY module in the platform that has cleared the Wilson gate
+   * and survived FDR correction (2026-08-15). Until it reaches this path the
+   * dossier composite has nothing validated in it at all, which is why the
+   * verdict there reads "descriptive" for every asset.
+   */
+  etfFlows?: AggregateMarketData["etfFlows"] | null;
+  /**
    * Measured planner constraints for this side and regime, when a caller has
    * them. Deliberately OPTIONAL and deliberately absent in the execution
    * replay: gating the replay with a threshold derived from the replay would
@@ -164,7 +179,7 @@ function toCandles(bars: Bar[]): Candle[] {
 }
 
 export function buildLiveAnalysis(inputs: LiveAnalysisInputs): LiveAnalysisResult {
-  const { symbol, name, assetClass, bars, benchmarkCloses, benchmarkSymbol, marketWide, earningsCalendar, hasDerivatives, now } =
+  const { symbol, name, assetClass, bars, benchmarkCloses, benchmarkSymbol, marketWide, earningsCalendar, hasDerivatives, etfFlows, now } =
     inputs;
 
   if (bars.length === 0) {
@@ -265,6 +280,14 @@ export function buildLiveAnalysis(inputs: LiveAnalysisInputs): LiveAnalysisResul
    * readings before cross-asset instruments were removed from the snapshot.
    */
   if (assetClass === "equity") metrics.push(...marketWide);
+
+  /*
+   * THE ONE VALIDATED SIGNAL. Crypto only — US spot ETFs exist for BTC and
+   * ETH and for nothing else here, so a null is the normal case rather than
+   * a failure.
+   */
+  const etf = assetClass === "crypto" ? etfFlowsMetric(etfFlows ?? null, asOf) : null;
+  if (etf) metrics.push(etf);
 
   const bias = buildMarketBias({
     asset: symbol,
