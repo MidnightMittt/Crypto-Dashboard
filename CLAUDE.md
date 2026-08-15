@@ -162,6 +162,38 @@ solution, refactor affected code, verify performance, verify UI consistency,
 verify reasoning consistency, and suggest the next highest-impact
 improvement. Never stop at implementation — continuously optimize.
 
+### Staging and Commits
+
+**Stage explicit paths. Never `git add -A`, `git add .`, or `git commit -a`.**
+
+More than one agent works in this repository at a time, and the working tree
+is frequently dirty with someone else's in-progress edits. A blanket stage
+does not commit your change — it commits whatever happened to be on disk at
+that moment, under a message describing only your work.
+
+This is not hypothetical. Commit `259dd91` ("Fingerprint analogs replace the
+broad buckets") is 5,296 lines across 14 files spanning four unrelated
+concerns, because a blanket stage swept up a data-integrity audit, a
+cross-validation script, a 3,806-line fixture and a `package.json` entry that
+had nothing to do with fingerprint analogs. Nothing was lost, but the history
+now describes work it does not contain, and the audit is invisible to anyone
+reading the log.
+
+The rules:
+
+- `git add <path> <path>` — name every file you intend to commit.
+- Before staging, run `git status` and account for every entry. If a modified
+  file is not yours, leave it. Do not assume a dirty file is stale.
+- One commit, one concern. If your change touches genuinely unrelated areas,
+  make separate commits.
+- If `git status` shows changes you did not make, say so rather than
+  absorbing them silently — another agent may be mid-edit.
+- Re-check `git status` immediately before committing. The tree can change
+  underneath a long-running task.
+
+The commit message describes what the commit contains. If those two things
+disagree, the staging was wrong — fix the staging, not the message.
+
 ## Definition of Success
 
 The finished product should not feel like a dashboard. It should feel like
