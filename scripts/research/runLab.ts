@@ -1,7 +1,8 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { LabSeries, runHypothesis, HypothesisResult, resolveDependencies, excludeCorruptSeries } from "../../src/lib/research/signalLab";
+import { runHypothesis, HypothesisResult, resolveDependencies, excludeCorruptSeries } from "../../src/lib/research/signalLab";
+import { describeLoad, loadEquityPanel } from "./loadPanel";
 import { benjaminiHochberg } from "../../src/lib/research/multipleTesting";
 import { FAMILY } from "./hypotheses";
 
@@ -16,33 +17,14 @@ import { FAMILY } from "./hypotheses";
  */
 
 const __dirname_ = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = path.join(__dirname_, "..", "ingest", "data");
 const OUT = path.join(__dirname_, "..", "..", "src", "data", "signalValidation.json");
 
-function load(): LabSeries[] {
-  const out: LabSeries[] = [];
-  for (const f of fs.readdirSync(DATA_DIR).filter((x) => x.endsWith(".json"))) {
-    const raw = JSON.parse(fs.readFileSync(path.join(DATA_DIR, f), "utf8")) as {
-      bars?: Array<{ t: number; open: number; high: number; low: number; close: number; volume: number }>;
-    };
-    const bars = (raw.bars ?? []).filter((b) => Number.isFinite(b.close) && b.close > 0);
-    if (bars.length < 300) continue;
-    out.push({
-      symbol: f.split(".")[0],
-      t: bars.map((b) => b.t),
-      close: bars.map((b) => b.close),
-      high: bars.map((b) => b.high),
-      low: bars.map((b) => b.low),
-      volume: bars.map((b) => b.volume),
-    });
-  }
-  return out;
-}
 
 function main(): void {
-  const raw = load();
-  const { clean: series, excluded } = excludeCorruptSeries(raw);
-  console.log(`Signal lab — ${series.length} instruments, ${FAMILY.length} declared hypotheses`);
+  const load = loadEquityPanel();
+  const { clean: series, excluded } = excludeCorruptSeries(load.series);
+  console.log(`Signal lab — ${describeLoad(load)}`);
+  console.log(`${series.length} usable after integrity exclusions, ${FAMILY.length} declared hypotheses`);
   if (excluded.length) {
     console.log(
       `Excluded ${excluded.length} for impossible sessions (corporate-action artifacts):\n  ` +

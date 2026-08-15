@@ -2,12 +2,12 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import {
-  LabSeries,
   excludeCorruptSeries,
   indexAsOf,
   panelBreadth,
   ret,
 } from "../../src/lib/research/signalLab";
+import { describeLoad, loadEquityPanel } from "./loadPanel";
 
 /**
  * TODAY'S CROSS-SECTION — the bridge from the validated study to one ticker.
@@ -42,7 +42,6 @@ import {
  */
 
 const __dirname_ = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = path.join(__dirname_, "..", "ingest", "data");
 const OUT = path.join(__dirname_, "..", "..", "src", "data", "equityCrossSection.json");
 
 /** Trailing window and skip, identical to the declared hypothesis. */
@@ -57,28 +56,10 @@ const DECILE = 0.1;
  */
 const MAX_INSTRUMENT_STALENESS_MS = 10 * 86_400_000;
 
-function load(): LabSeries[] {
-  const out: LabSeries[] = [];
-  for (const f of fs.readdirSync(DATA_DIR).filter((x) => x.endsWith(".json"))) {
-    const raw = JSON.parse(fs.readFileSync(path.join(DATA_DIR, f), "utf8")) as {
-      bars?: Array<{ t: number; open: number; high: number; low: number; close: number; volume: number }>;
-    };
-    const bars = (raw.bars ?? []).filter((b) => Number.isFinite(b.close) && b.close > 0);
-    if (bars.length < 300) continue;
-    out.push({
-      symbol: f.split(".")[0],
-      t: bars.map((b) => b.t),
-      close: bars.map((b) => b.close),
-      high: bars.map((b) => b.high),
-      low: bars.map((b) => b.low),
-      volume: bars.map((b) => b.volume),
-    });
-  }
-  return out;
-}
 
 function main(): void {
-  const { clean, excluded } = excludeCorruptSeries(load());
+  const load = loadEquityPanel();
+  const { clean, excluded } = excludeCorruptSeries(load.series);
   if (clean.length === 0) throw new Error("no usable instruments");
 
   /*
@@ -140,6 +121,7 @@ function main(): void {
   fs.writeFileSync(OUT, JSON.stringify(artifact, null, 2));
 
   console.log(`Cross-section as of ${new Date(asOf).toISOString().slice(0, 10)}`);
+  console.log(`  panel           ${describeLoad(load)}`);
   console.log(`  ranked          ${members.length} instruments (decile = ${k})`);
   console.log(`  excluded        ${excluded.length} corrupt, ${stale.length} stale, ${tooShort.length} short`);
   if (stale.length) console.log(`    stale: ${stale.join(", ")}`);

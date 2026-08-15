@@ -155,7 +155,13 @@ describe("readEquityMomentum — when the record applies", () => {
     expect(r.read.regime).toBe("broad-weakness");
     expect(r.read.applies).toBe(false);
     expect(r.read.record).toBeNull();
-    expect(r.read.detail).toContain("49.2%");
+    /*
+     * Asserted against the ARTIFACT, not a literal. A hardcoded rate here
+     * would have to be edited in lockstep with the study, which is exactly
+     * the coupling that let "49.2%" survive a panel change into 48.9%.
+     */
+    const down = loadMomentumRecord("momentum-12-1-long-only-broad-down")!;
+    expect(r.read.detail).toContain(`${(down.winRate * 100).toFixed(1)}%`);
   });
 
   it("makes no standalone short claim for the bottom decile", () => {

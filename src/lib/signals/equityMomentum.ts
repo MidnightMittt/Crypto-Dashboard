@@ -12,24 +12,27 @@ import { ordinal } from "@/lib/utils/format";
  * equities beyond what any chart says.
  *
  * `momentum-12-1-long-only` closes it. Declared before it was run, measured
- * on a 128-instrument panel over 1980-2026 in non-overlapping 21-session
- * periods, corrected across a 12-hypothesis family at q = 0.05, and charged
- * 2pp of costs.
+ * on the declared equity panel (src/lib/markets/equityPanel.ts) in
+ * non-overlapping 21-session periods, corrected across a 12-hypothesis
+ * family at q = 0.05, and charged 2pp of costs.
+ *
+ * NO RATE IS WRITTEN INTO THIS FILE. Every number the module prints is read
+ * from signalValidation.json at call time. Prose literals were tried and
+ * they rot: a hardcoded down-regime rate survived a panel change that moved
+ * it, and only a test noticed. A statistic in a comment has no owner.
  *
  * ── The distinction this module exists to protect ─────────────────────
  *
- * The headline momentum result — 56.3%, lower bound 52.6% — belongs to a
- * LONG-SHORT SPREAD. A reader looking at one ticker holds the long leg and
- * inherits none of it. Quoting the spread here would be the most tempting
- * overstatement available to this platform, because the number is real and
- * merely about something else.
+ * The headline momentum result belongs to a LONG-SHORT SPREAD. A reader
+ * looking at one ticker holds the long leg and inherits none of it. Quoting
+ * the spread here would be the most tempting overstatement available to this
+ * platform, because the number is real and merely about something else.
  *
  * So the long leg was declared and measured separately, against the
  * equal-weighted panel over the same window, which is the comparison a
- * single long position actually faces. It cleared on its own at the same
- * 2pp bar: 57.0%, lower bound 53.3%, +0.85% mean excess over the panel per
- * 21 sessions. THAT is the number this module is allowed to say, and it is
- * the only one it says.
+ * single long position actually faces. It clears on its own at the same 2pp
+ * bar. THAT is the record this module is allowed to quote, and it is the
+ * only one it quotes.
  *
  * ── Why it does not vote in the composite ─────────────────────────────
  *
@@ -51,9 +54,11 @@ import { ordinal } from "@/lib/utils/format";
  *    as half of a spread; no standalone short record exists, so a ticker
  *    ranked at the bottom gets the ranking and an explicit refusal to
  *    forecast, not an inverted long claim.
- *  - Nothing in broad weakness. The declared complement measured 49.2% —
- *    below its own base rate — so the record does not apply and the module
- *    says so rather than quietly averaging the two regimes.
+ *  - Nothing in broad weakness. The declared complement measures below its
+ *    own base rate, so the record does not apply and the module says so
+ *    rather than quietly averaging the two regimes. Every rate this module
+ *    prints is read from signalValidation.json — never written into prose,
+ *    where it would go stale silently on the next panel change.
  *  - Nothing about a ticker in the middle eight deciles. The effect was
  *    measured at the extremes; the middle has no measured claim attached.
  */
@@ -309,7 +314,7 @@ export function readEquityMomentum(inputs: MomentumInputs): MomentumOutcome {
       applies,
       record,
       headline: headlineFor(symbol, mom, percentile, leg, regime, applies),
-      detail: detailFor(symbol, leg, regime, applies, record, row),
+      detail: detailFor(symbol, leg, regime, applies, record, row, loadMomentumRecord("momentum-12-1-long-only-broad-down")),
       caveats: caveatsFor(cs, leg, regime, peers),
       peers,
       panelSize: cs.members.length,
@@ -350,7 +355,14 @@ function detailFor(
   regime: BreadthRegime,
   applies: boolean,
   record: MomentumRecord | null,
-  unconditional: ValidationRow | null
+  unconditional: ValidationRow | null,
+  /*
+   * The measured down-regime row, READ rather than written into the prose.
+   * This sentence carried a hardcoded "49.2%" until a panel change made the
+   * truth 48.9% — a literal in narrative text is a number with no owner and
+   * nothing to keep it honest. Only a test caught it.
+   */
+  down: ValidationRow | null
 ): string {
   if (applies && record) {
     return (
@@ -366,7 +378,7 @@ function detailFor(
     return (
       `The complement of this hypothesis was declared and measured at the same time, precisely so this case could not be ` +
       `quietly ignored. When half or fewer of the panel trades above its own 200-session average, the top momentum decile beat ` +
-      `the panel in only 49.2% of periods — below its own base rate. The ranking below is real; the forward claim is withdrawn ` +
+      `the panel in only ${down ? (down.winRate * 100).toFixed(1) + "%" : "under half"} of periods — below its own base rate. The ranking below is real; the forward claim is withdrawn ` +
       `until breadth recovers. This is the signal's own stated "do not take this trade" condition.`
     );
   }
