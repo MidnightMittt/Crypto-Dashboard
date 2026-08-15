@@ -43,8 +43,26 @@ async function nasdaqJson<T>(path: string): Promise<T | null> {
 
 // ── Pure pieces, testable without HTTP ──────────────────────────────────
 
+/*
+ * TWO PANELS, NOT ONE. The buy/hold/sell split comes from the targetprice
+ * endpoint's consensusOverview; the headline analyst count is scraped from
+ * the ratings endpoint's summary text. They are different surveys and they
+ * disagree on every symbol measured — AAPL 29 vs 28, SOFI 21 vs 14, and
+ * WULF 5 vs 15, which the page rendered as "5 analysts (15 buy · 0 hold ·
+ * 0 sell)".
+ *
+ * So each count now travels with the figures it actually decomposes.
+ * `coveringAnalysts` is the sum of the split by construction and can never
+ * contradict it; `ratingsSurveyCount` belongs to `meanRating` alone and is
+ * null when the summary text does not carry it — the old code fell back to
+ * buy+hold+sell there, which made the two agree exactly when the data was
+ * missing and disagree whenever it was present.
+ */
 export interface ConsensusView {
-  analysts: number;
+  /** Population behind buy/hold/sell — their sum, so it always reconciles. */
+  coveringAnalysts: number;
+  /** Population behind meanRating. A different survey; null when unstated. */
+  ratingsSurveyCount: number | null;
   meanRating: string;
   buy: number;
   hold: number;
@@ -67,11 +85,11 @@ export function buildConsensus(
   const buy = o.buy ?? 0;
   const hold = o.hold ?? 0;
   const sell = o.sell ?? 0;
-  const analysts =
-    Number(ratings?.ratingsSummary?.match(/(\d+)\s+analysts/)?.[1] ?? NaN) || buy + hold + sell;
+  const scraped = Number(ratings?.ratingsSummary?.match(/(\d+)\s+analysts/)?.[1] ?? NaN);
 
   return {
-    analysts,
+    coveringAnalysts: buy + hold + sell,
+    ratingsSurveyCount: Number.isFinite(scraped) && scraped > 0 ? scraped : null,
     meanRating: ratings?.meanRatingType ?? "unrated",
     buy,
     hold,
@@ -141,8 +159,23 @@ export function composeStreetLines(s: Omit<StreetSummary, "lines">): string[] {
 
   if (s.consensus) {
     const c = s.consensus;
+    /*
+     * The count leading this sentence is the one the split adds up to, so
+     * the parenthetical reads as the decomposition it actually is. The
+     * ratings survey follows as its own clause, and says outright that it
+     * polls a different panel when the two counts differ — a reader who
+     * notices "28" and "29" should be told why rather than left to assume
+     * one of them is wrong.
+     */
+    const ratingClause =
+      c.ratingsSurveyCount === null
+        ? ` Nasdaq's ratings survey averages "${c.meanRating}".`
+        : c.ratingsSurveyCount === c.coveringAnalysts
+          ? ` The same panel averages "${c.meanRating}".`
+          : ` Nasdaq's ratings survey polls a different panel of ${c.ratingsSurveyCount} and averages "${c.meanRating}", so the two counts do not reconcile.`;
+
     lines.push(
-      `${c.analysts} analysts average "${c.meanRating}" (${c.buy} buy · ${c.hold} hold · ${c.sell} sell). Their mean price target of $${c.targetPrice.toFixed(2)} sits ${Math.abs(c.impliedMovePct).toFixed(0)}% ${c.impliedMovePct >= 0 ? "above" : "BELOW"} the current price, with individual targets running $${c.lowTarget.toFixed(0)}–$${c.highTarget.toFixed(0)}.`
+      `${c.coveringAnalysts} analysts publish price targets on it (${c.buy} buy · ${c.hold} hold · ${c.sell} sell). Their mean target of $${c.targetPrice.toFixed(2)} sits ${Math.abs(c.impliedMovePct).toFixed(0)}% ${c.impliedMovePct >= 0 ? "above" : "BELOW"} the current price, with individual targets running $${c.lowTarget.toFixed(0)}–$${c.highTarget.toFixed(0)}.${ratingClause}`
     );
   }
   if (s.surprises) lines.push(s.surprises.line);

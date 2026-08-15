@@ -146,7 +146,9 @@ describe("nasdaqStreet pure pieces", () => {
       { consensusOverview: { priceTarget: 330, lowPriceTarget: 245, highPriceTarget: 400, buy: 16, hold: 9, sell: 4 } },
       300
     )!;
-    expect(c.analysts).toBe(29);
+    // 29 from the ratings survey; 16+9+4 = 29 analysts behind the split.
+    expect(c.ratingsSurveyCount).toBe(29);
+    expect(c.coveringAnalysts).toBe(29);
     expect(c.impliedMovePct).toBeCloseTo(10, 6);
     const lines = composeStreetLines({
       consensus: c, surprises: null, marketCapUsd: null, averageVolume: null,
@@ -154,6 +156,44 @@ describe("nasdaqStreet pure pieces", () => {
       sector: null, nextEarningsDate: null, herdingCaveat: "",
     });
     expect(lines[0]).toContain("10% above the current price");
+    expect(lines[0]).toContain("The same panel averages");
+  });
+
+  /*
+   * The live shape, not a hypothetical. Every symbol measured disagreed;
+   * WULF was the worst — the ratings summary said 5 analysts while the
+   * target endpoint carried 15 buys, and the page rendered "5 analysts
+   * (15 buy · 0 hold · 0 sell)".
+   */
+  it("never presents one survey's count as the other's breakdown", () => {
+    const c = buildConsensus(
+      { meanRatingType: "Strong Buy", ratingsSummary: "Based on 5 analysts offering recommendations." },
+      { consensusOverview: { priceTarget: 20, lowPriceTarget: 12, highPriceTarget: 28, buy: 15, hold: 0, sell: 0 } },
+      16
+    )!;
+    expect(c.coveringAnalysts).toBe(15);
+    expect(c.ratingsSurveyCount).toBe(5);
+
+    const [line] = composeStreetLines({
+      consensus: c, surprises: null, marketCapUsd: null, averageVolume: null,
+      fiftyTwoWeekHigh: null, fiftyTwoWeekLow: null, rangePositionPct: null,
+      sector: null, nextEarningsDate: null, herdingCaveat: "",
+    });
+    // The count leading the split is the one the split sums to.
+    expect(line).toContain("15 analysts publish price targets on it (15 buy · 0 hold · 0 sell)");
+    // And the discrepancy is stated rather than left for the reader to spot.
+    expect(line).toContain("a different panel of 5");
+    expect(line).toContain("do not reconcile");
+  });
+
+  it("omits the survey size rather than inventing one when it is unstated", () => {
+    const c = buildConsensus(
+      { meanRatingType: "Buy", ratingsSummary: "Recommendations are available." },
+      { consensusOverview: { priceTarget: 20, buy: 3, hold: 1, sell: 0 } },
+      16
+    )!;
+    expect(c.ratingsSurveyCount).toBeNull();
+    expect(c.coveringAnalysts).toBe(4);
   });
 
   it("says BELOW loudly when the street's own target is under the price", () => {
