@@ -1,7 +1,9 @@
 {
-  "generatedAt": 1786832095891,
+  "generatedAt": 1786833826057,
   "asOf": 1786737600000,
   "instruments": 86,
+  "declaredInstruments": 95,
+  "missingInstruments": [],
   "excludedForCorruptBars": 9,
   "excludedForStaleness": [],
   "excludedForShortHistory": 0,

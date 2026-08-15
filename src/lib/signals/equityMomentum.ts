@@ -70,6 +70,10 @@ export interface CrossSection {
   generatedAt: number;
   asOf: number;
   instruments: number;
+  /** Panel size as declared, so a shortfall is visible rather than inferred. */
+  declaredInstruments?: number;
+  /** Declared members whose bar files were absent when this was built. */
+  missingInstruments?: string[];
   lookbackSessions: number;
   skipSessions: number;
   decileSize: number;

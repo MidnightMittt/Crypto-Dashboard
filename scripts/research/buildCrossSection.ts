@@ -8,6 +8,7 @@ import {
   ret,
 } from "../../src/lib/research/signalLab";
 import { describeLoad, loadEquityPanel } from "./loadPanel";
+import { EQUITY_PANEL } from "../../src/lib/markets/equityPanel";
 
 /**
  * TODAY'S CROSS-SECTION — the bridge from the validated study to one ticker.
@@ -99,6 +100,19 @@ function main(): void {
     /** Last session in the panel. Everything below is measured at this date. */
     asOf,
     instruments: members.length,
+    /*
+     * WHAT THE PANEL WAS SUPPOSED TO BE, beside what it turned out to be.
+     *
+     * A ranked count alone is unanchored: 86 could mean the panel, or the
+     * panel minus nine names whose bar files were absent on whichever
+     * machine ran last. Same code, same day, a quietly different reference
+     * set — and a ticker's rank is measured against it. Recording the
+     * declared size and naming the absentees makes a partial ingest visible
+     * instead of something a reader would have to infer from a number they
+     * have no baseline for.
+     */
+    declaredInstruments: EQUITY_PANEL.length,
+    missingInstruments: load.missing,
     excludedForCorruptBars: excluded.length,
     excludedForStaleness: stale,
     excludedForShortHistory: tooShort.length,
