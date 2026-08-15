@@ -70,6 +70,12 @@ export interface DossierInputs {
   forward?: ForwardRecordSummary | null;
   /** Out-of-sample record for the verdict word itself. */
   verdictForward?: VerdictForwardRecord | null;
+  /**
+   * Where this ticker sits in the validated cross-sectional momentum
+   * ranking. Computed by the caller because it needs the raw bars, which
+   * LiveAnalysis deliberately does not carry.
+   */
+  momentum?: import("@/lib/signals/equityMomentum").MomentumOutcome | null;
   /*
    * Provider-backed sections, already shaped by the caller (analyseTicker
    * maps each provider result to a Section with its depth and upgrade).
@@ -223,6 +229,8 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
 
     nextEntry: buildNextEntry(analysis, inputs.plannedRecords ?? null, inputs.reachOf ?? null, inputs.forward ?? null),
 
+    validatedSignal: buildValidatedSignal(inputs.momentum ?? null),
+
     macro: buildMacroContext({
       symbol: analysis.symbol,
       assetClass: analysis.assetClass,
@@ -339,6 +347,34 @@ function buildExpectations(expectations: PlanExpectations | null, isCrypto: bool
       ? "No replayed trades match this asset and volatility regime yet, so no expectancy is claimed for it."
       : "The equity replay has no publishable record for this particular side and volatility regime — either the read is not directional, or too few comparable trades exist in that bucket to quote a win rate honestly. Borrowing a neighbouring bucket's number would be worse than saying so."
   );
+}
+
+/**
+ * The cross-sectional momentum read, as a section.
+ *
+ * DEPTH IS `advanced`, NOT `institutional`, and the distinction is the point
+ * of the ladder. This is backtested on 579 non-overlapping periods with a
+ * Wilson bound and an FDR correction — numbers with an n, which is exactly
+ * what `advanced` means. `institutional` is reserved for a FORWARD record,
+ * and this signal has none yet: it has never made a prediction in public.
+ * Promoting it on the strength of a backtest would collapse the one
+ * distinction the tier system exists to hold.
+ */
+function buildValidatedSignal(
+  outcome: import("@/lib/signals/equityMomentum").MomentumOutcome | null
+): Section<import("@/lib/signals/equityMomentum").MomentumRead> {
+  if (!outcome) {
+    return unavailable(
+      "not-measured-yet",
+      "The cross-sectional ranking was not computed for this request."
+    );
+  }
+  if (!outcome.ok) return unavailable(outcome.blockedBy, outcome.reason);
+
+  return available(outcome.read, "advanced", {
+    to: "institutional",
+    when: "this ranking has published forward calls for long enough to be scored out of sample, the way the daily verdict record already is — a backtest with a lower bound is evidence, but it is not yet a track record",
+  });
 }
 
 /**

@@ -452,6 +452,22 @@ export interface TickerDossier {
   analogs: Section<import("@/lib/research/neighbourhood").NeighbourhoodStats>;
   /** Where this becomes a trade, whether or not it is one today. */
   nextEntry: Section<PlannedEntryRead>;
+  /**
+   * THE ONE EQUITY SIGNAL WITH A MEASURED FORWARD RECORD.
+   *
+   * Every other equity module here is State: it describes conditions and
+   * makes no forecast, which is why the equity composite grades as
+   * "descriptive" and why `evidenceGrade` reports 0% validated weight on
+   * these pages. This section is the exception and is deliberately kept
+   * OUTSIDE the composite — see equityMomentum.ts for why blending it in
+   * would either silence it or silence everything else.
+   *
+   * It is also the section most likely to say nothing, and that is correct:
+   * the effect was measured at the extremes of a cross-sectional ranking, so
+   * a mid-pack ticker gets an explicit no-claim rather than an interpolated
+   * fraction of an edge.
+   */
+  validatedSignal: Section<import("@/lib/signals/equityMomentum").MomentumRead>;
   macro: Section<MacroContext>;
   evidence: EvidenceGroup[];
   /** Structural context the evidence groups do not cover. */

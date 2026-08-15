@@ -22,6 +22,7 @@ import {
   PlanPanel,
   ReasonsPanel,
   TldrPanel,
+  ValidatedSignalPanel,
   VerdictPanel,
 } from "@/components/dossier/DossierSections";
 import { FoldedSection } from "@/components/ui/FoldedSection";
@@ -108,6 +109,7 @@ const SECTION_COMPONENTS: Record<SectionId, (props: { d: TickerDossier }) => Rea
   plan: PlanPanel,
   nextEntry: NextEntryPanel,
   checklist: ChecklistPanel,
+  validatedSignal: ValidatedSignalPanel,
   reasons: ReasonsPanel,
   engineBars: EngineBarsPanel,
   invalidation: InvalidationPanel,

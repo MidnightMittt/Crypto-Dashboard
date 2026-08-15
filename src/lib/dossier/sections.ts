@@ -50,6 +50,7 @@ export type SectionId =
   | "plan"
   | "nextEntry"
   | "checklist"
+  | "validatedSignal"
   | "reasons"
   | "engineBars"
   | "invalidation"
@@ -84,6 +85,24 @@ export const DOSSIER_SECTIONS: readonly SectionDef[] = [
    * the plan's existing backtested star rating.
    */
   { id: "checklist", phase: "decide" },
+  /*
+   * OPENS THE UNDERSTAND GROUP, ahead of the reasons — because when it has
+   * something to say it is the strongest evidence on the page, and when it
+   * does not it says so in a line.
+   *
+   * Not in DECIDE, and that was argued rather than assumed. The manifest's
+   * own rule is that a section which cannot justify the first screen does
+   * not get it, and this one fires only for the top and bottom deciles of a
+   * 128-name ranking — roughly one searched ticker in five. A card that
+   * reads "no claim" four times out of five would dilute the decide group
+   * every time it appeared there, which is the opposite of what a validated
+   * signal should do to a page.
+   *
+   * It leads UNDERSTAND instead: the first answer to "why would I take
+   * this", and the only one on an equity page with a measured forward
+   * record behind it.
+   */
+  { id: "validatedSignal", phase: "understand" },
   { id: "reasons", phase: "understand" },
   /*
    * The four category rollups as bars — the engine in one glance, each

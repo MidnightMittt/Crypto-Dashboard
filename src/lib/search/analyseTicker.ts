@@ -16,6 +16,7 @@ import { fetchNews, fetchSocial } from "@/lib/dossier/providers/attention";
 import { fetchFundamentals } from "@/lib/dossier/providers/secFundamentals";
 import { fetchStreet } from "@/lib/dossier/providers/nasdaqStreet";
 import { fetchBackdrop } from "@/lib/dossier/providers/macroBackdrop";
+import { readEquityMomentum } from "@/lib/signals/equityMomentum";
 import {
   equityAnalogsFor,
   equityExpectationsFor,
@@ -312,8 +313,23 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
     });
   })();
 
+  /*
+   * THE VALIDATED SIGNAL. Computed here rather than inside buildDossier
+   * because it needs the raw bars — a full year plus the skipped month —
+   * and LiveAnalysis carries only `barsUsed`. Given the panel snapshot, it
+   * is pure arithmetic; every refusal it can return is a stated reason
+   * rather than a thrown error.
+   */
+  const momentum = readEquityMomentum({
+    symbol: result.analysis.symbol,
+    assetClass: result.analysis.assetClass,
+    bars: history.history.bars,
+    now: Date.now(),
+  });
+
   const dossier = buildDossier({
     analysis: result.analysis,
+    momentum,
     optionsIntel: optionsIntel
       ? available(optionsIntel, "advanced", {
           to: "institutional" as const,

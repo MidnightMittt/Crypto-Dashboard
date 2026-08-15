@@ -17,6 +17,10 @@ describe("the section manifest", () => {
       "nextEntry",
       // Deliberate addition, 2026-08-14: the setup checklist closes DECIDE.
       "checklist",
+      // Deliberate addition, 2026-08-15: the cross-sectional momentum read —
+      // the first equity signal with a validated forward record. Opens
+      // UNDERSTAND rather than joining DECIDE; see the manifest for why.
+      "validatedSignal",
       "reasons",
       // Deliberate addition, 2026-08-14: the category bars.
       "engineBars",

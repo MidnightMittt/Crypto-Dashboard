@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/Card";
 import { Collapsible } from "@/components/ui/Collapsible";
 import { EvidenceModuleDetail } from "@/components/evidence/EvidenceModuleDetail";
-import { formatPrice } from "@/lib/utils/format";
+import { formatPrice, ordinal } from "@/lib/utils/format";
 import { TRADE_PLAN_REFUSAL_SHORT, TRADE_PLAN_REFUSAL_TEXT } from "@/lib/signals/tradePlan";
 import { Depth, EvidenceBullet, EvidenceGroup, InvalidationTrigger, Section, TickerDossier } from "@/lib/dossier/types";
 import { MetricVerdict } from "@/lib/signals/types";
@@ -733,6 +733,107 @@ export function InvalidationPanel({ d }: { d: TickerDossier }) {
  * per overlapping window — and five figures reads as settled science. The raw
  * count still appears, beside its correction rather than instead of it.
  */
+/**
+ * THE VALIDATED SIGNAL.
+ *
+ * Two states that must not be allowed to look alike: the record APPLIES, or
+ * it does not. Everything else on this page is a reading; this is the only
+ * thing with a corrected, cost-charged forward measurement behind it, and
+ * the design job is to make "it applies" earn its prominence without letting
+ * "it does not" borrow any.
+ *
+ * So the statistics block renders only when the record applies. A page that
+ * showed 58.7% next to "this does not apply right now" would have a reader
+ * remembering the number and forgetting the qualifier — which is precisely
+ * the failure mode of every backtest ever put on a marketing page.
+ */
+export function ValidatedSignalPanel({ d }: { d: TickerDossier }) {
+  const s = d.validatedSignal;
+  if (s.status !== "available") {
+    return (
+      <Panel title="Validated signal">
+        <Unavailable section={s} />
+      </Panel>
+    );
+  }
+
+  const m = s.data;
+  const applies = m.applies && m.record !== null;
+
+  return (
+    <Panel
+      title="Validated signal"
+      subtitle={`cross-sectional momentum · ${m.panelSize}-name panel`}
+    >
+      <p
+        className={`rounded-md border px-3 py-2.5 text-[13px] leading-relaxed ${
+          applies
+            ? "border-success/25 bg-success/[0.04] text-ink"
+            : "border-hairline bg-void/30 text-ink"
+        }`}
+      >
+        <span
+          className={`mr-2 text-[9px] font-semibold uppercase tracking-[0.14em] ${
+            applies ? "text-success" : "text-ink-faint"
+          }`}
+        >
+          {applies ? "Record applies" : "No claim"}
+        </span>
+        {m.headline}
+      </p>
+
+      {/* Only when the record genuinely covers this situation. See the header. */}
+      {applies && m.record && (
+        <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 lg:grid-cols-5">
+          <PlanStat label="Beat the panel" value={`${m.record.winRatePct.toFixed(1)}%`} tone="text-success" />
+          {/* The number a reader should actually size on — the hit rate is the
+              optimistic end of the interval, not the estimate. */}
+          <PlanStat label="95% floor" value={`${m.record.lowerBoundPct.toFixed(1)}%`} />
+          <PlanStat label="Periods" value={`${m.record.n}`} tone="text-ink-faint" />
+          <PlanStat
+            label={`Excess / ${m.record.holdSessions}d`}
+            value={`${m.record.meanExcessPct >= 0 ? "+" : ""}${m.record.meanExcessPct.toFixed(2)}%`}
+            tone={m.record.meanExcessPct >= 0 ? "text-success" : "text-danger"}
+          />
+          {/* Never omitted. A hit rate says how often you win; this says what
+              the worst period looked like, and they size differently. */}
+          <PlanStat label="Worst period" value={`${m.record.worstPct.toFixed(1)}%`} tone="text-danger" />
+        </div>
+      )}
+
+      <p className="text-[12px] leading-relaxed text-ink-muted">{m.detail}</p>
+
+      <div className="grid gap-x-6 gap-y-3 sm:grid-cols-3">
+        <PlanStat label="12-1 return" value={`${m.momentumPct >= 0 ? "+" : ""}${m.momentumPct.toFixed(0)}%`} />
+        <PlanStat label="Panel rank" value={`${ordinal(m.percentile)} pct`} />
+        <PlanStat
+          label="Market breadth"
+          value={m.breadthPct === null ? "unknown" : `${(m.breadthPct * 100).toFixed(0)}% above 200d`}
+          tone={
+            m.regime === "broad-strength"
+              ? "text-success"
+              : m.regime === "broad-weakness"
+                ? "text-danger"
+                : "text-ink-faint"
+          }
+        />
+      </div>
+
+      <Collapsible title="What bounds this claim" summary={`${m.caveats.length} limits`}>
+        <ul className="flex flex-col gap-2">
+          {m.caveats.map((c, i) => (
+            <li key={i} className="text-[12px] leading-relaxed text-ink-muted">
+              — {c}
+            </li>
+          ))}
+        </ul>
+      </Collapsible>
+
+      <DepthMeta section={s} />
+    </Panel>
+  );
+}
+
 export function AnalogsPanel({ d }: { d: TickerDossier }) {
   const a = d.analogs;
   return (
