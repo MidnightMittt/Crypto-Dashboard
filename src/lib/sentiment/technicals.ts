@@ -311,12 +311,13 @@ function buildSummary(
     return `${regime}, with no clear directional bias in the technical picture.`;
   }
 
+  // "Exponential" is load-bearing here — see the note in composeTechnicalLines.
   const where =
     emaAlignment === "above-all"
-      ? "trading above its 20, 50 and 200-day averages"
+      ? "trading above its 20, 50 and 200-day exponential averages"
       : emaAlignment === "below-all"
-        ? "trading below its 20, 50 and 200-day averages"
-        : "mixed against its moving averages";
+        ? "trading below its 20, 50 and 200-day exponential averages"
+        : "mixed against its exponential moving averages";
 
   const structureText =
     structure === "higher-highs"
@@ -362,13 +363,23 @@ export function technicalConfirmation(read: TechnicalRead, dominant: ThesisDirec
     lines.push(`Price action is neutral, neither confirming nor contradicting the ${dominant} thesis.`);
   }
 
-  // 2. Moving-average structure — the clearest "is the trend intact" read.
+  /*
+   * 2. Moving-average structure — the clearest "is the trend intact" read.
+   *
+   * "Exponential" is stated because the convention decides the verdict, and
+   * most charting defaults are simple. IREN on 2026-08-14 closed at $44.06
+   * against EMAs of 40.64 / 43.35 / 43.35 — above all three — and SMAs of
+   * 39.23 / 44.89 / 47.09, which is mixed. Same price, same periods,
+   * opposite readings, and this one casts a directional vote. A reader who
+   * checks against a default SMA200 and finds price 6.4% BELOW it should be
+   * able to see that we measured a different thing, not that we are wrong.
+   */
   if (read.emaAlignment === "above-all") {
-    lines.push("Price is above its 20, 50 and 200-day moving averages, supporting continuation higher.");
+    lines.push("Price is above its 20, 50 and 200-day exponential moving averages, supporting continuation higher.");
   } else if (read.emaAlignment === "below-all") {
-    lines.push("Price is below its 20, 50 and 200-day moving averages, supporting continuation lower.");
+    lines.push("Price is below its 20, 50 and 200-day exponential moving averages, supporting continuation lower.");
   } else if (read.emaAlignment === "mixed") {
-    lines.push("Price is caught between its moving averages — no clean trend structure to lean on.");
+    lines.push("Price is caught between its exponential moving averages — no clean trend structure to lean on.");
   }
 
   // 3. Momentum — extremes first (exhaustion/washout warnings carry more
