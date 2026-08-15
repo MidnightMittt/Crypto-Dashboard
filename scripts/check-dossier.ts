@@ -364,12 +364,24 @@ function checkMovingAverage(symbol: string, html: string, bars: Bar[]): void {
   const s50 = sma(closes, 50);
   const e50 = ema(closes, 50);
   if (!claim || s50 === null || e50 === null) {
+    /*
+     * "The page makes no directional claim" is not the same as "the pattern
+     * broke", and filing both under pattern-drift sends a reader hunting for
+     * a regex that is working fine. HUT reads "mixed against its exponential
+     * moving averages" — the engine's own no-verdict branch — so there is
+     * nothing here to verify and nothing to fix.
+     */
+    const mixed = /mixed against its (?:exponential )?moving averages/.test(html);
     record(
       symbol,
       "external",
       "MA direction vs reference",
       "SKIP",
-      !claim ? "pattern not found" : "need 50+ bars"
+      claim
+        ? "need 50+ bars"
+        : mixed
+          ? "n/a — page reports mixed alignment, so it makes no directional claim"
+          : "pattern not found"
     );
     return;
   }
@@ -487,12 +499,25 @@ async function main(): Promise<number> {
       console.log(`  ${f.symbol.padEnd(6)} ${f.name.padEnd(34)} ${f.detail}`);
     }
   }
-  if (skips.length > 0) {
+  /*
+   * Split, because the two need opposite responses. A drifted pattern is a
+   * blind spot wearing the costume of coverage and must be fixed; a check
+   * that does not apply is simply not applicable, and chasing it wastes the
+   * attention the drift list is trying to buy.
+   */
+  const drifted = skips.filter((s) => !s.detail.startsWith("n/a"));
+  const notApplicable = skips.filter((s) => s.detail.startsWith("n/a"));
+
+  if (drifted.length > 0) {
     console.log(
       "\nSkipped (pattern drift — page copy likely changed; update PATTERNS " +
         "rather than ignoring):"
     );
-    for (const s of skips) console.log(`  ${s.symbol.padEnd(6)} ${s.name}`);
+    for (const s of drifted) console.log(`  ${s.symbol.padEnd(6)} ${s.name.padEnd(34)} ${s.detail}`);
+  }
+  if (notApplicable.length > 0) {
+    console.log("\nNot applicable (nothing on the page to check — no action needed):");
+    for (const s of notApplicable) console.log(`  ${s.symbol.padEnd(6)} ${s.name.padEnd(34)} ${s.detail}`);
   }
 
   return fails.length > 0 ? 1 : 0;
