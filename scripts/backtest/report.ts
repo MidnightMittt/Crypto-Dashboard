@@ -892,12 +892,42 @@ export function metricPerformanceSection(
     const size = effectiveN24h !== null ? deriveSampleSizeLabel(effectiveN24h) : null;
     const confidence = size !== null && significant24h !== null ? deriveConfidenceLabel(size, significant24h) : null;
 
+    /*
+     * EVERY HORIZON, EACH WITH ITS OWN BLOCK LENGTH.
+     *
+     * Publishing only the 24h effective sample left every other horizon
+     * unjudgeable, and a metric does not owe its edge to whichever horizon
+     * happened to get published. `funding` is the case that forced this: it
+     * reads 30.3% at 24h and 57.6% at 7d while carrying the engine's largest
+     * weight, and there was no corrected sample at 7d to say which is real.
+     *
+     * blockLengthFor is called PER HORIZON rather than reusing `block`
+     * above. That is the whole point — 7d windows sampled daily share six of
+     * seven days on top of the cross-section, so reusing the 24h block would
+     * understate the overlap sevenfold, in the direction that flatters.
+     */
+    const byHoldingPeriod: MetricPerformanceSummary["byHoldingPeriod"] = {};
+    for (const hp of HOLDING_PERIODS) {
+      const stat = hypothesesStats[`${h.id}:${hp}`];
+      if (!stat || stat.n < MIN_SAMPLE_N) continue;
+      const hpBlock = blockLengthFor(hp, assetCount);
+      byHoldingPeriod[hp] = {
+        n: stat.n,
+        effectiveN: Math.round(effectiveSampleSize(stat.n, hpBlock)),
+        blockLength: hpBlock,
+        winRate: stat.winRate,
+        baseRate: stat.significance?.nullWinRate ?? null,
+        significant: stat.significance?.significant ?? null,
+      };
+    }
+
     out[h.id] = {
       metricId: h.id,
       label: h.label,
       hasHistoricalSource: h.hasHistoricalSource,
       n24h,
       effectiveN24h,
+      byHoldingPeriod,
       baseRate24h,
       winRate24h: headline?.winRate ?? null,
       winRate7d,

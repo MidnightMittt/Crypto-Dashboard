@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { assessEdge, EdgeAssessment, EdgeRecord } from "../src/lib/research/edgeGate";
+import { assessEdge, EdgeAssessment, EdgeRecord, wilsonLowerBound } from "../src/lib/research/edgeGate";
 import { METRIC_ROLES, METRIC_WEIGHTS } from "../src/lib/signals/scoring";
 
 /**
@@ -25,14 +25,19 @@ import { METRIC_ROLES, METRIC_WEIGHTS } from "../src/lib/signals/scoring";
  * ── Reading the output ────────────────────────────────────────────────
  *
  * Each module is judged at ITS OWN best holding period, not a fixed 24h.
- * Judging a 7-day signal on next-day returns measures the wrong thing, and
- * `funding` is exactly that case: 30% at 24h, 58% at 7d.
+ * Judging a 7-day signal on next-day returns measures the wrong thing.
  *
- * The honest limit, stated because it bounds every 7d verdict below: the
- * artifact carries an effective sample for the 24h horizon only. Where a
- * module's best period is not 24h, the gate reports `unmeasured` rather than
- * borrowing the 24h effective n — a different horizon has a different
- * overlap structure, and reusing the number would manufacture a verdict.
+ * The first version of this report could not do that: the artifact carried
+ * an effective sample for 24h only, so eight of nine modules came back
+ * `unmeasured` and `funding`'s 57.6% at 7d sat unresolved against its 30.3%
+ * at 24h, on the engine's largest weight. `byHoldingPeriod` now publishes
+ * every horizon with its own block length, and the answer that unlocked is
+ * the reason it was worth doing: funding's 33 rows at 7d are worth an
+ * EFFECTIVE 2 — seven days of overlap across two correlated assets — so the
+ * flattering number was never a signal at all.
+ *
+ * n_eff is printed beside n for exactly that reason. The gap between them is
+ * where the misleading confidence lives.
  */
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -46,6 +51,10 @@ interface MetricSnapshot {
   baseRate24h?: number;
   winRate24h?: number;
   winRate7d?: number;
+  byHoldingPeriod?: Record<
+    string,
+    { n: number; effectiveN: number; blockLength: number; winRate: number | null; baseRate: number | null }
+  >;
   bestHoldingPeriod?: { holdingPeriod: string; winRate: number } | null;
   stableAcrossWindows?: boolean | null;
   sampleSizeLabel?: string;
@@ -58,25 +67,32 @@ interface MetricSnapshot {
  */
 const COST_PP = 2;
 
-function toRecord(m: MetricSnapshot): EdgeRecord | null {
-  const best = m.bestHoldingPeriod?.holdingPeriod ?? "24h";
-  if (m.winRate24h === undefined || m.baseRate24h === undefined) return null;
+/**
+ * The module's BEST honest case: whichever horizon gives it the highest
+ * Wilson lower bound against its own null.
+ *
+ * Best-of-four is a multiple-comparison, and picking the flattering horizon
+ * after the fact is how a coin flip becomes a strategy. It is deliberate
+ * here for one reason: the question this report answers is "does anything
+ * survive?", and a module that fails at its most favourable horizon fails
+ * everywhere. That inference is safe in the negative direction only — an
+ * `EDGE` verdict below is a CANDIDATE, owed the FDR correction across the
+ * candidate family before it earns a vote.
+ */
+function bestRecord(m: MetricSnapshot): EdgeRecord | null {
+  const by = m.byHoldingPeriod ?? {};
+  let best: EdgeRecord | null = null;
+  let bestBound = -Infinity;
 
-  // See the header: only the 24h horizon has an overlap-corrected sample.
-  if (best !== "24h") {
-    return {
-      winRate: m.bestHoldingPeriod?.winRate ?? m.winRate24h,
-      baseRate: m.baseRate24h,
-      effectiveN: null,
-      holdingPeriod: best,
-    };
+  for (const [hp, r] of Object.entries(by)) {
+    if (!r || r.winRate === null || r.baseRate === null || r.effectiveN <= 0) continue;
+    const bound = wilsonLowerBound(r.winRate, r.effectiveN) - r.baseRate;
+    if (bound > bestBound) {
+      bestBound = bound;
+      best = { winRate: r.winRate, baseRate: r.baseRate, effectiveN: r.effectiveN, holdingPeriod: hp };
+    }
   }
-  return {
-    winRate: m.winRate24h,
-    baseRate: m.baseRate24h,
-    effectiveN: m.effectiveN24h ?? null,
-    holdingPeriod: "24h",
-  };
+  return best;
 }
 
 const SYMBOL: Record<EdgeAssessment["verdict"], string> = {
@@ -97,7 +113,8 @@ function main(): void {
   console.log(`Edge gate — coverage ${raw.coverageStart} to ${raw.coverageEnd}, costs ${COST_PP}pp\n`);
   console.log(
     `${"module".padEnd(17)}${"role".padEnd(9)}${"weight".padStart(7)}${"HP".padStart(5)}` +
-      `${"win".padStart(8)}${"null".padStart(7)}${"LB".padStart(8)}  verdict`
+      `${"n".padStart(7)}${"n_eff".padStart(7)}${"win".padStart(8)}${"null".padStart(7)}` +
+      `${"LB".padStart(8)}  verdict`
   );
   console.log("-".repeat(78));
 
@@ -110,17 +127,20 @@ function main(): void {
   })) {
     const role = METRIC_ROLES[m.metricId] ?? "?";
     const weight = METRIC_WEIGHTS[m.metricId] ?? 0;
-    const rec = toRecord(m);
+    const rec = bestRecord(m);
     const a = assessEdge(rec, COST_PP);
     if (role === "edge") voting.push({ id: m.metricId, a, weight });
 
     const win = rec ? `${(rec.winRate * 100).toFixed(1)}%` : "--";
     const nul = rec ? `${(rec.baseRate * 100).toFixed(1)}%` : "--";
     const lb = a.lowerBound === null ? "--" : `${(a.lowerBound * 100).toFixed(1)}%`;
+    const hp = rec?.holdingPeriod ?? null;
+    const raw = hp ? (m.byHoldingPeriod?.[hp]?.n ?? null) : null;
     console.log(
       `${m.metricId.padEnd(17)}${role.padEnd(9)}${(weight || "").toString().padStart(7)}` +
-        `${(rec?.holdingPeriod ?? "-").padStart(5)}${win.padStart(8)}${nul.padStart(7)}` +
-        `${lb.padStart(8)}  ${SYMBOL[a.verdict]}`
+        `${(hp ?? "-").padStart(5)}${(raw ?? "--").toString().padStart(7)}` +
+        `${(rec?.effectiveN ?? "--").toString().padStart(7)}` +
+        `${win.padStart(8)}${nul.padStart(7)}${lb.padStart(8)}  ${SYMBOL[a.verdict]}`
     );
   }
 

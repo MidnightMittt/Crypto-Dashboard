@@ -52,6 +52,9 @@ describe("lookupMetricPerformance", () => {
     hasHistoricalSource: true,
     n24h: 500,
     effectiveN24h: 250,
+    byHoldingPeriod: {
+      "24h": { n: 500, effectiveN: 250, blockLength: 2, winRate: 0.6, baseRate: 0.53, significant: true },
+    },
     baseRate24h: 0.53,
     winRate24h: 0.6,
     winRate7d: 0.55,

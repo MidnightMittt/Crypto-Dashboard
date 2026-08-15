@@ -149,6 +149,28 @@ export interface BacktestResearch {
  * stay research-only, same split rationale as `BacktestStats` vs.
  * `BacktestResearch` above.
  */
+/**
+ * One metric's directional record at one holding period, with the overlap
+ * correction that horizon actually requires.
+ *
+ * `effectiveN` is the only count that should reach a significance test.
+ * `n` is kept beside it so the gap is visible rather than implied — a reader
+ * seeing 1,762 raw and 881 effective learns something about the replay that
+ * either number alone hides.
+ */
+export interface HorizonRecord {
+  /** Scored occurrences at this horizon. */
+  n: number;
+  /** How many independent observations `n` is worth, after overlap. */
+  effectiveN: number;
+  /** The block length used, so the correction is auditable, not asserted. */
+  blockLength: number;
+  winRate: number | null;
+  /** The drift-matched null this horizon must beat, never a bare 50%. */
+  baseRate: number | null;
+  significant: boolean | null;
+}
+
 export interface MetricPerformanceSummary {
   metricId: string;
   label: string;
@@ -165,9 +187,25 @@ export interface MetricPerformanceSummary {
    *
    * 24h windows sampled daily do not overlap each other in TIME (one ends
    * where the next begins), so the cross-sectional dependence is the only one
-   * at this horizon. The 7d bucket suffers both and is not published here.
+   * at this horizon. The 7d bucket suffers both — see `byHoldingPeriod`,
+   * which publishes every horizon with its own block length.
    */
   effectiveN24h: number | null;
+  /**
+   * THE SAME EVIDENCE AT EVERY HORIZON, each with its own overlap correction.
+   *
+   * Publishing 24h alone made every other horizon unjudgeable, and a metric
+   * does not owe its edge to the horizon we happened to publish. `funding`
+   * is the case that forced this: 30.3% at 24h and 57.6% at 7d, carrying the
+   * engine's largest weight, with no way to tell which number was real
+   * because only the 24h sample had been corrected for overlap.
+   *
+   * The block length differs by horizon and is carried alongside so a reader
+   * can see why the same raw n yields different independent counts — 7d
+   * windows sampled daily share six of seven days, the shorter horizons are
+   * back-to-back and share nothing in time.
+   */
+  byHoldingPeriod: Partial<Record<HoldingPeriod, HorizonRecord>>;
   /**
    * What firing blindly would have won at 24h — the number `winRate24h`
    * must BEAT, not 50%. The asset drifts; a bullish 53% against a 54%

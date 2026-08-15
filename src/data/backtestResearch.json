@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1786604227133,
+  "generatedAt": 1786777421808,
   "coverageStart": "2022-08-14",
   "coverageEnd": "2026-07-31",
   "hypotheses": {
@@ -1641,7 +1641,7 @@
       "subset": [
         "positioning"
       ],
-      "label": "Positioning Intelligence bullish",
+      "label": "Trader Positioning bullish",
       "holdingPeriod": "1h",
       "stat": {
         "n": 27,
@@ -1679,7 +1679,7 @@
       "subset": [
         "positioning"
       ],
-      "label": "Positioning Intelligence bullish",
+      "label": "Trader Positioning bullish",
       "holdingPeriod": "4h",
       "stat": {
         "n": 27,
@@ -1717,7 +1717,7 @@
       "subset": [
         "positioning"
       ],
-      "label": "Positioning Intelligence bullish",
+      "label": "Trader Positioning bullish",
       "holdingPeriod": "24h",
       "stat": {
         "n": 27,
@@ -1755,7 +1755,7 @@
       "subset": [
         "positioning"
       ],
-      "label": "Positioning Intelligence bullish",
+      "label": "Trader Positioning bullish",
       "holdingPeriod": "7d",
       "stat": {
         "n": 27,
@@ -1793,7 +1793,7 @@
       "subset": [
         "marketStructure"
       ],
-      "label": "Market Structure bullish",
+      "label": "Trend & Structure bullish",
       "holdingPeriod": "1h",
       "stat": {
         "n": 645,
@@ -1831,7 +1831,7 @@
       "subset": [
         "marketStructure"
       ],
-      "label": "Market Structure bullish",
+      "label": "Trend & Structure bullish",
       "holdingPeriod": "4h",
       "stat": {
         "n": 645,
@@ -1869,7 +1869,7 @@
       "subset": [
         "marketStructure"
       ],
-      "label": "Market Structure bullish",
+      "label": "Trend & Structure bullish",
       "holdingPeriod": "24h",
       "stat": {
         "n": 645,
@@ -1907,7 +1907,7 @@
       "subset": [
         "marketStructure"
       ],
-      "label": "Market Structure bullish",
+      "label": "Trend & Structure bullish",
       "holdingPeriod": "7d",
       "stat": {
         "n": 644,
@@ -1946,7 +1946,7 @@
         "positioning",
         "marketStructure"
       ],
-      "label": "Positioning Intelligence + Market Structure bullish",
+      "label": "Trader Positioning + Trend & Structure bullish",
       "holdingPeriod": "1h",
       "stat": {
         "n": 74,
@@ -1985,7 +1985,7 @@
         "positioning",
         "marketStructure"
       ],
-      "label": "Positioning Intelligence + Market Structure bullish",
+      "label": "Trader Positioning + Trend & Structure bullish",
       "holdingPeriod": "4h",
       "stat": {
         "n": 74,
@@ -2024,7 +2024,7 @@
         "positioning",
         "marketStructure"
       ],
-      "label": "Positioning Intelligence + Market Structure bullish",
+      "label": "Trader Positioning + Trend & Structure bullish",
       "holdingPeriod": "24h",
       "stat": {
         "n": 74,
@@ -2063,7 +2063,7 @@
         "positioning",
         "marketStructure"
       ],
-      "label": "Positioning Intelligence + Market Structure bullish",
+      "label": "Trader Positioning + Trend & Structure bullish",
       "holdingPeriod": "7d",
       "stat": {
         "n": 74,
@@ -2101,7 +2101,7 @@
       "subset": [
         "leadingDrivers"
       ],
-      "label": "Leading Drivers bullish",
+      "label": "Money Flow bullish",
       "holdingPeriod": "1h",
       "stat": {
         "n": 424,
@@ -2139,7 +2139,7 @@
       "subset": [
         "leadingDrivers"
       ],
-      "label": "Leading Drivers bullish",
+      "label": "Money Flow bullish",
       "holdingPeriod": "4h",
       "stat": {
         "n": 424,
@@ -2177,7 +2177,7 @@
       "subset": [
         "leadingDrivers"
       ],
-      "label": "Leading Drivers bullish",
+      "label": "Money Flow bullish",
       "holdingPeriod": "24h",
       "stat": {
         "n": 424,
@@ -2215,7 +2215,7 @@
       "subset": [
         "leadingDrivers"
       ],
-      "label": "Leading Drivers bullish",
+      "label": "Money Flow bullish",
       "holdingPeriod": "7d",
       "stat": {
         "n": 424,
@@ -2254,7 +2254,7 @@
         "positioning",
         "leadingDrivers"
       ],
-      "label": "Positioning Intelligence + Leading Drivers bullish",
+      "label": "Trader Positioning + Money Flow bullish",
       "holdingPeriod": "1h",
       "stat": {
         "n": 22,
@@ -2293,7 +2293,7 @@
         "positioning",
         "leadingDrivers"
       ],
-      "label": "Positioning Intelligence + Leading Drivers bullish",
+      "label": "Trader Positioning + Money Flow bullish",
       "holdingPeriod": "4h",
       "stat": {
         "n": 22,
@@ -2332,7 +2332,7 @@
         "positioning",
         "leadingDrivers"
       ],
-      "label": "Positioning Intelligence + Leading Drivers bullish",
+      "label": "Trader Positioning + Money Flow bullish",
       "holdingPeriod": "24h",
       "stat": {
         "n": 22,
@@ -2371,7 +2371,7 @@
         "positioning",
         "leadingDrivers"
       ],
-      "label": "Positioning Intelligence + Leading Drivers bullish",
+      "label": "Trader Positioning + Money Flow bullish",
       "holdingPeriod": "7d",
       "stat": {
         "n": 22,
@@ -2410,7 +2410,7 @@
         "marketStructure",
         "leadingDrivers"
       ],
-      "label": "Market Structure + Leading Drivers bullish",
+      "label": "Trend & Structure + Money Flow bullish",
       "holdingPeriod": "1h",
       "stat": {
         "n": 264,
@@ -2449,7 +2449,7 @@
         "marketStructure",
         "leadingDrivers"
       ],
-      "label": "Market Structure + Leading Drivers bullish",
+      "label": "Trend & Structure + Money Flow bullish",
       "holdingPeriod": "4h",
       "stat": {
         "n": 264,
@@ -2488,7 +2488,7 @@
         "marketStructure",
         "leadingDrivers"
       ],
-      "label": "Market Structure + Leading Drivers bullish",
+      "label": "Trend & Structure + Money Flow bullish",
       "holdingPeriod": "24h",
       "stat": {
         "n": 264,
@@ -2527,7 +2527,7 @@
         "marketStructure",
         "leadingDrivers"
       ],
-      "label": "Market Structure + Leading Drivers bullish",
+      "label": "Trend & Structure + Money Flow bullish",
       "holdingPeriod": "7d",
       "stat": {
         "n": 264,
@@ -2567,7 +2567,7 @@
         "marketStructure",
         "leadingDrivers"
       ],
-      "label": "Positioning Intelligence + Market Structure + Leading Drivers bullish",
+      "label": "Trader Positioning + Trend & Structure + Money Flow bullish",
       "holdingPeriod": "1h",
       "stat": {
         "n": 41,
@@ -2607,7 +2607,7 @@
         "marketStructure",
         "leadingDrivers"
       ],
-      "label": "Positioning Intelligence + Market Structure + Leading Drivers bullish",
+      "label": "Trader Positioning + Trend & Structure + Money Flow bullish",
       "holdingPeriod": "4h",
       "stat": {
         "n": 41,
@@ -2647,7 +2647,7 @@
         "marketStructure",
         "leadingDrivers"
       ],
-      "label": "Positioning Intelligence + Market Structure + Leading Drivers bullish",
+      "label": "Trader Positioning + Trend & Structure + Money Flow bullish",
       "holdingPeriod": "24h",
       "stat": {
         "n": 41,
@@ -2687,7 +2687,7 @@
         "marketStructure",
         "leadingDrivers"
       ],
-      "label": "Positioning Intelligence + Market Structure + Leading Drivers bullish",
+      "label": "Trader Positioning + Trend & Structure + Money Flow bullish",
       "holdingPeriod": "7d",
       "stat": {
         "n": 41,
@@ -2725,7 +2725,7 @@
       "subset": [
         "risk"
       ],
-      "label": "Risk Monitor bullish",
+      "label": "Risk & Volatility bullish",
       "holdingPeriod": "1h",
       "stat": {
         "n": 0,
@@ -2756,7 +2756,7 @@
       "subset": [
         "risk"
       ],
-      "label": "Risk Monitor bullish",
+      "label": "Risk & Volatility bullish",
       "holdingPeriod": "4h",
       "stat": {
         "n": 0,
@@ -2787,7 +2787,7 @@
       "subset": [
         "risk"
       ],
-      "label": "Risk Monitor bullish",
+      "label": "Risk & Volatility bullish",
       "holdingPeriod": "24h",
       "stat": {
         "n": 0,
@@ -2818,7 +2818,7 @@
       "subset": [
         "risk"
       ],
-      "label": "Risk Monitor bullish",
+      "label": "Risk & Volatility bullish",
       "holdingPeriod": "7d",
       "stat": {
         "n": 0,
@@ -2850,7 +2850,7 @@
         "positioning",
         "risk"
       ],
-      "label": "Positioning Intelligence + Risk Monitor bullish",
+      "label": "Trader Positioning + Risk & Volatility bullish",
       "holdingPeriod": "1h",
       "stat": {
         "n": 0,
@@ -2882,7 +2882,7 @@
         "positioning",
         "risk"
       ],
-      "label": "Positioning Intelligence + Risk Monitor bullish",
+      "label": "Trader Positioning + Risk & Volatility bullish",
       "holdingPeriod": "4h",
       "stat": {
         "n": 0,
@@ -2914,7 +2914,7 @@
         "positioning",
         "risk"
       ],
-      "label": "Positioning Intelligence + Risk Monitor bullish",
+      "label": "Trader Positioning + Risk & Volatility bullish",
       "holdingPeriod": "24h",
       "stat": {
         "n": 0,
@@ -2946,7 +2946,7 @@
         "positioning",
         "risk"
       ],
-      "label": "Positioning Intelligence + Risk Monitor bullish",
+      "label": "Trader Positioning + Risk & Volatility bullish",
       "holdingPeriod": "7d",
       "stat": {
         "n": 0,
@@ -2978,7 +2978,7 @@
         "marketStructure",
         "risk"
       ],
-      "label": "Market Structure + Risk Monitor bullish",
+      "label": "Trend & Structure + Risk & Volatility bullish",
       "holdingPeriod": "1h",
       "stat": {
         "n": 0,
@@ -3010,7 +3010,7 @@
         "marketStructure",
         "risk"
       ],
-      "label": "Market Structure + Risk Monitor bullish",
+      "label": "Trend & Structure + Risk & Volatility bullish",
       "holdingPeriod": "4h",
       "stat": {
         "n": 0,
@@ -3042,7 +3042,7 @@
         "marketStructure",
         "risk"
       ],
-      "label": "Market Structure + Risk Monitor bullish",
+      "label": "Trend & Structure + Risk & Volatility bullish",
       "holdingPeriod": "24h",
       "stat": {
         "n": 0,
@@ -3074,7 +3074,7 @@
         "marketStructure",
         "risk"
       ],
-      "label": "Market Structure + Risk Monitor bullish",
+      "label": "Trend & Structure + Risk & Volatility bullish",
       "holdingPeriod": "7d",
       "stat": {
         "n": 0,
@@ -3107,7 +3107,7 @@
         "marketStructure",
         "risk"
       ],
-      "label": "Positioning Intelligence + Market Structure + Risk Monitor bullish",
+      "label": "Trader Positioning + Trend & Structure + Risk & Volatility bullish",
       "holdingPeriod": "1h",
       "stat": {
         "n": 0,
@@ -3140,7 +3140,7 @@
         "marketStructure",
         "risk"
       ],
-      "label": "Positioning Intelligence + Market Structure + Risk Monitor bullish",
+      "label": "Trader Positioning + Trend & Structure + Risk & Volatility bullish",
       "holdingPeriod": "4h",
       "stat": {
         "n": 0,
@@ -3173,7 +3173,7 @@
         "marketStructure",
         "risk"
       ],
-      "label": "Positioning Intelligence + Market Structure + Risk Monitor bullish",
+      "label": "Trader Positioning + Trend & Structure + Risk & Volatility bullish",
       "holdingPeriod": "24h",
       "stat": {
         "n": 0,
@@ -3206,7 +3206,7 @@
         "marketStructure",
         "risk"
       ],
-      "label": "Positioning Intelligence + Market Structure + Risk Monitor bullish",
+      "label": "Trader Positioning + Trend & Structure + Risk & Volatility bullish",
       "holdingPeriod": "7d",
       "stat": {
         "n": 0,
@@ -3238,7 +3238,7 @@
         "leadingDrivers",
         "risk"
       ],
-      "label": "Leading Drivers + Risk Monitor bullish",
+      "label": "Money Flow + Risk & Volatility bullish",
       "holdingPeriod": "1h",
       "stat": {
         "n": 0,
@@ -3270,7 +3270,7 @@
         "leadingDrivers",
         "risk"
       ],
-      "label": "Leading Drivers + Risk Monitor bullish",
+      "label": "Money Flow + Risk & Volatility bullish",
       "holdingPeriod": "4h",
       "stat": {
         "n": 0,
@@ -3302,7 +3302,7 @@
         "leadingDrivers",
         "risk"
       ],
-      "label": "Leading Drivers + Risk Monitor bullish",
+      "label": "Money Flow + Risk & Volatility bullish",
       "holdingPeriod": "24h",
       "stat": {
         "n": 0,
@@ -3334,7 +3334,7 @@
         "leadingDrivers",
         "risk"
       ],
-      "label": "Leading Drivers + Risk Monitor bullish",
+      "label": "Money Flow + Risk & Volatility bullish",
       "holdingPeriod": "7d",
       "stat": {
         "n": 0,
@@ -3367,7 +3367,7 @@
         "leadingDrivers",
         "risk"
       ],
-      "label": "Positioning Intelligence + Leading Drivers + Risk Monitor bullish",
+      "label": "Trader Positioning + Money Flow + Risk & Volatility bullish",
       "holdingPeriod": "1h",
       "stat": {
         "n": 0,
@@ -3400,7 +3400,7 @@
         "leadingDrivers",
         "risk"
       ],
-      "label": "Positioning Intelligence + Leading Drivers + Risk Monitor bullish",
+      "label": "Trader Positioning + Money Flow + Risk & Volatility bullish",
       "holdingPeriod": "4h",
       "stat": {
         "n": 0,
@@ -3433,7 +3433,7 @@
         "leadingDrivers",
         "risk"
       ],
-      "label": "Positioning Intelligence + Leading Drivers + Risk Monitor bullish",
+      "label": "Trader Positioning + Money Flow + Risk & Volatility bullish",
       "holdingPeriod": "24h",
       "stat": {
         "n": 0,
@@ -3466,7 +3466,7 @@
         "leadingDrivers",
         "risk"
       ],
-      "label": "Positioning Intelligence + Leading Drivers + Risk Monitor bullish",
+      "label": "Trader Positioning + Money Flow + Risk & Volatility bullish",
       "holdingPeriod": "7d",
       "stat": {
         "n": 0,
@@ -3499,7 +3499,7 @@
         "leadingDrivers",
         "risk"
       ],
-      "label": "Market Structure + Leading Drivers + Risk Monitor bullish",
+      "label": "Trend & Structure + Money Flow + Risk & Volatility bullish",
       "holdingPeriod": "1h",
       "stat": {
         "n": 0,
@@ -3532,7 +3532,7 @@
         "leadingDrivers",
         "risk"
       ],
-      "label": "Market Structure + Leading Drivers + Risk Monitor bullish",
+      "label": "Trend & Structure + Money Flow + Risk & Volatility bullish",
       "holdingPeriod": "4h",
       "stat": {
         "n": 0,
@@ -3565,7 +3565,7 @@
         "leadingDrivers",
         "risk"
       ],
-      "label": "Market Structure + Leading Drivers + Risk Monitor bullish",
+      "label": "Trend & Structure + Money Flow + Risk & Volatility bullish",
       "holdingPeriod": "24h",
       "stat": {
         "n": 0,
@@ -3598,7 +3598,7 @@
         "leadingDrivers",
         "risk"
       ],
-      "label": "Market Structure + Leading Drivers + Risk Monitor bullish",
+      "label": "Trend & Structure + Money Flow + Risk & Volatility bullish",
       "holdingPeriod": "7d",
       "stat": {
         "n": 0,

@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1786604227139,
+  "generatedAt": 1786777421815,
   "coverageStart": "2022-08-14",
   "coverageEnd": "2026-07-31",
   "metrics": {
@@ -9,6 +9,40 @@
       "hasHistoricalSource": true,
       "n24h": 33,
       "effectiveN24h": 17,
+      "byHoldingPeriod": {
+        "1h": {
+          "n": 33,
+          "effectiveN": 17,
+          "blockLength": 2,
+          "winRate": 0.48484848484848486,
+          "baseRate": 0.4987862045873092,
+          "significant": false
+        },
+        "4h": {
+          "n": 33,
+          "effectiveN": 17,
+          "blockLength": 2,
+          "winRate": 0.3333333333333333,
+          "baseRate": 0.5069060773480661,
+          "significant": false
+        },
+        "24h": {
+          "n": 33,
+          "effectiveN": 17,
+          "blockLength": 2,
+          "winRate": 0.30303030303030304,
+          "baseRate": 0.49976979742173067,
+          "significant": true
+        },
+        "7d": {
+          "n": 33,
+          "effectiveN": 2,
+          "blockLength": 14,
+          "winRate": 0.5757575757575758,
+          "baseRate": 0.5101638794584852,
+          "significant": false
+        }
+      },
       "baseRate24h": 0.49976979742173067,
       "winRate24h": 0.30303030303030304,
       "winRate7d": 0.5757575757575758,
@@ -39,6 +73,40 @@
       "hasHistoricalSource": true,
       "n24h": 749,
       "effectiveN24h": 375,
+      "byHoldingPeriod": {
+        "1h": {
+          "n": 749,
+          "effectiveN": 375,
+          "blockLength": 2,
+          "winRate": 0.48731642189586116,
+          "baseRate": 0.499005119164408,
+          "significant": false
+        },
+        "4h": {
+          "n": 749,
+          "effectiveN": 375,
+          "blockLength": 2,
+          "winRate": 0.46461949265687585,
+          "baseRate": 0.5048775900095204,
+          "significant": true
+        },
+        "24h": {
+          "n": 749,
+          "effectiveN": 375,
+          "blockLength": 2,
+          "winRate": 0.4672897196261682,
+          "baseRate": 0.5002849102670983,
+          "significant": false
+        },
+        "7d": {
+          "n": 747,
+          "effectiveN": 53,
+          "blockLength": 14,
+          "winRate": 0.49129852744310576,
+          "baseRate": 0.5089477319142827,
+          "significant": false
+        }
+      },
       "baseRate24h": 0.5002849102670983,
       "winRate24h": 0.4672897196261682,
       "winRate7d": 0.49129852744310576,
@@ -69,6 +137,40 @@
       "hasHistoricalSource": true,
       "n24h": 2348,
       "effectiveN24h": 1174,
+      "byHoldingPeriod": {
+        "1h": {
+          "n": 2348,
+          "effectiveN": 1174,
+          "blockLength": 2,
+          "winRate": 0.4940374787052811,
+          "baseRate": 0.5009538504616301,
+          "significant": false
+        },
+        "4h": {
+          "n": 2348,
+          "effectiveN": 1174,
+          "blockLength": 2,
+          "winRate": 0.4833901192504259,
+          "baseRate": 0.49304097998060364,
+          "significant": false
+        },
+        "24h": {
+          "n": 2348,
+          "effectiveN": 1174,
+          "blockLength": 2,
+          "winRate": 0.50809199318569,
+          "baseRate": 0.5000805905108031,
+          "significant": false
+        },
+        "7d": {
+          "n": 2344,
+          "effectiveN": 167,
+          "blockLength": 14,
+          "winRate": 0.5063993174061433,
+          "baseRate": 0.4891604001151698,
+          "significant": false
+        }
+      },
       "baseRate24h": 0.5000805905108031,
       "winRate24h": 0.50809199318569,
       "winRate7d": 0.5063993174061433,
@@ -99,6 +201,40 @@
       "hasHistoricalSource": true,
       "n24h": 1272,
       "effectiveN24h": 636,
+      "byHoldingPeriod": {
+        "1h": {
+          "n": 1272,
+          "effectiveN": 636,
+          "blockLength": 2,
+          "winRate": 0.5,
+          "baseRate": 0.49864864571389406,
+          "significant": false
+        },
+        "4h": {
+          "n": 1272,
+          "effectiveN": 636,
+          "blockLength": 2,
+          "winRate": 0.5078616352201258,
+          "baseRate": 0.5086825463011317,
+          "significant": false
+        },
+        "24h": {
+          "n": 1272,
+          "effectiveN": 636,
+          "blockLength": 2,
+          "winRate": 0.5117924528301887,
+          "baseRate": 0.4986991382605282,
+          "significant": false
+        },
+        "7d": {
+          "n": 1270,
+          "effectiveN": 91,
+          "blockLength": 14,
+          "winRate": 0.5055118110236221,
+          "baseRate": 0.5087627013428351,
+          "significant": false
+        }
+      },
       "baseRate24h": 0.4986991382605282,
       "winRate24h": 0.5117924528301887,
       "winRate7d": 0.5055118110236221,
@@ -129,6 +265,40 @@
       "hasHistoricalSource": true,
       "n24h": 2706,
       "effectiveN24h": 1353,
+      "byHoldingPeriod": {
+        "1h": {
+          "n": 2706,
+          "effectiveN": 1353,
+          "blockLength": 2,
+          "winRate": 0.4977827050997783,
+          "baseRate": 0.5007028579828499,
+          "significant": false
+        },
+        "4h": {
+          "n": 2706,
+          "effectiveN": 1353,
+          "blockLength": 2,
+          "winRate": 0.500369549150037,
+          "baseRate": 0.4950651917367992,
+          "significant": false
+        },
+        "24h": {
+          "n": 2706,
+          "effectiveN": 1353,
+          "blockLength": 2,
+          "winRate": 0.4970436067997044,
+          "baseRate": 0.4994211757788027,
+          "significant": false
+        },
+        "7d": {
+          "n": 2702,
+          "effectiveN": 193,
+          "blockLength": 14,
+          "winRate": 0.5011102886750555,
+          "baseRate": 0.4897821704735924,
+          "significant": false
+        }
+      },
       "baseRate24h": 0.4994211757788027,
       "winRate24h": 0.4970436067997044,
       "winRate7d": 0.5011102886750555,
@@ -159,6 +329,7 @@
       "hasHistoricalSource": false,
       "n24h": null,
       "effectiveN24h": null,
+      "byHoldingPeriod": {},
       "baseRate24h": null,
       "winRate24h": null,
       "winRate7d": null,
@@ -177,6 +348,7 @@
       "hasHistoricalSource": false,
       "n24h": null,
       "effectiveN24h": null,
+      "byHoldingPeriod": {},
       "baseRate24h": null,
       "winRate24h": null,
       "winRate7d": null,
@@ -195,6 +367,40 @@
       "hasHistoricalSource": true,
       "n24h": 2195,
       "effectiveN24h": 1098,
+      "byHoldingPeriod": {
+        "1h": {
+          "n": 2195,
+          "effectiveN": 1098,
+          "blockLength": 2,
+          "winRate": 0.48838268792710704,
+          "baseRate": 0.4998955436136809,
+          "significant": false
+        },
+        "4h": {
+          "n": 2195,
+          "effectiveN": 1098,
+          "blockLength": 2,
+          "winRate": 0.4911161731207289,
+          "baseRate": 0.49932103348896867,
+          "significant": false
+        },
+        "24h": {
+          "n": 2195,
+          "effectiveN": 1098,
+          "blockLength": 2,
+          "winRate": 0.4797266514806378,
+          "baseRate": 0.5003778678312106,
+          "significant": false
+        },
+        "7d": {
+          "n": 2193,
+          "effectiveN": 157,
+          "blockLength": 14,
+          "winRate": 0.48654810761513906,
+          "baseRate": 0.5004153161795434,
+          "significant": false
+        }
+      },
       "baseRate24h": 0.5003778678312106,
       "winRate24h": 0.4797266514806378,
       "winRate7d": 0.48654810761513906,
@@ -225,6 +431,40 @@
       "hasHistoricalSource": true,
       "n24h": 542,
       "effectiveN24h": 271,
+      "byHoldingPeriod": {
+        "1h": {
+          "n": 542,
+          "effectiveN": 271,
+          "blockLength": 2,
+          "winRate": 0.518450184501845,
+          "baseRate": 0.49978211453385313,
+          "significant": false
+        },
+        "4h": {
+          "n": 542,
+          "effectiveN": 271,
+          "blockLength": 2,
+          "winRate": 0.5239852398523985,
+          "baseRate": 0.5003058041630147,
+          "significant": false
+        },
+        "24h": {
+          "n": 542,
+          "effectiveN": 271,
+          "blockLength": 2,
+          "winRate": 0.6568265682656826,
+          "baseRate": 0.4999184522231959,
+          "significant": true
+        },
+        "7d": {
+          "n": 540,
+          "effectiveN": 39,
+          "blockLength": 14,
+          "winRate": 0.5703703703703704,
+          "baseRate": 0.5001664873725732,
+          "significant": true
+        }
+      },
       "baseRate24h": 0.4999184522231959,
       "winRate24h": 0.6568265682656826,
       "winRate7d": 0.5703703703703704,
@@ -255,6 +495,40 @@
       "hasHistoricalSource": true,
       "n24h": 2065,
       "effectiveN24h": 1033,
+      "byHoldingPeriod": {
+        "1h": {
+          "n": 2065,
+          "effectiveN": 1033,
+          "blockLength": 2,
+          "winRate": 0.5065375302663438,
+          "baseRate": 0.4998270972402398,
+          "significant": false
+        },
+        "4h": {
+          "n": 2065,
+          "effectiveN": 1033,
+          "blockLength": 2,
+          "winRate": 0.49249394673123487,
+          "baseRate": 0.4997317833397988,
+          "significant": false
+        },
+        "24h": {
+          "n": 2065,
+          "effectiveN": 1033,
+          "blockLength": 2,
+          "winRate": 0.4808716707021792,
+          "baseRate": 0.5002056773641209,
+          "significant": false
+        },
+        "7d": {
+          "n": 2063,
+          "effectiveN": 147,
+          "blockLength": 14,
+          "winRate": 0.49878817256422686,
+          "baseRate": 0.5003891927117363,
+          "significant": false
+        }
+      },
       "baseRate24h": 0.5002056773641209,
       "winRate24h": 0.4808716707021792,
       "winRate7d": 0.49878817256422686,
@@ -285,6 +559,7 @@
       "hasHistoricalSource": false,
       "n24h": null,
       "effectiveN24h": null,
+      "byHoldingPeriod": {},
       "baseRate24h": null,
       "winRate24h": null,
       "winRate7d": null,
@@ -303,6 +578,7 @@
       "hasHistoricalSource": false,
       "n24h": null,
       "effectiveN24h": null,
+      "byHoldingPeriod": {},
       "baseRate24h": null,
       "winRate24h": null,
       "winRate7d": null,
@@ -321,6 +597,7 @@
       "hasHistoricalSource": false,
       "n24h": null,
       "effectiveN24h": null,
+      "byHoldingPeriod": {},
       "baseRate24h": null,
       "winRate24h": null,
       "winRate7d": null,
@@ -339,6 +616,40 @@
       "hasHistoricalSource": true,
       "n24h": 2264,
       "effectiveN24h": 1132,
+      "byHoldingPeriod": {
+        "1h": {
+          "n": 2264,
+          "effectiveN": 1132,
+          "blockLength": 2,
+          "winRate": 0.5128091872791519,
+          "baseRate": 0.4994963810202493,
+          "significant": false
+        },
+        "4h": {
+          "n": 2264,
+          "effectiveN": 1132,
+          "blockLength": 2,
+          "winRate": 0.523851590106007,
+          "baseRate": 0.5018912402631668,
+          "significant": true
+        },
+        "24h": {
+          "n": 2264,
+          "effectiveN": 1132,
+          "blockLength": 2,
+          "winRate": 0.5013250883392226,
+          "baseRate": 0.5001891240263107,
+          "significant": false
+        },
+        "7d": {
+          "n": 2260,
+          "effectiveN": 161,
+          "blockLength": 14,
+          "winRate": 0.5353982300884956,
+          "baseRate": 0.5038188961921243,
+          "significant": true
+        }
+      },
       "baseRate24h": 0.5001891240263107,
       "winRate24h": 0.5013250883392226,
       "winRate7d": 0.5353982300884956,
@@ -369,6 +680,40 @@
       "hasHistoricalSource": true,
       "n24h": 808,
       "effectiveN24h": 404,
+      "byHoldingPeriod": {
+        "1h": {
+          "n": 808,
+          "effectiveN": 404,
+          "blockLength": 2,
+          "winRate": 0.5024752475247525,
+          "baseRate": 0.49933674306656933,
+          "significant": false
+        },
+        "4h": {
+          "n": 808,
+          "effectiveN": 404,
+          "blockLength": 2,
+          "winRate": 0.5185643564356436,
+          "baseRate": 0.5028034571412986,
+          "significant": false
+        },
+        "24h": {
+          "n": 808,
+          "effectiveN": 404,
+          "blockLength": 2,
+          "winRate": 0.5346534653465347,
+          "baseRate": 0.5002803457141308,
+          "significant": false
+        },
+        "7d": {
+          "n": 806,
+          "effectiveN": 58,
+          "blockLength": 14,
+          "winRate": 0.543424317617866,
+          "baseRate": 0.5055942807917081,
+          "significant": true
+        }
+      },
       "baseRate24h": 0.5002803457141308,
       "winRate24h": 0.5346534653465347,
       "winRate7d": 0.543424317617866,
@@ -399,6 +744,7 @@
       "hasHistoricalSource": false,
       "n24h": null,
       "effectiveN24h": null,
+      "byHoldingPeriod": {},
       "baseRate24h": null,
       "winRate24h": null,
       "winRate7d": null,
@@ -417,6 +763,40 @@
       "hasHistoricalSource": true,
       "n24h": 2350,
       "effectiveN24h": 1175,
+      "byHoldingPeriod": {
+        "1h": {
+          "n": 2350,
+          "effectiveN": 1175,
+          "blockLength": 2,
+          "winRate": 0.5085106382978724,
+          "baseRate": 0.5005463147995597,
+          "significant": false
+        },
+        "4h": {
+          "n": 2350,
+          "effectiveN": 1175,
+          "blockLength": 2,
+          "winRate": 0.4957446808510638,
+          "baseRate": 0.4958916186669741,
+          "significant": false
+        },
+        "24h": {
+          "n": 2350,
+          "effectiveN": 1175,
+          "blockLength": 2,
+          "winRate": 0.5072340425531915,
+          "baseRate": 0.4995891618667135,
+          "significant": false
+        },
+        "7d": {
+          "n": 2346,
+          "effectiveN": 168,
+          "blockLength": 14,
+          "winRate": 0.5080988917306053,
+          "baseRate": 0.4917814260227986,
+          "significant": false
+        }
+      },
       "baseRate24h": 0.4995891618667135,
       "winRate24h": 0.5072340425531915,
       "winRate7d": 0.5080988917306053,
@@ -447,6 +827,40 @@
       "hasHistoricalSource": true,
       "n24h": 1761,
       "effectiveN24h": 881,
+      "byHoldingPeriod": {
+        "1h": {
+          "n": 1761,
+          "effectiveN": 881,
+          "blockLength": 2,
+          "winRate": 0.48722316865417375,
+          "baseRate": 0.49967606928509134,
+          "significant": false
+        },
+        "4h": {
+          "n": 1761,
+          "effectiveN": 881,
+          "blockLength": 2,
+          "winRate": 0.5002839295854627,
+          "baseRate": 0.5007615901311736,
+          "significant": false
+        },
+        "24h": {
+          "n": 1761,
+          "effectiveN": 881,
+          "blockLength": 2,
+          "winRate": 0.4906303236797274,
+          "baseRate": 0.5001831424259808,
+          "significant": false
+        },
+        "7d": {
+          "n": 1759,
+          "effectiveN": 126,
+          "blockLength": 14,
+          "winRate": 0.4559408754974417,
+          "baseRate": 0.501952810167352,
+          "significant": true
+        }
+      },
       "baseRate24h": 0.5001831424259808,
       "winRate24h": 0.4906303236797274,
       "winRate7d": 0.4559408754974417,
@@ -477,6 +891,7 @@
       "hasHistoricalSource": false,
       "n24h": null,
       "effectiveN24h": null,
+      "byHoldingPeriod": {},
       "baseRate24h": null,
       "winRate24h": null,
       "winRate7d": null,
