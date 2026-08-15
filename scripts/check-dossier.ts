@@ -99,10 +99,34 @@ const PATTERNS = {
   price: /font-mono text-sm text-ink">\$(\d+\.\d+)</,
   moveNarrative: /typically moves (\d+\.\d+)% in a day/,
   moveStopSizing: /Typical daily move · <\/span>(\d+\.\d+)% of price/,
-  analysts: /(\d+) analysts average[^(]*\((\d+) buy · (\d+) hold · (\d+) sell\)/,
-  impliedVol: /Implied move \(ATM IV\)<\/dt><dd[^>]*>(\d+)%/,
-  chainOpenInterest: /([\d,]+) contracts · CBOE/,
-  strikeContracts: /([\d,]+) contracts/g,
+  /*
+   * Copy changed under this check on 2026-08-14; both quantities below are now
+   * named, so these patterns measure what they claim to.
+   *
+   * The count leading the analyst line used to come from Nasdaq's ratings
+   * survey while the breakdown came from the targetprice endpoint — different
+   * panels, so the line read "5 analysts (15 buy · 0 hold · 0 sell)". It now
+   * leads with the covering count, which is the breakdown's own sum.
+   */
+  analysts: /(\d+) analysts publish price targets on it \((\d+) buy · (\d+) hold · (\d+) sell\)/,
+  /*
+   * This never matched the dossier — there is no "Implied move (ATM IV)"
+   * <dt>/<dd> pair in it — so the IV/RV check reported SKIP on every symbol
+   * and the 0DTE contamination underneath it went unseen. A pattern that
+   * cannot match is worse than one that fails: it looks like coverage.
+   *
+   * The dossier states ATM IV in prose, with its tenor, in the CBOE panel.
+   */
+  impliedVol: /expiry imply (\d+)% annualised volatility/,
+  /*
+   * This check was comparing a chain CONTRACT COUNT against per-strike OPEN
+   * INTEREST, because the page called both "contracts" — hence chain 1,348 vs
+   * largest strike 49,937 on CIFR and a FAIL on all four symbols. The
+   * arithmetic was never wrong; the noun was overloaded. The page now renders
+   * the real chain open-interest total, which is what this invariant needs.
+   */
+  chainOpenInterest: /out of ([\d,]+) open across the chain/,
+  strikeContracts: /open interest ([\d,]+),/g,
   earningsDate: /Next earnings report: (\d{4}-\d{2}-\d{2})/,
   noEarnings: /(No (?:known )?earnings|no report (?:known|scheduled))/,
   maClaim: /(above|below) (?:its |all )?(?:20,? 50,? and 200|20\/50\/200)[- ]day/,

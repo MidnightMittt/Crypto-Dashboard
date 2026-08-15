@@ -935,8 +935,16 @@ export function OptionsPanel({ d }: { d: TickerDossier }) {
         ? "call-heavy — more standing bets on upside than downside"
         : "roughly balanced between puts and calls";
 
+  /*
+   * "Contracts" meant two different things on this panel and the collision
+   * read as a contradiction: the subtitle is how many contracts are LISTED
+   * (CIFR 1,348) while the concentration line below reports OPEN INTEREST
+   * per strike (49,937). Same noun, different quantity, so one strike
+   * appeared to hold thirty-seven times the whole chain. The arithmetic was
+   * always right; the words were not. Both now say which they are.
+   */
   return (
-    <Panel title="Options positioning" subtitle={`${o.contractCount.toLocaleString()} contracts · CBOE, delayed`}>
+    <Panel title="Options positioning" subtitle={`${o.contractCount.toLocaleString()} contracts listed · CBOE, delayed`}>
       <p className="text-[13px] leading-relaxed text-ink">
         Open interest is {oiLean} (put/call ratio {o.putCallOiRatio.toFixed(2)}).{" "}
         {/* The sentence carries the tenor too, and says why it runs hot on a
@@ -1003,8 +1011,19 @@ export function OptionsPanel({ d }: { d: TickerDossier }) {
         <p className="text-[11px] leading-relaxed text-ink-muted">
           <span className="text-ink">Where positions concentrate · </span>
           {o.largestOiStrikes
-            .map((x) => `${formatPrice(x.strike)} ${x.kind}s (${x.openInterest.toLocaleString()} contracts, ${x.expiry})`)
+            .map(
+              (x) =>
+                `${formatPrice(x.strike)} ${x.kind}s (open interest ${x.openInterest.toLocaleString()}, ${x.expiry})`
+            )
             .join(" · ")}
+          {/*
+           * A strike's open interest says nothing on its own — 49,937 is
+           * enormous on a thin chain and unremarkable on a deep one. The
+           * chain total is what makes it a concentration rather than a
+           * number, and it is the figure a reader reaches for the moment
+           * they see the word "concentrate".
+           */}
+          {` out of ${(o.callOi + o.putOi).toLocaleString()} open across the chain`}
           . Heavy strikes act like magnets into expiry because hedging flows pin price near them.
         </p>
       )}
