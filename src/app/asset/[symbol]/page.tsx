@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/Card";
 import { TickerSearch } from "@/components/search/TickerSearch";
+import { WatchlistStar, WatchlistStrip } from "@/components/watchlist/WatchlistStrip";
 import {
   AnalogsPanel,
   AttentionPanel,
@@ -160,9 +161,13 @@ export default async function AssetPage({ params }: { params: Promise<{ symbol: 
               {d.identity.change24hPct.toFixed(2)}%
             </span>
           </div>
-          <Link href="/scanner" className="text-[11px] uppercase tracking-[0.16em] text-ink-muted hover:text-ink">
-            ← Scanner
-          </Link>
+          <div className="flex items-center gap-3">
+            {/* Beside the identity, because that is what it acts on. */}
+            <WatchlistStar symbol={d.identity.symbol} />
+            <Link href="/scanner" className="text-[11px] uppercase tracking-[0.16em] text-ink-muted hover:text-ink">
+              ← Scanner
+            </Link>
+          </div>
         </div>
 
         {/* Search leads, because searching a ticker is the primary way this
@@ -170,6 +175,10 @@ export default async function AssetPage({ params }: { params: Promise<{ symbol: 
             page you had already finished reading. Without its help text: the
             verdict has to own the first screen. */}
         <TickerSearch showHelp={false} />
+
+        {/* Directly under search: the saved list IS a search shortcut. Renders
+            nothing when empty, so a first-time reader never sees a pitch. */}
+        <WatchlistStrip activeSymbol={d.identity.symbol} />
 
         {PHASE_ORDER.map((phase) => {
           const ids = DOSSIER_SECTIONS.filter((s) => s.phase === phase).map((s) => s.id);
@@ -218,6 +227,9 @@ function NoRead({ symbol, message }: { symbol: string; message: string }) {
       <main className="mx-auto flex max-w-[760px] flex-col gap-5 px-4 py-10 sm:px-6">
         <div className="flex items-baseline justify-between gap-3">
           <h1 className="font-mono text-lg font-semibold text-ink">{symbol}</h1>
+          {/* No star here on purpose: a ticker the engine refuses to score
+              would sit in the watchlist as a row that leads back to this same
+              refusal. Watch it once it can be read. */}
           <Link href="/scanner" className="text-[11px] uppercase tracking-[0.16em] text-ink-muted hover:text-ink">
             ← Scanner
           </Link>
