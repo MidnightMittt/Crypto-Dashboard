@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1786786534078,
+  "generatedAt": 1786786814192,
   "coverageStart": "2022-08-14",
   "coverageEnd": "2026-07-31",
   "metrics": {
@@ -951,6 +951,179 @@
       "sampleSizeLabel": null,
       "confidenceLabel": null,
       "stableAcrossWindows": null
+    }
+  },
+  "moduleGrades": {
+    "funding": {
+      "metricId": "funding",
+      "verdict": "below-base-rate",
+      "holdingPeriod": "1h",
+      "lowerBound": 0.2730570187689643,
+      "effectiveN": 17,
+      "survivesFdr": false,
+      "sentence": "Wins 48.5% at 1h against a 49.9% base rate — below the null on 17 independent observations. Doing nothing beat it."
+    },
+    "openInterest": {
+      "metricId": "openInterest",
+      "verdict": "below-base-rate",
+      "holdingPeriod": "1h",
+      "lowerBound": 0.4371113349627609,
+      "effectiveN": 375,
+      "survivesFdr": false,
+      "sentence": "Wins 48.7% at 1h against a 49.9% base rate — below the null on 375 independent observations. Doing nothing beat it."
+    },
+    "squeezeRisk": {
+      "metricId": "squeezeRisk",
+      "verdict": "not-distinguishable",
+      "holdingPeriod": "24h",
+      "lowerBound": 0.4795142976209578,
+      "effectiveN": 1174,
+      "survivesFdr": false,
+      "sentence": "Wins 50.8% at 24h against a 50.0% base rate, but the 95% lower bound is 48.0% on 1174 independent observations — the interval contains the null, so this is a coin flip as measured."
+    },
+    "longShort": {
+      "metricId": "longShort",
+      "verdict": "not-distinguishable",
+      "holdingPeriod": "24h",
+      "lowerBound": 0.4729896671218312,
+      "effectiveN": 636,
+      "survivesFdr": false,
+      "sentence": "Wins 51.2% at 24h against a 49.9% base rate, but the 95% lower bound is 47.3% on 636 independent observations — the interval contains the null, so this is a coin flip as measured."
+    },
+    "basis": {
+      "metricId": "basis",
+      "verdict": "not-distinguishable",
+      "holdingPeriod": "4h",
+      "lowerBound": 0.47376361808426193,
+      "effectiveN": 1353,
+      "survivesFdr": false,
+      "sentence": "Wins 50.0% at 4h against a 49.5% base rate, but the 95% lower bound is 47.4% on 1353 independent observations — the interval contains the null, so this is a coin flip as measured."
+    },
+    "orderFlow": {
+      "metricId": "orderFlow",
+      "verdict": "unmeasured",
+      "holdingPeriod": null,
+      "lowerBound": null,
+      "effectiveN": null,
+      "survivesFdr": false,
+      "sentence": "No measured directional record with an effective sample behind it. This is an absence of evidence, not evidence the module fails."
+    },
+    "spotCvd": {
+      "metricId": "spotCvd",
+      "verdict": "unmeasured",
+      "holdingPeriod": null,
+      "lowerBound": null,
+      "effectiveN": null,
+      "survivesFdr": false,
+      "sentence": "No measured directional record with an effective sample behind it. This is an absence of evidence, not evidence the module fails."
+    },
+    "technicals": {
+      "metricId": "technicals",
+      "verdict": "below-base-rate",
+      "holdingPeriod": "4h",
+      "lowerBound": 0.46162838272494916,
+      "effectiveN": 1098,
+      "survivesFdr": false,
+      "sentence": "Wins 49.1% at 4h against a 49.9% base rate — below the null on 1098 independent observations. Doing nothing beat it."
+    },
+    "etfFlows": {
+      "metricId": "etfFlows",
+      "verdict": "edge",
+      "holdingPeriod": "24h",
+      "lowerBound": 0.5984614817393878,
+      "effectiveN": 271,
+      "survivesFdr": true,
+      "sentence": "Wins 65.7% at 24h against a 50.0% base rate. The 95% lower bound is 59.8% on 271 independent observations — clear of the null, so this is allowed to move a decision."
+    },
+    "spotPerpVolume": {
+      "metricId": "spotPerpVolume",
+      "verdict": "not-distinguishable",
+      "holdingPeriod": "1h",
+      "lowerBound": 0.47608114094058634,
+      "effectiveN": 1033,
+      "survivesFdr": false,
+      "sentence": "Wins 50.7% at 1h against a 50.0% base rate, but the 95% lower bound is 47.6% on 1033 independent observations — the interval contains the null, so this is a coin flip as measured."
+    },
+    "exchangeFlow": {
+      "metricId": "exchangeFlow",
+      "verdict": "unmeasured",
+      "holdingPeriod": null,
+      "lowerBound": null,
+      "effectiveN": null,
+      "survivesFdr": false,
+      "sentence": "No measured directional record with an effective sample behind it. This is an absence of evidence, not evidence the module fails."
+    },
+    "options": {
+      "metricId": "options",
+      "verdict": "unmeasured",
+      "holdingPeriod": null,
+      "lowerBound": null,
+      "effectiveN": null,
+      "survivesFdr": false,
+      "sentence": "No measured directional record with an effective sample behind it. This is an absence of evidence, not evidence the module fails."
+    },
+    "coinbasePremium": {
+      "metricId": "coinbasePremium",
+      "verdict": "unmeasured",
+      "holdingPeriod": null,
+      "lowerBound": null,
+      "effectiveN": null,
+      "survivesFdr": false,
+      "sentence": "No measured directional record with an effective sample behind it. This is an absence of evidence, not evidence the module fails."
+    },
+    "stablecoins": {
+      "metricId": "stablecoins",
+      "verdict": "not-distinguishable",
+      "holdingPeriod": "4h",
+      "lowerBound": 0.49472573406484444,
+      "effectiveN": 1132,
+      "survivesFdr": false,
+      "sentence": "Wins 52.4% at 4h against a 50.2% base rate, but the 95% lower bound is 49.5% on 1132 independent observations — the interval contains the null, so this is a coin flip as measured."
+    },
+    "fearGreed": {
+      "metricId": "fearGreed",
+      "verdict": "not-distinguishable",
+      "holdingPeriod": "24h",
+      "lowerBound": 0.48591598960762544,
+      "effectiveN": 404,
+      "survivesFdr": false,
+      "sentence": "Wins 53.5% at 24h against a 50.0% base rate, but the 95% lower bound is 48.6% on 404 independent observations — the interval contains the null, so this is a coin flip as measured."
+    },
+    "sectorBreadth": {
+      "metricId": "sectorBreadth",
+      "verdict": "unmeasured",
+      "holdingPeriod": null,
+      "lowerBound": null,
+      "effectiveN": null,
+      "survivesFdr": false,
+      "sentence": "No measured directional record with an effective sample behind it. This is an absence of evidence, not evidence the module fails."
+    },
+    "macroLiquidity": {
+      "metricId": "macroLiquidity",
+      "verdict": "not-distinguishable",
+      "holdingPeriod": "1h",
+      "lowerBound": 0.47994410886450733,
+      "effectiveN": 1175,
+      "survivesFdr": false,
+      "sentence": "Wins 50.9% at 1h against a 50.1% base rate, but the 95% lower bound is 48.0% on 1175 independent observations — the interval contains the null, so this is a coin flip as measured."
+    },
+    "marketStructure": {
+      "metricId": "marketStructure",
+      "verdict": "below-base-rate",
+      "holdingPeriod": "4h",
+      "lowerBound": 0.46733741409141566,
+      "effectiveN": 881,
+      "survivesFdr": false,
+      "sentence": "Wins 50.0% at 4h against a 50.1% base rate — below the null on 881 independent observations. Doing nothing beat it."
+    },
+    "liquidations": {
+      "metricId": "liquidations",
+      "verdict": "unmeasured",
+      "holdingPeriod": null,
+      "lowerBound": null,
+      "effectiveN": null,
+      "survivesFdr": false,
+      "sentence": "No measured directional record with an effective sample behind it. This is an absence of evidence, not evidence the module fails."
     }
   },
   "agreementBuckets": [

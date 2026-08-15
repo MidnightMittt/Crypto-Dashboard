@@ -240,11 +240,36 @@ export interface MetricPerformanceSummary {
   stableAcrossWindows: boolean | null;
 }
 
+/**
+ * Per-module validation verdicts, computed once by the harness where the
+ * WHOLE candidate family is in scope, and committed.
+ *
+ * The multiple-testing correction is only meaningful across every test in the
+ * family, so it cannot be derived at request time from whatever a page
+ * happens to load. Shape mirrors `ModuleGrade` in research/edgeGate.ts, which
+ * is the module that produces it.
+ */
+export interface ModuleGradeSnapshot {
+  metricId: string;
+  verdict: "edge" | "not-distinguishable" | "below-base-rate" | "unmeasured";
+  holdingPeriod: string | null;
+  lowerBound: number | null;
+  effectiveN: number | null;
+  survivesFdr: boolean;
+  sentence: string;
+}
+
 export interface BacktestMetricStats {
   generatedAt: number;
   coverageStart: string;
   coverageEnd: string;
   metrics: Record<string, MetricPerformanceSummary>;
+  /**
+   * Which modules earned the right to move a decision, keyed by metric id.
+   * Read at runtime by evidenceGrade.ts to state what share of a verdict's
+   * weight is actually validated.
+   */
+  moduleGrades: Record<string, ModuleGradeSnapshot>;
   /**
    * Does the composite bias score's own "agreement" figure (how much the
    * metrics concur, src/lib/signals/confidence.ts's agreementOf) historically

@@ -74,7 +74,7 @@ describe("lookupMetricPerformance", () => {
     coverageStart: "2022-01-01",
     coverageEnd: "2026-01-01",
     metrics,
-    agreementBuckets: [],
+    moduleGrades: {}, agreementBuckets: [],
   scoreCalibration: {},
   });
 

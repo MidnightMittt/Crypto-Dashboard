@@ -164,3 +164,115 @@ export function assessEdge(record: EdgeRecord | null, costPp = 0): EdgeAssessmen
 export function mayVote(assessment: EdgeAssessment): boolean {
   return assessment.verdict === "edge";
 }
+
+// ── Grading a whole family at once ──────────────────────────────────────
+
+/**
+ * One module's validation verdict, computed once in the backtest harness and
+ * committed so the runtime never re-derives it.
+ *
+ * This exists because the alternative — grading at request time — would put a
+ * multiple-testing correction inside a page render, where it would be
+ * recomputed per visitor against a family that changes with whatever happens
+ * to be loaded. The correction is only meaningful over the WHOLE candidate
+ * family, so it belongs where the whole family is in scope: the harness.
+ */
+export interface ModuleGrade {
+  metricId: string;
+  verdict: EdgeVerdict;
+  /** Horizon the verdict was reached at, null when unmeasured. */
+  holdingPeriod: string | null;
+  lowerBound: number | null;
+  effectiveN: number | null;
+  /**
+   * Whether this module's best cell survives Benjamini-Hochberg across every
+   * (module, horizon) test in the family. A module can clear the Wilson gate
+   * and still fail this — that is the point of running both.
+   */
+  survivesFdr: boolean;
+  sentence: string;
+}
+
+export interface ModuleHorizons {
+  metricId: string;
+  horizons: Record<
+    string,
+    { effectiveN: number; winRate: number | null; baseRate: number | null; pValue?: number | null }
+  >;
+}
+
+/**
+ * Grades every module at its own most favourable horizon and corrects across
+ * the family.
+ *
+ * `fdr` is injected rather than imported so this module stays free of a
+ * dependency cycle and the correction used stays visible at the call site —
+ * which correction was applied is part of the result's meaning.
+ */
+export function gradeModules(
+  modules: ModuleHorizons[],
+  fdr: (pValues: number[], q: number) => Array<{ significant: boolean }>,
+  costPp = 0,
+  q = 0.05
+): ModuleGrade[] {
+  /*
+   * The family is every cell that produced a p-value, FAILURES INCLUDED.
+   * Correcting only over cells that already looked good is the selection the
+   * correction exists to undo.
+   */
+  const family: Array<{ metricId: string; hp: string; p: number }> = [];
+  for (const m of modules) {
+    for (const [hp, r] of Object.entries(m.horizons)) {
+      if (typeof r.pValue === "number" && Number.isFinite(r.pValue)) {
+        family.push({ metricId: m.metricId, hp, p: r.pValue });
+      }
+    }
+  }
+  const corrected = fdr(
+    family.map((f) => f.p),
+    q
+  );
+  const survivors = new Set(
+    family.filter((_, i) => corrected[i]?.significant).map((f) => `${f.metricId}:${f.hp}`)
+  );
+
+  return modules.map((m) => {
+    // Most favourable horizon by margin over its own null — see assessEdge.
+    let best: EdgeRecord | null = null;
+    let bestMargin = -Infinity;
+    for (const [hp, r] of Object.entries(m.horizons)) {
+      if (r.winRate === null || r.baseRate === null || r.effectiveN <= 0) continue;
+      const margin = wilsonLowerBound(r.winRate, r.effectiveN) - r.baseRate;
+      if (margin > bestMargin) {
+        bestMargin = margin;
+        best = {
+          winRate: r.winRate,
+          baseRate: r.baseRate,
+          effectiveN: r.effectiveN,
+          holdingPeriod: hp,
+        };
+      }
+    }
+
+    const a = assessEdge(best, costPp);
+    return {
+      metricId: m.metricId,
+      verdict: a.verdict,
+      holdingPeriod: a.holdingPeriod,
+      lowerBound: a.lowerBound,
+      effectiveN: a.effectiveN,
+      survivesFdr: best !== null && survivors.has(`${m.metricId}:${best.holdingPeriod}`),
+      sentence: a.sentence,
+    };
+  });
+}
+
+/**
+ * A module has earned its vote only if it clears the gate AND survives the
+ * family correction. Both, because they fail in different ways: the gate
+ * catches effects too small to trade, the correction catches effects that
+ * are only there because we looked thirty-six times.
+ */
+export function isValidatedEdge(grade: ModuleGrade): boolean {
+  return grade.verdict === "edge" && grade.survivesFdr;
+}

@@ -7,6 +7,9 @@ import { buildMacroContext } from "./macroContext";
 import { composeBearCase, composeBullCase, composeInvalidation, composeTldr } from "./narrative";
 import { NeighbourhoodStats } from "@/lib/research/neighbourhood";
 import { buildChecklist } from "./checklist";
+import { gradeEvidence } from "@/lib/signals/evidenceGrade";
+import { weightForBasis } from "@/lib/signals/scoring";
+import metricStats from "@/data/backtestMetricStats.json";
 import { buildPassRules } from "./passRules";
 import {
   AnalogStats,
@@ -139,6 +142,26 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
       stars: strengthStars(bias.score),
       evidence: evidenceLevel(bias.confidence),
       agreementLine: describeAgreement(bias.agreement),
+      /*
+       * Read from the committed snapshot, never recomputed here. The FDR
+       * correction behind these grades is only meaningful across the whole
+       * candidate family, which the harness has in scope and a page render
+       * does not.
+       *
+       * Weights come from the SAME weightForBasis the composite itself used,
+       * so the denominator is literally the weight that produced the score —
+       * not a second opinion about what should have counted.
+       */
+      evidenceGrade: (() => {
+        const weightOf = weightForBasis(bias.basis);
+        return gradeEvidence({
+          contributing: bias.metrics
+            .map((m) => ({ id: m.id, label: m.label, weight: weightOf(m.id) }))
+            .filter((m) => m.weight > 0),
+          grades: metricStats.moduleGrades as Parameters<typeof gradeEvidence>[0]["grades"],
+          isStateBasis: bias.basis === "state",
+        });
+      })(),
       forward: inputs.verdictForward ?? null,
     },
 

@@ -151,7 +151,41 @@ export function VerdictPanel({ d }: { d: TickerDossier }) {
           <Stat label="Signals">
             <span className="text-sm text-ink-muted">{v.agreementLine}</span>
           </Stat>
+          {/*
+            A SEPARATE AXIS FROM "Evidence" TO ITS LEFT, and the two are
+            routinely confused. Evidence grades the INPUTS — are the feeds
+            fresh and complete. This grades whether the signals underneath
+            have ever predicted anything. A pristine reading from a coin flip
+            scores high on the first and zero on this one, which is exactly
+            the case a reader needs to see before sizing.
+          */}
+          <Stat label="Proven signal">
+            <span
+              className={`text-sm capitalize ${
+                v.evidenceGrade.label === "validated"
+                  ? "text-success"
+                  : v.evidenceGrade.label === "mixed"
+                    ? "text-amber"
+                    : "text-ink-muted"
+              }`}
+            >
+              {v.evidenceGrade.label === "descriptive"
+                ? "descriptive"
+                : `${Math.round(v.evidenceGrade.validatedWeightPct)}% of weight`}
+            </span>
+          </Stat>
         </div>
+
+        {/*
+          The sentence, not just the number — a bare "11%" is exactly the
+          uninterpreted figure the charter forbids. Sits directly under the
+          verdict because it qualifies the verdict, and a reader who stops
+          here has still been told the most important caveat.
+        */}
+        <p className="rounded-md border border-hairline bg-void/30 px-3 py-2 text-[11px] leading-relaxed text-ink-muted">
+          <span className="font-semibold uppercase tracking-[0.12em] text-cyan">Proven signal</span> ·{" "}
+          {v.evidenceGrade.sentence}
+        </p>
 
         {/* THE HEADLINE'S OWN TRACK RECORD.
             A verdict that never reports how its past verdicts did is asking

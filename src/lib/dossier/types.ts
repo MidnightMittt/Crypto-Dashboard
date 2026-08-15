@@ -113,6 +113,8 @@ export function dataOf<T>(section: Section<T>): T | null {
   return section.status === "available" ? section.data : null;
 }
 
+import { EvidenceGrade } from "@/lib/signals/evidenceGrade";
+
 // ── Section payloads ───────────────────────────────────────────────────
 
 export interface VerdictSection {
@@ -125,6 +127,17 @@ export interface VerdictSection {
   stars: number;
   evidence: "thin" | "moderate" | "strong";
   agreementLine: string;
+  /**
+   * What share of THIS verdict's own evidence weight comes from signals that
+   * have actually beaten their baseline out of sample.
+   *
+   * A separate axis from `evidence` above, which grades INPUT QUALITY — are
+   * the feeds fresh and complete. This grades whether the signal works at
+   * all. A pristine reading from a coin flip and a stale reading from a
+   * validated module fail differently, and one number covering both would
+   * hide each of them.
+   */
+  evidenceGrade: EvidenceGrade;
   /** How this verdict has actually done since forward scoring began. */
   forward: VerdictForwardRecord | null;
 }

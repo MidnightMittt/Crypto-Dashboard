@@ -43,6 +43,8 @@ import { buildWeightReview, WeightReviewDayRecord } from "./weightReview";
 import { buildMetricCombinations, MetricComboDayRecord } from "./metricCombinations";
 import { DayFingerprint } from "../../src/lib/signals/similarity";
 import { effectiveSampleSize } from "../../src/lib/research/overlap";
+import { gradeModules } from "../../src/lib/research/edgeGate";
+import { benjaminiHochberg } from "../../src/lib/research/multipleTesting";
 
 /**
  * Aggregates run.ts's per-day output into descriptive statistics. These are
@@ -62,6 +64,13 @@ import { effectiveSampleSize } from "../../src/lib/research/overlap";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, "data");
+
+/**
+ * Percentage points of win rate an edge must clear ON TOP OF its drift null
+ * before it counts. Round-trip costs are real; a 50.4% signal is not
+ * tradeable however significant it is. Mirrored in scripts/edgeGateReport.ts.
+ */
+const EDGE_GATE_COST_PP = 2;
 const STATS_OUT_PATH = path.join(__dirname, "..", "..", "src", "data", "backtestStats.json");
 const RESEARCH_OUT_PATH = path.join(__dirname, "..", "..", "src", "data", "backtestResearch.json");
 const METRIC_STATS_OUT_PATH = path.join(__dirname, "..", "..", "src", "data", "backtestMetricStats.json");
@@ -1182,6 +1191,27 @@ ${scoreCalibration.markdown}
     coverageStart,
     coverageEnd,
     metrics: metricPerformance,
+    /*
+     * Graded HERE, where the whole candidate family is in scope. The FDR
+     * correction is only meaningful across every test in the family, so it
+     * cannot be derived at request time from whatever a page happens to have
+     * loaded — the runtime reads this snapshot instead.
+     */
+    moduleGrades: Object.fromEntries(
+      gradeModules(
+        Object.values(metricPerformance).map((m) => ({
+          metricId: m.metricId,
+          horizons: Object.fromEntries(
+            Object.entries(m.byHoldingPeriod).map(([hp, r]) => [
+              hp,
+              { effectiveN: r.effectiveN, winRate: r.winRate, baseRate: r.baseRate, pValue: r.pValue },
+            ])
+          ),
+        })),
+        benjaminiHochberg,
+        EDGE_GATE_COST_PP
+      ).map((g) => [g.metricId, g])
+    ),
     agreementBuckets: agreementValidation.stats,
     scoreCalibration: scoreCalibration.cells,
   };
