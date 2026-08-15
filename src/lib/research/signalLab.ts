@@ -106,6 +106,24 @@ export interface Hypothesis {
    */
   periodGate?: (ctx: PeriodContext) => boolean;
   /**
+   * What is actually held. Default `long-short`.
+   *
+   * THIS EXISTS BECAUSE A DOSSIER CANNOT HOLD A SPREAD. Every result in this
+   * family so far measures top-decile MINUS bottom-decile, and that number
+   * belongs to a four-legged portfolio. A reader looking at one ticker holds
+   * the long leg alone and inherits none of the spread's record — quoting it
+   * at them would be the single most tempting overstatement this engine
+   * could make, because the statistic is real and merely about something
+   * else.
+   *
+   * `long-vs-panel` measures the top decile against the equal-weighted panel
+   * over the same window, which is the comparison a single long position
+   * actually faces. The null stays 50% for both: each is a relative
+   * comparison over identical windows, so market drift cancels rather than
+   * accruing to one side.
+   */
+  leg?: "long-short" | "long-vs-panel";
+  /**
    * Higher = more attractive to be LONG. The long-short spread is always
    * top-decile minus bottom-decile of this number, so the sign convention
    * lives in the hypothesis rather than in the engine.
@@ -236,7 +254,14 @@ export function runHypothesis(series: LabSeries[], h: Hypothesis): HypothesisRes
     if (scored.length < MIN_PANEL) continue;
     scored.sort((a, b) => b.score - a.score);
     const k = Math.max(1, Math.floor(scored.length * DECILE));
-    spreads.push(mean(scored.slice(0, k).map((x) => x.fwd)) - mean(scored.slice(-k).map((x) => x.fwd)));
+    const top = mean(scored.slice(0, k).map((x) => x.fwd));
+    // See `leg`. The short leg is the bottom decile, or the panel itself when
+    // the hypothesis is about a long position rather than a spread.
+    const reference =
+      h.leg === "long-vs-panel"
+        ? mean(scored.map((x) => x.fwd))
+        : mean(scored.slice(-k).map((x) => x.fwd));
+    spreads.push(top - reference);
   }
 
   const n = spreads.length;

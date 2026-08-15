@@ -93,6 +93,82 @@ export const FAMILY: Hypothesis[] = [
     rank: ({ series, i }) => ret(series, i - 252, i - 21),
   },
 
+  /*
+   * THE LONG-LEG TRIO — declared because the dossier cannot hold a spread.
+   *
+   * Everything above measures top decile MINUS bottom decile, which is a
+   * four-legged portfolio. A reader looking at one ticker holds the long leg
+   * and nothing else, and inherits none of that record. Quoting a spread's
+   * 56.3% win rate at a single long position would be the most tempting
+   * overstatement available here precisely because the statistic is real and
+   * merely about a different thing.
+   *
+   * So the comparison is against the equal-weighted panel over the same
+   * window: what a long position actually faces. All three halves are
+   * declared together for the same reason the spread's regime pair was —
+   * testing only the flattering half and reporting it is the selection this
+   * whole apparatus exists to prevent.
+   *
+   * COSTS STAY AT 2pp, identical to every other entry, and that is
+   * deliberately unfavourable. A one-legged decile rotation trades roughly
+   * half the round trips a long-short book does, so 2pp over-charges it. If
+   * one of these clears anyway, the verdict cannot be attributed to a cost
+   * assumption chosen to let it through; if it fails at 2pp but would clear
+   * at 1pp, that is reported and it still does not ship.
+   */
+  {
+    id: "momentum-12-1-long-only",
+    statement:
+      "The top decile of 12-1 momentum outperforms the equal-weighted panel over the following month.",
+    rationale:
+      "The only form of the momentum result a single-ticker page can honestly use. The spread's record belongs to a portfolio that is also short the bottom decile; this asks whether the long leg alone carries any of it. If the spread's edge lives entirely in the short leg — which is the common finding in the literature, and is why momentum is expensive to trade — then a dossier must say so rather than implying the top decile is the profitable side.",
+    hold: 21,
+    warmup: 273,
+    costPp: COST_PP,
+    killCriteria:
+      "Retire if the Wilson lower bound fails to clear 50% + costs, or if it does not survive FDR across this family. On failure the dossier may still RANK a ticker's momentum, but must state plainly that the long leg has no measured edge of its own.",
+    leg: "long-vs-panel",
+    rank: ({ series, i }) => ret(series, i - 252, i - 21),
+  },
+
+  {
+    id: "momentum-12-1-long-only-broad-up",
+    statement:
+      "The top decile of 12-1 momentum outperforms the panel when MORE than half of it trades above its own 200-session average.",
+    rationale:
+      "The regime finding applied to the leg a reader can actually hold. If the spread's dependence on breadth comes from the short leg being run over in reversals, the long leg should be roughly regime-indifferent and this will look like the unconditional result. If instead the long leg is also regime-dependent, breadth becomes a gate on individual entries and not merely on a portfolio.",
+    hold: 21,
+    warmup: 273,
+    costPp: COST_PP,
+    killCriteria:
+      "Retire if it fails the gate. If this and its down-regime complement look alike, breadth does not condition the long leg and the dossier must not gate on it.",
+    leg: "long-vs-panel",
+    periodGate: ({ panel, decisionTime }) => {
+      const b = panelBreadth(panel, decisionTime);
+      return b !== null && b > 0.5;
+    },
+    rank: ({ series, i }) => ret(series, i - 252, i - 21),
+  },
+
+  {
+    id: "momentum-12-1-long-only-broad-down",
+    statement:
+      "The top decile of 12-1 momentum outperforms the panel when HALF OR FEWER of it trades above its own 200-session average.",
+    rationale:
+      "The complement, so the pair partitions every period. A negative result here is the more useful outcome: it would mean buying strength in a weak tape underperforms simply holding the market, which is a direct instruction to a reader rather than a portfolio construction note.",
+    hold: 21,
+    warmup: 273,
+    costPp: COST_PP,
+    killCriteria:
+      "Retire if it fails the gate. A NEGATIVE result is a finding, not a failure — it locates precisely when a momentum long should not be taken.",
+    leg: "long-vs-panel",
+    periodGate: ({ panel, decisionTime }) => {
+      const b = panelBreadth(panel, decisionTime);
+      return b !== null && b <= 0.5;
+    },
+    rank: ({ series, i }) => ret(series, i - 252, i - 21),
+  },
+
   {
     id: "reversal-5d",
     statement:

@@ -108,6 +108,13 @@ function main(): void {
             id: r.id,
             statement: r.statement,
             rationale: h.rationale,
+            /*
+             * WHAT THE SPREAD NUMBERS DESCRIBE. Without this a consumer
+             * cannot tell whether `meanSpread` belongs to a four-legged
+             * portfolio or to a single long position, and those two readings
+             * differ by more than any statistic in the file.
+             */
+            leg: h.leg ?? "long-short",
             holdSessions: h.hold,
             killCriteria: h.killCriteria,
             n: r.n,
