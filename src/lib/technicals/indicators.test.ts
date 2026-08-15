@@ -4,6 +4,7 @@ import {
   rsi,
   macd,
   atr,
+  atrPctSeries,
   adx,
   directionalBias,
   rollingVwap,
@@ -349,5 +350,57 @@ describe("fibonacciRetracement", () => {
 
   it("returns null when the swing range is degenerate (flat price)", () => {
     expect(fibonacciRetracement(Array.from({ length: 50 }, (_, i) => bar(100, 100, 100, i)))).toBeNull();
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════════════
+ * ATR AS A PERCENT, AND THE PROPERTY THAT KEEPS THE PAGE HONEST
+ *
+ * The dossier used to print "typical daily move" twice from two different
+ * estimators — Wilder's here, a 14-bar simple mean in the volatility
+ * module — disagreeing by up to 15.8% relative across the panel, with the
+ * unvalidated one attached to the copy telling a user where to put a stop.
+ * These tests exist so the two can never drift apart again.
+ * ═══════════════════════════════════════════════════════════════════════ */
+describe("atrPctSeries", () => {
+  const series = Array.from({ length: 60 }, (_, i) => bar(105 + i * 0.3, 95 + i * 0.3, 100 + i * 0.3, i));
+
+  /*
+   * THE INVARIANT. The narrative reads the last element of this series; the
+   * planner reads `atr()`. Identical, not merely close — a tolerance here
+   * would be the reconciliation the audit explicitly warned against.
+   */
+  it("ends on exactly the value atr() reports, as a percent of the last close", () => {
+    const last = series[series.length - 1];
+    const expected = (atr(series)! / last.close) * 100;
+    expect(atrPctSeries(series)[series.length - 1]).toBe(expected);
+  });
+
+  it("is aligned to the input, with nulls where there is no reading yet", () => {
+    const out = atrPctSeries(series, 14);
+    expect(out).toHaveLength(series.length);
+    expect(out.slice(0, 14).every((v) => v === null)).toBe(true);
+    expect(out.slice(14).every((v) => typeof v === "number")).toBe(true);
+  });
+
+  /*
+   * THE LOOK-AHEAD GUARD. `trueRanges[j]` describes bar j+1 and
+   * `wilderSmooth[k]` describes bar period+k; an off-by-one would give bar i
+   * a value computed from bar i+1's range. Truncating the input must not
+   * change any earlier reading.
+   */
+  it("never lets a later bar change an earlier reading", () => {
+    const full = atrPctSeries(series);
+    const truncated = atrPctSeries(series.slice(0, 40));
+    expect(truncated).toEqual(full.slice(0, 40));
+  });
+
+  it("returns all nulls rather than throwing on too little history", () => {
+    expect(atrPctSeries(series.slice(0, 5))).toEqual([null, null, null, null, null]);
+  });
+
+  it("reports a constant range as that range over price", () => {
+    const flat = Array.from({ length: 40 }, (_, i) => bar(105, 95, 100, i));
+    expect(atrPctSeries(flat)[39]).toBeCloseTo(10, 9);
   });
 });

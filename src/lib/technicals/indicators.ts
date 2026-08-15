@@ -201,6 +201,64 @@ export function atr(candles: Candle[], period = 14): number | null {
 }
 
 /**
+ * ATR as a PERCENT OF PRICE, per bar, aligned to the input.
+ *
+ * ── Why this exists ───────────────────────────────────────────────────
+ *
+ * "Typical daily move" was being computed twice, by two different
+ * estimators: Wilder's (above) sized the stops, while the volatility module
+ * used a 14-bar simple mean of true ranges for its narrative and its
+ * percentile band. Both were labelled the same thing on the same page and
+ * disagreed by up to 15.8% relative across the panel — in BOTH directions,
+ * so not even a constant offset that could be reconciled.
+ *
+ * Wilder's is the one that survives: it is the industry definition of ATR,
+ * it is what every charting platform reports, and it is the number the
+ * planner actually places stops with. The simple mean was the narrative's
+ * private opinion, and a page cannot hold two.
+ *
+ * ── The alignment guarantee ───────────────────────────────────────────
+ *
+ * Returns an array the SAME LENGTH as the input, null for bars too early to
+ * have a reading. Returning the raw smoothed series would leave the caller
+ * doing the index arithmetic — `trueRanges[j]` describes bar `j+1`, and
+ * `wilderSmooth[k]` describes bar `period + k` — and an off-by-one there is
+ * a look-ahead: bar i would carry a value computed from bar i+1's range.
+ * Same-length-with-nulls makes that mistake unavailable.
+ *
+ * By construction the last element equals `atr()` over the same input as a
+ * percent of the last close. A test pins that, because it is the property
+ * guaranteeing the narrative and the stop sizing cannot diverge again.
+ *
+ * Structurally typed rather than taking `Candle`, so the equity evidence
+ * modules can pass their own `Bar` shape without a conversion existing only
+ * to satisfy a nominal type.
+ */
+export function atrPctSeries(
+  bars: ReadonlyArray<{ high: number; low: number; close: number }>,
+  period = 14
+): Array<number | null> {
+  const out: Array<number | null> = new Array(bars.length).fill(null);
+  if (bars.length < period + 1) return out;
+
+  const tr: number[] = [];
+  for (let i = 1; i < bars.length; i++) {
+    const prevClose = bars[i - 1].close;
+    tr.push(
+      Math.max(bars[i].high - bars[i].low, Math.abs(bars[i].high - prevClose), Math.abs(bars[i].low - prevClose))
+    );
+  }
+
+  const smoothed = wilderSmooth(tr, period);
+  for (let k = 0; k < smoothed.length; k++) {
+    const idx = period + k;
+    const close = bars[idx].close;
+    out[idx] = close > 0 ? (smoothed[k] / close) * 100 : null;
+  }
+  return out;
+}
+
+/**
  * Wilder's ADX — trend STRENGTH, with no direction of its own. Above ~25 is
  * conventionally a trending market, below ~20 a ranging one.
  *

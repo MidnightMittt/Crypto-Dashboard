@@ -2,6 +2,7 @@ import { Bar } from "@/lib/research/types";
 import { MetricVerdict, Verdict } from "@/lib/signals/types";
 // Market structure is SHARED, not equity-specific — see its own doc comment.
 import { evaluateMarketStructure } from "@/lib/signals/marketStructureEvidence";
+import { atrPctSeries } from "@/lib/technicals/indicators";
 export { evaluateMarketStructure } from "@/lib/signals/marketStructureEvidence";
 
 /**
@@ -359,18 +360,6 @@ export function buildEquityEvidence(opts: {
 const ATR_WINDOW = 14;
 const TREND_WINDOW = 60;
 
-/** Average true range over `n` bars ending at `endIdx`, as a percent of price. */
-function atrPctAt(bars: Bar[], endIdx: number, n: number): number | null {
-  if (endIdx < n) return null;
-  let sum = 0;
-  for (let i = endIdx - n + 1; i <= endIdx; i++) {
-    const prev = bars[i - 1].close;
-    sum += Math.max(bars[i].high - bars[i].low, Math.abs(bars[i].high - prev), Math.abs(bars[i].low - prev));
-  }
-  const price = bars[endIdx].close;
-  return price > 0 ? (sum / n / price) * 100 : null;
-}
-
 /**
  * VOLATILITY REGIME — is this market calm or stressed, for itself?
  *
@@ -390,14 +379,24 @@ export function evaluateVolatilityRegime(
   asOf: number
 ): MetricVerdict | null {
   const bars = instrument.bars;
-  const now = atrPctAt(bars, bars.length - 1, ATR_WINDOW);
-  if (now === null) return null;
+
+  /*
+   * THE SAME ESTIMATOR THE PLANNER USES. This module previously computed its
+   * own 14-bar simple mean of true ranges, so the page carried two different
+   * "typical daily move" figures — one in this sentence, one sizing the
+   * stop — that disagreed by up to 15.8% relative and in both directions.
+   * The stop is where the money is, so Wilder's ATR won and this reads from
+   * it. See `atrPctSeries`.
+   */
+  const series = atrPctSeries(bars, ATR_WINDOW);
+  const now = series[bars.length - 1];
+  if (now === null || now === undefined) return null;
 
   const history: number[] = [];
   const start = Math.max(ATR_WINDOW, bars.length - BAND_HISTORY);
   for (let i = start; i < bars.length - 1; i++) {
-    const v = atrPctAt(bars, i, ATR_WINDOW);
-    if (v !== null) history.push(v);
+    const v = series[i];
+    if (v !== null && v !== undefined) history.push(v);
   }
 
   const p = percentileOf(now, history);
