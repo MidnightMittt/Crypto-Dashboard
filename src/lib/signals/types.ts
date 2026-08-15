@@ -1,3 +1,4 @@
+import type { EvidenceGrade } from "./evidenceGrade";
 export type Verdict = "bullish" | "bearish" | "neutral";
 
 /**
@@ -138,6 +139,15 @@ export interface BiasChange {
  */
 export interface MarketBias {
   asset: string;
+  /**
+   * What share of this composite's weight comes from modules that have
+   * actually beaten their baseline out of sample.
+   *
+   * Optional because the pure/replay callers have no access to the committed
+   * grades and must not import a 39KB artifact to get one — an absent grade
+   * is honest there, a fabricated one would not be. Server paths attach it.
+   */
+  evidenceGrade?: EvidenceGrade;
   /**
    * Which question the score answers (see ScoreBasis in scoring.ts):
    * "edge" — the predictive composite, Edge voters only, the basis with a

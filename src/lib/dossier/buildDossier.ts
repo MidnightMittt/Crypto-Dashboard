@@ -7,7 +7,7 @@ import { buildMacroContext } from "./macroContext";
 import { composeBearCase, composeBullCase, composeInvalidation, composeTldr } from "./narrative";
 import { NeighbourhoodStats } from "@/lib/research/neighbourhood";
 import { buildChecklist } from "./checklist";
-import { gradeEvidence } from "@/lib/signals/evidenceGrade";
+import { gradeForComposite } from "@/lib/signals/evidenceGrade";
 import { weightForBasis } from "@/lib/signals/scoring";
 import metricStats from "@/data/backtestMetricStats.json";
 import { buildPassRules } from "./passRules";
@@ -152,16 +152,11 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
        * so the denominator is literally the weight that produced the score —
        * not a second opinion about what should have counted.
        */
-      evidenceGrade: (() => {
-        const weightOf = weightForBasis(bias.basis);
-        return gradeEvidence({
-          contributing: bias.metrics
-            .map((m) => ({ id: m.id, label: m.label, weight: weightOf(m.id) }))
-            .filter((m) => m.weight > 0),
-          grades: metricStats.moduleGrades as Parameters<typeof gradeEvidence>[0]["grades"],
-          isStateBasis: bias.basis === "state",
-        });
-      })(),
+      evidenceGrade: gradeForComposite(
+        bias,
+        weightForBasis(bias.basis),
+        metricStats.moduleGrades as Parameters<typeof gradeForComposite>[2]
+      ),
       forward: inputs.verdictForward ?? null,
     },
 

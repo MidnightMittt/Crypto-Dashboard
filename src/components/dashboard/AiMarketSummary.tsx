@@ -352,8 +352,42 @@ function Decision({
             >
               · Data Quality {bias.confidence}%
             </span>
+            {/*
+              A THIRD, GENUINELY DIFFERENT AXIS. Score is the read, Data
+              Quality is whether the inputs are clean, and this is whether the
+              signals underneath have ever predicted anything. All three can
+              disagree, and the case that matters is a strong score on clean
+              data from modules that are measured coin flips — which is the
+              live crypto shape, not a hypothetical.
+            */}
+            {bias.evidenceGrade && (
+              <span
+                className={`text-[11px] ${
+                  bias.evidenceGrade.label === "validated"
+                    ? "text-success"
+                    : bias.evidenceGrade.label === "mixed"
+                      ? "text-amber"
+                      : "text-ink-faint"
+                }`}
+                title={bias.evidenceGrade.sentence}
+              >
+                · Proven signal {Math.round(bias.evidenceGrade.validatedWeightPct)}%
+              </span>
+            )}
           </div>
         </div>
+
+        {/*
+          The sentence, not just the percentage — a bare "11%" is the
+          uninterpreted number the charter forbids, and this figure needs more
+          interpretation than anything else on the card.
+        */}
+        {bias.evidenceGrade && (
+          <p className="mt-2 rounded-md border border-hairline bg-void/30 px-3 py-2 text-[11px] leading-relaxed text-ink-muted">
+            <span className="font-semibold uppercase tracking-[0.12em] text-cyan">Proven signal</span> ·{" "}
+            {bias.evidenceGrade.sentence}
+          </p>
+        )}
 
         <ScoreCalibrationLine asset={bias.asset} score={bias.score} verdict={bias.verdict} regimeTags={thesis?.regimeTags ? regimeTagsToStrings(thesis.regimeTags) : null} />
 

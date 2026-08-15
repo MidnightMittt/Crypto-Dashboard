@@ -162,3 +162,33 @@ function listOf(names: string[]): string {
   if (names.length === 2) return `${names[0]} and ${names[1]}`;
   return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 }
+
+/**
+ * Grades a composite directly.
+ *
+ * ONE helper, so the dossier and the dashboard cannot drift into two answers
+ * about the same composite. The weight function is the same one the score
+ * itself used, so the denominator is literally the weight that produced the
+ * number rather than a second opinion about what should have counted.
+ *
+ * Grades are passed IN rather than imported here on purpose: this module is
+ * reachable from client components, and the committed artifact is ~39KB that
+ * has no business in a browser bundle. Server callers supply it; anything
+ * that cannot gets an honest "unmeasured" rather than a wrong number.
+ */
+export function gradeForComposite(
+  bias: {
+    basis: "edge" | "state";
+    metrics: Array<{ id: string; label: string }>;
+  },
+  weightOf: (id: string) => number,
+  grades: Record<string, ModuleGrade>
+): EvidenceGrade {
+  return gradeEvidence({
+    contributing: bias.metrics
+      .map((m) => ({ id: m.id, label: m.label, weight: weightOf(m.id) }))
+      .filter((m) => m.weight > 0),
+    grades,
+    isStateBasis: bias.basis === "state",
+  });
+}

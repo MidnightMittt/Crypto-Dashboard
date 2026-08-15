@@ -111,6 +111,9 @@ import { fetchEtfFlows } from "../providers/etfFlows";
 import { fetchSpotVolumeUsd } from "../providers/spotVolume";
 import { evaluateAll } from "../signals/evaluators";
 import { buildMarketBias, snapshotVerdicts } from "../signals/marketBias";
+import { gradeForComposite } from "../signals/evidenceGrade";
+import { weightForBasis } from "../signals/scoring";
+import { moduleGrades as moduleGradesSnapshot } from "@/data/backtestMetricStats.json";
 import { readBiasSnapshot, writeBiasSnapshot } from "../history/biasStore";
 import { recordBiasHistory, BiasHistoryEntry } from "../history/biasHistory";
 import { readSwingThesis, writeSwingThesis } from "../history/swingThesisStore";
@@ -712,6 +715,27 @@ async function withRecordedHistory(
     now: agg.updatedAt,
     regimeTags,
   });
+
+  /*
+   * THE EDGE-BASIS COMPOSITE IS THE ONE WHERE THIS BITES.
+   *
+   * No `basis` is passed above, so this is the "edge" composite — the one
+   * where funding (weight 0.15, measured BELOW its own null) and squeezeRisk
+   * (0.14, a measured coin flip) actually vote. Measured 2026-08-15, 11% of
+   * the weight behind this score comes from a module that earned it.
+   *
+   * Attached here rather than inside buildMarketBias because that module is
+   * reachable from client components and the grades artifact is ~39KB with
+   * no business in a browser bundle. Same helper the dossier uses, so the two
+   * surfaces cannot drift into different answers about the same composite.
+   */
+  if (marketBias) {
+    marketBias.evidenceGrade = gradeForComposite(
+      marketBias,
+      weightForBasis(marketBias.basis),
+      moduleGradesSnapshot as Parameters<typeof gradeForComposite>[2]
+    );
+  }
 
   /*
    * Awaited rather than fire-and-forget: this IS the action rendered on the
