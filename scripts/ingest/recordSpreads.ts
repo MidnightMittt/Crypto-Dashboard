@@ -101,6 +101,9 @@ interface Quote {
   bid: number | null;
   ask: number | null;
   last: number | null;
+  /** Top-of-book depth. Null outside hours — never 0, see spreadHistory. */
+  bidSize: number | null;
+  askSize: number | null;
 }
 
 async function fetchQuotes(symbols: string[]): Promise<Quote[] | null> {
@@ -126,6 +129,8 @@ async function fetchQuotes(symbols: string[]): Promise<Quote[] | null> {
       bid: typeof q.bid === "number" ? q.bid : null,
       ask: typeof q.ask === "number" ? q.ask : null,
       last: typeof q.last === "number" ? q.last : null,
+      bidSize: typeof q.bidsize === "number" ? q.bidsize : null,
+      askSize: typeof q.asksize === "number" ? q.asksize : null,
     }));
   } catch (err) {
     console.log(`[spreads] Tradier fetch threw: ${err instanceof Error ? err.message : err}`);
@@ -149,6 +154,7 @@ async function captureAt(
     const o = observe({
       t: now, session: date, symbol: q.symbol, window, targetMinute,
       bid: q.bid, ask: q.ask, last: q.last,
+      bidSize: q.bidSize, askSize: q.askSize,
     });
     if (o) out.push(o);
     else refused++;

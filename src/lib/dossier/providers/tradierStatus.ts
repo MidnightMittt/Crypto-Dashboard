@@ -77,8 +77,13 @@ export interface VenueClock {
 export interface VenueBook {
   bid: number;
   ask: number;
-  bid_size: number;
-  ask_size: number;
+  /**
+   * Depth at the touch. NULL, not 0, when the venue does not report it —
+   * a closed book returns empty, and storing that as zero manufactures a
+   * "thin book" signal on every holiday.
+   */
+  bid_size: number | null;
+  ask_size: number | null;
   spread_bp: number;
   /**
    * Seconds since the staler side of this book was last updated.
@@ -221,8 +226,8 @@ export function toVenueQuote(raw: RawQuote, nowMs: number): QuoteResult {
       book: {
         bid,
         ask,
-        bid_size: typeof raw.bidsize === "number" ? raw.bidsize : 0,
-        ask_size: typeof raw.asksize === "number" ? raw.asksize : 0,
+        bid_size: typeof raw.bidsize === "number" && raw.bidsize > 0 ? raw.bidsize : null,
+        ask_size: typeof raw.asksize === "number" && raw.asksize > 0 ? raw.asksize : null,
         spread_bp: spreadBp(bid, ask),
         // Clamped: a few hundred ms of clock skew against the venue is not a
         // negative age, it is noise, and a negative number would read as one.
