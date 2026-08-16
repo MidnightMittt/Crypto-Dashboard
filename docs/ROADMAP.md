@@ -9,6 +9,11 @@ with unmet exit criteria unless the user explicitly redirects. Phases are
 sequential because each depends on the one before it — the ordering is the
 content.
 
+**Where capabilities land is not negotiable per-phase.** Every phase below
+delivers its work as dossier modules, under the contract in
+`DOSSIER_ARCHITECTURE.md`. A phase that produces a new page has been built
+wrong regardless of how good its statistics are.
+
 Grounding facts that produced this ordering (do not re-litigate without new
 data):
 
@@ -97,6 +102,47 @@ Tasks:
 
 Exit criteria: replay delta measured and published; a test proves no plan
 generates through an earnings date; one confidence semantic site-wide.
+
+## PHASE 1.5 — Productization: the dossier becomes the platform
+
+**Why here, ahead of Phase 2:** adding another isolated research module now
+creates less value than turning what is already built into a coherent product.
+The evidence is not theoretical — the EDGAR catalyst feed shipped into
+`/api/pretrade` and renders on zero pages; `/asset/[symbol]` redirected ETFs
+away from the dossier entirely; crypto intelligence is reachable only from
+`/crypto`. Those modules are not weak. They had nowhere to land.
+
+The architecture is specified in `DOSSIER_ARCHITECTURE.md`, which governs this
+phase and every phase after it. Read it before adding anything.
+
+**What happens to Phase 0.** Its exit criteria remain UNMET and are not
+waived — `daily-intelligence` has never once completed a green *scheduled*
+run, and the signal ledger holds three entries. But its liveness work is
+absorbed rather than deferred: the pipeline health surface lands as the
+**Audit section of the dossier**, not as another page. Phase 0 closes when
+five consecutive green automated runs are visible there.
+
+Tasks:
+1. **The interface**: `Section<T>` → `Read<T>`, gaining `evidence`
+   (confidence / reasoning / provenance). `Provenance` is imported from the
+   pre-trade contract, never redefined.
+2. **Section/Module split**: fourteen named sections; today's twenty-one
+   sections become modules registered against them, each declaring a
+   non-empty `serves`.
+3. **Five phases** mapped to the six questions the page answers, with
+   `risk` promoted to sit directly under the Trading Plan.
+4. **Land the orphans**: EDGAR catalysts into News & Catalysts; pipeline
+   liveness into Audit. Both are already built and reach nobody.
+5. **Canonical routing**: remove the ETF redirect. No symbol is routed away
+   from the dossier. Legacy pages become discovery surfaces that link in, and
+   are retired individually on parity — never in one migration.
+6. Apply the four-way gate to every existing module; delete what fails it
+   (`street` is the standing candidate).
+
+Exit criteria: every module returns `Read<T>` with provenance; a test proves
+`serves` is non-empty for all of them; searching any symbol — equity, ETF or
+crypto — lands on the dossier; catalysts and liveness render in production;
+no new page has been created.
 
 ## PHASE 2 — Memory becomes product: The Brief
 
