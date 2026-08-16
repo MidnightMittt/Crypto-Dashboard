@@ -18,6 +18,9 @@ import {
   OptionsIntelPanel,
   OptionsPanel,
   OwnershipPanel,
+  CatalystsPanel,
+  LivenessPanel,
+  MoneyFlowPanel,
   PassRulesPanel,
   StreetPanel,
   PlanPanel,
@@ -27,7 +30,15 @@ import {
   VerdictPanel,
 } from "@/components/dossier/DossierSections";
 import { FoldedSection } from "@/components/ui/FoldedSection";
-import { DOSSIER_SECTIONS, SectionId, SectionPhase } from "@/lib/dossier/sections";
+import {
+  MODULES,
+  ModuleId,
+  PHASE_ORDER,
+  Phase,
+  SECTIONS,
+  modulesOf,
+  sectionsOf,
+} from "@/lib/dossier/modules";
 import { TickerDossier } from "@/lib/dossier/types";
 import { analyseTicker } from "@/lib/search/analyseTicker";
 import { formatPrice } from "@/lib/utils/format";
@@ -73,60 +84,83 @@ export const dynamic = "force-dynamic";
  * who wants it — and `FoldedSection` keeps every word in the document while
  * it is closed, so folding is layering rather than hiding.
  */
-const PHASE_PRESENTATION: Record<
-  SectionPhase,
-  { heading: string | null; blurb: string | null; folded: boolean }
-> = {
-  decide: { heading: null, blurb: null, folded: false },
-  understand: {
-    heading: "Why the engine reads it this way",
-    blurb: null,
-    folded: false,
-  },
-  verify: {
-    heading: "Check it against something independent",
-    blurb: null,
-    folded: false,
-  },
+/**
+ * How each phase is presented.
+ *
+ * `decide` gets no headings at all — it IS the answer, and labelling the
+ * punchline explains it away. Every other phase labels its SECTIONS, using
+ * the reader's names for them rather than the engine's internal phase names,
+ * because the fourteen section names are the contract a reader learns.
+ *
+ * `audit` folds into one server-rendered `<details>`, so every word stays in
+ * the document and find-in-page still reaches it. Folding is layering, not
+ * hiding: nothing in it votes in the score, so it earns its space only for
+ * the reader who wants it.
+ */
+const PHASE_PRESENTATION: Record<Phase, { fold: string | null; blurb: string | null }> = {
+  decide: { fold: null, blurb: null },
+  risk: { fold: null, blurb: null },
+  verify: { fold: null, blurb: null },
+  evidence: { fold: null, blurb: null },
   audit: {
-    heading: "Show me the evidence",
+    fold: "Show me the evidence",
     blurb:
-      "Every reading behind the decision above, with its confidence, its sources and what would flip it — plus the fundamentals, analyst view, ownership, coverage and the gaps this page cannot see. Nothing here votes in the score; it is the workings.",
-    folded: true,
+      "Every reading behind the decision above, with its confidence and its sources — plus the fundamentals, the analyst view, the gaps this page cannot see, and whether the daily pipeline behind these numbers actually ran. Nothing here votes in the score; it is the workings.",
   },
 };
 
-const PHASE_ORDER: SectionPhase[] = ["decide", "understand", "verify", "audit"];
-
 /**
- * Every id the manifest can name has exactly one component. The Record type
- * makes this exhaustive at compile time: adding a section to the manifest
- * without a component (or vice versa) is a type error, not a blank spot
- * discovered in production.
+ * Every module the registry names has exactly one component. The Record type
+ * makes this exhaustive at compile time: registering a module without a
+ * component (or vice versa) is a type error, not a blank spot discovered in
+ * production.
  */
-const SECTION_COMPONENTS: Record<SectionId, (props: { d: TickerDossier }) => React.ReactNode> = {
-  verdict: VerdictPanel,
+const MODULE_COMPONENTS: Record<ModuleId, (props: { d: TickerDossier }) => React.ReactNode> = {
   tldr: TldrPanel,
+  verdict: VerdictPanel,
+  reasons: ReasonsPanel,
+  engineBars: EngineBarsPanel,
   plan: PlanPanel,
   nextEntry: NextEntryPanel,
   checklist: ChecklistPanel,
-  validatedSignal: ValidatedSignalPanel,
-  reasons: ReasonsPanel,
-  engineBars: EngineBarsPanel,
   invalidation: InvalidationPanel,
   passRules: PassRulesPanel,
   analogs: AnalogsPanel,
+  validatedSignal: ValidatedSignalPanel,
+  moneyFlow: MoneyFlowPanel,
+  optionsIntel: OptionsIntelPanel,
+  optionsFlow: OptionsPanel,
+  ownership: OwnershipPanel,
+  news: AttentionPanel,
+  catalysts: CatalystsPanel,
+  levels: LevelsPanel,
   macro: MacroPanel,
   business: BusinessPanel,
   street: StreetPanel,
-  optionsIntel: OptionsIntelPanel,
-  options: OptionsPanel,
-  ownership: OwnershipPanel,
-  attention: AttentionPanel,
-  levels: LevelsPanel,
-  evidence: EvidencePanel,
+  fullEvidence: EvidencePanel,
   gaps: GapsPanel,
+  liveness: LivenessPanel,
 };
+
+/** One section: its heading (outside `decide`) and every module inside it. */
+function SectionBlock({ id, title, showTitle, d }: {
+  id: (typeof SECTIONS)[number]["id"];
+  title: string;
+  showTitle: boolean;
+  d: TickerDossier;
+}) {
+  return (
+    <section key={id} className="flex flex-col gap-5">
+      {showTitle && (
+        <h2 className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-ink-faint">{title}</h2>
+      )}
+      {modulesOf(id).map((m) => {
+        const Module = MODULE_COMPONENTS[m.id];
+        return <Module key={m.id} d={d} />;
+      })}
+    </section>
+  );
+}
 
 export default async function AssetPage({ params }: { params: Promise<{ symbol: string }> }) {
   const { symbol } = await params;
@@ -181,31 +215,39 @@ export default async function AssetPage({ params }: { params: Promise<{ symbol: 
         <WatchlistStrip activeSymbol={d.identity.symbol} />
 
         {PHASE_ORDER.map((phase) => {
-          const ids = DOSSIER_SECTIONS.filter((s) => s.phase === phase).map((s) => s.id);
-          if (ids.length === 0) return null;
-          const { heading, blurb, folded } = PHASE_PRESENTATION[phase];
-          const panels = ids.map((id) => {
-            const SectionComponent = SECTION_COMPONENTS[id];
-            return <SectionComponent key={id} d={d} />;
-          });
+          const sections = sectionsOf(phase);
+          if (sections.length === 0) return null;
+          const { fold, blurb } = PHASE_PRESENTATION[phase];
+          const blocks = sections.map((sec) => (
+            <SectionBlock
+              key={sec.id}
+              id={sec.id}
+              title={sec.title}
+              /*
+               * A heading exists to GROUP. With one module there is nothing to
+               * group, and the heading merely restates the panel beneath it —
+               * "Money Flow" directly above "Money flow". Single-module
+               * sections are titled by their own panel, whose copy is better
+               * anyway ("Price levels that matter" beats "Technical
+               * Structure"). The decide group never takes a heading at all:
+               * it is the answer, and labelling the punchline explains it.
+               */
+              showTitle={phase !== "decide" && modulesOf(sec.id).length > 1}
+              d={d}
+            />
+          ));
 
-          if (folded) {
+          if (fold) {
             return (
-              <FoldedSection key={phase} title={heading ?? ""} summary={blurb ?? undefined}>
-                {panels}
+              <FoldedSection key={phase} title={fold} summary={blurb ?? undefined}>
+                {blocks}
               </FoldedSection>
             );
           }
-
           return (
-            <section key={phase} className="flex flex-col gap-5">
-              {heading && (
-                <h2 className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-ink-faint">
-                  {heading}
-                </h2>
-              )}
-              {panels}
-            </section>
+            <div key={phase} className="flex flex-col gap-5">
+              {blocks}
+            </div>
           );
         })}
 

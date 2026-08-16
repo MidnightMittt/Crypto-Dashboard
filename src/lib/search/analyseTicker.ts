@@ -4,10 +4,11 @@ import { buildLiveAnalysis, LiveAnalysis } from "./liveAnalysis";
 import { MetricVerdict } from "@/lib/signals/types";
 import { EarningsCalendar } from "@/lib/markets/earningsVeto";
 import { buildDossier } from "@/lib/dossier/buildDossier";
-import { available, Section, TickerDossier, unavailable } from "@/lib/dossier/types";
+import { available, Read, TickerDossier, unavailable } from "@/lib/dossier/types";
 import { fetchOptionsSummary } from "@/lib/dossier/providers/cboeOptions";
 import { fetchTradierChains } from "@/lib/dossier/providers/tradierOptions";
 import { buildOptionsIntelligence } from "@/lib/dossier/providers/optionsIntelligence";
+import { fetchCatalysts } from "@/lib/dossier/providers/edgarCatalysts";
 import { fetchEtfFlows } from "@/lib/providers/etfFlows";
 import { crossConfirm } from "@/lib/dossier/providers/crossVenueOptions";
 import { fetchInsiderSummary } from "@/lib/dossier/providers/edgarInsiders";
@@ -99,7 +100,8 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
    * section, never the page. Equity-only sources are skipped for crypto
    * with a typed null rather than a wasted request.
    */
-  const [history, intradayBars, etfFlows, options, tradier, insiders, shortVolume, news, social] = await Promise.all([
+  const [history, intradayBars, etfFlows, options, tradier, insiders, shortVolume, news, social, catalysts] =
+    await Promise.all([
     fetchQuoteHistory(resolved.providerSymbol),
     // The second timeframe, from the same keyless endpoint as the daily bars.
     fetchIntradayHistory(resolved.providerSymbol),
@@ -117,6 +119,12 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
     isCrypto ? null : fetchShortVolume(resolved.symbol),
     fetchNews(resolved.providerSymbol),
     isCrypto ? null : fetchSocial(resolved.symbol),
+    /*
+     * Filings accepted since the prior close — the catalyst class that
+     * decides an overnight hold. Equity-only: there is no issuer filing with
+     * the SEC behind a token.
+     */
+    isCrypto ? null : fetchCatalysts(resolved.symbol),
   ]);
 
   if (!history.ok) {
@@ -472,31 +480,58 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
         lib
       );
     })(),
-    options: toSection(options, "advanced", {
+    options: toRead(options, "advanced", {
       to: "institutional" as const,
       when: "positioning is tracked across sessions, so today's cross-venue snapshot becomes a trend rather than a single reading",
     }),
-    insiders: toSection(insiders, "advanced", {
+    insiders: toRead(insiders, "advanced", {
       to: "institutional" as const,
       when: "cluster-buy patterns are scored against their own forward record instead of reported as raw filings",
     }),
-    shortVolume: toSection(shortVolume, "basic", {
+    shortVolume: toRead(shortVolume, "basic", {
       to: "advanced" as const,
       when: "bi-monthly short interest is ingested, so the standing short position is measured rather than one day's flow",
     }),
-    newsSection: toSection(news, "basic", {
+    newsSection: toRead(news, "basic", {
       to: "advanced" as const,
       when: "coverage volume is measured against this symbol's own baseline, so unusual attention becomes detectable",
     }),
-    social: toSection(social, "basic", {
+    /*
+     * A SUCCESSFUL fetch returning zero filings is a real answer — nothing was
+     * filed — and must not be confused with a lookup that failed. The provider
+     * already separates the two, so the section carries the distinction rather
+     * than flattening it into an empty list.
+     */
+    catalysts: catalysts
+      ? catalysts.ok
+        ? available(catalysts.filings, "advanced", null, {
+            confidence: null,
+            reasoning: [
+              catalysts.filings.length === 0
+                ? "No qualifying filing has been accepted since the prior session's close."
+                : `${catalysts.filings.length} qualifying filing(s) accepted since the prior close.`,
+            ],
+            provenance: [
+              {
+                field: "filings_since_prior_close",
+                unit: "filings",
+                as_of: catalysts.windowStart,
+                source: "sec_edgar_submissions",
+                method: "8-K items 1.01/2.02/3.02/7.01/8.01, any 424B, S-3ASR",
+              },
+            ],
+          })
+        : unavailable("provider-error", `EDGAR could not be read for this symbol (${catalysts.reason}).`)
+      : undefined,
+    social: toRead(social, "basic", {
       to: "advanced" as const,
       when: "message velocity is baselined per symbol, so a crowd arriving is distinguishable from a crowd that was always there",
     }),
-    business: toSection(fundamentals, "advanced", {
+    business: toRead(fundamentals, "advanced", {
       to: "institutional" as const,
       when: "fundamental trends are scored against forward returns, so growth and dilution carry measured consequences rather than descriptions",
     }),
-    street: toSection(street, "basic", {
+    street: toRead(street, "basic", {
       to: "advanced" as const,
       when: "target accuracy and rating changes are scored against realised outcomes, so the consensus carries a track record instead of a caveat",
     }),
@@ -513,11 +548,11 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
  * provider-error; null means the source was never queried and the dossier's
  * per-asset-class default explains why.
  */
-function toSection<T>(
+function toRead<T>(
   result: { ok: true; summary: T } | { ok: false; reason: string } | null,
   depth: "basic" | "advanced",
   upgrade: { to: "advanced" | "institutional"; when: string }
-): Section<T> | undefined {
+): Read<T> | undefined {
   if (result === null) return undefined;
   if (result.ok) return available(result.summary, depth, upgrade);
   return unavailable("provider-error", result.reason);

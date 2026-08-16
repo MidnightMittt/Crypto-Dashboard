@@ -3,7 +3,7 @@ import { IndustryRead } from "@/lib/markets/industryIntelligence";
 import { RegimeRead } from "@/lib/markets/riskRegime";
 import { RotationRead, RotationState } from "@/lib/markets/rotation";
 import { composeMacroSummary } from "./narrative";
-import { available, MacroContext, Section, unavailable } from "./types";
+import { available, MacroContext, Read, unavailable } from "./types";
 
 /**
  * EVERY TICKER ARRIVES WITH ITS CONTEXT.
@@ -45,7 +45,7 @@ export interface MacroInputs {
   backdropLines?: string[] | null;
 }
 
-export function buildMacroContext(inputs: MacroInputs): Section<MacroContext> {
+export function buildMacroContext(inputs: MacroInputs): Read<MacroContext> {
   const { symbol, assetClass, regime, rotation, industries } = inputs;
 
   /*

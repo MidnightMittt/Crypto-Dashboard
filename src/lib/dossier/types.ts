@@ -3,6 +3,7 @@ import { TradePlan, TradePlanRefusal } from "@/lib/signals/tradePlan";
 import { EarningsVetoResult } from "@/lib/markets/earningsVeto";
 import { SupportResistanceZone } from "@/lib/technicals/marketStructure";
 import { RotationState } from "@/lib/markets/rotation";
+import { Provenance } from "@/lib/provenance";
 
 /**
  * THE TICKER DOSSIER — one contract for the research page.
@@ -91,26 +92,88 @@ export interface Upgrade {
   when: string;
 }
 
-export type Section<T> =
-  | { status: "available"; depth: Depth; data: T; upgrade: Upgrade | null }
+/**
+ * How strongly a module believes its own claim.
+ *
+ * Two axes, because they fail differently. `grade` is INPUT quality — are the
+ * feeds fresh and complete. `validated` is whether the signal works at all
+ * out of sample. A pristine reading from a coin flip and a stale reading from
+ * a validated module are both bad, in opposite ways, and one number covering
+ * both would hide each of them.
+ */
+export interface Confidence {
+  grade: "thin" | "moderate" | "strong";
+  validated: EvidenceGrade;
+  /** Sample size behind the claim. null means NOT MEASURED — never 0. */
+  n: number | null;
+}
+
+/**
+ * What a module knows, why it believes it, and where it came from.
+ *
+ * `confidence: null` is a real answer and not a gap: this module reports
+ * FACTS and makes no probabilistic claim. Forcing a fundamentals read to
+ * invent a grade would fabricate certainty, which is the defect this codebase
+ * keeps removing. A null-confidence module must never be summarised as
+ * certain by anything downstream.
+ */
+export interface Evidence {
+  confidence: Confidence | null;
+  /** Why, in the analyst voice. One clause per claim, never one blob. */
+  reasoning: string[];
+  /** Where every number came from. See src/lib/provenance.ts. */
+  provenance: Provenance[];
+}
+
+/**
+ * A MODULE'S OUTPUT — the one envelope every module returns.
+ *
+ * Formerly `Section<T>`. Renamed because "section" now means one of the
+ * fourteen named slots on the page (see modules.ts), and a module is what
+ * fills one. The word matches vocabulary already in use: TechnicalRead,
+ * IndustryRead, LiquidityMapRead.
+ */
+export type Read<T> =
+  | { status: "available"; depth: Depth; data: T; evidence: Evidence; upgrade: Upgrade | null }
   | { status: "unavailable"; reason: string; blockedBy: BlockedBy };
 
-export const unavailable = <T>(blockedBy: BlockedBy, reason: string): Section<T> => ({
+/**
+ * Evidence for a module that has not yet had its provenance wired.
+ *
+ * Deliberately NOT a silent default: it states, in the payload, that the
+ * sourcing is undeclared. An empty `provenance: []` would be
+ * indistinguishable from "this value has no sources", which is never true —
+ * every read here comes from somewhere. Modules are migrated off this as
+ * their provenance is filled in, and a grep for it is the remaining work.
+ */
+export const undeclaredEvidence = (): Evidence => ({
+  confidence: null,
+  reasoning: [],
+  provenance: [],
+});
+
+export const unavailable = <T>(blockedBy: BlockedBy, reason: string): Read<T> => ({
   status: "unavailable",
   reason,
   blockedBy,
 });
 
-export const available = <T>(data: T, depth: Depth = "basic", upgrade: Upgrade | null = null): Section<T> => ({
+export const available = <T>(
+  data: T,
+  depth: Depth = "basic",
+  upgrade: Upgrade | null = null,
+  evidence: Evidence = undeclaredEvidence()
+): Read<T> => ({
   status: "available",
   depth,
   data,
+  evidence,
   upgrade,
 });
 
 /** Convenience for rendering: the data, or null. Never throws, never fabricates. */
-export function dataOf<T>(section: Section<T>): T | null {
-  return section.status === "available" ? section.data : null;
+export function dataOf<T>(read: Read<T>): T | null {
+  return read.status === "available" ? read.data : null;
 }
 
 import { EvidenceGrade } from "@/lib/signals/evidenceGrade";
@@ -173,7 +236,7 @@ export interface PlanFieldsSection {
    * exists for the asset class — crypto today, equities once the equity
    * replay is built. Null fields are rendered as "not measured", never as 0.
    */
-  expectations: Section<PlanExpectations>;
+  expectations: Read<PlanExpectations>;
 }
 
 export interface PlanExpectations {
@@ -459,9 +522,9 @@ export interface TickerDossier {
    * broad-bucket analogs, whose "71,585 times seen" counted the same
    * environments thousands of times over.
    */
-  analogs: Section<import("@/lib/research/neighbourhood").NeighbourhoodStats>;
+  analogs: Read<import("@/lib/research/neighbourhood").NeighbourhoodStats>;
   /** Where this becomes a trade, whether or not it is one today. */
-  nextEntry: Section<PlannedEntryRead>;
+  nextEntry: Read<PlannedEntryRead>;
   /**
    * THE ONE EQUITY SIGNAL WITH A MEASURED FORWARD RECORD.
    *
@@ -477,7 +540,7 @@ export interface TickerDossier {
    * a mid-pack ticker gets an explicit no-claim rather than an interpolated
    * fraction of an edge.
    */
-  validatedSignal: Section<import("@/lib/signals/equityMomentum").MomentumRead>;
+  validatedSignal: Read<import("@/lib/signals/equityMomentum").MomentumRead>;
   /**
    * Downsampled closes, oldest first, for the evidence sparklines.
    *
@@ -487,7 +550,7 @@ export interface TickerDossier {
    * to draw honestly.
    */
   priceTrail: { closes: number[]; sessions: number } | null;
-  macro: Section<MacroContext>;
+  macro: Read<MacroContext>;
   evidence: EvidenceGroup[];
   /** Structural context the evidence groups do not cover. */
   earnings: EarningsVetoResult | null;
@@ -497,19 +560,19 @@ export interface TickerDossier {
 
   /*
    * ── Provider-backed sections ─────────────────────────────────────────
-   * Each is a typed payload or a stated reason. These were Section<never>
+   * Each is a typed payload or a stated reason. These were Read<never>
    * placeholders until their providers landed — the page rendered their
    * absence from day one, which is exactly how the contract is meant to
    * work: the slots existed before the data did.
    */
-  moneyFlow: Section<EvidenceGroup>;
+  moneyFlow: Read<EvidenceGroup>;
   /** Audited financials from SEC filings — what the stock is a claim on. */
-  business: Section<import("./providers/secFundamentals").FundamentalsSummary>;
+  business: Read<import("./providers/secFundamentals").FundamentalsSummary>;
   /** Analyst consensus, targets and surprise history — reported opinion, labelled as such. */
-  street: Section<import("./providers/nasdaqStreet").StreetSummary>;
-  news: Section<import("./providers/attention").NewsSummary>;
-  socialSentiment: Section<import("./providers/attention").SocialSummary>;
-  optionsFlow: Section<import("./providers/cboeOptions").OptionsSummary>;
+  street: Read<import("./providers/nasdaqStreet").StreetSummary>;
+  news: Read<import("./providers/attention").NewsSummary>;
+  socialSentiment: Read<import("./providers/attention").SocialSummary>;
+  optionsFlow: Read<import("./providers/cboeOptions").OptionsSummary>;
   /**
    * What the options market is PRICING, as distinct from what it traded.
    * Separate from `optionsFlow` on purpose: flow is a record of activity
@@ -518,7 +581,24 @@ export interface TickerDossier {
    * chart. They answer different questions and come from different venues,
    * so merging them would blur which claim rests on which source.
    */
-  optionsIntel: Section<import("./providers/optionsIntelligence").OptionsIntelligence>;
-  insiderActivity: Section<import("./providers/edgarInsiders").InsiderSummary>;
-  shortInterest: Section<import("./providers/finraShortVolume").ShortVolumeSummary>;
+  optionsIntel: Read<import("./providers/optionsIntelligence").OptionsIntelligence>;
+  insiderActivity: Read<import("./providers/edgarInsiders").InsiderSummary>;
+  shortInterest: Read<import("./providers/finraShortVolume").ShortVolumeSummary>;
+  /**
+   * Relevant EDGAR filings accepted since the prior session's close.
+   *
+   * The catalyst class that decides an overnight hold: a filing accepted
+   * after the close is precisely the event a position cannot react to,
+   * because the stop is a statement about continuous tape and the tape is
+   * closed. An empty list from a SUCCESSFUL fetch is a real answer — nothing
+   * was filed — which is why this is a Read and not a bare array.
+   */
+  catalysts: Read<import("./providers/edgarCatalysts").CatalystFiling[]>;
+  /**
+   * Whether the daily pipeline behind every number on this page actually ran.
+   *
+   * Not a diagnostic for us — a trust input for the reader. It exists because
+   * the pipeline stopped for days and nothing on the site said so.
+   */
+  liveness: Read<import("./pipelineLiveness").LivenessRead>;
 }

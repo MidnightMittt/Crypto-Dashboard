@@ -12,6 +12,12 @@ import { gradeForComposite } from "@/lib/signals/evidenceGrade";
 import { weightForBasis } from "@/lib/signals/scoring";
 import metricStats from "@/data/backtestMetricStats.json";
 import { buildPassRules } from "./passRules";
+import { LivenessRead, StoreInput, assessLiveness } from "./pipelineLiveness";
+import signalLedgerJson from "@/data/signalLedger.json";
+import equityMarketsJson from "@/data/equityMarkets.json";
+import positioningLatestJson from "@/data/positioningLatest.json";
+import forwardReachJson from "@/data/forwardReachRecord.json";
+import equityCrossSectionJson from "@/data/equityCrossSection.json";
 import {
   AnalogStats,
   available,
@@ -22,7 +28,7 @@ import {
   WatchLevel,
   EvidenceGroup,
   PlanExpectations,
-  Section,
+  Read,
   TickerDossier,
   unavailable,
 } from "./types";
@@ -96,8 +102,84 @@ export interface DossierInputs {
   social?: TickerDossier["socialSentiment"];
   business?: TickerDossier["business"];
   street?: TickerDossier["street"];
+  catalysts?: TickerDossier["catalysts"];
   /** Volatility/rates/dollar/credit sentences, threaded into the macro section. */
   backdropLines?: string[] | null;
+}
+
+
+/**
+ * THE DECLARED STORES the daily pipeline is supposed to append to.
+ *
+ * A declared list rather than a directory scan, for the reason a declared
+ * list is always right here: a scan reports on whatever happens to exist, so
+ * a store that stopped being written would simply stop being checked. These
+ * are the five the dossier actually draws numbers from, named in the
+ * reader's words.
+ */
+const isoDay = (ms: number | null | undefined): string | null =>
+  typeof ms === "number" && Number.isFinite(ms) && ms > 0
+    ? new Date(ms).toISOString().slice(0, 10)
+    : null;
+
+function livenessStores(): StoreInput[] {
+  const ledger = (signalLedgerJson as { entries?: { date?: string }[] }).entries ?? [];
+  const lastLedger = ledger.length ? (ledger[ledger.length - 1].date ?? null) : null;
+  return [
+    {
+      store: "equityMarkets.json",
+      what: "the markets snapshot",
+      lastUpdate: isoDay((equityMarketsJson as { generatedAt?: number }).generatedAt),
+    },
+    {
+      store: "signalLedger.json",
+      what: "the daily signal ledger",
+      lastUpdate: lastLedger,
+    },
+    {
+      store: "forwardReachRecord.json",
+      what: "the forward record",
+      lastUpdate: isoDay((forwardReachJson as { generatedAt?: number }).generatedAt),
+    },
+    {
+      store: "positioningLatest.json",
+      what: "options and short-volume positioning",
+      lastUpdate: isoDay((positioningLatestJson as { generatedAt?: number }).generatedAt),
+    },
+    {
+      store: "equityCrossSection.json",
+      what: "the cross-sectional panel",
+      // asOf is epoch ms here, not an ISO string — the compiler caught the
+      // assumption. Normalised through the same helper as every other store.
+      lastUpdate: isoDay((equityCrossSectionJson as { asOf?: number }).asOf),
+    },
+  ];
+}
+
+/**
+ * Always available, never a provider call: the answer is derived from files
+ * already in the bundle. There is no failure mode that produces "unknown" —
+ * a store that has never been written reports exactly that.
+ */
+function buildLiveness(): Read<LivenessRead> {
+  const read = assessLiveness(livenessStores(), new Date().toISOString().slice(0, 10));
+  return available(read, "advanced", null, {
+    confidence: null,
+    reasoning: [describeLivenessReason(read)],
+    provenance: read.stores.map((s) => ({
+      field: s.store,
+      unit: "iso_date",
+      as_of: s.lastUpdate ?? "never",
+      source: "committed_data_store",
+      method: "weekdays_since_last_append_excluding_today",
+    })),
+  });
+}
+
+function describeLivenessReason(read: LivenessRead): string {
+  return read.degraded === 0
+    ? `All ${read.stores.length} daily stores carry the most recent session.`
+    : `${read.degraded} of ${read.stores.length} daily stores are behind by up to ${read.worstSessionsBehind ?? 0} session(s).`;
 }
 
 export function buildDossier(inputs: DossierInputs): TickerDossier {
@@ -286,6 +368,24 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
       ),
     street: streetSection,
 
+    /*
+     * THE TWO RECOVERED ORPHANS.
+     *
+     * Both were built, tested and shipped, and reached no reader: the
+     * catalyst feed served /api/pretrade only, and nothing anywhere reported
+     * whether the daily pipeline had run. Under the module registry they are
+     * one entry each and the page did not change to accept them.
+     */
+    catalysts:
+      inputs.catalysts ??
+      unavailable(
+        isCrypto ? "not-applicable" : "no-provider",
+        isCrypto
+          ? "There is no issuer filing with the SEC behind a crypto asset, so there are no filings to watch for."
+          : "EDGAR was not queried for this asset."
+      ),
+    liveness: buildLiveness(),
+
     news:
       inputs.newsSection ??
       unavailable("no-provider", "The news feed was not queried for this asset."),
@@ -341,7 +441,7 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
  * inputs exist, the study has not been run. Printing a crypto win rate beside
  * an equity plan would be borrowed authority of the worst kind.
  */
-function buildExpectations(expectations: PlanExpectations | null, isCrypto: boolean): Section<PlanExpectations> {
+function buildExpectations(expectations: PlanExpectations | null, isCrypto: boolean): Read<PlanExpectations> {
   if (expectations) {
     // Replay-backed numbers are MEASURED, not yet validated: the cells are
     // in-sample and re-earn themselves each regeneration. Institutional
@@ -379,7 +479,7 @@ function buildExpectations(expectations: PlanExpectations | null, isCrypto: bool
  */
 function buildValidatedSignal(
   outcome: import("@/lib/signals/equityMomentum").MomentumOutcome | null
-): Section<import("@/lib/signals/equityMomentum").MomentumRead> {
+): Read<import("@/lib/signals/equityMomentum").MomentumRead> {
   if (!outcome) {
     return unavailable(
       "not-measured-yet",
@@ -407,7 +507,7 @@ function buildAnalogs(
   isCrypto: boolean,
   barsUsed: number,
   blockedReason: string | null
-): Section<NeighbourhoodStats> {
+): Read<NeighbourhoodStats> {
   if (analogs) {
     return available(analogs, "advanced", {
       to: "institutional",
@@ -446,7 +546,7 @@ function buildAnalogs(
 function buildMoneyFlow(
   categories: TickerDossier["evidence"],
   isCrypto: boolean
-): Section<EvidenceGroup> {
+): Read<EvidenceGroup> {
   const group = categories.find((c) => c.label === "Money Flow");
   if (group && group.metrics.length > 0) {
     return available(
@@ -490,7 +590,7 @@ function buildNextEntry(
   records: { long: AnalogStats | null; short: AnalogStats | null } | null,
   reachOf: ((distanceAtr: number, touches: number, prefer: "plan" | "zone") => PlannedEntry["reach"]) | null,
   forward: ForwardRecordSummary | null
-): Section<PlannedEntryRead> {
+): Read<PlannedEntryRead> {
   /*
    * NEVER "NOTHING TO DO". Structure exists on both sides of price at all
    * times; what varies is whether it is close enough to price a stop

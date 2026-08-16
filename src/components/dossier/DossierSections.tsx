@@ -4,8 +4,9 @@ import { EvidenceModuleDetail } from "@/components/evidence/EvidenceModuleDetail
 import { formatPrice, ordinal } from "@/lib/utils/format";
 import { Sparkline } from "@/components/charts/Sparkline";
 import { TRADE_PLAN_REFUSAL_SHORT, TRADE_PLAN_REFUSAL_TEXT } from "@/lib/signals/tradePlan";
-import { Depth, EvidenceBullet, EvidenceGroup, InvalidationTrigger, Section, TickerDossier } from "@/lib/dossier/types";
+import { Depth, EvidenceBullet, EvidenceGroup, InvalidationTrigger, Read, TickerDossier } from "@/lib/dossier/types";
 import { MetricVerdict } from "@/lib/signals/types";
+import { describeLiveness } from "@/lib/dossier/pipelineLiveness";
 import { CheckState } from "@/lib/dossier/checklist";
 import { StructureLadder, LadderMarker } from "@/components/markets/StructureLadder";
 
@@ -53,7 +54,7 @@ function Panel({
  * world, and flattening it into "no data" would let the platform hide its own
  * unfinished work behind the market's limitations.
  */
-export function Unavailable({ section }: { section: Extract<Section<unknown>, { status: "unavailable" }> }) {
+export function Unavailable({ section }: { section: Extract<Read<unknown>, { status: "unavailable" }> }) {
   const ours = section.blockedBy === "not-measured-yet";
   return (
     <div className={`rounded-md border px-3 py-2.5 ${ours ? "border-amber/20 bg-amber/[0.03]" : "border-hairline bg-void/30"}`}>
@@ -92,7 +93,7 @@ const DEPTH_LABEL: Record<Depth, { word: string; meaning: string; tone: string }
   institutional: { word: "Validated", meaning: "supported by a forward-tested record", tone: "text-success" },
 };
 
-export function DepthMeta({ section }: { section: Extract<Section<unknown>, { status: "available" }> }) {
+export function DepthMeta({ section }: { section: Extract<Read<unknown>, { status: "available" }> }) {
   const d = DEPTH_LABEL[section.depth];
   return (
     <div className="flex flex-col gap-1 border-t border-hairline pt-2">
@@ -1052,7 +1053,7 @@ export function EvidencePanel({ d }: { d: TickerDossier }) {
  * it tells a reader exactly how far to trust the page, and it is the roadmap.
  */
 export function GapsPanel({ d }: { d: TickerDossier }) {
-  const gaps: Array<{ label: string; section: Section<unknown> }> = [
+  const gaps: Array<{ label: string; section: Read<unknown> }> = [
     { label: "Money flow (single-name)", section: d.moneyFlow },
     { label: "News", section: d.news },
     { label: "Social & search interest", section: d.socialSentiment },
@@ -1075,7 +1076,7 @@ export function GapsPanel({ d }: { d: TickerDossier }) {
           <div key={g.label}>
             <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink">{g.label}</span>
             <div className="mt-1">
-              <Unavailable section={g.section as Extract<Section<unknown>, { status: "unavailable" }>} />
+              <Unavailable section={g.section as Extract<Read<unknown>, { status: "unavailable" }>} />
             </div>
           </div>
         ))}
@@ -1768,6 +1769,147 @@ export function NextEntryPanel({ d }: { d: TickerDossier }) {
         </>
       ) : (
         <Unavailable section={s} />
+      )}
+    </Panel>
+  );
+}
+
+/* ── THE RECOVERED ORPHANS ───────────────────────────────────────────── */
+
+/**
+ * AFTER-HOURS FILINGS — the catalyst class that decides an overnight hold.
+ *
+ * Built, tested and shipped into /api/pretrade, and rendered on no page at
+ * all until the module registry gave it a slot. A filing accepted after the
+ * close is precisely the event a position cannot react to: the stop is a
+ * statement about continuous tape, and the tape is closed.
+ *
+ * "Nothing filed" is stated rather than left blank, because a blank is
+ * indistinguishable from a lookup that failed — and those two answers point
+ * a trader in opposite directions.
+ */
+export function CatalystsPanel({ d }: { d: TickerDossier }) {
+  const s = d.catalysts;
+  return (
+    <Panel title="Filings since the prior close">
+      {s.status === "unavailable" ? (
+        <Unavailable section={s} />
+      ) : s.data.length === 0 ? (
+        <p className="text-[13px] leading-relaxed text-ink-muted">
+          Nothing qualifying has been filed since the last close. This is a checked answer, not an
+          empty feed — EDGAR was read and returned no 8-K carrying a material item, no prospectus and
+          no shelf.
+        </p>
+      ) : (
+        <>
+          <p className="text-[13px] leading-relaxed text-ink">
+            {s.data.length === 1
+              ? "One qualifying filing has landed since the last close."
+              : `${s.data.length} qualifying filings have landed since the last close.`}{" "}
+            A position held overnight could not have reacted to {s.data.length === 1 ? "it" : "them"}.
+          </p>
+          <ul className="flex flex-col gap-2">
+            {s.data.map((f) => (
+              <li key={f.accession} className="flex flex-wrap items-baseline gap-2 border-l-2 border-amber/40 pl-3">
+                <span className="font-mono text-[12px] font-semibold text-ink">{f.form}</span>
+                {f.items.length > 0 && (
+                  <span className="font-mono text-[10px] text-ink-muted">items {f.items.join(", ")}</span>
+                )}
+                <span className="font-mono text-[10px] text-ink-faint">
+                  {f.filed_at.replace("T", " ").slice(0, 16)} UTC
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {s.status === "available" && <DepthMeta section={s} />}
+    </Panel>
+  );
+}
+
+/**
+ * PIPELINE LIVENESS — whether the machinery behind this page actually ran.
+ *
+ * Not a diagnostic for us. A terminal that looks live when it is not
+ * discredits every number on it, and this platform has already had that
+ * failure: the daily job stopped, the ledger sat at three entries, and it was
+ * found by running `git log` by hand. From the site, everything looked fine.
+ */
+export function LivenessPanel({ d }: { d: TickerDossier }) {
+  const s = d.liveness;
+  if (s.status === "unavailable") {
+    return (
+      <Panel title="Pipeline liveness">
+        <Unavailable section={s} />
+      </Panel>
+    );
+  }
+  const read = s.data;
+  return (
+    <Panel title="Pipeline liveness" subtitle={`as of ${read.asOf}`}>
+      <p className="text-[13px] leading-relaxed text-ink">{describeLiveness(read)}</p>
+      <ul className="flex flex-col gap-1.5">
+        {read.stores.map((store) => (
+          <li key={store.store} className="flex flex-wrap items-baseline justify-between gap-2">
+            <span className="text-[12px] text-ink-muted">{store.what}</span>
+            <span className="flex items-baseline gap-2">
+              <span className="font-mono text-[11px] text-ink-faint">{store.lastUpdate ?? "never written"}</span>
+              <span
+                className={`text-[9px] font-semibold uppercase tracking-[0.14em] ${
+                  store.status === "current"
+                    ? "text-success"
+                    : store.status === "late"
+                      ? "text-amber"
+                      : "text-danger"
+                }`}
+              >
+                {store.status === "current"
+                  ? "current"
+                  : store.status === "never"
+                    ? "never written"
+                    : `${store.sessionsBehind} behind`}
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <DepthMeta section={s} />
+    </Panel>
+  );
+}
+
+/**
+ * MONEY FLOW — where the capital is going.
+ *
+ * The third orphan: `moneyFlow` has been assembled on the dossier for as long
+ * as the contract has existed and was read by nothing except the gaps report,
+ * which listed it as missing. It was never missing; it had no slot.
+ */
+export function MoneyFlowPanel({ d }: { d: TickerDossier }) {
+  const s = d.moneyFlow;
+  return (
+    <Panel title="Money flow">
+      {s.status === "unavailable" ? (
+        <Unavailable section={s} />
+      ) : (
+        <>
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <span className="text-[13px] leading-relaxed text-ink">{s.data.topReason}</span>
+            <span className="font-mono text-[11px] text-ink-muted">{s.data.verdict}</span>
+          </div>
+          {s.data.metrics.length > 0 && (
+            <ul className="flex flex-col gap-1">
+              {s.data.metrics.slice(0, 5).map((m) => (
+                <li key={m.id} className="flex flex-col gap-0.5">
+                  <span className="text-[12px] text-ink-muted">{m.label}</span>
+                  <span className="text-[11px] leading-relaxed text-ink-faint">{m.explanation}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <DepthMeta section={s} />
+        </>
       )}
     </Panel>
   );

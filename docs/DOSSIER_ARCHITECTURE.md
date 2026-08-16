@@ -208,8 +208,13 @@ risk or execution for a swing trade, and the burden is on the module.
 
 ## 8. Migration policy — canonical now, retire on parity
 
-`/asset/[symbol]` is the canonical page for every ticker **today**. The
-ETF redirect is removed: no symbol is ever routed away from the dossier.
+`/asset/[symbol]` is the canonical page for every ticker. **One exception
+remains and is tracked, not tolerated:** `/asset/[ETF]` still redirects to
+`/markets/[symbol]`, so searching SPY leaves the dossier. Removing it is the
+next migration step and is deliberately sequenced after the module registry
+rather than bundled with it — the ETF pages are validated and daily-refreshed,
+and reversing the redirect without first checking that the dossier serves them
+at least as well would trade one honest page for a worse one.
 
 Existing pages (`/crypto`, `/markets`, `/markets/[symbol]`, `/industries`,
 `/industry/[slug]`, `/intelligence`, `/scanner`) remain as **discovery and
