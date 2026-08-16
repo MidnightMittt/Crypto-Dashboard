@@ -1,78 +1,100 @@
 import Link from "next/link";
-import { RotationBoard } from "@/components/intelligence/RotationBoard";
+import { TickerSearch } from "@/components/search/TickerSearch";
+import { WatchlistStrip } from "@/components/watchlist/WatchlistStrip";
+import { WhatChanged } from "@/components/intelligence/WhatChanged";
 import { FreshnessBanner } from "@/components/intelligence/FreshnessBanner";
-import { EvidenceModuleDetail } from "@/components/evidence/EvidenceModuleDetail";
-import { Collapsible } from "@/components/ui/Collapsible";
+import { buildBrief } from "@/lib/brief/buildBrief";
+import { Ledger, latestDiff } from "@/lib/markets/historyLedger";
 import { RegimeRead } from "@/lib/markets/riskRegime";
-import { RotationRead } from "@/lib/markets/rotation";
 import snapshot from "@/data/marketIntelligence.json";
 import ledgerJson from "@/data/signalLedger.json";
-import { WhatChanged } from "@/components/intelligence/WhatChanged";
-import { Ledger, latestDiff } from "@/lib/markets/historyLedger";
+import crossSectionJson from "@/data/equityCrossSection.json";
+import validationJson from "@/data/signalValidation.json";
+import earningsJson from "@/data/earningsCalendar.json";
 
 /**
- * MARKET INTELLIGENCE — the top of the hierarchy, and now the front door.
+ * THE BRIEF — the front door, and the shortest page on the platform.
  *
- * The reading order is the hierarchy itself: what regime are we in, where is
- * capital moving inside it, and only then which individual instruments are
- * worth acting on. Each level is context for the one below, which is why the
- * scanner now sits a level DOWN rather than being the landing page — a ranked
- * list of setups read without knowing the regime is a list of setups you
- * cannot size.
+ * Four questions, in the order a returning trader asks them: what regime are
+ * we in, what changed overnight, what could blow up today, and is there
+ * anything worth doing. The market intelligence page — regime pairs, rotation
+ * boards, industry breadth — is one click down at /intelligence, where it
+ * belongs: it is the WORKINGS, and the workings should not be the first
+ * screen.
  *
- * ── What this page is not ─────────────────────────────────────────────
+ * ── Why the actionable section is usually empty ───────────────────────
  *
- * Not a second engine. The regime pairs emit ordinary `MetricVerdict`s under
- * the same contract as funding, breadth and market structure, and are
- * rendered by the same `EvidenceModuleDetail` the asset pages use. Rotation
- * emits no verdict at all — it is a level provider in the sense the evidence
- * contract already defines, producing measurements that other things consume.
+ * Items are Edge-qualified only: a signal that cleared the Wilson gate and
+ * survived FDR correction, or nothing. Today the platform has exactly one
+ * such equity signal, it fires only for the top decile of a ranking, and its
+ * record only holds while breadth is healthy. Most days that produces
+ * nothing, and the page says so as a conclusion rather than an apology.
  *
- * Nothing on this page is ranked by hand. Every ordering falls out of a
- * subtraction between two price series.
+ * The failure mode this avoids is not subtle. A brief that must produce three
+ * ideas every morning will find three, and the third will be there because
+ * the layout had a slot — which is how a research tool turns into a tip sheet
+ * without anyone deciding to do that.
  */
 
 const data = snapshot as unknown as {
   generatedAt: number;
   regime: RegimeRead | null;
-  rotation: RotationRead | null;
-  rotationNarrative: string | null;
 };
-
-/** Committed data, read once at module load like every other snapshot here. */
 const ledger = ledgerJson as Ledger;
-
-export const metadata = { title: "Market Intelligence — Leverage Terminal" };
-
-const REGIME_STYLE: Record<string, { tone: string; border: string; label: string }> = {
-  "risk-on": { tone: "text-success", border: "border-success/25", label: "Risk-On" },
-  "risk-off": { tone: "text-danger", border: "border-danger/25", label: "Risk-Off" },
-  mixed: { tone: "text-amber", border: "border-amber/25", label: "Mixed" },
+const crossSection = crossSectionJson as {
+  asOf: number;
+  breadthPct: number | null;
+  decileSize: number;
+  members: Array<{ symbol: string; mom: number }>;
 };
+const validation = validationJson as {
+  results: Array<{
+    id: string;
+    winRate: number;
+    lowerBound: number | null;
+    n: number;
+    meanSpread: number;
+    holdSessions: number;
+    earnsEdge: boolean;
+  }>;
+};
+const earnings = earningsJson as { entries?: Array<{ symbol: string; date: string }> };
 
-export default function MarketIntelligencePage() {
-  const { regime, rotation, rotationNarrative } = data;
-  const style = regime ? REGIME_STYLE[regime.regime] : null;
+export const metadata = { title: "The Brief — Leverage Terminal" };
+
+export default function BriefPage() {
+  const brief = buildBrief({
+    regime: data.regime ? { regime: data.regime.regime, headline: data.regime.headline } : null,
+    diff: latestDiff(ledger),
+    ledgerEntries: ledger.entries.length,
+    crossSection,
+    /*
+     * The GATED long-only record, not the unconditional one. The brief only
+     * ever offers this item while breadth is healthy, so quoting the
+     * all-weather number beside it would describe a different strategy than
+     * the one on offer.
+     */
+    momentumRecord: validation.results.find((r) => r.id === "momentum-12-1-long-only-broad-up") ?? null,
+    earnings: earnings.entries ?? [],
+    now: Date.now(),
+  });
 
   return (
     <div className="min-h-screen">
-      <main className="mx-auto flex max-w-[1400px] flex-col gap-5 px-4 py-6 sm:px-6">
+      <main className="mx-auto flex max-w-[900px] flex-col gap-5 px-4 py-6 sm:px-6">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <div>
-            <h1 className="text-lg font-semibold tracking-tight text-ink">Market Intelligence</h1>
+            <h1 className="text-lg font-semibold tracking-tight text-ink">The Brief</h1>
             <p className="mt-0.5 text-[11px] uppercase tracking-[0.16em] text-ink-faint">
-              Regime · rotation · where capital is going
+              State · what changed · what is due · what qualifies
             </p>
           </div>
           <nav className="flex gap-4 text-[11px] uppercase tracking-[0.16em] text-ink-muted">
-            <Link href="/industries" className="hover:text-ink">
-              Industries
+            <Link href="/intelligence" className="hover:text-ink">
+              Intelligence
             </Link>
             <Link href="/scanner" className="hover:text-ink">
               Scanner
-            </Link>
-            <Link href="/markets" className="hover:text-ink">
-              Markets
             </Link>
             <Link href="/crypto" className="hover:text-ink">
               Crypto
@@ -82,148 +104,107 @@ export default function MarketIntelligencePage() {
 
         <FreshnessBanner generatedAt={data.generatedAt} />
 
-        {/*
-          WHAT CHANGED, above the state itself.
-          A returning reader already knows the regime; the delta is the part
-          they do not have. This is also the signal ledger's FIRST consumer —
-          it had been write-only since it was built, accumulating for nobody.
-        */}
+        <TickerSearch showHelp={false} />
+        <WatchlistStrip />
+
+        {/* ── 1. THE STATE ─────────────────────────────────────────────── */}
+        {brief.stateLine && (
+          <section className="rounded-xl border border-hairline bg-panel/60 px-5 py-4 sm:px-6">
+            <h2 className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-muted">
+              Where we are
+            </h2>
+            <p className="mt-2 text-[14px] leading-relaxed text-ink">{brief.stateLine}</p>
+            <Link
+              href="/intelligence"
+              className="mt-2 inline-block text-[11px] uppercase tracking-[0.14em] text-ink-faint hover:text-ink"
+            >
+              The pairs behind this →
+            </Link>
+          </section>
+        )}
+
+        {/* ── 2. WHAT CHANGED ──────────────────────────────────────────── */}
         <section className="rounded-xl border border-hairline bg-panel/40 px-5 py-4 sm:px-6">
           <h2 className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-muted">
             Since the last session
           </h2>
           <div className="mt-2">
-            <WhatChanged diff={latestDiff(ledger)} entries={ledger.entries.length} />
+            <WhatChanged diff={brief.diff} entries={brief.ledgerEntries} />
           </div>
         </section>
 
-        {/* ── LEVEL 1: THE REGIME ────────────────────────────────────────── */}
-        {regime && style ? (
-          <section className={`rounded-xl border ${style.border} bg-panel/60 px-5 py-6 shadow-glass backdrop-blur-xs sm:px-6`}>
-            <h2 className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-muted">
-              Risk environment
-            </h2>
-            <div className="mt-1.5 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-              <span className={`text-3xl font-bold uppercase leading-none tracking-[0.02em] sm:text-4xl ${style.tone}`}>
-                {style.label}
-              </span>
-              <span className="font-mono text-[11px] text-ink-faint">
-                {regime.agreeing} of {regime.total} independent pairs agree
-              </span>
-            </div>
-            <p className="mt-3 max-w-4xl text-[14px] leading-relaxed text-ink">{regime.headline}</p>
+        {/* ── 3. WHAT IS DUE ───────────────────────────────────────────── */}
+        <section className="rounded-xl border border-hairline bg-panel/40 px-5 py-4 sm:px-6">
+          <h2 className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-muted">
+            Risk on the calendar
+          </h2>
+          {brief.riskEvents.length === 0 ? (
+            <p className="mt-2 text-[12px] leading-relaxed text-ink-muted">
+              No tracked name reports inside the next five sessions. That is the same window the planner
+              uses to veto new entries, so nothing on the calendar is currently blocking a plan.
+            </p>
+          ) : (
+            <ul className="mt-2 flex flex-col gap-1.5">
+              {brief.riskEvents.map((e) => (
+                <li key={`${e.symbol}-${e.date}`} className="flex flex-wrap items-baseline gap-x-2 text-[12px]">
+                  <span className="font-mono text-ink">{e.symbol}</span>
+                  <span className="text-ink-muted">
+                    reports {e.daysAway === 0 ? "today" : e.daysAway === 1 ? "tomorrow" : `in ${e.daysAway} days`}
+                  </span>
+                  <span className="font-mono text-[10px] text-ink-faint">{e.date}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
-            {/* The pairs themselves, at a glance, then in full on demand. */}
-            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              {regime.metrics.map((m) => (
-                <div key={m.id} className="rounded-md border border-hairline bg-void/40 px-3 py-2.5">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-muted">
-                      {m.label}
-                    </span>
-                    <span
-                      className={`font-mono text-[10px] uppercase ${
-                        m.verdict === "bullish"
-                          ? "text-success"
-                          : m.verdict === "bearish"
-                            ? "text-danger"
-                            : "text-ink-faint"
-                      }`}
-                    >
-                      {m.verdict === "bullish" ? "risk-on" : m.verdict === "bearish" ? "risk-off" : "flat"}
-                    </span>
+        {/* ── 4. WHAT QUALIFIES ────────────────────────────────────────── */}
+        <section
+          className={`rounded-xl border px-5 py-4 sm:px-6 ${
+            brief.items.length > 0 ? "border-success/25 bg-success/[0.03]" : "border-hairline bg-panel/40"
+          }`}
+        >
+          <h2 className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-muted">
+            What qualifies today
+          </h2>
+
+          {brief.items.length === 0 ? (
+            <div className="mt-2 flex flex-col gap-2">
+              <p className="text-[15px] font-semibold text-ink">Nothing qualifies today.</p>
+              <p className="text-[12px] leading-relaxed text-ink-muted">{brief.noItemsReason}</p>
+            </div>
+          ) : (
+            <div className="mt-2 flex flex-col gap-4">
+              {brief.items.map((item) => (
+                <div key={item.headline} className="flex flex-col gap-2">
+                  <p className="text-[14px] font-semibold leading-snug text-ink">{item.headline}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {item.symbols.map((s) => (
+                      <Link
+                        key={s}
+                        href={`/asset/${encodeURIComponent(s)}`}
+                        className="rounded-md border border-hairline bg-void/30 px-2 py-1 font-mono text-[11px] text-ink-muted transition-colors hover:border-cyan/30 hover:text-ink"
+                      >
+                        {s}
+                      </Link>
+                    ))}
                   </div>
-                  <p className="mt-1 text-[11px] leading-relaxed text-ink-muted">{m.explanation}</p>
-                  <p className="mt-1 font-mono text-[9px] text-ink-faint">confidence {m.confidence}%</p>
+                  <p className="text-[12px] leading-relaxed text-ink-muted">{item.detail}</p>
+                  <p className="rounded-md border border-hairline bg-void/30 px-3 py-2 text-[11px] leading-relaxed text-ink-muted">
+                    <span className="font-semibold uppercase tracking-[0.12em] text-success">Record</span> ·{" "}
+                    {item.record}
+                  </p>
                 </div>
               ))}
             </div>
+          )}
 
-            <div className="mt-4 border-t border-hairline pt-3">
-              <Collapsible
-                title="How each pair is measured"
-                summary="ratios, both horizons, and what would flip them"
-              >
-                <ul className="flex flex-col gap-5">
-                  {regime.metrics.map((m) => (
-                    <li key={m.id} className="border-l border-hairline pl-4">
-                      <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-ink">
-                        {m.label}
-                      </h3>
-                      <EvidenceModuleDetail metric={m} allMetrics={regime.metrics} />
-                    </li>
-                  ))}
-                </ul>
-              </Collapsible>
-            </div>
-          </section>
-        ) : (
-          <section className="rounded-xl border border-hairline bg-panel/60 px-5 py-6">
-            <p className="text-[13px] leading-relaxed text-ink">
-              No risk pair could be evaluated. This means the underlying series are missing, not that the
-              market has no appetite signal — an outage, not a reading.
-            </p>
-          </section>
-        )}
-
-        {/* ── LEVEL 2: WHERE CAPITAL IS MOVING ───────────────────────────── */}
-        {rotation ? (
-          <RotationBoard read={rotation} narrative={rotationNarrative} />
-        ) : (
-          <section className="rounded-xl border border-hairline bg-panel/60 px-5 py-6">
-            <p className="text-[13px] leading-relaxed text-ink">
-              Rotation could not be built — the benchmark series is too short to measure anything against.
-            </p>
-          </section>
-        )}
-
-        {/* ── LEVEL 3: INDUSTRIES ────────────────────────────────────────── */}
-        <Link
-          href="/industries"
-          className="group flex flex-wrap items-center justify-between gap-3 rounded-xl border border-hairline bg-panel/60 px-5 py-4 shadow-glass backdrop-blur-xs transition-colors hover:border-cyan/40 sm:px-6"
-        >
-          <div>
-            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-muted">
-              Next level down
-            </span>
-            <p className="mt-1 text-[14px] leading-relaxed text-ink">
-              Industries, with breadth —{" "}
-              <span className="text-ink-muted">
-                whether a sector&apos;s move is the whole group or three names carrying it.
-              </span>
-            </p>
-          </div>
-          <span className="text-[11px] uppercase tracking-[0.16em] text-cyan group-hover:underline">
-            Open industries →
-          </span>
-        </Link>
-
-        {/* ── LEVEL 4: DOWN TO INSTRUMENTS ───────────────────────────────── */}
-        <Link
-          href="/scanner"
-          className="group flex flex-wrap items-center justify-between gap-3 rounded-xl border border-hairline bg-panel/60 px-5 py-4 shadow-glass backdrop-blur-xs transition-colors hover:border-cyan/40 sm:px-6"
-        >
-          <div>
-            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-ink-muted">
-              Next level down
-            </span>
-            <p className="mt-1 text-[14px] leading-relaxed text-ink">
-              Individual instruments, ranked by the decision engine —{" "}
-              <span className="text-ink-muted">
-                read them against the regime above, not on their own.
-              </span>
-            </p>
-          </div>
-          <span className="text-[11px] uppercase tracking-[0.16em] text-cyan group-hover:underline">
-            Open scanner →
-          </span>
-        </Link>
-
-        <p className="text-[10px] leading-relaxed text-ink-faint">
-          Daily closes through {new Date(data.generatedAt).toISOString().slice(0, 10)}. Regime pairs and
-          sector relatives are computed from adjusted daily bars and rebuilt with the snapshot; they do
-          not move intraday. Not financial advice.
-        </p>
+          <p className="mt-3 text-[10px] leading-relaxed text-ink-faint">
+            Items appear here only when a signal has beaten its own baseline out of sample and survived
+            correction for multiple testing. An empty section is the normal output and is a conclusion, not a
+            gap — a brief that always finds three ideas is a content schedule.
+          </p>
+        </section>
       </main>
     </div>
   );

@@ -74,7 +74,7 @@ export default async function IndustryPage({ params }: { params: Promise<{ slug:
             <Link href="/industries" className="hover:text-ink">
               ← Industries
             </Link>
-            <Link href="/" className="hover:text-ink">
+            <Link href="/intelligence" className="hover:text-ink">
               Intelligence
             </Link>
           </nav>

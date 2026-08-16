@@ -141,7 +141,7 @@ export default async function ScannerPage() {
             </p>
           </div>
           <div className="flex gap-4 text-[11px] uppercase tracking-[0.16em] text-ink-muted">
-            <Link href="/" className="hover:text-ink">
+            <Link href="/intelligence" className="hover:text-ink">
               ← Intelligence
             </Link>
             <Link href="/crypto" className="hover:text-ink">
