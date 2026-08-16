@@ -6,6 +6,7 @@ import {
   observe,
   pruneObservations,
   roundTripCostBp,
+  spreadBp,
   summariseWindow,
 } from "./spreadHistory";
 
@@ -35,6 +36,26 @@ describe("observe — refusing rather than recording", () => {
     const o = obs("2026-08-14", 31.19, 31.2);
     expect(o.mid).toBeCloseTo(31.195, 10);
     expect(o.spreadBp).toBeCloseTo((0.01 / 31.195) * 10_000, 8);
+  });
+
+  /*
+   * The module header quotes four books measured against live quotes, and for
+   * a while three of them were written a factor of ten low — a percent copied
+   * into a basis-point column. This test IS that table, so the prose and the
+   * formula can never disagree again without a red run. Note that the check
+   * above has said 3.2056bp since the day it was written: the code was never
+   * wrong, only the sentence a reader would have trusted.
+   */
+  it("matches the four books quoted in the module header", () => {
+    const table: Array<[string, number, number, number]> = [
+      ["APLD", 31.19, 31.2, 3.21],
+      ["IREN", 44.16, 44.17, 2.26],
+      ["CLSK", 12.07, 12.08, 8.28],
+      ["RIOT", 19.02, 19.08, 31.5],
+    ];
+    for (const [symbol, bid, ask, expected] of table) {
+      expect(spreadBp(bid, ask), symbol).toBeCloseTo(expected, 1);
+    }
   });
 
   /*
@@ -166,8 +187,8 @@ describe("roundTripCostBp — null until measured, never modelled", () => {
   /*
    * THE FIELD THAT DECIDES A TRADE. Substituting a modelled spread here is
    * how a fictional edge gets published — Corwin-Schultz returns 114-177bp on
-   * these names where the observed book is one tick, so a fallback would be
-   * wrong by two orders of magnitude and confidently so.
+   * these names where the observed book is 2-8bp, so a fallback would be wrong
+   * by more than an order of magnitude and confidently so.
    */
   it("refuses with a reason when neither window has enough sessions", () => {
     const c = roundTripCostBp([], "APLD");

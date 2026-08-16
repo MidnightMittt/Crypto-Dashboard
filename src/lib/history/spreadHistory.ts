@@ -6,13 +6,23 @@
  * actually getting into and out of these names at the minutes that matter is
  * simply absent from history. The usual escape is the Corwin-Schultz high-low
  * estimator, and on these names it is not merely imprecise — it is wrong by
- * an order of magnitude, returning 114-177bp where the observed book is one
- * tick. Measured 2026-08-16 against live quotes:
+ * more than an order of magnitude, returning 114-177bp where the observed book
+ * is one tick. Measured 2026-08-16 against live quotes:
  *
- *   APLD  31.19 / 31.20   1 tick   0.32bp
- *   IREN  44.16 / 44.17   1 tick   0.23bp
- *   CLSK  12.07 / 12.08   1 tick   0.83bp
- *   RIOT  19.02 / 19.08   6 ticks  31.5bp
+ *   APLD  31.19 / 31.20   1 tick    3.21bp
+ *   IREN  44.16 / 44.17   1 tick    2.26bp
+ *   CLSK  12.07 / 12.08   1 tick    8.28bp
+ *   RIOT  19.02 / 19.08   6 ticks  31.50bp
+ *
+ * Three of those four figures were recorded a factor of ten low until
+ * 2026-08-16: the fraction was carried into the table as though a percent
+ * were a basis point, so APLD's 0.0321% was written as 0.32bp rather than
+ * 3.21bp. RIOT alone was converted correctly, which is precisely why the
+ * error survived — one plausible outlier beside three numbers that were all
+ * wrong the same way looks like a spread of spreads. The conclusion does not
+ * move: 114-177bp modelled against a 2-8bp book is still an order of
+ * magnitude and then some. But the numbers a reader checks against are now
+ * the ones spreadBp() actually returns, and a test pins them.
  *
  * Corwin-Schultz is biased upward under high volatility, and these are among
  * the most volatile names in the panel, so the estimator fails hardest
@@ -72,6 +82,18 @@ export const EMPTY_SPREAD_HISTORY: SpreadHistory = {
 export const TICK = 0.01;
 
 /**
+ * (ask − bid) / mid, in basis points. ONE definition.
+ *
+ * Exported rather than inlined because the live pre-trade book quotes a
+ * spread from the same venue this store records, and two spellings of the
+ * same formula — one over the mid, one over the last — would put the snapshot
+ * and the recorded median on different scales while both were labelled "bp".
+ */
+export function spreadBp(bid: number, ask: number): number {
+  return ((ask - bid) / ((bid + ask) / 2)) * 10_000;
+}
+
+/**
  * Build one observation, or refuse.
  *
  * Refuses rather than records when the book is crossed, zero-width, or
@@ -104,7 +126,7 @@ export function observe(input: {
     bid,
     ask,
     mid,
-    spreadBp: ((ask - bid) / mid) * 10_000,
+    spreadBp: spreadBp(bid, ask),
     last: typeof input.last === "number" && input.last > 0 ? input.last : null,
   };
 }
