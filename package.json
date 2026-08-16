@@ -27,7 +27,8 @@
     "backtest:execution": "tsx scripts/backtest/executionReport.ts",
     "record:positioning": "tsx scripts/ingest/recordPositioning.ts",
     "backfill:short-volume": "tsx scripts/ingest/backfillShortVolume.ts",
-    "record:spreads": "tsx scripts/ingest/recordSpreads.ts"
+    "record:spreads": "tsx scripts/ingest/recordSpreads.ts",
+    "study:overnight": "tsx scripts/research/overnightPremium.ts"
   },
   "dependencies": {
     "@drift-labs/sdk": "^2.155.0",
