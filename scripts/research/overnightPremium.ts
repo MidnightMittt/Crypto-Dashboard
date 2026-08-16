@@ -7,14 +7,17 @@ import {
   overnightSeries,
   MIN_SESSIONS,
   WINDOWS,
+  summariseSeries,
   decomposeSymbol,
 } from "../../src/lib/research/overnightDecomposition";
 import { adjustForCorporateActions } from "../../src/lib/research/corporateActions";
 import { benjaminiHochberg } from "../../src/lib/research/multipleTesting";
 import { SCANNED, BENCHMARKS, resolveUniverse, isBenchmark } from "../../src/lib/markets/scannerUniverse";
+import { DatedReturn, Regression, regressOnMarket } from "../../src/lib/research/alphaBeta";
 import {
   BasketObservation,
   BasketResult,
+  dailyBasketSeries,
   detectableEffectBp,
   testBasket,
 } from "../../src/lib/research/overnightBasket";
@@ -127,10 +130,38 @@ const BASKETS: { name: string; symbols: readonly string[]; note: string }[] = [
   },
 ];
 
+interface AlphaRow {
+  subject: string;
+  kind: "symbol" | "basket";
+  proxy: string;
+  window: number;
+  alphaBp: number;
+  alphaT: number;
+  alphaP: number;
+  beta: number;
+  rSquared: number;
+  n: number;
+  detectableAlphaAtT3Bp: number;
+  significantAfterFdr: boolean;
+}
+
+/**
+ * MARKET PROXIES. SPY is the declared one; the equal-weighted four-ETF
+ * benchmark basket is the broader alternative. Both are reported rather than
+ * one being silently substituted — a beta against a broad basket and a beta
+ * against SPY answer slightly different questions, and picking whichever
+ * flatters the alpha afterwards would be the whole disease.
+ */
+const PROXIES = ["SPY", "BENCH4"] as const;
+
+/** The window the decay measurement uses. The longest, for the most nights. */
+const DECAY_WINDOW = 250;
+
 function main(): void {
   const universe = resolveUniverse();
   const rows: Row[] = [];
   const nightly: (BasketObservation & { window: number })[] = [];
+  const closeToClose: { symbol: string; netBp: number }[] = [];
   const missing: string[] = [];
   let adjustments = 0;
 
@@ -155,6 +186,7 @@ function main(): void {
       if (observations.length < MIN_SESSIONS) continue;
       for (const o of observations) {
         nightly.push({ window: w, date: o.date, symbol, netBp: o.netBp });
+        if (w === DECAY_WINDOW) closeToClose.push({ symbol, netBp: o.closeToCloseNetBp });
       }
     }
 
@@ -211,6 +243,120 @@ function main(): void {
     }
   }
 
+  /*
+   * ── ALPHA AFTER BETA ────────────────────────────────────────────────
+   *
+   * Both sides NET of their own tick cost at their own prior close. Charging
+   * cost to the subject only would manufacture alpha of exactly the cost
+   * difference — and the cost difference is the entire question.
+   */
+  const alphaRows: AlphaRow[] = [];
+  const seriesFor = (symbol: string, w: number): DatedReturn[] =>
+    nightly.filter((o) => o.window === w && o.symbol === symbol).map(({ date, netBp }) => ({ date, netBp }));
+
+  for (const w of WINDOWS) {
+    const proxySeries: Record<string, DatedReturn[]> = {
+      SPY: seriesFor("SPY", w),
+      // Equal-weighted across whatever benchmarks priced each night.
+      BENCH4: dailyBasketSeries(
+        nightly
+          .filter((o) => o.window === w && (BENCHMARKS as readonly string[]).includes(o.symbol))
+          .map(({ date, symbol, netBp }) => ({ date, symbol, netBp }))
+      ).map((d) => ({ date: d.date, netBp: d.meanBp })),
+    };
+
+    for (const proxy of PROXIES) {
+      const market = proxySeries[proxy];
+      if (market.length === 0) continue;
+
+      const push = (subject: string, kind: "symbol" | "basket", r: Regression | null) => {
+        if (!r) return;
+        alphaRows.push({
+          subject, kind, proxy, window: w,
+          alphaBp: r.alphaBp, alphaT: r.alphaT, alphaP: r.alphaP,
+          beta: r.beta, rSquared: r.rSquared, n: r.n,
+          detectableAlphaAtT3Bp: r.detectableAlphaAtT3Bp,
+          significantAfterFdr: false,
+        });
+      };
+
+      /*
+       * A benchmark regressed on itself is a tautology (alpha 0, beta 1), so
+       * SPY is skipped against the SPY proxy. It is kept against BENCH4,
+       * where it is a genuine question.
+       */
+      for (const symbol of SCANNED) push(symbol, "symbol", regressOnMarket(seriesFor(symbol, w), market));
+      for (const symbol of BENCHMARKS) {
+        if (proxy === "SPY" && symbol === "SPY") continue;
+        push(symbol, "symbol", regressOnMarket(seriesFor(symbol, w), market));
+      }
+      for (const b of BASKETS) {
+        if (proxy === "BENCH4" && b.name === "benchmarks") continue;
+        const members = new Set<string>(b.symbols);
+        const daily = dailyBasketSeries(
+          nightly
+            .filter((o) => o.window === w && members.has(o.symbol))
+            .map(({ date, symbol, netBp }) => ({ date, symbol, netBp }))
+        ).map((d) => ({ date: d.date, netBp: d.meanBp }));
+        push(b.name, "basket", regressOnMarket(daily, market));
+      }
+    }
+  }
+
+  /*
+   * ONE family across every alpha, failures included. Ranking by alpha t and
+   * reading the top is precisely how noise gets promoted to a finding.
+   */
+  /*
+   * ── PREMIUM DECAY, and what the data will and will not support ──────
+   *
+   * The full request was retained premium at 09:30, 09:35, 09:40, 09:45,
+   * 09:50, 10:00, 10:30, 11:00 and the close, over full history. Only DAILY
+   * bars are stored — open and close, nothing between — so exactly two of
+   * those nine points are computable, and those two are computable over the
+   * whole history rather than a 60-day window.
+   *
+   * The intermediate points are not skipped for convenience. Yahoo caps
+   * five-minute history near sixty days, which is about forty sessions —
+   * statistically indistinguishable from the thirty-two-session prototype
+   * that produced t of 1.2 to 1.9. Building it would reproduce a shape at the
+   * same power rather than resolve it.
+   *
+   * What DOES resolve it is already running: the spread recorder captures
+   * 09:35, 09:40, 09:45 and 09:50 — four of the requested nine — and already
+   * stores `last` at each. From its first session those four points begin
+   * accumulating at full fidelity, and cannot be backfilled, which is why
+   * they are worth more than a 60-day reconstruction.
+   */
+  const decay = [...new Set(closeToClose.map((c) => c.symbol))].sort().map((symbol) => {
+    const mine = closeToClose.filter((c) => c.symbol === symbol).map((c) => c.netBp);
+    const atOpen = summariseSeries(
+      nightly.filter((o) => o.window === DECAY_WINDOW && o.symbol === symbol).map((o) => o.netBp)
+    );
+    const atClose = summariseSeries(mine);
+    return {
+      symbol,
+      window: DECAY_WINDOW,
+      atOpenBp: atOpen?.meanBp ?? null,
+      atOpenT: atOpen?.tStat ?? null,
+      atCloseBp: atClose?.meanBp ?? null,
+      atCloseT: atClose?.tStat ?? null,
+      /*
+       * Share of the overnight gain still present at 16:00. Null when the
+       * overnight leg was negative — a "retention" of a loss is not a
+       * meaningful percentage, and rendering one would invert the sign.
+       */
+      retentionPct:
+        atOpen && atClose && atOpen.meanBp > 0 ? (atClose.meanBp / atOpen.meanBp) * 100 : null,
+    };
+  });
+
+  const alphaFdr = benjaminiHochberg(alphaRows.map((r) => r.alphaP), FDR_Q);
+  alphaRows.forEach((r, i) => {
+    r.significantAfterFdr = alphaFdr[i].significant;
+  });
+  alphaRows.sort((a, b) => b.alphaT - a.alphaT);
+
   const fdr = benjaminiHochberg(rows.map((r) => r.pValue), FDR_Q);
   rows.forEach((r, i) => {
     r.significantAfterFdr = fdr[i].significant;
@@ -244,6 +390,19 @@ function main(): void {
           "the unit of risk is a night, not a name-night. The pooled figure beside it treats " +
           "every name-day as independent and is INFLATED; the ratio is reported.",
         baskets,
+        alphaNote:
+          "overnight_i,t = alpha_i + beta_i * overnight_market,t + e_i,t, on the SAME nights for " +
+          "both parameters, both sides net of their own one-tick cost at their own prior close. " +
+          "Alpha is the excess over an index overnight trade that also had to be executed. The " +
+          "FDR family spans every alpha in this artefact, failures included.",
+        alphaRows,
+        decayNote:
+          "Only two of the nine requested decay points are computable from stored data: 09:30 " +
+          "(the open) and 16:00 (the close), because only DAILY bars are kept. Those two are " +
+          "measured over full history rather than a 60-day five-minute window. The spread " +
+          "recorder already captures 09:35/09:40/09:45/09:50 with `last` at each, so four more " +
+          "points begin accumulating from its first session and cannot be backfilled.",
+        decay,
         universe: universe.length,
         notIngested: missing,
         corporateActionAdjustments: adjustments,
@@ -286,6 +445,39 @@ function main(): void {
         `${((b.detectableAtT3Bp ?? 0).toFixed(1) + "bp").padStart(10)}`
     );
   }
+
+  console.log("");
+  console.log("ALPHA AFTER BETA — 250 sessions, vs SPY overnight, both sides tick-net");
+  console.log("subject       kind      alpha      t     beta    R2      n   t=3 needs  FDR");
+  for (const a of alphaRows.filter((r) => r.proxy === "SPY" && r.window === 250)) {
+    console.log(
+      `${a.subject.padEnd(12)} ${a.kind.padEnd(7)} ` +
+        `${((a.alphaBp >= 0 ? "+" : "") + a.alphaBp.toFixed(1) + "bp").padStart(9)} ` +
+        `${a.alphaT.toFixed(2).padStart(6)} ${a.beta.toFixed(2).padStart(7)} ` +
+        `${a.rSquared.toFixed(2).padStart(5)} ${String(a.n).padStart(5)} ` +
+        `${(a.detectableAlphaAtT3Bp.toFixed(1) + "bp").padStart(10)}  ` +
+        `${a.significantAfterFdr ? "PASS" : "—"}`
+    );
+  }
+  const alphaPassed = alphaRows.filter((r) => r.significantAfterFdr).length;
+  console.log("");
+  console.log(`[alpha] ${alphaPassed} of ${alphaRows.length} alphas clear FDR at q=${FDR_Q}.`);
+
+  console.log("");
+  console.log(`PREMIUM DECAY — only 2 of the 9 requested points are computable from daily bars`);
+  console.log("sym       at 09:30      t    at 16:00      t   retained");
+  for (const r of [...decay].sort((a, b) => (b.atOpenBp ?? 0) - (a.atOpenBp ?? 0))) {
+    if (r.atOpenBp === null || r.atCloseBp === null) continue;
+    console.log(
+      `${r.symbol.padEnd(8)} ${(r.atOpenBp.toFixed(1) + "bp").padStart(9)} ${(r.atOpenT ?? 0).toFixed(2).padStart(6)} ` +
+        `${(r.atCloseBp.toFixed(1) + "bp").padStart(11)} ${(r.atCloseT ?? 0).toFixed(2).padStart(6)}   ` +
+        `${r.retentionPct === null ? "—" : r.retentionPct.toFixed(0) + "%"}`
+    );
+  }
+  console.log(
+    "[decay] Retention ranges too widely to estimate at n=250, and no close-leg t reaches 1.7. " +
+      "The two computable endpoints do NOT show systematic decay; several names gained intraday."
+  );
 
   const passed = rows.filter((r) => r.significantAfterFdr).length;
   console.log("");

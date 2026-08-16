@@ -187,6 +187,15 @@ export interface NightObservation {
   costBp: number;
   netBp: number;
   intradayBp: number;
+  /**
+   * Prior close to THIS session's close, net of the same one round trip.
+   *
+   * The far end of the premium-decay question: how much of the overnight gap
+   * is still there at 16:00. Compounded rather than added, because two legs
+   * of tens of basis points are not quite additive and the difference shows
+   * up once the numbers are stacked across 250 nights.
+   */
+  closeToCloseNetBp: number;
 }
 
 /**
@@ -232,6 +241,7 @@ export function overnightSeries(
       costBp: cost,
       netBp: grossBp - cost,
       intradayBp: (cur.close / cur.open - 1) * 10_000,
+      closeToCloseNetBp: (cur.close / prev.close - 1) * 10_000 - cost,
     });
   }
   return { observations, droppedGaps };
