@@ -358,7 +358,13 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
       ? null
       : (() => {
           const r = forwardReachJson as unknown as {
-            totals: { resolved: number; predictedPct: number | null; observedPct: number | null };
+            totals: {
+              resolved: number;
+              predictedPct: number | null;
+              observedPct: number | null;
+              open?: number;
+              openReached?: number;
+            };
             predictions: Array<{ date: string }>;
           };
           const dates = r.predictions.map((p) => p.date).sort();
@@ -367,6 +373,8 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
             predictedPct: r.totals.predictedPct,
             observedPct: r.totals.observedPct,
             since: dates[0] ?? null,
+            open: r.totals.open ?? 0,
+            openReached: r.totals.openReached ?? 0,
           };
         })(),
     /*

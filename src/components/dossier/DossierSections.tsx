@@ -1722,9 +1722,24 @@ export function NextEntryPanel({ d }: { d: TickerDossier }) {
                 <>
                   The rates above come from replayed history, which already existed when the rule was written.
                   Live predictions are now being registered daily
-                  {s.data.forward.since && <> (since {s.data.forward.since})</>} and scored ten sessions later.
-                  None has finished its window yet — until they do, treat every number on this page as a
-                  hypothesis rather than a track record.
+                  {s.data.forward.since && <> (since {s.data.forward.since})</>} and scored ten sessions later.{" "}
+                  {s.data.forward.open > 0 ? (
+                    <>
+                      {s.data.forward.open.toLocaleString()} are open and none has finished its window.
+                      {s.data.forward.openReached > 0 && (
+                        <>
+                          {" "}
+                          {s.data.forward.openReached.toLocaleString()} have already touched their level — which is
+                          deliberately not shown as a hit rate, because a miss needs all ten sessions to become
+                          one and a young cohort can therefore only show hits.
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <>None has finished its window yet.</>
+                  )}{" "}
+                  Until those windows close, treat every number on this page as a hypothesis rather than a track
+                  record.
                 </>
               ) : (
                 <>

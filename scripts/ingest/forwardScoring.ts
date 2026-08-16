@@ -137,6 +137,7 @@ function verify(all: Map<string, Loaded>, snapshot: EquityExecutionSnapshot, asO
         distanceAtrMax: REACH_DISTANCE_ATR_BUCKETS.find((b) => distanceAtr <= b) ?? Infinity,
         touchesMin: [...REACH_TOUCH_BUCKETS].reverse().find((t) => zone.reactionCount >= t) ?? 0,
         predictedPct: cell.reachRatePct, reached: null, sessionsToReach: null, resolvedDate: null,
+        sessionsObserved: 0, windowComplete: false,
       });
     }
   }
@@ -276,6 +277,8 @@ function main() {
         reached: null,
         sessionsToReach: null,
         resolvedDate: null,
+        sessionsObserved: 0,
+        windowComplete: false,
       });
     };
     register(near.support, "long");

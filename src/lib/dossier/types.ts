@@ -342,6 +342,16 @@ export interface ForwardRecordSummary {
   observedPct: number | null;
   /** When registration began, so "none yet" reads as young rather than broken. */
   since: string | null;
+  /** Registered but not yet finished. These count toward nothing. */
+  open: number;
+  /**
+   * Open predictions whose level has ALREADY traded. Shown so the wait is
+   * legible, never as a rate: this cohort's misses cannot exist yet, because
+   * a miss takes the full horizon to become one. `openReached / open` is a
+   * lower bound climbing toward the truth, not a measurement — and reporting
+   * it as one is exactly what published a 100.0% record on 2026-08-16.
+   */
+  openReached: number;
 }
 
 export interface PlannedEntryRead {
