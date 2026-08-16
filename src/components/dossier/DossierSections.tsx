@@ -1115,7 +1115,16 @@ export function OptionsPanel({ d }: { d: TickerDossier }) {
   return (
     <Panel title="Options positioning" subtitle={`${o.contractCount.toLocaleString()} contracts listed · CBOE, delayed`}>
       <p className="text-[13px] leading-relaxed text-ink">
-        Open interest is {oiLean} (put/call ratio {o.putCallOiRatio.toFixed(2)}).{" "}
+        {/*
+          THE RATIO NEVER TRAVELS WITHOUT ITS DENOMINATOR.
+          1.40 over 300 contracts and 1.40 over 300,000 are the same number
+          and different facts, and the thin one is noise a reader would size
+          on. The total was already computed and was rendered only further
+          down as a footnote to the largest strikes; it belongs beside the
+          ratio it divides.
+        */}
+        Open interest is {oiLean} (put/call ratio {o.putCallOiRatio.toFixed(2)}, across{" "}
+        {(o.callOi + o.putOi).toLocaleString()} contracts of open interest).{" "}
         {/* The sentence carries the tenor too, and says why it runs hot on a
             short expiry — otherwise a 300% reading looks like an error. */}
         {o.atmIvPct !== null &&
@@ -1134,6 +1143,14 @@ export function OptionsPanel({ d }: { d: TickerDossier }) {
 
       <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
         <PlanStat label="Put/call (open interest)" value={o.putCallOiRatio.toFixed(2)} />
+        {/*
+          Distinct from the "contracts listed" count in the subtitle, which is
+          an INSTRUMENT count — how many strikes and expiries exist. This is
+          how many are actually held. A cross-validation check that compared
+          the two would be comparing apples to oranges; this is the quantity a
+          per-strike open-interest figure can legitimately be measured against.
+        */}
+        <PlanStat label="Chain open interest" value={(o.callOi + o.putOi).toLocaleString()} tone="text-ink-muted" />
         <PlanStat
           label="Put/call (today's volume)"
           value={o.putCallVolumeRatio === null ? "—" : o.putCallVolumeRatio.toFixed(2)}
