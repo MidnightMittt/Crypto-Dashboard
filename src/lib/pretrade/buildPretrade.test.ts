@@ -52,6 +52,7 @@ const inputs = (over: Partial<BuildInputs> = {}): BuildInputs => ({
   earnings: { generatedAt: NOW, entries: [{ symbol: "APLD", date: "2026-10-08" }] },
   measuredRoundTripBp: new Map(),
   dataQuality: new Map([["APLD", { adjustments: 0, undeclared: 0 }]]),
+  marketExposure: new Map(),
   catalysts: new Map(),
   venue: null,
   ...over,
@@ -326,6 +327,69 @@ describe("buildPretrade — tradability from the venue clock and book", () => {
   });
 });
 
+describe("buildPretrade — beta before premium", () => {
+  const exposure = {
+    proxy: "SPY",
+    window_sessions: 250,
+    observations: 250,
+    beta: 4.63,
+    alpha_bp: 25.1,
+    alpha_t: 1.4,
+    alpha_significant_after_fdr: false,
+    detectable_alpha_at_t3_bp: 53.6,
+    r_squared: 0.44,
+    proxy_net_bp: 6.36,
+  };
+
+  /*
+   * THE MIS-ATTRIBUTION THIS BLOCK EXISTS TO PREVENT. A consumer reading
+   * APLD's +51.7bp net premium and nothing else would rank it as an edge.
+   * Beta 4.63 on a market that itself returned 6.36bp a night accounts for
+   * 29bp of it, and the residual is not significant. A ranking on realised
+   * premium is a ranking on market exposure.
+   */
+  it("serves the decomposition beside the premium, not instead of it", () => {
+    const s = buildPretrade(inputs({ marketExposure: new Map([["APLD", exposure]]) })).symbols[0];
+    const m = measured(s.market_exposure);
+    expect(m.value.beta).toBe(4.63);
+    expect(m.value.alpha_significant_after_fdr).toBe(false);
+    // The premium itself is still there — this adds context, never replaces.
+    expect(s.overnight.legs).toHaveLength(2);
+  });
+
+  /*
+   * The proxy's own return ships with the row so beta x market is computable
+   * from one call. Supplied as a FACT rather than as a derived "share
+   * explained", which would be an interpretation the payload must not make.
+   */
+  it("carries the proxy's own premium so the arithmetic needs no second call", () => {
+    const m = measured(
+      buildPretrade(inputs({ marketExposure: new Map([["APLD", exposure]]) })).symbols[0]
+        .market_exposure
+    );
+    expect(m.value.proxy_net_bp).toBe(6.36);
+    expect(m.value.beta * m.value.proxy_net_bp).toBeCloseTo(29.4, 1);
+  });
+
+  /*
+   * A null alpha from a test that could not have seen one is not evidence of
+   * absence, so the detectable floor rides with the row.
+   */
+  it("states the alpha it could have detected, not only the one it found", () => {
+    const m = measured(
+      buildPretrade(inputs({ marketExposure: new Map([["APLD", exposure]]) })).symbols[0]
+        .market_exposure
+    );
+    expect(m.value.detectable_alpha_at_t3_bp).toBeGreaterThan(Math.abs(m.value.alpha_bp));
+    expect(m.method).toContain("fdr_across_all_alphas");
+  });
+
+  it("says a symbol is outside the study rather than omitting the block", () => {
+    const s = buildPretrade(inputs()).symbols[0];
+    expect((s.market_exposure as { reason: string }).reason).toBe("not_in_overnight_study");
+  });
+});
+
 describe("buildPretrade — the catalyst filter is declared once", () => {
   /*
    * Which forms qualify is identical for every symbol, so restating it in
@@ -480,17 +544,36 @@ describe("buildPretrade — no verdicts, and data quality is never silent", () =
    * many symbols are asked for, so counting them per symbol would penalise
    * exactly the de-duplication that made the payload smaller.
    *
-   * The budget is 2,300 rather than the 2,048 originally aimed at, and the
-   * gap is a decision, not a slip. Closing it means deleting method strings
-   * like "short_volume_over_total_volume_NOT_short_interest" — which exists
-   * because flow and standing interest have been conflated before. A hundred
-   * and fifty bytes is a bad price for the field that prevents it.
+   * The budget has moved twice and each move is argued rather than reflexive:
+   *
+   *   2,048 -> 2,300  method strings like
+   *                   "short_volume_over_total_volume_NOT_short_interest",
+   *                   which exists because flow and standing interest have
+   *                   been conflated before.
+   *   2,300 -> 2,400  the 172-byte market_exposure block. It is what stops a
+   *                   consumer reading APLD's +51.7bp net premium as an edge
+   *                   when beta 4.63 on overnight SPY explains nearly all of
+   *                   it. The cheapest 172 bytes in the payload.
+   *
+   * The rule for the next move: name the block, its byte cost, and the
+   * specific misreading it prevents. A budget raised without those three is
+   * not a budget.
    */
   it("keeps the MARGINAL cost of a fully populated symbol within budget", () => {
     const full = (symbols: string[]) =>
       inputs({
         symbols,
         venue: venueOpen(),
+        marketExposure: new Map(
+          symbols.map((s) => [
+            s,
+            {
+              proxy: "SPY", window_sessions: 250, observations: 250, beta: 4.63,
+              alpha_bp: 25.1, alpha_t: 1.4, alpha_significant_after_fdr: false,
+              detectable_alpha_at_t3_bp: 53.6, r_squared: 0.44, proxy_net_bp: 6.36,
+            },
+          ])
+        ),
         positioningLatest: { generatedAt: NOW, points: symbols.map((s) => position({ symbol: s })) },
         overnight: {
           generatedAt: NOW,
@@ -530,10 +613,11 @@ describe("buildPretrade — no verdicts, and data quality is never silent", () =
     // Nothing is measured as absent here, so this is the expensive case.
     expect(one.symbols[0].tradability.book.value).not.toBeNull();
     expect(one.symbols[0].net_edge.value).not.toBeNull();
+    expect(one.symbols[0].market_exposure.value).not.toBeNull();
     expect(measured(one.symbols[0].catalysts.filings_since_prior_close).value).toHaveLength(1);
 
     const marginal =
       JSON.stringify(buildPretrade(full(["APLD", "WULF"]))).length - JSON.stringify(one).length;
-    expect(marginal).toBeLessThan(2_300);
+    expect(marginal).toBeLessThan(2_400);
   });
 });

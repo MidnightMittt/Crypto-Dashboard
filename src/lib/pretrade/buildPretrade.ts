@@ -88,6 +88,47 @@ export const unmeasured = (reason: string, detail?: Record<string, number | stri
  */
 export const SCHEMA_VERSION = "2.0";
 
+/**
+ * WHAT THE OVERNIGHT PREMIUM ACTUALLY IS, after the market is taken out.
+ *
+ * The single most consequential number this payload carries, and it was
+ * missing. A consumer reading APLD's +51.7bp net premium had no way to know
+ * that a beta of 4.63 on overnight SPY accounts for nearly all of it — so a
+ * ranking built on realised premium is a ranking on BETA, and the same
+ * exposure is available through QQQ at roughly a tenth of the cost per unit.
+ *
+ * Measured 2026-08-16 across the scanned cohort: 0 of 76 alphas clear
+ * Benjamini-Hochberg at q=0.10, on either market proxy, at either window.
+ */
+export interface MarketExposure {
+  /** The market series regressed against. */
+  proxy: string;
+  window_sessions: number;
+  /** Matched nights — both series had to price the same date. */
+  observations: number;
+  /** Slope on the proxy's overnight return. What the position is actually long. */
+  beta: number;
+  /** Intercept: return the market does not explain, in bp per night. */
+  alpha_bp: number;
+  alpha_t: number;
+  /** FDR across every alpha in the study, failures included. */
+  alpha_significant_after_fdr: boolean;
+  /**
+   * The smallest alpha this regression could have called significant at t=3.
+   * A null alpha from a test that could not have seen it is not evidence of
+   * absence, and a consumer must be able to tell the two apart.
+   */
+  detectable_alpha_at_t3_bp: number;
+  /** Share of nightly variance the market explains. */
+  r_squared: number;
+  /**
+   * The proxy's OWN net premium per night, so beta x this is computable
+   * without a second call. Supplied as a fact rather than as a derived
+   * "share explained", which would be an interpretation.
+   */
+  proxy_net_bp: number;
+}
+
 export interface OvernightLeg {
   window_sessions: number;
   observations: number;
@@ -134,6 +175,11 @@ export interface PretradeSymbol {
   };
   /** The field that decides a trade. Null until the spread is MEASURED. */
   net_edge: Field<number>;
+  /**
+   * The overnight premium decomposed into market exposure and residual.
+   * Null with a reason for anything outside the declared study.
+   */
+  market_exposure: Field<MarketExposure>;
   catalysts: {
     /** Three states, never a boolean. See earningsVeto.ts. */
     earnings_status: "confirmed_date" | "confirmed_none" | "lookup_failed";
@@ -214,6 +260,12 @@ export interface BuildInputs {
   measuredRoundTripBp: Map<string, { bp: number | null; reason: string | null }>;
   /** Corporate-action counts per symbol, from the ingest guard. */
   dataQuality: Map<string, { adjustments: number; undeclared: number }>;
+  /**
+   * Beta/alpha rows from the overnight study, keyed by symbol. Absent for
+   * anything the study does not cover, which is a stated reason rather than
+   * a silent omission.
+   */
+  marketExposure: Map<string, MarketExposure>;
   /**
    * After-hours EDGAR filings per symbol, fetched live by the route. Absent
    * from the map means the fetch was not attempted; an entry with ok:false
@@ -397,6 +449,19 @@ export function buildPretrade(input: BuildInputs): PretradeResponse {
         exit_window: unmeasured(measured.reason ?? "no_spread_history"),
       },
       net_edge: netEdge,
+      market_exposure: (() => {
+        const m = input.marketExposure.get(symbol);
+        if (!m) return unmeasured("not_in_overnight_study");
+        return {
+          value: m,
+          unit: "beta_and_bp",
+          as_of: overnightAsOf ?? iso(overnight.generatedAt),
+          source: "overnight_premium_study",
+          method:
+            `ols_overnight_on_${m.proxy}_same_nights_both_sides_tick_net_` +
+            `fdr_across_all_alphas`,
+        };
+      })(),
       catalysts: {
         earnings_status: es.status,
         earnings_detail:

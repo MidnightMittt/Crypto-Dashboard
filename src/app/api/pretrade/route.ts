@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import overnightJson from "@/data/overnightPremium.json";
 import positioningLatestJson from "@/data/positioningLatest.json";
 import earningsJson from "@/data/earningsCalendar.json";
-import { buildPretrade, BuildInputs, OvernightRow } from "@/lib/pretrade/buildPretrade";
+import {
+  buildPretrade,
+  BuildInputs,
+  MarketExposure,
+  OvernightRow,
+} from "@/lib/pretrade/buildPretrade";
 import { EarningsCalendar } from "@/lib/markets/earningsVeto";
 import { PositioningPoint } from "@/lib/history/positioningHistory";
 import { resolveUniverse } from "@/lib/markets/scannerUniverse";
@@ -73,7 +78,57 @@ export async function GET(req: Request) {
     );
   }
 
-  const overnight = overnightJson as unknown as { generatedAt: number; rows: OvernightRow[] };
+  const overnight = overnightJson as unknown as {
+    generatedAt: number;
+    rows: OvernightRow[];
+    alphaRows?: {
+      subject: string;
+      kind: string;
+      proxy: string;
+      window: number;
+      alphaBp: number;
+      alphaT: number;
+      beta: number;
+      rSquared: number;
+      n: number;
+      detectableAlphaAtT3Bp: number;
+      significantAfterFdr: boolean;
+    }[];
+  };
+
+  /*
+   * BETA BEFORE PREMIUM. Without this a consumer reads APLD's +51.7bp net and
+   * cannot tell that a beta of 4.63 on overnight SPY explains nearly all of
+   * it — so a ranking on realised premium is a ranking on market exposure.
+   *
+   * SPY at the longest window is the declared headline pairing: one proxy and
+   * one horizon, chosen in advance, so nothing here is the flattering pick of
+   * four combinations.
+   */
+  const HEADLINE_PROXY = "SPY";
+  const HEADLINE_WINDOW = 250;
+  const proxyNetBp =
+    overnight.rows.find((r) => r.symbol === HEADLINE_PROXY && r.window === HEADLINE_WINDOW)
+      ?.overnightNetBp ?? null;
+
+  const marketExposure = new Map<string, MarketExposure>();
+  if (proxyNetBp !== null) {
+    for (const a of overnight.alphaRows ?? []) {
+      if (a.kind !== "symbol" || a.proxy !== HEADLINE_PROXY || a.window !== HEADLINE_WINDOW) continue;
+      marketExposure.set(a.subject, {
+        proxy: a.proxy,
+        window_sessions: a.window,
+        observations: a.n,
+        beta: a.beta,
+        alpha_bp: a.alphaBp,
+        alpha_t: a.alphaT,
+        alpha_significant_after_fdr: a.significantAfterFdr,
+        detectable_alpha_at_t3_bp: a.detectableAlphaAtT3Bp,
+        r_squared: a.rSquared,
+        proxy_net_bp: proxyNetBp,
+      });
+    }
+  }
   const positioningLatest = positioningLatestJson as unknown as {
     generatedAt: number;
     points: PositioningPoint[];
@@ -132,6 +187,7 @@ export async function GET(req: Request) {
     // Empty until spreadHistory clears MIN_SPREAD_SESSIONS in both windows.
     measuredRoundTripBp: new Map(),
     dataQuality,
+    marketExposure,
     catalysts,
     venue,
   };
