@@ -2,12 +2,22 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import {
+  ROUND_TRIP_TICKS_CENTRAL,
+  ROUND_TRIP_TICKS_CONSERVATIVE,
+  overnightSeries,
   MIN_SESSIONS,
+  WINDOWS,
   decomposeSymbol,
 } from "../../src/lib/research/overnightDecomposition";
 import { adjustForCorporateActions } from "../../src/lib/research/corporateActions";
 import { benjaminiHochberg } from "../../src/lib/research/multipleTesting";
-import { resolveUniverse, isBenchmark } from "../../src/lib/markets/scannerUniverse";
+import { SCANNED, BENCHMARKS, resolveUniverse, isBenchmark } from "../../src/lib/markets/scannerUniverse";
+import {
+  BasketObservation,
+  BasketResult,
+  detectableEffectBp,
+  testBasket,
+} from "../../src/lib/research/overnightBasket";
 import { Bar } from "../../src/lib/research/types";
 
 /**
@@ -70,11 +80,57 @@ interface Row {
   sharpeAnnualised: number;
   droppedGaps: number;
   significantAfterFdr: boolean;
+  /** Net at the CONSERVATIVE two-tick bound. Sensitivity, not a second test. */
+  overnightNetConservativeBp: number;
+  /**
+   * The smallest true effect this test could have called significant at t=3.
+   * A null from a test whose detectable effect exceeds the effect in question
+   * is a power statement, not evidence of absence.
+   */
+  detectableAtT3Bp: number | null;
 }
+
+/**
+ * DECLARED BASKETS — defined by a rule, never by realised return.
+ *
+ * A basket assembled from the names with the largest premium is not a test:
+ * the selection has already used the answer, and the resulting t is a
+ * measure of how hard we looked. Every basket here is fixed by membership of
+ * a declared set.
+ *
+ * `benchmarks` is the CONTROL. If the premium is a real feature of these
+ * small, volatile, heavily shorted names, the four index ETFs should show
+ * markedly less of it. If they show the same thing, what is being measured
+ * is the market's own overnight drift and not this cohort at all — which
+ * would be the most important finding available here.
+ */
+const BASKETS: { name: string; symbols: readonly string[]; note: string }[] = [
+  {
+    name: "scanned",
+    symbols: SCANNED,
+    note: "Every scanned non-benchmark name. The basket the strategy actually holds.",
+  },
+  {
+    name: "miners",
+    symbols: ["RIOT", "CLSK", "MARA", "WULF", "CIFR", "HUT", "BTDR"],
+    note: "Bitcoin miners, declared by business model rather than by return.",
+  },
+  {
+    name: "datacenter",
+    symbols: ["APLD", "IREN", "CORZ"],
+    note: "Datacenter/HPC names. Declared by business model, not by premium.",
+  },
+  {
+    name: "benchmarks",
+    symbols: BENCHMARKS,
+    note: "CONTROL. Index ETFs, where a cohort-specific effect should be absent.",
+  },
+];
 
 function main(): void {
   const universe = resolveUniverse();
   const rows: Row[] = [];
+  const nightly: (BasketObservation & { window: number })[] = [];
   const missing: string[] = [];
   let adjustments = 0;
 
@@ -88,6 +144,19 @@ function main(): void {
     const guarded = adjustForCorporateActions((raw.bars ?? []) as Bar[], symbol);
     const repairs = guarded.notes.filter((n) => n.barsAffected > 0).length;
     adjustments += repairs;
+
+    /*
+     * The dated per-night series, kept so the basket test and the per-symbol
+     * test are literally the same observations rather than two loops that
+     * agree today and drift later.
+     */
+    for (const w of WINDOWS) {
+      const { observations } = overnightSeries(guarded.bars, w, ROUND_TRIP_TICKS_CENTRAL);
+      if (observations.length < MIN_SESSIONS) continue;
+      for (const o of observations) {
+        nightly.push({ window: w, date: o.date, symbol, netBp: o.netBp });
+      }
+    }
 
     const d = decomposeSymbol(symbol, guarded.bars);
     const lastBar = guarded.bars.length ? guarded.bars[guarded.bars.length - 1] : null;
@@ -112,7 +181,33 @@ function main(): void {
         sharpeAnnualised: w.overnightNet.sharpeAnnualised,
         droppedGaps: w.droppedGaps,
         significantAfterFdr: false,
+        /*
+         * The upper bound costs exactly one extra tick per night, so it is
+         * derived rather than re-summarised — re-running the whole window at
+         * two ticks would give the same answer and invite the two to drift.
+         */
+        overnightNetConservativeBp:
+          w.overnightNet.meanBp -
+          (w.meanCostBp ?? 0) * (ROUND_TRIP_TICKS_CONSERVATIVE / ROUND_TRIP_TICKS_CENTRAL - 1),
+        detectableAtT3Bp: detectableEffectBp(w.overnightNet.sdBp, w.overnightNet.n),
       });
+    }
+  }
+
+  /*
+   * The baskets, at the CENTRAL cost basis only. The conservative basis is a
+   * sensitivity on the same hypothesis, not a second one, so it never enters
+   * a multiple-testing family.
+   */
+  const baskets: BasketResult[] = [];
+  for (const w of WINDOWS) {
+    for (const b of BASKETS) {
+      const members = new Set<string>(b.symbols);
+      const obs = nightly
+        .filter((o) => o.window === w && members.has(o.symbol))
+        .map(({ date, symbol, netBp }) => ({ date, symbol, netBp }));
+      if (obs.length === 0) continue;
+      baskets.push(testBasket(b.name, w, obs));
     }
   }
 
@@ -130,9 +225,25 @@ function main(): void {
         generatedAt: Date.now(),
         fdrQ: FDR_Q,
         costBasis: "modelled",
+        costTicksCentral: ROUND_TRIP_TICKS_CENTRAL,
+        costTicksConservative: ROUND_TRIP_TICKS_CONSERVATIVE,
         costNote:
-          "Round trip modelled as 2 ticks against each session's own prior close. " +
-          "Replace with the measured spread once spreadHistory has 20 sessions in both windows.",
+          `Round trip modelled as ${ROUND_TRIP_TICKS_CENTRAL} tick against each session's own ` +
+          "prior close: you buy at the ask and sell at the bid, losing the spread ONCE. This was " +
+          `${ROUND_TRIP_TICKS_CONSERVATIVE} ticks until 2026-08-16, which double-charged it. ` +
+          `The ${ROUND_TRIP_TICKS_CONSERVATIVE}-tick figure is retained per row as an upper bound ` +
+          "and is NOT a second entry in the FDR family. Replace with the measured spread once " +
+          "spreadHistory has 20 sessions in both windows.",
+        powerNote:
+          "detectableAtT3Bp is the smallest true effect each test could have called significant " +
+          "at t=3 given its own dispersion. A null from a test whose detectable effect exceeds " +
+          "the effect in question is not evidence of absence.",
+        basketNote:
+          "Baskets are declared by membership rule, never selected on realised return. The " +
+          "clustered statistic averages across names within a date and tests the daily series — " +
+          "the unit of risk is a night, not a name-night. The pooled figure beside it treats " +
+          "every name-day as independent and is INFLATED; the ratio is reported.",
+        baskets,
         universe: universe.length,
         notIngested: missing,
         corporateActionAdjustments: adjustments,
@@ -161,6 +272,21 @@ function main(): void {
         `${r.significantAfterFdr ? "PASS" : "—"}${r.benchmark ? "   (benchmark)" : ""}`
     );
   }
+  console.log("");
+  console.log("BASKETS — clustered by date (the unit of risk is a night, not a name-night)");
+  console.log("basket        win  dates  n-days  names/dt      net       t_clu    t_pool  infl   t=3 needs");
+  for (const b of baskets) {
+    if (!b.clustered || !b.pooled) continue;
+    console.log(
+      `${b.basket.padEnd(12)} ${String(b.window).padStart(4)} ${String(b.dates).padStart(6)} ` +
+        `${String(b.nameDays).padStart(7)} ${(b.meanNamesPerDate ?? 0).toFixed(1).padStart(9)} ` +
+        `${((b.clustered.meanBp >= 0 ? "+" : "") + b.clustered.meanBp.toFixed(1) + "bp").padStart(9)} ` +
+        `${b.clustered.tStat.toFixed(2).padStart(8)} ${b.pooled.tStat.toFixed(2).padStart(9)} ` +
+        `${(b.inflationRatio ?? 0).toFixed(2).padStart(5)}x ` +
+        `${((b.detectableAtT3Bp ?? 0).toFixed(1) + "bp").padStart(10)}`
+    );
+  }
+
   const passed = rows.filter((r) => r.significantAfterFdr).length;
   console.log("");
   console.log(`[overnight] ${passed} of ${rows.length} clear FDR at q=${FDR_Q}.`);
@@ -169,6 +295,35 @@ function main(): void {
       "[overnight] Nothing is established. The sign is consistent and the effect is large in the " +
         "miners, but at these sample sizes and this volatility none of it separates from chance."
     );
+    /*
+     * Reported off the HEADLINE basket, not off the minimum across rows. The
+     * minimum is always a benchmark ETF — the lowest-volatility name in the
+     * set — so quoting it would advertise power the tradeable names do not
+     * have. The number that matters is whether the test could have seen the
+     * effect it was pointed at.
+     */
+    const headline = baskets
+      .filter((b) => b.basket === "scanned" && b.clustered)
+      .sort((a, b) => b.window - a.window)[0];
+    if (headline?.clustered && headline.detectableAtT3Bp !== null) {
+      console.log(
+        `[overnight] POWER: the ${headline.window}-session scanned basket measured ` +
+          `${headline.clustered.meanBp.toFixed(1)}bp but needed ${headline.detectableAtT3Bp.toFixed(1)}bp ` +
+          "to reach t=3. It could not have detected an effect of the size it found."
+      );
+    }
+    const control = baskets
+      .filter((b) => b.basket === "benchmarks" && b.clustered)
+      .sort((a, b) => b.window - a.window)[0];
+    if (headline?.clustered && control?.clustered) {
+      console.log(
+        `[overnight] CONTROL: index ETFs show ${control.clustered.meanBp.toFixed(1)}bp at ` +
+          `t=${control.clustered.tStat.toFixed(2)} against the cohort's ` +
+          `${headline.clustered.meanBp.toFixed(1)}bp at t=${headline.clustered.tStat.toFixed(2)}. ` +
+          "Four times the effect, the SAME significance — which is what a volatility-scaled " +
+          "version of a market-wide drift looks like, not a cohort-specific edge."
+      );
+    }
   }
   console.log(`[overnight] -> ${OUT}`);
 }

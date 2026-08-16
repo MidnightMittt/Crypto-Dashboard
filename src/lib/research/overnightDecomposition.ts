@@ -50,14 +50,34 @@ import { Bar } from "./types";
 export const MIN_SESSIONS = 60;
 
 /**
- * How many ticks a round trip is assumed to cost, entry and exit combined.
+ * THE CENTRAL COST: one tick per round trip.
  *
- * Two is deliberately pessimistic for a book that is usually one tick wide:
- * it charges the full spread on each leg rather than the half-spread a
- * mid-referenced fill would pay. Erring expensive is the safe direction for
- * a number whose job is to decide whether an edge survives costs.
+ * Buy at the ask and sell at the bid with price unchanged and you are out
+ * the spread exactly once — half at entry, half at exit. On a one-tick book
+ * that is $0.01 total, not $0.02. This is the physically correct charge and
+ * therefore the declared basis for the test.
+ *
+ * It was 2 until 2026-08-16, documented as "deliberately pessimistic". That
+ * was a defensible choice for a sensitivity but it was the ONLY figure the
+ * artefact published, so a central estimate was being reported as though it
+ * were the expected cost. The same off-by-a-factor-of-two lived in
+ * spreadHistory.roundTripCostBp, where it was not deliberate at all.
  */
-export const ROUND_TRIP_TICKS = 2;
+export const ROUND_TRIP_TICKS_CENTRAL = 1;
+
+/**
+ * THE UPPER BOUND: two ticks, charging a full spread on each leg.
+ *
+ * What a round trip costs if every fill is at the touch on both sides with
+ * no price improvement anywhere. Reported as a SENSITIVITY beside the
+ * central case, and deliberately NOT entered into the FDR family — it is the
+ * same hypothesis under a different cost assumption, not a second hypothesis,
+ * and counting it twice would make the correction stricter for no reason.
+ */
+export const ROUND_TRIP_TICKS_CONSERVATIVE = 2;
+
+/** The declared basis for every headline figure. */
+export const ROUND_TRIP_TICKS = ROUND_TRIP_TICKS_CENTRAL;
 
 /** The US minimum price increment above $1. */
 export const TICK = 0.01;
@@ -118,7 +138,7 @@ function twoSidedP(t: number): number {
   return 1 - erf(Math.abs(t) / Math.SQRT2);
 }
 
-function summarise(returnsBp: number[]): LegStats | null {
+export function summariseSeries(returnsBp: number[]): LegStats | null {
   const n = returnsBp.length;
   if (n < 2) return null;
   const mean = returnsBp.reduce((s, x) => s + x, 0) / n;
@@ -159,6 +179,64 @@ export function tickCostBp(price: number, ticks = ROUND_TRIP_TICKS): number | nu
   return ((ticks * TICK) / price) * 10_000;
 }
 
+/** One night's return, dated by the session whose OPEN closes the hold. */
+export interface NightObservation {
+  /** ISO date of the session being entered into — the exit date of the hold. */
+  date: string;
+  grossBp: number;
+  costBp: number;
+  netBp: number;
+  intradayBp: number;
+}
+
+/**
+ * The dated per-night series, shared by the per-symbol and basket tests.
+ *
+ * Extracted so the two can never disagree about which nights are in scope.
+ * A basket test built on its own loop would eventually drift on the gap rule
+ * or the cost anchor, and the disagreement would look like a finding.
+ *
+ * Cost is charged PER OBSERVATION against that night's own prior close, never
+ * against today's price — using today's price understates cost for names that
+ * have risen, which is exactly the set a premium ranking surfaces.
+ */
+export function overnightSeries(
+  bars: Bar[],
+  sessions: number,
+  ticks = ROUND_TRIP_TICKS
+): { observations: NightObservation[]; droppedGaps: number } {
+  const observations: NightObservation[] = [];
+  let droppedGaps = 0;
+  if (bars.length < 2) return { observations, droppedGaps };
+
+  // sessions+1 bars yield `sessions` overnight observations.
+  const slice = bars.slice(Math.max(0, bars.length - (sessions + 1)));
+  for (let i = 1; i < slice.length; i++) {
+    const prev = slice[i - 1];
+    const cur = slice[i];
+    if (!(prev.close > 0) || !(cur.open > 0) || !(cur.close > 0)) continue;
+
+    const gapDays = (cur.t - prev.t) / 86_400_000;
+    if (gapDays > MAX_GAP_DAYS) {
+      droppedGaps++;
+      continue;
+    }
+
+    const cost = tickCostBp(prev.close, ticks);
+    if (cost === null) continue;
+
+    const grossBp = (cur.open / prev.close - 1) * 10_000;
+    observations.push({
+      date: new Date(cur.t).toISOString().slice(0, 10),
+      grossBp,
+      costBp: cost,
+      netBp: grossBp - cost,
+      intradayBp: (cur.close / cur.open - 1) * 10_000,
+    });
+  }
+  return { observations, droppedGaps };
+}
+
 /**
  * Decompose the trailing `sessions` bars into overnight and intraday legs.
  *
@@ -167,7 +245,11 @@ export function tickCostBp(price: number, ticks = ROUND_TRIP_TICKS): number | nu
  * price level changes, and a single 2,633% "overnight return" would dominate
  * every statistic here.
  */
-export function decomposeWindow(bars: Bar[], sessions: number): WindowResult {
+export function decomposeWindow(
+  bars: Bar[],
+  sessions: number,
+  ticks = ROUND_TRIP_TICKS
+): WindowResult {
   const empty: WindowResult = {
     sessions,
     used: 0,
@@ -180,35 +262,11 @@ export function decomposeWindow(bars: Bar[], sessions: number): WindowResult {
   };
   if (bars.length < 2) return empty;
 
-  // sessions+1 bars yield `sessions` overnight observations.
-  const slice = bars.slice(Math.max(0, bars.length - (sessions + 1)));
-  const overnight: number[] = [];
-  const overnightNet: number[] = [];
-  const intraday: number[] = [];
-  const costs: number[] = [];
-  let droppedGaps = 0;
-
-  for (let i = 1; i < slice.length; i++) {
-    const prev = slice[i - 1];
-    const cur = slice[i];
-    if (!(prev.close > 0) || !(cur.open > 0) || !(cur.close > 0)) continue;
-
-    const gapDays = (cur.t - prev.t) / 86_400_000;
-    if (gapDays > MAX_GAP_DAYS) {
-      droppedGaps++;
-      continue;
-    }
-
-    const on = (cur.open / prev.close - 1) * 10_000;
-    const id = (cur.close / cur.open - 1) * 10_000;
-    const cost = tickCostBp(prev.close);
-    if (cost === null) continue;
-
-    overnight.push(on);
-    intraday.push(id);
-    costs.push(cost);
-    overnightNet.push(on - cost);
-  }
+  const { observations, droppedGaps } = overnightSeries(bars, sessions, ticks);
+  const overnight = observations.map((o) => o.grossBp);
+  const overnightNet = observations.map((o) => o.netBp);
+  const intraday = observations.map((o) => o.intradayBp);
+  const costs = observations.map((o) => o.costBp);
 
   /*
    * `used` always reports what was actually usable, even below the two
@@ -224,9 +282,9 @@ export function decomposeWindow(bars: Bar[], sessions: number): WindowResult {
   return {
     sessions,
     used: overnight.length,
-    overnightGross: summarise(overnight),
-    overnightNet: summarise(overnightNet),
-    intradayGross: summarise(intraday),
+    overnightGross: summariseSeries(overnight),
+    overnightNet: summariseSeries(overnightNet),
+    intradayGross: summariseSeries(intraday),
     meanCostBp: costs.reduce((s, x) => s + x, 0) / costs.length,
     costBasis: "modelled",
     droppedGaps,

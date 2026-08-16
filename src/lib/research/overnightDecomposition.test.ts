@@ -3,6 +3,8 @@ import { Bar } from "./types";
 import {
   MAX_GAP_DAYS,
   ROUND_TRIP_TICKS,
+  ROUND_TRIP_TICKS_CENTRAL,
+  ROUND_TRIP_TICKS_CONSERVATIVE,
   decomposeSymbol,
   decomposeWindow,
   tickCostBp,
@@ -22,6 +24,30 @@ function bars(pairs: Array<[number, number]>, startAt = START, stepDays = 1): Ba
     volume: 1_000,
   }));
 }
+
+/*
+ * THE COST BASIS CHANGED on 2026-08-16, from two ticks to one, and it is a
+ * correction rather than a retune. Buy at the ask and sell at the bid with
+ * price unchanged and you are out the spread ONCE. Two ticks is retained as
+ * a declared upper bound and is reported as a sensitivity, never entered
+ * into the FDR family — it is the same hypothesis at a different cost
+ * assumption, not a second hypothesis.
+ */
+describe("the two declared cost bases", () => {
+  it("charges one tick centrally and two at the upper bound", () => {
+    expect(ROUND_TRIP_TICKS_CENTRAL).toBe(1);
+    expect(ROUND_TRIP_TICKS_CONSERVATIVE).toBe(2);
+    expect(ROUND_TRIP_TICKS).toBe(ROUND_TRIP_TICKS_CENTRAL);
+  });
+
+  it("puts the upper bound at exactly twice the central charge", () => {
+    const central = tickCostBp(31.195, ROUND_TRIP_TICKS_CENTRAL)!;
+    const upper = tickCostBp(31.195, ROUND_TRIP_TICKS_CONSERVATIVE)!;
+    // APLD's real book: $0.01 once is 3.21bp; twice is 6.41bp.
+    expect(central).toBeCloseTo(3.206, 3);
+    expect(upper).toBeCloseTo(2 * central, 10);
+  });
+});
 
 describe("tickCostBp — the whole reason this is not a flat charge", () => {
   /*
@@ -110,7 +136,7 @@ describe("decomposeWindow — the split itself", () => {
     ]);
     const r = decomposeWindow(b, 120);
     // Costs: at $2 -> 100bp, at $2 -> 100bp, at $30 -> 6.667bp. Mean 68.9bp.
-    expect(r.meanCostBp!).toBeCloseTo((100 + 100 + 6.6667) / 3, 2);
+    expect(r.meanCostBp!).toBeCloseTo((50 + 50 + 3.3333) / 3, 2);
   });
 
   /*
@@ -192,7 +218,7 @@ describe("decomposeSymbol", () => {
     const b = bars([[10, 10], [10, 10], [10, 20]]);
     const d = decomposeSymbol("TEST", b);
     expect(d.lastClose).toBe(20);
-    expect(d.costBpAtLastClose!).toBeCloseTo(((2 * 0.01) / 20) * 10_000, 6);
+    expect(d.costBpAtLastClose!).toBeCloseTo(((ROUND_TRIP_TICKS * 0.01) / 20) * 10_000, 6);
   });
 
   it("refuses with a reason when no window can be filled", () => {
