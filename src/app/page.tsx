@@ -11,6 +11,8 @@ import ledgerJson from "@/data/signalLedger.json";
 import crossSectionJson from "@/data/equityCrossSection.json";
 import validationJson from "@/data/signalValidation.json";
 import earningsJson from "@/data/earningsCalendar.json";
+import macroJson from "@/data/macroSeries.json";
+import { VolTermRead } from "@/lib/markets/volTermStructure";
 
 /**
  * THE BRIEF — the front door, and the shortest page on the platform.
@@ -60,6 +62,7 @@ const validation = validationJson as {
   }>;
 };
 const earnings = earningsJson as { entries?: Array<{ symbol: string; date: string }> };
+const macro = macroJson as { volTermStructure: VolTermRead | null };
 
 export const metadata = { title: "The Brief — Leverage Terminal" };
 
@@ -118,6 +121,21 @@ export default function BriefPage() {
               Where we are
             </h2>
             <p className="mt-2 text-[14px] leading-relaxed text-ink">{brief.stateLine}</p>
+            {/*
+              THE VOLATILITY CURVE, beside the risk regime and distinct from
+              it. The regime reads cross-asset APPETITE; this reads whether
+              the stress being priced is now or later. State only — it has no
+              measured record here, does not vote, and says so.
+            */}
+            {macro.volTermStructure && (
+              <p className="mt-3 border-t border-hairline pt-3 text-[12px] leading-relaxed text-ink-muted">
+                <span className="text-[9px] uppercase tracking-[0.14em] text-ink-faint">Volatility curve · </span>
+                {macro.volTermStructure.sentence}{" "}
+                <span className="text-ink-faint">
+                  Descriptive: this has no measured forward record here and moves no score.
+                </span>
+              </p>
+            )}
             <Link
               href="/intelligence"
               className="mt-2 inline-block text-[11px] uppercase tracking-[0.14em] text-ink-faint hover:text-ink"

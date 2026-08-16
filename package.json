@@ -18,6 +18,7 @@
     "check-dossier": "tsx scripts/check-dossier.ts",
     "refresh-reference-bars": "tsx scripts/refresh-reference-bars.ts",
     "edge-gate": "tsx scripts/edgeGateReport.ts",
+    "ingest:macro": "tsx scripts/ingest/fetchMacroSeries.ts",
     "study:signals": "tsx scripts/research/runLab.ts",
     "study:cross-section": "tsx scripts/research/buildCrossSection.ts",
     "backtest:fetch": "node scripts/backtest/fetchHistory.mjs",

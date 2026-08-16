@@ -79,6 +79,13 @@ jobs:
       # no error: past 10 days it withholds the forecast, past 45 the section
       # disappears. Manually refreshed, the signal quietly stopped making its
       # claim a week and a half after anyone last remembered.
+      # Keyless FRED. Both legs of the volatility term structure are checked
+      # for staleness and the step FAILS rather than writing a ratio whose
+      # numerator and denominator describe different weeks — the exact defect
+      # that ruled out Yahoo's ^VIX3M, which was four weeks behind its ^VIX.
+      - name: Refresh FRED macro series
+        run: npx tsx scripts/ingest/fetchMacroSeries.ts
+
       - name: Rebuild equity cross-section panel
         run: npx tsx scripts/research/buildCrossSection.ts
 
@@ -92,7 +99,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add src/data/marketIntelligence.json src/data/equityMarkets.json src/data/signalLedger.json src/data/earningsCalendar.json src/data/forwardReachRecord.json src/data/forwardVerdictRecord.json src/data/equityCrossSection.json
+          git add src/data/marketIntelligence.json src/data/equityMarkets.json src/data/signalLedger.json src/data/earningsCalendar.json src/data/forwardReachRecord.json src/data/forwardVerdictRecord.json src/data/equityCrossSection.json src/data/macroSeries.json
           if git diff --cached --quiet; then
             echo "No data changes (holiday or re-run on identical bars) — nothing to deploy."
             exit 0
