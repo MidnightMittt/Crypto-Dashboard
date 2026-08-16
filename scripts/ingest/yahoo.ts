@@ -5,6 +5,10 @@ import { Bar } from "../../src/lib/research/types";
 import { InstrumentConfig, instrumentsByProvider, usListing } from "../../src/lib/research/universe";
 import { industryUniverse, INDUSTRIES } from "../../src/lib/markets/industries";
 import { validateBars, summarizeReport } from "../../src/lib/research/validation";
+import {
+  adjustForCorporateActions,
+  formatAdjustmentNotes,
+} from "../../src/lib/research/corporateActions";
 
 /**
  * YAHOO PROVIDER ADAPTER — one of possibly many, deliberately isolated.
@@ -243,7 +247,33 @@ async function main() {
   let failures = 0;
   for (const config of configs) {
     try {
-      const bars = quarantineBadLiveRow(await fetchDaily(config), config.meta.id);
+      const fetched = quarantineBadLiveRow(await fetchDaily(config), config.meta.id);
+
+      /*
+       * CORPORATE ACTIONS AND BROKEN PRINTS, applied before validation so the
+       * validator judges the series that will actually be written.
+       *
+       * Yahoo back-adjusts most actions, which is why HUT's merger and CORZ's
+       * Chapter 11 emergence arrive clean here and show up raw only in the
+       * Robinhood feed. It does not catch everything: NVR's 1993 relisting
+       * and two MARA placeholder prints survive in this data, and every ATR,
+       * realised-vol and momentum figure computed across them is wrong.
+       *
+       * Spikes are repaired outright. Steps are repaired only against a
+       * declared verdict — see corporateActions.ts for why guessing is the
+       * expensive mistake here.
+       */
+      const symbol = config.meta.displaySymbol ?? config.meta.id.replace(/\.US$/, "");
+      const adj = adjustForCorporateActions(fetched, symbol);
+      const bars = adj.bars;
+      for (const line of formatAdjustmentNotes(symbol, adj.notes)) console.log(`   ${line}`);
+      if (adj.undeclared.length > 0) {
+        console.log(
+          `   [corporate-action] ${symbol}: ${adj.undeclared.length} UNDECLARED step(s) — series written UNCHANGED. ` +
+            `Judge each on volume and intraday range, then add it to DECLARED_PRICE_EVENTS.`
+        );
+      }
+
       const report = validateBars(config.meta, bars, "1D");
       console.log(summarizeReport(report));
 
