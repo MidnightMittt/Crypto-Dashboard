@@ -276,3 +276,33 @@ export function gradeModules(
 export function isValidatedEdge(grade: ModuleGrade): boolean {
   return grade.verdict === "edge" && grade.survivesFdr;
 }
+
+/**
+ * THE COST AT WHICH A RESULT STOPS CLEARING.
+ *
+ * The gate asks "does the lower bound beat the null plus 2pp". That answers a
+ * yes/no and hides the question a reader actually has: HOW WRONG would the
+ * cost assumption have to be to change the answer?
+ *
+ * It is nearly free to answer. `lowerBound` is a function of the win rate and
+ * the sample size only — costs enter the gate as a bar, never as an input to
+ * the estimate — so the breakeven charge is just the distance from the bound
+ * to the null.
+ *
+ * ── Why this is a sensitivity, not a tuning knob ──────────────────────
+ *
+ * Re-running a study at a cost chosen after seeing the result is exactly the
+ * p-hacking the declared-family discipline exists to prevent. Reporting the
+ * breakeven is the opposite move: the declared 2pp verdict stands unchanged,
+ * and the reader additionally learns the margin. A signal clearing at 2pp
+ * with a 2.1pp breakeven and one with a 5.4pp breakeven are wildly different
+ * propositions that the verdict alone renders identical.
+ *
+ * This matters most for the weekly hypotheses, where the hypothesis file
+ * already concedes a flat 2pp is light: a 5-day rebalance turns over roughly
+ * four times as often as a monthly one at the same charge.
+ */
+export function breakevenCostPp(lowerBound: number | null, baseRate = 0.5): number | null {
+  if (lowerBound === null || !Number.isFinite(lowerBound)) return null;
+  return (lowerBound - baseRate) * 100;
+}

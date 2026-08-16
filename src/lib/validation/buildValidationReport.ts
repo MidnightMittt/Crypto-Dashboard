@@ -31,6 +31,8 @@
  * coin flips would waste the most decision-relevant result we have.
  */
 
+import { breakevenCostPp } from "@/lib/research/edgeGate";
+
 export type Outcome = "cleared" | "indistinct" | "below" | "unmeasured";
 
 export interface ValidationRow {
@@ -45,6 +47,16 @@ export interface ValidationRow {
   n: number | null;
   winRatePct: number | null;
   lowerBoundPct: number | null;
+  /**
+   * The cost charge at which this stops clearing its null, in percentage
+   * points of win rate. Null when there is no bound.
+   *
+   * The verdict answers yes/no at the declared 2pp. This answers the question
+   * behind it: how wrong would that assumption have to be? Two signals with
+   * the same verdict and breakevens of 2.1pp and 5.4pp are entirely different
+   * propositions, and the verdict alone renders them identical.
+   */
+  breakevenCostPp: number | null;
   /** Declared before the run, for lab hypotheses. Null for graded modules. */
   killCriteria: string | null;
   /** What retired it despite its own numbers passing. */
@@ -154,12 +166,14 @@ const IN_USE = new Set([
 
 const CAUTIONS: Record<string, string> = {
   "reversal-5d":
-    "Passes only since the panel was declared, and nobody has investigated why. Its retirement is OPEN, not " +
-    "overturned: a 5-day rebalance turns over roughly four times as often as the monthly hypotheses at the same flat " +
-    "2pp charge, which is the cost assumption this family is weakest on. No module on this site quotes it.",
+    "RESOLVED against it, on its own breakeven. This clears at the declared 2pp but stops clearing at 4.5pp, and it " +
+    "rebalances every 5 sessions against the monthly hypotheses' 21 — roughly 4.2 times the turnover. If costs scale " +
+    "with turnover, the comparable charge is about 8.4pp, well past where this dies. The verdict beside it is " +
+    "correct at the cost that was declared; it does not survive the objection the declaration already flagged.",
   "reversal-5d-skip1":
-    "The falsification test for reversal-5d. It now passes, which removes the automatic retirement — but a robustness " +
-    "test flipping after a change made for unrelated reasons is a reason to look harder, not to ship.",
+    "Thinner still: it stops clearing at 2.4pp, barely above the 2pp it was charged, on a strategy turning over four " +
+    "times as often as the monthly ones. Its passing removed the automatic retirement of reversal-5d; its breakeven " +
+    "removes the reason to care.",
 };
 
 export function buildValidationReport(inputs: ValidationInputs): ValidationReport {
@@ -175,6 +189,7 @@ export function buildValidationReport(inputs: ValidationInputs): ValidationRepor
       n: r.n,
       winRatePct: r.winRate * 100,
       lowerBoundPct: r.lowerBound === null ? null : r.lowerBound * 100,
+      breakevenCostPp: breakevenCostPp(r.lowerBound),
       killCriteria: r.killCriteria,
       retiredBy: r.retiredBy,
       sentence: null,
@@ -193,6 +208,7 @@ export function buildValidationReport(inputs: ValidationInputs): ValidationRepor
       n: g.effectiveN ?? null,
       winRatePct: null,
       lowerBoundPct: g.lowerBound === undefined || g.lowerBound === null ? null : g.lowerBound * 100,
+      breakevenCostPp: breakevenCostPp(g.lowerBound ?? null),
       killCriteria: null,
       retiredBy: null,
       sentence: g.sentence ?? null,

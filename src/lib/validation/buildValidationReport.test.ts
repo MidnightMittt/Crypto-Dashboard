@@ -120,12 +120,13 @@ describe("buildValidationReport — ordering", () => {
 
 describe("buildValidationReport — the cautions", () => {
   /*
-   * reversal-5d passes only since the panel was declared and nobody has
-   * investigated why. Its retirement is open, not overturned. A page that
-   * showed the verdict without the caveat would turn "it passed" into "it
-   * shipped" by omission.
+   * Deliberate update, 2026-08-15: this previously pinned "retirement is
+   * OPEN, not overturned". The breakeven closed it. reversal-5d dies at
+   * 4.5pp while rebalancing 4.2x as often as the monthly hypotheses charged
+   * the same 2pp — so it does not survive the objection its own declaration
+   * flagged, and the caution now says so rather than deferring.
    */
-  it("attaches the standing caution to the reversal pair", () => {
+  it("attaches the resolved caution to the reversal pair", () => {
     const r = buildValidationReport(
       inputs({
         lab: {
@@ -146,8 +147,10 @@ describe("buildValidationReport — the cautions", () => {
         },
       })
     );
-    expect(r.rows[0].caution).toMatch(/retirement is OPEN, not overturned/);
-    expect(r.rows[0].caution).toMatch(/No module on this site quotes it/);
+    expect(r.rows[0].caution).toMatch(/RESOLVED against it, on its own breakeven/);
+    expect(r.rows[0].caution).toMatch(/4\.2 times the turnover/);
+    // The verdict itself is not disputed — only the cost it was judged at.
+    expect(r.rows[0].caution).toMatch(/correct at the cost that was declared/);
   });
 
   it("leaves ordinary results uncautioned", () => {
@@ -235,5 +238,36 @@ describe("buildValidationReport — cleared is not the same as used", () => {
 
   it("does not mark a failing module as in use just because it is named", () => {
     expect(buildValidationReport(inputs()).rows.find((x) => x.id === "funding")!.inUse).toBe(false);
+  });
+});
+
+describe("buildValidationReport — the breakeven cost", () => {
+  /*
+   * The verdict answers yes-or-no at a declared charge and hides the margin.
+   * Since the Wilson bound depends only on the win rate and sample size, the
+   * breakeven is free to compute and is the sensitivity a reader actually
+   * needs: how wrong would the cost assumption have to be?
+   */
+  it("derives the charge at which each result would stop clearing", () => {
+    const r = buildValidationReport(inputs());
+    // Lower bound 55.4% against a 50% null → dies at 5.4pp.
+    expect(r.rows.find((x) => x.id === "winner")!.breakevenCostPp).toBeCloseTo(5.4, 6);
+    // 50.8% → 0.8pp, well under the 2pp it was charged.
+    expect(r.rows.find((x) => x.id === "coin-flip")!.breakevenCostPp).toBeCloseTo(0.8, 6);
+  });
+
+  /*
+   * A signal reading below its own null has a NEGATIVE breakeven — it would
+   * need costs to be negative to clear. Rendering that as a cost is
+   * nonsense, so the page suppresses it rather than printing "-6.5pp".
+   */
+  it("returns a negative breakeven for a signal below its own null", () => {
+    const r = buildValidationReport(inputs());
+    expect(r.rows.find((x) => x.id === "worse-than-null")!.breakevenCostPp).toBeLessThan(0);
+  });
+
+  it("is null when there is no bound to measure against", () => {
+    const r = buildValidationReport(inputs());
+    expect(r.rows.find((x) => x.id === "options")!.breakevenCostPp).toBeNull();
   });
 });

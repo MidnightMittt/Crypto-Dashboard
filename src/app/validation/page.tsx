@@ -97,6 +97,10 @@ export default function ValidationPage() {
             worth anything.
           </p>
           <p className="mt-3 text-[11px] leading-relaxed text-ink-faint">
+            Each row shows the cost charge at which it would stop clearing. The verdict answers yes-or-no at the
+            declared {report.costPp}pp; the breakeven answers how wrong that assumption would have to be. Two
+            signals sharing a verdict with breakevens of 2.4pp and 5.4pp are entirely different propositions, and
+            a rebalance running four times as often should be charged four times as much.{" "}
             The equity study corrected across all {report.equityFamilySize} declared hypotheses at once on{" "}
             {report.equityInstruments} instruments, charging {report.costPp}pp of costs to every one. Correcting only
             across survivors would undo the correction. A further {report.totals.unmeasured} modules have never been
@@ -148,6 +152,12 @@ export default function ValidationPage() {
                       <span>
                         <span className="text-ink-faint">FDR</span> {r.survivesFdr ? "survives" : "no"}
                       </span>
+                      {/* The margin the verdict hides. See breakevenCostPp. */}
+                      {r.breakevenCostPp !== null && r.breakevenCostPp > 0 && (
+                        <span>
+                          <span className="text-ink-faint">dies at</span> {r.breakevenCostPp.toFixed(1)}pp costs
+                        </span>
+                      )}
                     </div>
 
                     {r.sentence && (
