@@ -1,0 +1,77 @@
+# CROSS-VALIDATION AGAINST PRODUCTION
+#
+# Runs scripts/audit/crossvalidate.py against the deployed site: the page
+# contradicting itself is a FAIL, and — under --fail-on-internal-skip — a
+# pattern that no longer matches is ALSO a fail. That second rule is the
+# entire reason this exists in CI: copy changes once silently degraded
+# sixteen checks to SKIP, and an exit-0 run looked green while checking
+# nothing. Pattern drift now goes red the day it happens instead of the day
+# somebody notices.
+#
+# ── What this does and does not gate, stated honestly ─────────────────
+#
+# Vercel auto-deploys every push to main, so this job cannot literally block
+# a deploy — it verifies the deployment AFTER it is live and fails red. True
+# pre-deploy gating needs two admin settings this repository's tooling cannot
+# flip: branch protection with this workflow as a required check, plus
+# Vercel's "ignored build step" or a protected production branch. Until then,
+# red here means "production is currently wrong", which is still strictly
+# better than nobody running the suite at all.
+#
+# External checks (page vs Robinhood reference bars) SKIP in CI by design:
+# bars.json is a local snapshot refreshed from MCP tools that do not exist
+# here. Those skips are soft; INTERNAL skips are hard.
+name: crossvalidate
+
+on:
+  # Vercel's GitHub integration emits deployment_status; run on every
+  # successful production deploy.
+  deployment_status:
+  schedule:
+    # Daily backstop, ~90 min after the 22:15 UTC data refresh has deployed.
+    - cron: "45 23 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      base:
+        description: "Base URL to validate"
+        required: false
+        default: "https://crypto-dashboard-65d9.vercel.app"
+
+jobs:
+  validate:
+    # On deployment events, only successful PRODUCTION deploys are worth
+    # validating — previews would double every run and test the wrong URL.
+    if: >
+      github.event_name != 'deployment_status' ||
+      (github.event.deployment_status.state == 'success' &&
+       contains(github.event.deployment.environment, 'roduction'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # npm ci exists solely to read the DECLARED ticker list. Hardcoding the
+      # symbols here would be a second copy of the scanner universe, and two
+      # copies of a reference set is how the last panel drift happened.
+      - run: npm ci
+
+      - name: Resolve tickers from the declared scanner universe
+        id: tickers
+        run: |
+          TICKERS=$(npx tsx -e "import { SCANNED } from './src/lib/markets/scannerUniverse'; console.log(SCANNED.join(' '))")
+          echo "list=$TICKERS" >> "$GITHUB_OUTPUT"
+          echo "validating: $TICKERS"
+
+      - name: Cross-validate production
+        run: |
+          BASE="${{ github.event.inputs.base }}"
+          if [ -z "$BASE" ]; then BASE="https://crypto-dashboard-65d9.vercel.app"; fi
+          python3 scripts/audit/crossvalidate.py \
+            --base "$BASE" \
+            --fail-on-internal-skip \
+            ${{ steps.tickers.outputs.list }}
