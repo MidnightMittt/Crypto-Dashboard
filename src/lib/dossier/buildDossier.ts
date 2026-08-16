@@ -215,6 +215,19 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
     earningsDate: analysis.earnings?.date ?? null,
   });
 
+  /*
+   * Hoisted out of the literal because TWO sections read it: the next-entry
+   * section renders it, and the invalidation section takes its prices from it
+   * so that "what changes my mind" is a level on every ticker rather than
+   * only on the ones carrying a plan. One computation, so they cannot drift.
+   */
+  const nextEntry = buildNextEntry(
+    analysis,
+    inputs.plannedRecords ?? null,
+    inputs.reachOf ?? null,
+    inputs.forward ?? null
+  );
+
   return {
     identity: {
       symbol: analysis.symbol,
@@ -311,11 +324,23 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
 
     bullCase: composeBullCase(bias),
     bearCase: composeBearCase(bias),
-    invalidation: composeInvalidation({ bias, plan, earningsDate: analysis.earnings?.date ?? null }),
+    /*
+     * `nextEntry` is passed so this section can always name a PRICE. Without
+     * it the no-plan path fell back to engine internals, which is unusable on
+     * exactly the days — the WAIT majority — when a reader most needs a level
+     * to watch. Computed once above and shared, so the two sections can never
+     * disagree about where the next decision sits.
+     */
+    invalidation: composeInvalidation({
+      bias,
+      plan,
+      earningsDate: analysis.earnings?.date ?? null,
+      nextEntry,
+    }),
 
     analogs: buildAnalogs(inputs.analogs ?? null, isCrypto, analysis.barsUsed, inputs.analogsBlockedReason ?? null),
 
-    nextEntry: buildNextEntry(analysis, inputs.plannedRecords ?? null, inputs.reachOf ?? null, inputs.forward ?? null),
+    nextEntry,
 
     validatedSignal: buildValidatedSignal(inputs.momentum ?? null),
 

@@ -1,7 +1,14 @@
 import { MarketBias, MetricVerdict } from "@/lib/signals/types";
 import { TradePlan } from "@/lib/signals/tradePlan";
 import { formatPrice } from "@/lib/utils/format";
-import { EvidenceBullet, InvalidationTrigger, MacroContext, TldrSection } from "./types";
+import {
+  EvidenceBullet,
+  InvalidationTrigger,
+  MacroContext,
+  PlannedEntryRead,
+  Read,
+  TldrSection,
+} from "./types";
 
 /**
  * THE NARRATIVE COMPOSER — prose assembled from evidence, never written.
@@ -229,20 +236,112 @@ function toBullet(m: MetricVerdict): EvidenceBullet {
  * a date. Collapsing them into one list would leave a reader unsure what they
  * are supposed to watch.
  */
+/**
+ * Beyond this the list stops being read. Concrete triggers claim the slots
+ * first; module flips fill whatever is left.
+ */
+const MAX_TRIGGERS = 5;
+
+/** Module flips are useful but never lead — cap them even when slots are free. */
+const MAX_EVIDENCE_TRIGGERS = 3;
+
+/**
+ * WHAT WOULD CHANGE THE ANSWER — always as a price, on every ticker.
+ *
+ * This section used to collapse on exactly the days it mattered most. With a
+ * plan it named a level: "a daily close beyond $294.14". Without one it fell
+ * back to engine internals — "Price Action Strength 15/100 — below 20 this
+ * reports neutral regardless of direction" — which is not something anybody
+ * can act on, or even watch for.
+ *
+ * Measured across five tickers on 2026-08-16: a price appeared on the two
+ * that carried plans and on none of the three reading WAIT. Since the EV gate
+ * landed, WAIT is the majority state, so the question this section answers
+ * was unusable on most tickers on most days.
+ *
+ * The fix is not new data. `nextEntry` already computes both the level that
+ * would MAKE this a trade and the nearest structure either side — and its own
+ * doc says the watch levels exist so "a reader is never left without a price
+ * to watch". They simply were not reaching this section.
+ *
+ * ── What "invalidation" means when there is no position ───────────────
+ *
+ * With a plan, the answer is the stop: the level past which the reason for
+ * the trade is gone. Without one, the opinion being invalidated is *standing
+ * aside*, so the trigger is the level at which standing aside stops being
+ * right — plus the structure whose loss would change the read itself. Both
+ * are prices a reader can set an alert on.
+ */
 export function composeInvalidation(inputs: {
   bias: MarketBias;
   plan: TradePlan | null;
   earningsDate: string | null;
+  /**
+   * Where the next decision happens. Supplies the price on days with no plan;
+   * absent, the function degrades to exactly its previous behaviour.
+   */
+  nextEntry?: Read<PlannedEntryRead> | null;
 }): InvalidationTrigger[] {
-  const { bias, plan, earningsDate } = inputs;
-  const out: InvalidationTrigger[] = [];
+  const { bias, plan, earningsDate, nextEntry } = inputs;
+  const price: InvalidationTrigger[] = [];
+  const event: InvalidationTrigger[] = [];
+  const evidence: InvalidationTrigger[] = [];
 
   if (plan) {
-    out.push({
+    price.push({
       kind: "price",
       condition: `A daily close beyond ${formatPrice(plan.stopPrice)}`,
       consequence:
         "That level sits past the structure the whole idea rests on, so losing it means the reason for the trade is gone — not merely that price moved.",
+    });
+  } else {
+    const entry = nextEntry?.status === "available" ? nextEntry.data : null;
+    /*
+     * Deduplicated on the FORMATTED price, because a conditional entry's
+     * trigger is frequently the same structure edge a watch level names, and
+     * printing one level twice reads as two independent conditions.
+     */
+    const seen = new Set<string>();
+
+    const candidate =
+      entry?.entries.find((e) => e.primary && e.triggerPrice !== null) ??
+      entry?.entries.find((e) => e.triggerPrice !== null);
+    if (candidate?.triggerPrice != null) {
+      seen.add(formatPrice(candidate.triggerPrice));
+      price.push({
+        kind: "price",
+        condition: `Price reaching ${formatPrice(candidate.triggerPrice)}`,
+        consequence:
+          "That is where standing aside stops being the answer — close enough to structure to price a stop against, which is what turns this read into a trade with measured risk.",
+      });
+    }
+
+    for (const w of entry?.watchLevels ?? []) {
+      const at = formatPrice(w.price);
+      if (seen.has(at)) continue;
+      seen.add(at);
+      price.push({
+        kind: "price",
+        condition: w.direction === "long" ? `A daily close below ${at}` : `A daily close above ${at}`,
+        consequence:
+          w.direction === "long"
+            ? "That removes the nearest support this read leans on, and the next decision moves down to whatever structure sits beneath it."
+            : "That clears the nearest resistance capping this read, which changes what the upside above here is worth.",
+      });
+    }
+  }
+
+  /*
+   * Ahead of module flips, not behind them. A report can gap price straight
+   * through a stop, which makes it the one condition that can invalidate a
+   * trade before any reading has time to change.
+   */
+  if (earningsDate) {
+    event.push({
+      kind: "event",
+      condition: `Earnings on ${earningsDate}`,
+      consequence:
+        "A report can gap price straight past a stop, so the risk printed on any plan is not actually available across that date.",
     });
   }
 
@@ -252,25 +351,21 @@ export function composeInvalidation(inputs: {
    * that would do it. A module with no stated threshold is excluded upstream
    * rather than given a vague sentence here.
    */
-  for (const m of bias.watchNext.slice(0, 3)) {
+  const slots = Math.min(
+    MAX_EVIDENCE_TRIGGERS,
+    Math.max(0, MAX_TRIGGERS - price.length - event.length)
+  );
+  for (const m of bias.watchNext) {
+    if (evidence.length >= slots) break;
     if (!m.nextTrigger) continue;
-    out.push({
+    evidence.push({
       kind: "evidence",
       condition: `${m.label} ${m.nextTrigger}`,
       consequence: "That would remove one of the readings currently holding this view up.",
     });
   }
 
-  if (earningsDate) {
-    out.push({
-      kind: "event",
-      condition: `Earnings on ${earningsDate}`,
-      consequence:
-        "A report can gap price straight past a stop, so the risk printed on any plan is not actually available across that date.",
-    });
-  }
-
-  return out;
+  return [...price, ...event, ...evidence];
 }
 
 /**

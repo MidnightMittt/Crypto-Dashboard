@@ -8,6 +8,14 @@ import {
 } from "./narrative";
 import { MarketBias, MetricVerdict, Verdict } from "@/lib/signals/types";
 import { TradePlan } from "@/lib/signals/tradePlan";
+import {
+  PlannedEntry,
+  PlannedEntryRead,
+  Read,
+  WatchLevel,
+  available,
+  unavailable,
+} from "./types";
 
 const metric = (id: string, verdict: Verdict, over: Partial<MetricVerdict> = {}): MetricVerdict => ({
   id,
@@ -49,6 +57,9 @@ const bias = (over: Partial<MarketBias> = {}): MarketBias =>
   }) as MarketBias;
 
 const plan = { entryLow: 218, entryHigh: 221, stopPrice: 214 } as TradePlan;
+
+/** Only the fields composeInvalidation reads are meaningful here. */
+const plannedEntry = { direction: "long", primary: true, triggerPrice: null } as unknown as PlannedEntry;
 
 describe("composeTldr", () => {
   it("leads with the structural read a reader can check on a chart", () => {
@@ -216,8 +227,31 @@ describe("composeBullCase / composeBearCase", () => {
   });
 });
 
+/** A next-entry read shaped like the builder's own output. */
+const nextEntry = (over: Partial<PlannedEntryRead> = {}): Read<PlannedEntryRead> =>
+  available({
+    anchorPrice: 100,
+    favoured: "long",
+    rationale: "",
+    entries: [],
+    watchLevels: [],
+    forward: null,
+    ...over,
+  });
+
+const watch = (direction: "long" | "short", price: number): WatchLevel => ({
+  direction,
+  price,
+  distancePct: 5,
+  distanceAtr: 1.2,
+  touches: 3,
+  reachRatePct: null,
+  medianSessionsToReach: null,
+  reachAttempts: null,
+});
+
 describe("composeInvalidation", () => {
-  it("names the price level, the evidence flips and the event separately", () => {
+  it("names the price level, the event and the evidence flips, in that order", () => {
     const triggers = composeInvalidation({
       bias: bias({
         watchNext: [metric("equityBreadth", "bullish", { label: "Market Breadth", nextTrigger: "turns neutral below 65%" })],
@@ -225,10 +259,105 @@ describe("composeInvalidation", () => {
       plan,
       earningsDate: "2026-08-18",
     });
-    expect(triggers.map((t) => t.kind)).toEqual(["price", "evidence", "event"]);
+    /*
+     * Earnings moved AHEAD of module flips: a report can gap price straight
+     * through a stop, which makes it the one condition that can invalidate a
+     * trade before any reading has time to change.
+     */
+    expect(triggers.map((t) => t.kind)).toEqual(["price", "event", "evidence"]);
     expect(triggers[0].condition).toContain("$214.00");
-    expect(triggers[1].condition).toContain("turns neutral below 65%");
-    expect(triggers[2].condition).toContain("2026-08-18");
+    expect(triggers[1].condition).toContain("2026-08-18");
+    expect(triggers[2].condition).toContain("turns neutral below 65%");
+  });
+
+  /*
+   * THE DEFECT THIS SECTION EXISTS TO FIX. Measured across five tickers on
+   * 2026-08-16, a price appeared on the two carrying plans and on none of the
+   * three reading WAIT — and WAIT is the majority state since the EV gate
+   * landed. "Price Action Strength 15/100" is not something anyone can act on.
+   */
+  it("still names a price when there is no plan", () => {
+    const triggers = composeInvalidation({
+      bias: bias(),
+      plan: null,
+      earningsDate: null,
+      nextEntry: nextEntry({ watchLevels: [watch("long", 88.5), watch("short", 112.25)] }),
+    });
+    expect(triggers.every((t) => t.kind === "price")).toBe(true);
+    expect(triggers[0].condition).toBe("A daily close below $88.50");
+    expect(triggers[1].condition).toBe("A daily close above $112.25");
+  });
+
+  it("leads with the level that would MAKE it a trade", () => {
+    const triggers = composeInvalidation({
+      bias: bias(),
+      plan: null,
+      earningsDate: null,
+      nextEntry: nextEntry({
+        entries: [
+          { ...plannedEntry, primary: false, triggerPrice: 70 },
+          { ...plannedEntry, primary: true, triggerPrice: 95.4 },
+        ],
+        watchLevels: [watch("long", 88.5)],
+      }),
+    });
+    expect(triggers[0].condition).toBe("Price reaching $95.40");
+    expect(triggers[0].consequence).toContain("standing aside stops being the answer");
+    // The non-primary entry does not also get a line.
+    expect(triggers.some((t) => t.condition.includes("$70"))).toBe(false);
+  });
+
+  /*
+   * A conditional entry's trigger is frequently the same structure edge a
+   * watch level names. Printed twice it reads as two independent conditions.
+   */
+  it("prints one level once, even when two sources name it", () => {
+    const triggers = composeInvalidation({
+      bias: bias(),
+      plan: null,
+      earningsDate: null,
+      nextEntry: nextEntry({
+        entries: [{ ...plannedEntry, primary: true, triggerPrice: 88.5 }],
+        watchLevels: [watch("long", 88.5), watch("short", 112.25)],
+      }),
+    });
+    expect(triggers.filter((t) => t.condition.includes("88.50"))).toHaveLength(1);
+    expect(triggers).toHaveLength(2);
+  });
+
+  /* With a plan the stop IS the invalidation; watch levels would be noise. */
+  it("does not add watch levels on top of a plan's stop", () => {
+    const triggers = composeInvalidation({
+      bias: bias(),
+      plan,
+      earningsDate: null,
+      nextEntry: nextEntry({ watchLevels: [watch("long", 88.5), watch("short", 112.25)] }),
+    });
+    expect(triggers).toHaveLength(1);
+    expect(triggers[0].condition).toContain("$214.00");
+  });
+
+  /*
+   * Concrete triggers claim the slots first. A list longer than this stops
+   * being read, and module flips are the least actionable thing in it.
+   */
+  it("caps the list, and never lets module flips crowd out prices", () => {
+    const flips = ["a", "b", "c", "d", "e"].map((id) =>
+      metric(id, "bullish", { label: id, nextTrigger: "flips" })
+    );
+    const triggers = composeInvalidation({
+      bias: bias({ watchNext: flips }),
+      plan: null,
+      earningsDate: "2026-08-18",
+      nextEntry: nextEntry({
+        entries: [{ ...plannedEntry, primary: true, triggerPrice: 95.4 }],
+        watchLevels: [watch("long", 88.5), watch("short", 112.25)],
+      }),
+    });
+    expect(triggers).toHaveLength(5);
+    expect(triggers.filter((t) => t.kind === "price")).toHaveLength(3);
+    expect(triggers.filter((t) => t.kind === "event")).toHaveLength(1);
+    expect(triggers.filter((t) => t.kind === "evidence")).toHaveLength(1);
   });
 
   it("skips modules that cannot name what would flip them", () => {
@@ -242,6 +371,17 @@ describe("composeInvalidation", () => {
 
   it("returns nothing rather than a vague reassurance when there is nothing to state", () => {
     expect(composeInvalidation({ bias: bias(), plan: null, earningsDate: null })).toEqual([]);
+  });
+
+  /* An unavailable next-entry read degrades to the previous behaviour. */
+  it("survives a next-entry section that has nothing to offer", () => {
+    const triggers = composeInvalidation({
+      bias: bias(),
+      plan: null,
+      earningsDate: null,
+      nextEntry: unavailable("insufficient-history", "no structure yet"),
+    });
+    expect(triggers).toEqual([]);
   });
 });
 
