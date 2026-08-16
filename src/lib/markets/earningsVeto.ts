@@ -70,9 +70,12 @@ export interface EarningsVetoResult {
 }
 
 /**
- * The next earnings date for `symbol` inside the veto window, or null when
- * none is known — which, per the asymmetry above, is indistinguishable
- * from "no earnings soon" on purpose.
+ * The next earnings date for `symbol` inside the veto window, or null.
+ *
+ * Null is the right answer for the GATE — absence of evidence must not block
+ * every plan — but it is NOT a safe thing to display. Use `earningsStatus`
+ * for anything a reader sees; see the note there for why that distinction
+ * matters more than it sounds.
  */
 export function earningsVeto(
   symbol: string,
@@ -90,4 +93,127 @@ export function earningsVeto(
     if (!best || sessions < best.sessions) best = { date: e.date, sessions };
   }
   return best;
+}
+
+/**
+ * WHAT WE ACTUALLY KNOW ABOUT EARNINGS — three states, never a boolean.
+ *
+ * `earningsVeto` returns null for three unrelated situations: no calendar at
+ * all, a calendar that does not cover this symbol, and a symbol whose next
+ * report is genuinely outside the window. The first two mean "unknown"; only
+ * the third means "clear". Collapsing them let the page render an
+ * affirmative safety pass derived from having no data.
+ *
+ * ── The scale of it, measured 2026-08-16 ──────────────────────────────
+ *
+ * The committed calendar held 17 symbols against a 95-name panel. Of the
+ * twelve names in the scanner universe exactly one — IREN — was covered. So
+ * eleven of twelve traded symbols displayed "no earnings in the window" on
+ * the strength of never having been looked up. For a gate whose whole job is
+ * to decide whether a position is safe to carry through a gap, that is the
+ * worst available failure: confidently reassuring, and wrong for a reason the
+ * reader cannot see.
+ *
+ * ── Why an absent symbol is UNKNOWN, not clear ────────────────────────
+ *
+ * A listed operating company reports roughly quarterly. If the calendar
+ * offers no future date for it at all, the overwhelmingly likely explanation
+ * is that the provider did not return it — not that the company has stopped
+ * reporting. Absence of a date is absence of coverage.
+ *
+ * ── Why staleness is checked here and not left to the fetch ───────────
+ *
+ * The daily pipeline refreshes this calendar with a deliberate
+ * degrade-don't-fail rule: on any provider error it exits 0 and keeps the
+ * committed file, because its entries "expire naturally by date". Expiring
+ * entries is true and beside the point — a report announced AFTER the last
+ * successful fetch never appears at all. So a silently stale calendar loses
+ * exactly the dates that matter most, and only a staleness check can see it.
+ */
+export type EarningsStatus =
+  /** A date is known and falls inside the veto window. */
+  | { status: "confirmed_date"; date: string; sessions: number }
+  /** A date is known and falls OUTSIDE the window — genuinely clear. */
+  | { status: "confirmed_none"; nextDate: string; sessions: number }
+  /** Nothing is known. The reason is carried so the gap is diagnosable. */
+  | { status: "lookup_failed"; reason: EarningsUnknownReason; calendarAgeDays: number | null };
+
+export type EarningsUnknownReason =
+  /** No calendar was supplied, or it was empty. */
+  | "no_calendar"
+  /** A calendar exists but has no future date for this symbol. */
+  | "symbol_not_covered"
+  /** The calendar is old enough that a newly announced date could be missing. */
+  | "calendar_stale";
+
+/**
+ * Past this the calendar may be missing dates announced since the last
+ * successful fetch. Companies typically confirm a report date two to four
+ * weeks ahead, so a week of staleness is enough to lose one.
+ */
+export const MAX_CALENDAR_AGE_DAYS = 7;
+
+/**
+ * What is known about `symbol`'s next report, as one of three states.
+ *
+ * Never returns a bare boolean, and never reports "clear" without a date to
+ * point at. A caller that wants the GATE should use `earningsVeto`; a caller
+ * that wants to TELL somebody should use this.
+ */
+export function earningsStatus(
+  symbol: string,
+  calendar: EarningsCalendar | null | undefined,
+  asOf: number,
+  vetoSessions: number = EARNINGS_VETO_SESSIONS
+): EarningsStatus {
+  const ageDays =
+    calendar && Number.isFinite(calendar.generatedAt) && calendar.generatedAt > 0
+      ? Math.floor((asOf - calendar.generatedAt) / 86_400_000)
+      : null;
+
+  if (!calendar?.entries?.length) {
+    return { status: "lookup_failed", reason: "no_calendar", calendarAgeDays: ageDays };
+  }
+
+  /*
+   * Staleness is checked BEFORE coverage. A stale calendar that happens to
+   * contain this symbol still cannot rule out a date announced since the
+   * last fetch, so "we have an old date for it" is not the same as knowing.
+   */
+  if (ageDays !== null && ageDays > MAX_CALENDAR_AGE_DAYS) {
+    return { status: "lookup_failed", reason: "calendar_stale", calendarAgeDays: ageDays };
+  }
+
+  let soonest: { date: string; sessions: number } | null = null;
+  for (const e of calendar.entries) {
+    if (e.symbol !== symbol) continue;
+    const sessions = sessionsUntil(asOf, e.date);
+    if (sessions === null) continue; // already reported; not a pending gap
+    if (!soonest || sessions < soonest.sessions) soonest = { date: e.date, sessions };
+  }
+
+  if (!soonest) {
+    return { status: "lookup_failed", reason: "symbol_not_covered", calendarAgeDays: ageDays };
+  }
+  return soonest.sessions <= vetoSessions
+    ? { status: "confirmed_date", date: soonest.date, sessions: soonest.sessions }
+    : { status: "confirmed_none", nextDate: soonest.date, sessions: soonest.sessions };
+}
+
+/** One line a reader can act on, for each of the three states. */
+export function describeEarningsStatus(s: EarningsStatus): string {
+  switch (s.status) {
+    case "confirmed_date":
+      return s.sessions === 0
+        ? `Earnings today (${s.date}) — a stop cannot price a gap.`
+        : `Earnings in ${s.sessions} session${s.sessions === 1 ? "" : "s"} (${s.date}) — a stop cannot price a gap.`;
+    case "confirmed_none":
+      return `No earnings in the next ${EARNINGS_VETO_SESSIONS} sessions; next report ${s.nextDate}.`;
+    case "lookup_failed":
+      return s.reason === "symbol_not_covered"
+        ? "Earnings date UNKNOWN — this symbol is not in the calendar. Absence of a date is not evidence of no report; check before carrying overnight."
+        : s.reason === "calendar_stale"
+          ? `Earnings date UNKNOWN — the calendar is ${s.calendarAgeDays} days old and may be missing a date announced since. Check before carrying overnight.`
+          : "Earnings date UNKNOWN — no calendar available. Check before carrying overnight.";
+  }
 }
