@@ -4,6 +4,7 @@ import { fileURLToPath } from "url";
 import { Bar } from "../../src/lib/research/types";
 import { InstrumentConfig, instrumentsByProvider, usListing } from "../../src/lib/research/universe";
 import { industryUniverse, INDUSTRIES } from "../../src/lib/markets/industries";
+import { resolveUniverse } from "../../src/lib/markets/scannerUniverse";
 import { validateBars, summarizeReport } from "../../src/lib/research/validation";
 import {
   adjustForCorporateActions,
@@ -238,11 +239,40 @@ async function main() {
     INDUSTRIES.map((i) => i.driver?.seriesId).filter((id): id is string => id !== undefined)
   );
   const onlyUs = process.argv.includes("--only-us");
-  const all = [...research, ...industry];
-  const configs = onlyUs
+
+  /*
+   * THE SCANNED NAMES, which belong here for a different reason than the rest.
+   *
+   * Research and industry instruments are ingested because they are members
+   * of a declared research panel or a classified industry. These are here
+   * simply because the scanner covers them, and that distinction is worth
+   * keeping: IONQ is quantum computing and OKLO is nuclear fission, so filing
+   * either under "datacenter-mining" to get it fetched would be a taxonomy
+   * lie told for a plumbing reason. Panel composition is a claim, and this is
+   * the honest claim — traded, therefore measured.
+   */
+  const known = new Set([...research, ...industry].map((c) => c.meta.displaySymbol ?? c.meta.id));
+  const scanner = resolveUniverse()
+    .filter((s) => !known.has(s))
+    .map((s) => usListing(s, s));
+
+  const symbolsArg = process.argv.indexOf("--symbols");
+  const wanted =
+    symbolsArg >= 0 && process.argv[symbolsArg + 1]
+      ? new Set(process.argv[symbolsArg + 1].split(",").map((s) => s.trim().toUpperCase()))
+      : null;
+
+  const all = [...research, ...industry, ...scanner];
+  let configs = onlyUs
     ? all.filter((c) => c.meta.id.endsWith(".US") || snapshotDriverIds.has(c.meta.id))
     : all;
-  console.log(`[ingest] ${research.length} research + ${industry.length} industry-layer instruments from yahoo\n`);
+  // Targeted re-fetch, for adding a name without re-pulling 120 series.
+  if (wanted) configs = configs.filter((c) => wanted.has(c.meta.displaySymbol ?? c.meta.id));
+
+  console.log(
+    `[ingest] ${research.length} research + ${industry.length} industry + ${scanner.length} scanner-only ` +
+      `instruments from yahoo${wanted ? ` — filtered to ${configs.length}` : ""}\n`
+  );
 
   let failures = 0;
   for (const config of configs) {

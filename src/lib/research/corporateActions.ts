@@ -219,6 +219,36 @@ export const DECLARED_PRICE_EVENTS: DeclaredPriceEvent[] = [
     treatment: "keep",
     reason: "real — crypto-pivot repricing on 73x normal volume, wide intraday range, continued the next session",
   },
+  /*
+   * The four surfaced when the scanner names were first ingested, 2026-08-16.
+   * Every one is real, and every one would have been destroyed by a rule that
+   * back-adjusts anything past a size threshold — which is the case for
+   * judging rather than guessing, made concrete.
+   */
+  {
+    symbol: "APLD",
+    date: "2022-06-13",
+    treatment: "keep",
+    reason: "real — the June 2022 crypto collapse: -53% on 8.8x volume, a 73% intraday range and three sessions of follow-through",
+  },
+  {
+    symbol: "CLSK",
+    date: "2018-09-19",
+    treatment: "keep",
+    reason: "real — 76x volume and a 185% intraday range. Traded on 10-400 shares a session before this, so the PRICES are barely meaningful, but the move is not an unadjusted action",
+  },
+  {
+    symbol: "CLSK",
+    date: "2020-05-05",
+    treatment: "keep",
+    reason: "real — 80.3M shares against a 290K median, 277x, on a 93% range. Among the most heavily traded sessions in the symbol's history",
+  },
+  {
+    symbol: "OKLO",
+    date: "2024-05-10",
+    treatment: "keep",
+    reason: "real — first session trading as an operating company after the AltC de-SPAC: -54% on 18.3x volume, 94% range, sustained for days. The shares are the same shares; the market repriced them",
+  },
 ];
 
 export interface AdjustOptions {
