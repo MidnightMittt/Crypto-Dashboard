@@ -369,6 +369,51 @@ export function composeInvalidation(inputs: {
 }
 
 /**
+ * THE TRUST LINE — the epistemics, compressed to something that fits.
+ *
+ * The verdict card carried two full bordered paragraphs plus a footnote:
+ * roughly six hundred characters of "no module contributing to this has a
+ * validated forward record", "250 calls are registered and waiting", and
+ * "this platform does not generate summaries with a language model". Every
+ * word of that is true and worth saying, and all of it was standing between
+ * the reader and the trade on the most valuable screen in the product.
+ *
+ * So the prose folds and this line stays. The constraint that matters: the
+ * summary must carry the CONCLUSION, not merely announce that a caveat
+ * exists. A reader who never opens the fold has still been told the read has
+ * no track record — otherwise folding would be hiding, which is the one
+ * thing the layering rule forbids.
+ */
+export function composeTrustLine(input: {
+  gradeLabel: string;
+  validatedWeightPct: number;
+  forward: { scored: number | null; open: number; edgeVsBaselinePct: number | null } | null;
+}): string {
+  const { gradeLabel, validatedWeightPct, forward } = input;
+
+  const basis =
+    gradeLabel === "descriptive"
+      ? "Describes conditions, forecasts nothing"
+      : `${Math.round(validatedWeightPct)}% of the weight behind this has a forward record`;
+
+  if (!forward) return `${basis}. No track record is kept for this verdict yet.`;
+
+  if (forward.scored === null || forward.scored === 0) {
+    return (
+      `${basis}. No scored track record yet — ` +
+      `${forward.open.toLocaleString()} calls are still inside their window.`
+    );
+  }
+
+  const edge =
+    forward.edgeVsBaselinePct === null
+      ? "against no measured baseline"
+      : `${forward.edgeVsBaselinePct >= 0 ? "beating" : "trailing"} the baseline by ` +
+        `${Math.abs(forward.edgeVsBaselinePct).toFixed(2)}%`;
+  return `${basis}. ${forward.scored.toLocaleString()} past calls scored, ${edge}.`;
+}
+
+/**
  * THE MACRO SENTENCE — what this ticker inherited from the tape.
  *
  * Composed rather than listed because the interesting case is DISAGREEMENT: a

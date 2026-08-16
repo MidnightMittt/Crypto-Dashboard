@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   composeInvalidation,
+  composeTrustLine,
   composeMacroSummary,
   composeBearCase,
   composeBullCase,
@@ -382,6 +383,59 @@ describe("composeInvalidation", () => {
       nextEntry: unavailable("insufficient-history", "no structure yet"),
     });
     expect(triggers).toEqual([]);
+  });
+});
+
+describe("composeTrustLine — folding must not hide the conclusion", () => {
+  /*
+   * THE RULE. A reader who never opens the fold must still learn that the
+   * read has no track record. A summary that only announced "caveats apply"
+   * would turn layering into hiding.
+   */
+  it("says there is no record, not merely that a caveat exists", () => {
+    const line = composeTrustLine({
+      gradeLabel: "descriptive",
+      validatedWeightPct: 0,
+      forward: { scored: null, open: 250, edgeVsBaselinePct: null },
+    });
+    expect(line).toContain("Describes conditions, forecasts nothing");
+    expect(line).toContain("No scored track record yet");
+    expect(line).toContain("250 calls are still inside their window");
+  });
+
+  it("reports the measured edge once calls have been scored", () => {
+    const line = composeTrustLine({
+      gradeLabel: "mixed",
+      validatedWeightPct: 62.4,
+      forward: { scored: 140, open: 20, edgeVsBaselinePct: 0.31 },
+    });
+    expect(line).toContain("62% of the weight");
+    expect(line).toContain("140 past calls scored");
+    expect(line).toContain("beating the baseline by 0.31%");
+  });
+
+  it("says trailing, not beating, when the edge is negative", () => {
+    const line = composeTrustLine({
+      gradeLabel: "validated",
+      validatedWeightPct: 100,
+      forward: { scored: 90, open: 0, edgeVsBaselinePct: -0.44 },
+    });
+    expect(line).toContain("trailing the baseline by 0.44%");
+  });
+
+  it("does not imply a baseline comparison that was never made", () => {
+    const line = composeTrustLine({
+      gradeLabel: "mixed",
+      validatedWeightPct: 50,
+      forward: { scored: 10, open: 0, edgeVsBaselinePct: null },
+    });
+    expect(line).toContain("against no measured baseline");
+  });
+
+  it("handles a verdict with no forward record at all", () => {
+    expect(
+      composeTrustLine({ gradeLabel: "descriptive", validatedWeightPct: 0, forward: null })
+    ).toContain("No track record is kept");
   });
 });
 

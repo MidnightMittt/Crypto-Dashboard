@@ -7,6 +7,7 @@ import { TRADE_PLAN_REFUSAL_SHORT, TRADE_PLAN_REFUSAL_TEXT } from "@/lib/signals
 import { Depth, EvidenceBullet, EvidenceGroup, InvalidationTrigger, Read, TickerDossier } from "@/lib/dossier/types";
 import { MetricVerdict } from "@/lib/signals/types";
 import { describeLiveness } from "@/lib/dossier/pipelineLiveness";
+import { composeTrustLine } from "@/lib/dossier/narrative";
 import { CheckState } from "@/lib/dossier/checklist";
 import { StructureLadder, LadderMarker } from "@/components/markets/StructureLadder";
 
@@ -179,62 +180,103 @@ export function VerdictPanel({ d }: { d: TickerDossier }) {
         </div>
 
         {/*
-          The sentence, not just the number — a bare "11%" is exactly the
-          uninterpreted figure the charter forbids. Sits directly under the
-          verdict because it qualifies the verdict, and a reader who stops
-          here has still been told the most important caveat.
-        */}
-        <p className="rounded-md border border-hairline bg-void/30 px-3 py-2 text-[11px] leading-relaxed text-ink-muted">
-          <span className="font-semibold uppercase tracking-[0.12em] text-cyan">Proven signal</span> ·{" "}
-          {v.evidenceGrade.sentence}
-        </p>
+          ── THE EPISTEMICS, FOLDED BUT NOT HIDDEN ──────────────────────
 
-        {/* THE HEADLINE'S OWN TRACK RECORD.
-            A verdict that never reports how its past verdicts did is asking
-            to be believed on presentation alone. Until the record fills it
-            says so plainly, which is the more useful state of the two. */}
-        {v.forward && (
-          <p className="rounded-md border border-hairline bg-void/30 px-3 py-2 text-[11px] leading-relaxed text-ink-muted">
-            <span className="font-semibold uppercase tracking-[0.12em] text-cyan">Track record</span> ·{" "}
-            {v.forward.mine ? (
-              <>
-                Across {v.forward.mine.n.toLocaleString()} past {v.forward.mine.verdict} calls scored{" "}
-                {v.forward.horizonSessions} sessions later, price moved the called way{" "}
-                {v.forward.mine.hitRatePct !== null && (
-                  <span className="font-semibold text-ink">{v.forward.mine.hitRatePct.toFixed(0)}%</span>
-                )}{" "}
-                of the time, averaging{" "}
-                <span className="font-semibold text-ink">
-                  {v.forward.mine.meanReturnPct >= 0 ? "+" : ""}
-                  {v.forward.mine.meanReturnPct.toFixed(2)}%
-                </span>
-                {v.forward.mine.edgeVsBaselinePct !== null && v.forward.baselineReturnPct !== null && (
+          This was two bordered paragraphs plus a footnote under the TL;DR —
+          roughly six hundred characters explaining that no signal here has a
+          forward record, that 250 calls are pending, and that the prose is
+          not written by a language model. All true, all worth saying, and
+          all of it standing between the reader and the trade on the most
+          valuable screen in the product.
+
+          The summary line carries the CONCLUSION, not merely the existence
+          of a caveat, so a reader who never opens this has still been told
+          the read has no track record. `<details>` is server-rendered, so
+          every folded word stays in the document for find-in-page, reader
+          mode and crawlers. Folding here is layering, never deletion.
+        */}
+        <details className="group/trust rounded-md border border-hairline bg-void/30">
+          <summary className="flex cursor-pointer list-none items-baseline gap-2 px-3 py-2 [&::-webkit-details-marker]:hidden">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-cyan">
+              Trust
+            </span>
+            <span className="text-[11px] leading-relaxed text-ink-muted">
+              {composeTrustLine({
+                gradeLabel: v.evidenceGrade.label,
+                validatedWeightPct: v.evidenceGrade.validatedWeightPct,
+                forward: v.forward
+                  ? {
+                      scored: v.forward.mine?.n ?? null,
+                      open: v.forward.open,
+                      edgeVsBaselinePct: v.forward.mine?.edgeVsBaselinePct ?? null,
+                    }
+                  : null,
+              })}
+            </span>
+            <span className="ml-auto shrink-0 text-[10px] text-ink-faint">
+              <span className="group-open/trust:hidden">Why</span>
+              <span className="hidden group-open/trust:inline">Hide</span>
+            </span>
+          </summary>
+
+          <div className="flex flex-col gap-2 border-t border-hairline px-3 py-2">
+            <p className="text-[11px] leading-relaxed text-ink-muted">
+              <span className="font-semibold uppercase tracking-[0.12em] text-cyan">Proven signal</span> ·{" "}
+              {v.evidenceGrade.sentence}
+            </p>
+
+            {v.forward && (
+              <p className="text-[11px] leading-relaxed text-ink-muted">
+                <span className="font-semibold uppercase tracking-[0.12em] text-cyan">Track record</span> ·{" "}
+                {v.forward.mine ? (
                   <>
-                    {" "}against{" "}
-                    {v.forward.baselineReturnPct >= 0 ? "+" : ""}
-                    {v.forward.baselineReturnPct.toFixed(2)}% for every call in the same windows — an edge of{" "}
-                    <span
-                      className={`font-semibold ${
-                        v.forward.mine.edgeVsBaselinePct > 0 ? "text-success" : "text-danger"
-                      }`}
-                    >
-                      {v.forward.mine.edgeVsBaselinePct >= 0 ? "+" : ""}
-                      {v.forward.mine.edgeVsBaselinePct.toFixed(2)}%
+                    Across {v.forward.mine.n.toLocaleString()} past {v.forward.mine.verdict} calls scored{" "}
+                    {v.forward.horizonSessions} sessions later, price moved the called way{" "}
+                    {v.forward.mine.hitRatePct !== null && (
+                      <span className="font-semibold text-ink">{v.forward.mine.hitRatePct.toFixed(0)}%</span>
+                    )}{" "}
+                    of the time, averaging{" "}
+                    <span className="font-semibold text-ink">
+                      {v.forward.mine.meanReturnPct >= 0 ? "+" : ""}
+                      {v.forward.mine.meanReturnPct.toFixed(2)}%
                     </span>
+                    {v.forward.mine.edgeVsBaselinePct !== null && v.forward.baselineReturnPct !== null && (
+                      <>
+                        {" "}against{" "}
+                        {v.forward.baselineReturnPct >= 0 ? "+" : ""}
+                        {v.forward.baselineReturnPct.toFixed(2)}% for every call in the same windows — an edge of{" "}
+                        <span
+                          className={`font-semibold ${
+                            v.forward.mine.edgeVsBaselinePct > 0 ? "text-success" : "text-danger"
+                          }`}
+                        >
+                          {v.forward.mine.edgeVsBaselinePct >= 0 ? "+" : ""}
+                          {v.forward.mine.edgeVsBaselinePct.toFixed(2)}%
+                        </span>
+                      </>
+                    )}
+                    .
+                  </>
+                ) : (
+                  <>
+                    This verdict has no scored record yet. {v.forward.open.toLocaleString()} calls are registered and
+                    waiting out their {v.forward.horizonSessions}-session window; each is scored against what every
+                    other call did over the same period, so a bullish read only counts as right if it beat the
+                    market rather than merely rose with it. Until then the word above is a hypothesis.
                   </>
                 )}
-                .
-              </>
-            ) : (
-              <>
-                This verdict has no scored record yet. {v.forward.open.toLocaleString()} calls are registered and
-                waiting out their {v.forward.horizonSessions}-session window; each is scored against what every
-                other call did over the same period, so a bullish read only counts as right if it beat the
-                market rather than merely rose with it. Until then the word above is a hypothesis.
-              </>
+              </p>
             )}
-          </p>
-        )}
+
+            {/* Moved here from under the TL;DR, where it was a claim about
+                the platform occupying space owed to the trade. */}
+            <p className="text-[11px] leading-relaxed text-ink-faint">
+              Every sentence on this page is assembled from the readings below — this platform does not
+              generate summaries with a language model, so nothing here can describe something the engine
+              did not measure.
+            </p>
+          </div>
+        </details>
       </CardContent>
     </Card>
   );
@@ -255,10 +297,6 @@ export function TldrPanel({ d }: { d: TickerDossier }) {
   return (
     <Panel title="The short version" subtitle="ten seconds">
       <p className="text-[15px] leading-relaxed text-ink">{d.tldr.full}</p>
-      <p className="text-[10px] leading-relaxed text-ink-faint">
-        Every sentence above is assembled from the readings below — this platform does not generate summaries
-        with a language model, so nothing here can describe something the engine did not measure.
-      </p>
     </Panel>
   );
 }
