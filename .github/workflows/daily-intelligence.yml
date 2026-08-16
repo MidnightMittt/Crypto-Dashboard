@@ -95,15 +95,69 @@ jobs:
       - name: Register and score forward predictions (reach + verdict)
         run: npx tsx scripts/ingest/forwardScoring.ts
 
+      # WHY THIS DOES NOT REBASE, and it is not a style preference.
+      #
+      # The old sequence committed first and then `git pull --rebase origin
+      # main`. That replays a commit full of regenerated JSON onto whatever
+      # landed during the run — and regenerated JSON conflicts with
+      # regenerated JSON every time, because both sides rewrote the same
+      # lines from scratch. There is no merge driver that can resolve it and
+      # no reason to try: our copy is derived from today's bars and is
+      # strictly newer.
+      #
+      # It killed the job in practice, not in theory. Both scheduled runs on
+      # 2026-08-14 failed at exactly this step while eleven unrelated commits
+      # landed on main during their windows, two of them touching
+      # forwardReachRecord.json. More than one agent works in this repository,
+      # so a rebase here fails on most days — which is why the signal ledger
+      # held three entries instead of one per session, and why the "since
+      # when" work that depends on ~20 of them has been stuck.
+      #
+      # So: move onto the real tip FIRST, then stage. `--mixed` repoints the
+      # branch without touching the working tree, so today's freshly
+      # generated files survive and are staged as a diff against the current
+      # tip. No merge happens, so nothing can conflict. Only the eight
+      # declared paths are staged, per the repository's explicit-staging rule.
       - name: Commit and push
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add src/data/marketIntelligence.json src/data/equityMarkets.json src/data/signalLedger.json src/data/earningsCalendar.json src/data/forwardReachRecord.json src/data/forwardVerdictRecord.json src/data/equityCrossSection.json src/data/macroSeries.json
+
+          DATA_PATHS="src/data/marketIntelligence.json src/data/equityMarkets.json src/data/signalLedger.json src/data/earningsCalendar.json src/data/forwardReachRecord.json src/data/forwardVerdictRecord.json src/data/equityCrossSection.json src/data/macroSeries.json"
+
+          stage_onto_tip() {
+            # Explicit refspec: `git fetch origin main` only updates the
+            # remote-tracking ref opportunistically, and everything below
+            # depends on origin/main actually being the tip.
+            git fetch origin +refs/heads/main:refs/remotes/origin/main
+            git reset --mixed origin/main
+            git add $DATA_PATHS
+          }
+
+          stage_onto_tip
           if git diff --cached --quiet; then
             echo "No data changes (holiday or re-run on identical bars) — nothing to deploy."
             exit 0
           fi
           git commit -m "data: daily intelligence refresh $(date -u +%F)"
-          git pull --rebase origin main
-          git push origin main
+
+          # A push can still lose a race with a commit made in the last few
+          # seconds. Rebuild the commit on the newer tip and try again rather
+          # than failing a run whose data is already correct.
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then
+              echo "pushed on attempt $attempt"
+              exit 0
+            fi
+            echo "push rejected on attempt $attempt — restaging onto the new tip"
+            stage_onto_tip
+            if git diff --cached --quiet; then
+              echo "the newer tip already carries identical data — nothing left to push."
+              exit 0
+            fi
+            git commit -m "data: daily intelligence refresh $(date -u +%F)"
+          done
+
+          echo "::error::push failed three times against a moving main"
+          exit 1
