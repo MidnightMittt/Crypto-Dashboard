@@ -24,7 +24,9 @@
     "backtest:fetch": "node scripts/backtest/fetchHistory.mjs",
     "backtest": "tsx scripts/backtest/run.ts && tsx scripts/backtest/report.ts && tsx scripts/backtest/executionReport.ts",
     "backtest:rolling": "tsx scripts/backtest/rolling.ts",
-    "backtest:execution": "tsx scripts/backtest/executionReport.ts"
+    "backtest:execution": "tsx scripts/backtest/executionReport.ts",
+    "record:positioning": "tsx scripts/ingest/recordPositioning.ts",
+    "backfill:short-volume": "tsx scripts/ingest/backfillShortVolume.ts"
   },
   "dependencies": {
     "@drift-labs/sdk": "^2.155.0",

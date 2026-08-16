@@ -95,6 +95,20 @@ jobs:
       - name: Register and score forward predictions (reach + verdict)
         run: npx tsx scripts/ingest/forwardScoring.ts
 
+      # Today's positioning, appended so it can be tested later.
+      #
+      # This is the ONLY way gamma, put/call and ATM IV ever acquire a past:
+      # CBOE's delayed chain has no date parameter, so a session not recorded
+      # here is a session gone for good. Short volume is recoverable from
+      # FINRA (backfillShortVolume.ts) and therefore is not the reason this
+      # step must not be skipped.
+      #
+      # Degrade-don't-fail: a provider outage should cost one row, not the
+      # whole run, and the job's own log reports per-source coverage so a dead
+      # source is visible rather than silently null.
+      - name: Record positioning history
+        run: npx tsx scripts/ingest/recordPositioning.ts || echo "::warning::positioning recorder failed — one session lost"
+
       # WHY THIS DOES NOT REBASE, and it is not a style preference.
       #
       # The old sequence committed first and then `git pull --rebase origin
@@ -116,15 +130,15 @@ jobs:
       # So: move onto the real tip FIRST, then stage. `--mixed` repoints the
       # branch without touching the working tree, so today's freshly
       # generated files survive and are staged as a diff against the current
-      # tip. No merge happens, so nothing can conflict. Only the eight
-      # declared paths are staged, per the repository's explicit-staging rule.
+      # tip. No merge happens, so nothing can conflict. Only the declared data
+      # paths are staged, per the repository's explicit-staging rule.
       - name: Commit and push
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          DATA_PATHS="src/data/marketIntelligence.json src/data/equityMarkets.json src/data/signalLedger.json src/data/earningsCalendar.json src/data/forwardReachRecord.json src/data/forwardVerdictRecord.json src/data/equityCrossSection.json src/data/macroSeries.json"
+          DATA_PATHS="src/data/marketIntelligence.json src/data/equityMarkets.json src/data/signalLedger.json src/data/earningsCalendar.json src/data/forwardReachRecord.json src/data/forwardVerdictRecord.json src/data/equityCrossSection.json src/data/macroSeries.json src/data/positioningHistory.json"
 
           stage_onto_tip() {
             # Explicit refspec: `git fetch origin main` only updates the
