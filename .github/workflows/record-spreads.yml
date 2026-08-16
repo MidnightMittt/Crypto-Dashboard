@@ -1,0 +1,129 @@
+# EXECUTION-WINDOW SPREAD CAPTURE
+#
+# Records bid/ask for the scanner universe at specific US/Eastern minutes.
+# This is the one dataset here that cannot be reconstructed later at any
+# price: OHLCV bars carry no quote data, and the Corwin-Schultz high-low
+# estimator returns 114-177bp on these names where the observed book is one
+# tick. Every session not captured is gone.
+#
+# ── Why the crons fire EARLY and the job waits ────────────────────────
+#
+# GitHub's scheduled workflows are best-effort. This repository's own daily
+# job, cron `15 22 * * 1-5`, actually fired at 04:30 and 22:58 on 2026-08-14 —
+# drift measured in hours. A cron aimed directly at 15:50 ET would routinely
+# capture a closed book and stamp it as the entry window, which is worse than
+# capturing nothing because nothing downstream could detect it.
+#
+# So each cron fires ~30 minutes ahead and recordSpreads.ts waits on the wall
+# clock itself, then SKIPS any target that has already passed rather than
+# back-stamping it. Drift only has to be smaller than the head start.
+#
+# ── Two crons per window, because the US observes DST and runners do not ──
+#
+# The pair brackets both halves of the year; whichever invocation finds
+# itself more than 45 minutes early exits immediately. That is deliberately
+# not a calendar rule — a hardcoded DST rule is one that rots silently at the
+# next transition.
+#
+# ── This is best-effort, and the misses are counted ───────────────────
+#
+# GitHub cannot guarantee minute-accurate scheduling, so some sessions WILL
+# be missed. The job reports how many targets it skipped, so the capture rate
+# is measurable rather than assumed. If it proves poor, the answer is a
+# different scheduler, not a looser tolerance.
+name: record-spreads
+
+on:
+  schedule:
+    # Entry window, 15:50-15:58 ET. 19:20 UTC = 15:20 EDT; 20:20 UTC = 15:20 EST.
+    - cron: "20 19 * * 1-5"
+    - cron: "20 20 * * 1-5"
+    # Exit window, 09:35-09:50 ET. 13:05 UTC = 09:05 EDT; 14:05 UTC = 09:05 EST.
+    - cron: "5 13 * * 1-5"
+    - cron: "5 14 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      window:
+        description: "Which window to capture"
+        required: true
+        default: entry
+        type: choice
+        options: [entry, exit]
+
+permissions:
+  contents: write
+
+# Never cancel a run in flight: it may be seconds from its capture minute.
+concurrency:
+  group: record-spreads-${{ github.event.schedule || github.event.inputs.window }}
+  cancel-in-progress: false
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    # Generous: the job spends most of its life asleep waiting for a minute.
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # The morning crons take the exit window, the afternoon ones the entry
+      # window. A manual dispatch says which it wants.
+      - name: Capture quotes
+        env:
+          TRADIER_API_KEY: ${{ secrets.TRADIER_API_KEY }}
+          TRADIER_ENV: ${{ secrets.TRADIER_ENV }}
+        run: |
+          set -euo pipefail
+          SCHED="${{ github.event.schedule }}"
+          WINDOW="${{ github.event.inputs.window }}"
+          if [ -z "$WINDOW" ]; then
+            case "$SCHED" in
+              "5 13 * * 1-5"|"5 14 * * 1-5") WINDOW=exit ;;
+              *) WINDOW=entry ;;
+            esac
+          fi
+          echo "capturing window: $WINDOW"
+          npx tsx scripts/ingest/recordSpreads.ts --window "$WINDOW"
+
+      # Same no-rebase discipline as the daily job: regenerated JSON conflicts
+      # with regenerated JSON, so land on the tip first and never replay.
+      - name: Commit and push
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          stage_onto_tip() {
+            git fetch origin +refs/heads/main:refs/remotes/origin/main
+            git reset --mixed origin/main
+            git add src/data/spreadHistory.json
+          }
+
+          stage_onto_tip
+          if git diff --cached --quiet; then
+            echo "No captures this run (window missed, holiday, or provider down)."
+            exit 0
+          fi
+          git commit -m "data: execution-window spreads $(date -u +%FT%TZ)"
+
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then
+              echo "pushed on attempt $attempt"
+              exit 0
+            fi
+            echo "push rejected on attempt $attempt — restaging onto the new tip"
+            stage_onto_tip
+            if git diff --cached --quiet; then exit 0; fi
+            git commit -m "data: execution-window spreads $(date -u +%FT%TZ)"
+          done
+          echo "::error::push failed three times against a moving main"
+          exit 1
