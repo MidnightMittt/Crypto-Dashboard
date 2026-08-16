@@ -30,6 +30,7 @@ function inputs(over: Partial<BriefInputs> = {}): BriefInputs {
       lowerBound: 0.554,
       n: 412,
       meanSpread: 0.0131,
+      worstSpread: -0.172,
       holdSessions: 21,
       earnsEdge: true,
     },
@@ -191,5 +192,40 @@ describe("buildBrief — when the two state reads disagree", () => {
   it("says nothing about a split when there is none", () => {
     const b = buildBrief(inputs());
     expect(b.items[0].detail).not.toMatch(/split with the state line/);
+  });
+});
+
+describe("buildBrief — how the thing is actually held", () => {
+  /*
+   * A record without execution terms is a fact a reader will act on wrongly.
+   * 60.2% belongs to an equal-weighted basket rebalanced at its horizon; a
+   * reader who buys the strongest name for a week has not taken this trade,
+   * and the number would still be true while no longer being about them.
+   */
+  it("states weighting, horizon and rebalance, all read off the hypothesis", () => {
+    const [item] = buildBrief(inputs()).items;
+    expect(item.execution.join(" ")).toMatch(/Equal weight across all 3 names/);
+    expect(item.execution.join(" ")).toMatch(/Hold 21 sessions/);
+    expect(item.execution.join(" ")).toMatch(/Re-rank when the panel refreshes/);
+  });
+
+  /*
+   * THE OMISSION THAT IS THE POINT. The study measured periods running to
+   * their horizon with no stop. Offering one would describe a strategy nobody
+   * has measured while the record beside it stayed unchanged — the most
+   * plausible way this page could mislead.
+   */
+  it("declines to invent a stop, and says why, with the worst period to size on", () => {
+    const [item] = buildBrief(inputs()).items;
+    const text = item.execution.join(" ");
+    expect(text).toMatch(/NO STOP was modelled/);
+    expect(text).toMatch(/-17\.2%/);
+    expect(text).toMatch(/a strategy nobody has measured/);
+  });
+
+  it("names the declared gate as the invalidation, not a discretionary call", () => {
+    const [item] = buildBrief(inputs()).items;
+    expect(item.invalidation).toMatch(/breadth falls to 50% or below/);
+    expect(item.invalidation).toMatch(/not a discretionary call/);
   });
 });

@@ -54,6 +54,7 @@ const validation = validationJson as {
     lowerBound: number | null;
     n: number;
     meanSpread: number;
+    worstSpread: number;
     holdSessions: number;
     earnsEdge: boolean;
   }>;
@@ -196,6 +197,26 @@ export default function BriefPage() {
                   <p className="rounded-md border border-hairline bg-void/30 px-3 py-2 text-[11px] leading-relaxed text-ink-muted">
                     <span className="font-semibold uppercase tracking-[0.12em] text-success">Record</span> ·{" "}
                     {item.record}
+                  </p>
+
+                  {/* HOW it is held. A record without execution terms is a
+                      fact a reader will act on wrongly. */}
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
+                      How this is held
+                    </span>
+                    <ul className="flex flex-col gap-1">
+                      {item.execution.map((line, i) => (
+                        <li key={i} className="text-[12px] leading-relaxed text-ink-muted">
+                          — {line}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <p className="rounded-md border border-amber/25 bg-amber/[0.03] px-3 py-2 text-[11px] leading-relaxed text-ink">
+                    <span className="font-semibold uppercase tracking-[0.12em] text-amber">Invalidated when</span> ·{" "}
+                    {item.invalidation}
                   </p>
                 </div>
               ))}

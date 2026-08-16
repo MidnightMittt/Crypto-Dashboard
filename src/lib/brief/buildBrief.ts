@@ -37,6 +37,18 @@ export interface BriefItem {
   symbols: string[];
   /** The measured record that entitles this to be here at all. */
   record: string;
+  /**
+   * HOW the thing that was measured is actually held.
+   *
+   * A record without execution terms is a fact a reader cannot act on, and
+   * worse, one they will act on WRONGLY — 60.2% belongs to an equal-weighted
+   * basket rebalanced monthly, and a reader who buys the first name for a
+   * week has not taken this trade at all. Every term below is read off the
+   * declared hypothesis; none is invented for the page.
+   */
+  execution: string[];
+  /** The declared condition under which this stops being offered. */
+  invalidation: string;
   /** Where a reader goes to check it. */
   href: string;
 }
@@ -77,6 +89,8 @@ export interface BriefInputs {
     lowerBound: number | null;
     n: number;
     meanSpread: number;
+    /** The worst single period measured — the number a reader should size on. */
+    worstSpread: number;
     holdSessions: number;
     earnsEdge: boolean;
   } | null;
@@ -210,6 +224,26 @@ function momentumItem(inputs: BriefInputs): { item: BriefItem | null; reason: st
         `Beat the equal-weighted panel in ${(rec.winRate * 100).toFixed(1)}% of ${rec.n} non-overlapping ` +
         `${rec.holdSessions}-session periods${lb ? `, 95% lower bound ${lb}%` : ""}, averaging ` +
         `${rec.meanSpread >= 0 ? "+" : ""}${(rec.meanSpread * 100).toFixed(2)}% excess per period after 2pp of costs.`,
+      /*
+       * EVERY TERM IS READ OFF THE HYPOTHESIS, none is invented. The study
+       * measured an equal-weighted decile held for its horizon with NO STOP
+       * — so no stop is offered here. Adding one would describe a different
+       * strategy than the one with the record, which is the most plausible
+       * way this page could mislead: the numbers would still be true and
+       * would no longer be about what the reader is doing.
+       */
+      execution: [
+        `Equal weight across all ${decile.length} names. The record is the basket's; concentrating it into the ` +
+          `strongest name is a different trade with no record.`,
+        `Hold ${rec.holdSessions} sessions — the horizon the periods were measured over. Shorter or longer is untested.`,
+        `Re-rank when the panel refreshes. Names leaving the decile leave the position.`,
+        `NO STOP was modelled. The measured periods ran to their horizon whatever happened in between, and the worst ` +
+          `single period in the sample was ${(rec.worstSpread * 100).toFixed(1)}%. Size for that, because a stop would ` +
+          `make this a strategy nobody has measured.`,
+      ],
+      invalidation:
+        `This stops being offered the day panel breadth falls to 50% or below. That is not a discretionary call — it ` +
+        `is the declared gate, and the complement measured below its own base rate on the other side of it.`,
       href: `/asset/${encodeURIComponent(decile[0].symbol)}`,
     },
     reason: "",
