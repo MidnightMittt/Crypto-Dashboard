@@ -33,6 +33,14 @@ import { lookupCik } from "./edgarInsiders";
 /** 8-K items that matter after hours on this cohort. Declared, closed. */
 export const RELEVANT_8K_ITEMS = ["1.01", "2.02", "3.02", "7.01", "8.01"] as const;
 
+/**
+ * Non-8-K forms that qualify. Declared beside the predicate that applies
+ * them so the list a consumer is shown cannot drift from the list actually
+ * used — 424B is matched as a PREFIX by isRelevantFiling, which the star
+ * records, and a test pins both against each other.
+ */
+export const RELEVANT_OTHER_FORMS = ["424B*", "S-3ASR"] as const;
+
 export interface CatalystFiling {
   form: string;
   /** Parsed 8-K items, e.g. ["2.02","9.01"]. Empty for non-8-K forms. */

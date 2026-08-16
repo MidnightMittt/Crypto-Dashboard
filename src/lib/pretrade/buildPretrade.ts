@@ -3,7 +3,12 @@ import {
   earningsStatus,
 } from "@/lib/markets/earningsVeto";
 import { PositioningPoint } from "@/lib/history/positioningHistory";
-import { CatalystFiling } from "@/lib/dossier/providers/edgarCatalysts";
+import {
+  CatalystFiling,
+  RELEVANT_8K_ITEMS,
+  RELEVANT_OTHER_FORMS,
+} from "@/lib/dossier/providers/edgarCatalysts";
+import { VenueBook, VenueStatus } from "@/lib/dossier/providers/tradierStatus";
 
 /**
  * THE AGENT-FACING PRE-TRADE PAYLOAD.
@@ -71,8 +76,17 @@ export const unmeasured = (reason: string, detail?: Record<string, number | stri
  * Semantic versioning, enforced by convention and stated here so a consumer
  * can pin against it: additive changes bump MINOR, any field removal or
  * change of meaning bumps MAJOR.
+ *
+ * 2.0 — the venue feed landed, and with it the realisation that
+ *       `tradability.status` was in the wrong place. The session state is
+ *       MARKET-wide: repeating it inside every symbol duplicated it twelve
+ *       times and, worse, implied a per-symbol claim the feed cannot support.
+ *       It moved to `session` at the response root, and the declared filing
+ *       forms moved to `catalyst_filter` for the same reason. A field moved
+ *       out of a symbol is a removal, so this is MAJOR by the rule above even
+ *       though `tradability.status` had never carried a value.
  */
-export const SCHEMA_VERSION = "1.0";
+export const SCHEMA_VERSION = "2.0";
 
 export interface OvernightLeg {
   window_sessions: number;
@@ -86,9 +100,23 @@ export interface OvernightLeg {
 
 export interface PretradeSymbol {
   symbol: string;
+  /**
+   * Can this be traded right now, and against what book?
+   *
+   * Only per-SYMBOL venue facts live here; the session state is market-wide
+   * and sits at the response root. The venue's quote feed carries no halt
+   * flag, so nothing here emits one and nothing infers one from a thin book:
+   * a one-sided book at 03:00 is a book nobody is quoting overnight, and from
+   * here that is indistinguishable from a halt.
+   *
+   * `age_seconds` rides INSIDE the book rather than beside it, so the two can
+   * never be separated. It is what keeps the rest honest — a weekend quote
+   * returns Friday's one-tick book with nothing marking it stale, and priced
+   * as live a 3.2bp spread describes a market that closed two days ago.
+   */
   tradability: {
-    /** Halt state needs a live venue feed; not wired, so it says so. */
-    status: Field<string>;
+    /** Top of book. ONE snapshot — never the execution-window median. */
+    book: Field<VenueBook>;
   };
   price: {
     last: Field<number>;
@@ -128,6 +156,30 @@ export interface PretradeSymbol {
 export interface PretradeResponse {
   schema_version: string;
   generated_at: AsOf;
+  /**
+   * The venue session. Market-wide, so stated ONCE — a status repeated inside
+   * every symbol would read as a claim about that symbol, which the feed
+   * cannot make.
+   */
+  session: {
+    /** open | closed | premarket | postmarket. */
+    status: Field<string>;
+    /** ISO instant the state next changes. */
+    ends_at: Field<string>;
+  };
+  /**
+   * The declared, closed filing filter — identical for every symbol, so
+   * declared once rather than restated in twelve method strings. Each
+   * symbol's filings field still carries the window instant with its value.
+   */
+  catalyst_filter: {
+    /** Filings count only when accepted strictly after this instant. */
+    window_start: string | null;
+    /** 8-K items that qualify. A bare 9.01 is exhibits, and does not. */
+    forms_8k_items: string[];
+    /** Non-8-K forms that qualify; 424B matches as a prefix. */
+    other_forms: string[];
+  };
   /** Symbols asked for that nothing is known about, so a caller can tell. */
   unknown_symbols: string[];
   symbols: PretradeSymbol[];
@@ -173,6 +225,12 @@ export interface BuildInputs {
     | { ok: true; filings: CatalystFiling[]; windowStart: string }
     | { ok: false; reason: string }
   >;
+  /**
+   * Live venue clock and top of book, fetched once for the whole call. Null
+   * when the route did not attempt it at all, which is a different answer
+   * from a venue that was asked and refused.
+   */
+  venue: VenueStatus | null;
 }
 
 const iso = (ms: number): string => new Date(ms).toISOString();
@@ -187,6 +245,47 @@ export function buildPretrade(input: BuildInputs): PretradeResponse {
 
   const unknown: string[] = [];
   const out: PretradeSymbol[] = [];
+
+  /*
+   * The session clock is market-wide, so it is resolved once rather than per
+   * symbol. `venueSource` names the delay regime in the provenance a consumer
+   * reads: sandbox quotes are fifteen minutes delayed and production quotes
+   * are not, which is the difference between describing this execution window
+   * and describing the previous one.
+   */
+  const venue = input.venue;
+  const venueUnavailable = venue === null ? "venue_not_queried" : venue.ok ? null : venue.reason;
+  const venueSource = venue?.ok ? `tradier_${venue.env}_quotes` : "tradier";
+  const session: PretradeResponse["session"] = {
+    status: venue?.ok
+      ? {
+          value: venue.clock.state,
+          unit: "session_state",
+          as_of: venue.clock.asOf,
+          source: `tradier_${venue.env}_clock`,
+        }
+      : unmeasured(venueUnavailable ?? "venue_not_queried"),
+    ends_at: !venue?.ok
+      ? unmeasured(venueUnavailable ?? "venue_not_queried")
+      : venue.clock.nextChangeIso
+        ? {
+            value: venue.clock.nextChangeIso,
+            unit: "iso_instant",
+            as_of: venue.clock.asOf,
+            source: `tradier_${venue.env}_clock`,
+            method: `next_state_${venue.clock.nextState}`,
+          }
+        : /*
+           * The venue reports the next change as a bare ET wall clock with no
+           * date. Outside a session that time belongs to a later day this code
+           * cannot identify without a holiday calendar, so the raw time is
+           * handed over instead of an instant the market might not honour.
+           */
+          unmeasured(venue.clock.nextChangeReason ?? "next_change_unresolved", {
+            next_change_et: venue.clock.nextChangeEt,
+            next_state: venue.clock.nextState,
+          }),
+  };
 
   for (const symbol of symbols) {
     const legs = overnightBySymbol.get(symbol);
@@ -229,11 +328,30 @@ export function buildPretrade(input: BuildInputs): PretradeResponse {
 
     const es = earningsStatus(symbol, earnings, now);
 
+    /*
+     * A book is served only when the venue actually quoted a two-sided one.
+     * Crossed and one-sided books are refused on the same rules the spread
+     * recorder applies, so the live snapshot and the measured median are
+     * never drawn from different samples.
+     */
+    const q = venue?.ok ? venue.quotes.get(symbol) : undefined;
+    const quoteReason = venueUnavailable ?? (q ? (q.ok ? null : q.reason) : "venue_not_queried");
+
     out.push({
       symbol,
       tradability: {
-        // Halt and fractional eligibility need a live venue feed. Not wired.
-        status: unmeasured("no_venue_status_feed"),
+        book: q?.ok
+          ? {
+              value: q.quote.book,
+              unit: "usd_shares_bp_seconds",
+              as_of: q.quote.bookAsOf,
+              source: venueSource,
+              // Named so it can never be mistaken for the round-trip cost:
+              // one snapshot of the top of book, not a session median. The
+              // as_of and age_seconds both date the STALER side of the book.
+              method: "top_of_book_snapshot_spread_over_mid_NOT_session_median",
+            }
+          : unmeasured(quoteReason ?? "no_quote"),
       },
       price: {
         last:
@@ -296,7 +414,10 @@ export function buildPretrade(input: BuildInputs): PretradeResponse {
             unit: "filings",
             as_of: iso(now),
             source: "sec_edgar_submissions",
-            method: `accepted_after_${c.windowStart}_forms_8K(1.01,2.02,3.02,7.01,8.01)_424B*_S-3ASR`,
+            // The window instant stays WITH the value, so a symbol's block is
+            // still self-contained. Which forms qualify is identical for every
+            // symbol, so it is declared once in catalyst_filter at the root.
+            method: `accepted_after_${c.windowStart}`,
           };
         })(),
       },
@@ -334,9 +455,26 @@ export function buildPretrade(input: BuildInputs): PretradeResponse {
     });
   }
 
+  /*
+   * The window is identical for every symbol — it is a function of `now`, not
+   * of the ticker — so it is read off whichever fetch succeeded rather than
+   * recomputed here. Null when none did, which is the honest answer: no
+   * symbol was measured against any window.
+   */
+  const windowStart =
+    [...input.catalysts.values()].find(
+      (c): c is { ok: true; filings: CatalystFiling[]; windowStart: string } => c.ok
+    )?.windowStart ?? null;
+
   return {
     schema_version: SCHEMA_VERSION,
     generated_at: iso(now),
+    session,
+    catalyst_filter: {
+      window_start: windowStart,
+      forms_8k_items: [...RELEVANT_8K_ITEMS],
+      other_forms: [...RELEVANT_OTHER_FORMS],
+    },
     unknown_symbols: unknown,
     symbols: out,
   };

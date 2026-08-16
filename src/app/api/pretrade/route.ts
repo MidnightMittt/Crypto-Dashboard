@@ -8,6 +8,7 @@ import { PositioningPoint } from "@/lib/history/positioningHistory";
 import { resolveUniverse } from "@/lib/markets/scannerUniverse";
 import { DECLARED_PRICE_EVENTS } from "@/lib/research/corporateActions";
 import { CatalystResult, fetchCatalysts } from "@/lib/dossier/providers/edgarCatalysts";
+import { fetchVenueStatus } from "@/lib/dossier/providers/tradierStatus";
 
 /**
  * GET /api/pretrade?symbols=APLD,RIOT,CLSK
@@ -104,11 +105,23 @@ export async function GET(req: Request) {
   const now = Date.now();
   const catalysts = new Map<string, CatalystResult>();
   const CONCURRENCY = 5;
-  for (let i = 0; i < symbols.length; i += CONCURRENCY) {
-    const batch = symbols.slice(i, i + CONCURRENCY);
-    const results = await Promise.all(batch.map((s) => fetchCatalysts(s, now)));
-    batch.forEach((s, j) => catalysts.set(s, results[j]));
-  }
+
+  /*
+   * The venue clock and every top of book cost two requests total regardless
+   * of how many symbols were asked for, so it runs alongside the EDGAR sweep
+   * rather than after it. With no TRADIER_API_KEY the whole tradability block
+   * degrades to "tradier_not_configured" — a stated absence, not a silent one.
+   */
+  const [venue] = await Promise.all([
+    fetchVenueStatus(symbols, now),
+    (async () => {
+      for (let i = 0; i < symbols.length; i += CONCURRENCY) {
+        const batch = symbols.slice(i, i + CONCURRENCY);
+        const results = await Promise.all(batch.map((s) => fetchCatalysts(s, now)));
+        batch.forEach((s, j) => catalysts.set(s, results[j]));
+      }
+    })(),
+  ]);
 
   const inputs: BuildInputs = {
     symbols,
@@ -120,6 +133,7 @@ export async function GET(req: Request) {
     measuredRoundTripBp: new Map(),
     dataQuality,
     catalysts,
+    venue,
   };
 
   return NextResponse.json(buildPretrade(inputs));

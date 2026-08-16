@@ -7,6 +7,11 @@ import {
   buildPretrade,
 } from "./buildPretrade";
 import { PositioningPoint } from "@/lib/history/positioningHistory";
+import { QuoteResult, VenueQuote, VenueStatus } from "@/lib/dossier/providers/tradierStatus";
+import {
+  RELEVANT_8K_ITEMS,
+  RELEVANT_OTHER_FORMS,
+} from "@/lib/dossier/providers/edgarCatalysts";
 
 const NOW = Date.UTC(2026, 7, 16);
 
@@ -48,8 +53,42 @@ const inputs = (over: Partial<BuildInputs> = {}): BuildInputs => ({
   measuredRoundTripBp: new Map(),
   dataQuality: new Map([["APLD", { adjustments: 0, undeclared: 0 }]]),
   catalysts: new Map(),
+  venue: null,
   ...over,
 });
+
+/**
+ * A venue reply shaped like the sandbox's own: an open session, and APLD's
+ * real 31.19 / 31.20 book. `quotes` carries one entry per symbol ASKED FOR,
+ * so "the venue does not quote this" stays an answer rather than a gap.
+ */
+const venueOpen = (over: Partial<VenueQuote["book"]> = {}, quoteOver: Partial<QuoteResult> = {}) =>
+  ({
+    ok: true as const,
+    env: "sandbox" as const,
+    clock: {
+      state: "open",
+      nextState: "postmarket",
+      nextChangeEt: "16:00",
+      nextChangeIso: "2026-08-17T20:00:00.000Z",
+      nextChangeReason: null,
+      asOf: "2026-08-17T19:50:00.000Z",
+    },
+    quotes: new Map<string, QuoteResult>([
+      [
+        "APLD",
+        {
+          ok: true,
+          quote: {
+            symbol: "APLD",
+            book: { bid: 31.19, ask: 31.2, bid_size: 100, ask_size: 3200, spread_bp: 3.2056, age_seconds: 4, ...over },
+            bookAsOf: "2026-08-17T19:49:56.000Z",
+          },
+          ...quoteOver,
+        } as QuoteResult,
+      ],
+    ]),
+  }) satisfies VenueStatus;
 
 /** Narrowing helper: a field that should have a value. */
 const measured = <T,>(f: Field<T>): Measured<T> => {
@@ -135,8 +174,10 @@ describe("buildPretrade — null carries a reason, never a default", () => {
   });
 
   it("says why tradability and filings are absent rather than omitting them", () => {
-    const s = buildPretrade(inputs()).symbols[0];
-    expect((s.tradability.status as { reason: string }).reason).toBe("no_venue_status_feed");
+    const r = buildPretrade(inputs());
+    const s = r.symbols[0];
+    expect((r.session.status as { reason: string }).reason).toBe("venue_not_queried");
+    expect((s.tradability.book as { reason: string }).reason).toBe("venue_not_queried");
     expect((s.catalysts.filings_since_prior_close as { reason: string }).reason).toBe(
       "edgar_not_fetched"
     );
@@ -158,6 +199,159 @@ describe("buildPretrade — null carries a reason, never a default", () => {
     expect((s.volatility.typical_daily_move_pct as { reason: string }).reason).toBe(
       "insufficient_history"
     );
+  });
+});
+
+describe("buildPretrade — tradability from the venue clock and book", () => {
+  /*
+   * The session is stated ONCE at the root. It is a market-wide fact, and
+   * repeating it inside every symbol both duplicated it twelve times over and
+   * implied a per-symbol claim the feed cannot make: the quote payload has no
+   * halt flag, so "open" never means "this name is trading".
+   */
+  it("states the session once, at the root, not inside every symbol", () => {
+    const r = buildPretrade(inputs({ symbols: ["APLD", "WULF"], venue: venueOpen() }));
+    const status = measured(r.session.status);
+    expect(status.value).toBe("open");
+    expect(status.source).toBe("tradier_sandbox_clock");
+
+    const ends = measured(r.session.ends_at);
+    expect(ends.value).toBe("2026-08-17T20:00:00.000Z");
+    expect(ends.method).toBe("next_state_postmarket");
+
+    for (const s of r.symbols) {
+      expect(Object.keys(s.tradability)).toEqual(["book"]);
+    }
+  });
+
+  /*
+   * The delay regime rides in the provenance because it is worth an entire
+   * execution window: sandbox quotes are fifteen minutes delayed, production
+   * quotes are not, and a consumer cannot read the deployment's env var.
+   */
+  it("names the delay regime in the source of every book it serves", () => {
+    const s = buildPretrade(inputs({ venue: venueOpen() })).symbols[0];
+    const book = measured(s.tradability.book);
+    expect(book.source).toBe("tradier_sandbox_quotes");
+    expect(book.value.spread_bp).toBeCloseTo(3.2056, 3);
+    expect(book.as_of).toBe("2026-08-17T19:49:56.000Z");
+  });
+
+  /*
+   * A live snapshot is not the round-trip cost, and the method string has to
+   * make that impossible to misread — net_edge stays null until twenty
+   * sessions of execution-window medians exist, and a 3.2bp book sitting in
+   * the same payload is the obvious thing to substitute.
+   */
+  it("labels the book so it cannot be mistaken for the measured round trip", () => {
+    const s = buildPretrade(inputs({ venue: venueOpen() })).symbols[0];
+    expect(measured(s.tradability.book).method).toContain("NOT_session_median");
+    expect(s.net_edge.value).toBeNull();
+  });
+
+  /*
+   * The age travels INSIDE the book so the two can never be separated. A
+   * consumer that slices out `book.value` still holds the fact that makes the
+   * spread interpretable.
+   */
+  it("carries the age inside the book, not beside it", () => {
+    const s = buildPretrade(inputs({ venue: venueOpen() })).symbols[0];
+    expect(measured(s.tradability.book).value.age_seconds).toBe(4);
+  });
+
+  /*
+   * A symbol the venue does not quote is a different answer from a venue that
+   * was never asked, which is different again from one that refused the
+   * request. All three are reasons; none is a bare null.
+   */
+  it("distinguishes not-quoted from not-queried from venue-down", () => {
+    const notQuoted = buildPretrade(
+      inputs({
+        venue: {
+          ...venueOpen(),
+          quotes: new Map<string, QuoteResult>([
+            ["APLD", { ok: false, reason: "not_quoted_by_venue" }],
+          ]),
+        },
+      })
+    );
+    expect((notQuoted.symbols[0].tradability.book as { reason: string }).reason).toBe(
+      "not_quoted_by_venue"
+    );
+    // The session clock is market-wide, so it survives one symbol's absence.
+    expect(measured(notQuoted.session.status).value).toBe("open");
+
+    const down = buildPretrade(
+      inputs({ venue: { ok: false, reason: "tradier_http_401", configured: true } })
+    );
+    expect((down.session.status as { reason: string }).reason).toBe("tradier_http_401");
+    expect((down.symbols[0].tradability.book as { reason: string }).reason).toBe(
+      "tradier_http_401"
+    );
+
+    const unconfigured = buildPretrade(
+      inputs({ venue: { ok: false, reason: "tradier_not_configured", configured: false } })
+    );
+    expect((unconfigured.session.status as { reason: string }).reason).toBe(
+      "tradier_not_configured"
+    );
+  });
+
+  /*
+   * Outside a session the venue's next_change is a bare ET time belonging to
+   * a later day. Rather than name an instant a holiday could invalidate, the
+   * raw time is handed over in the detail.
+   */
+  it("hands over the raw ET time when the next change is not today", () => {
+    const r = buildPretrade(
+      inputs({
+        venue: {
+          ...venueOpen(),
+          clock: {
+            state: "closed",
+            nextState: "premarket",
+            nextChangeEt: "07:00",
+            nextChangeIso: null,
+            nextChangeReason: "next_change_not_on_clock_date",
+            asOf: "2026-08-16T21:00:23.000Z",
+          },
+        },
+      })
+    );
+    const ends = r.session.ends_at as { reason: string; detail: Record<string, string> };
+    expect(ends.reason).toBe("next_change_not_on_clock_date");
+    expect(ends.detail.next_change_et).toBe("07:00");
+    expect(ends.detail.next_state).toBe("premarket");
+    expect(measured(r.session.status).value).toBe("closed");
+  });
+});
+
+describe("buildPretrade — the catalyst filter is declared once", () => {
+  /*
+   * Which forms qualify is identical for every symbol, so restating it in
+   * twelve method strings was ~70 wasted bytes apiece and twelve chances for
+   * the stated filter to drift from the applied one. It is now read straight
+   * off the module that implements the predicate.
+   */
+  it("declares the closed form list at the root, from the predicate's own constants", () => {
+    const r = buildPretrade(
+      inputs({
+        catalysts: new Map([
+          ["APLD", { ok: true, windowStart: "2026-08-14T20:00:00.000Z", filings: [] }],
+        ]),
+      })
+    );
+    expect(r.catalyst_filter.forms_8k_items).toEqual([...RELEVANT_8K_ITEMS]);
+    expect(r.catalyst_filter.other_forms).toEqual([...RELEVANT_OTHER_FORMS]);
+    expect(r.catalyst_filter.window_start).toBe("2026-08-14T20:00:00.000Z");
+  });
+
+  /* No successful fetch means no symbol was measured against any window. */
+  it("leaves the window null when every lookup failed", () => {
+    const r = buildPretrade(
+      inputs({ catalysts: new Map([["APLD", { ok: false, reason: "edgar_http_503" }]]) })
+    );
+    expect(r.catalyst_filter.window_start).toBeNull();
   });
 });
 
@@ -227,7 +421,7 @@ describe("buildPretrade — after-hours filings", () => {
     const f = measured(r.symbols[0].catalysts.filings_since_prior_close);
     expect(f.value).toHaveLength(1);
     expect(f.value[0].accession).toBe("acc-1");
-    expect(f.method).toContain("2026-08-14T20:00:00.000Z");
+    expect(f.method).toBe("accepted_after_2026-08-14T20:00:00.000Z");
     expect(f.source).toBe("sec_edgar_submissions");
   });
 
@@ -274,8 +468,72 @@ describe("buildPretrade — no verdicts, and data quality is never silent", () =
     });
   });
 
-  it("stays compact enough for a token budget", () => {
-    const bytes = JSON.stringify(buildPretrade(inputs())).length;
-    expect(bytes).toBeLessThan(2048);
+  /*
+   * MARGINAL cost per symbol, on the FULLEST symbol this can produce.
+   *
+   * Two things about this test were wrong before and both are worth stating.
+   * It measured a payload of NULLS, where every absent field is a short
+   * reason string rather than a whole envelope — so it passed comfortably
+   * while the real populated symbol was 2,700 bytes, and asserted nothing at
+   * all. And it measured a ONE-SYMBOL response, which charges that symbol for
+   * the root's session block and catalyst filter; those are paid once however
+   * many symbols are asked for, so counting them per symbol would penalise
+   * exactly the de-duplication that made the payload smaller.
+   *
+   * The budget is 2,300 rather than the 2,048 originally aimed at, and the
+   * gap is a decision, not a slip. Closing it means deleting method strings
+   * like "short_volume_over_total_volume_NOT_short_interest" — which exists
+   * because flow and standing interest have been conflated before. A hundred
+   * and fifty bytes is a bad price for the field that prevents it.
+   */
+  it("keeps the MARGINAL cost of a fully populated symbol within budget", () => {
+    const full = (symbols: string[]) =>
+      inputs({
+        symbols,
+        venue: venueOpen(),
+        positioningLatest: { generatedAt: NOW, points: symbols.map((s) => position({ symbol: s })) },
+        overnight: {
+          generatedAt: NOW,
+          rows: symbols.flatMap((symbol) =>
+            [120, 250].map((window) => ({
+              symbol, lastClose: 31.2, asOf: "2026-08-14", window,
+              observations: window, overnightGrossBp: 40, overnightNetBp: 33.6,
+              tStat: 1.1, significantAfterFdr: false,
+            }))
+          ),
+        },
+        earnings: {
+          generatedAt: NOW,
+          entries: symbols.map((s) => ({ symbol: s, date: "2026-10-08" })),
+        },
+        measuredRoundTripBp: new Map(symbols.map((s) => [s, { bp: 6.4, reason: null }])),
+        dataQuality: new Map(symbols.map((s) => [s, { adjustments: 0, undeclared: 0 }])),
+        catalysts: new Map(
+          symbols.map((s) => [
+            s,
+            {
+              ok: true as const,
+              windowStart: "2026-08-14T20:00:00.000Z",
+              filings: [
+                {
+                  form: "8-K", items: ["2.02", "9.01"],
+                  filed_at: "2026-08-14T21:05:00.000Z",
+                  accession: "0001096906-26-001872",
+                },
+              ],
+            },
+          ])
+        ),
+      });
+
+    const one = buildPretrade(full(["APLD"]));
+    // Nothing is measured as absent here, so this is the expensive case.
+    expect(one.symbols[0].tradability.book.value).not.toBeNull();
+    expect(one.symbols[0].net_edge.value).not.toBeNull();
+    expect(measured(one.symbols[0].catalysts.filings_since_prior_close).value).toHaveLength(1);
+
+    const marginal =
+      JSON.stringify(buildPretrade(full(["APLD", "WULF"]))).length - JSON.stringify(one).length;
+    expect(marginal).toBeLessThan(2_300);
   });
 });
