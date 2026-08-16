@@ -49,6 +49,11 @@ on:
         default: entry
         type: choice
         options: [entry, exit]
+      smoke:
+        description: "Read quotes now and write nothing — verifies the credentials without waiting for a market minute"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -90,6 +95,15 @@ jobs:
               "5 13 * * 1-5"|"5 14 * * 1-5") WINDOW=exit ;;
               *) WINDOW=entry ;;
             esac
+          fi
+          # A smoke dispatch reads quotes and persists nothing, so the
+          # credentials can be proven the day they are set rather than on the
+          # next trading morning. It also bypasses the head-start guard, which
+          # would otherwise exit before ever touching the API.
+          if [ "${{ github.event.inputs.smoke }}" = "true" ]; then
+            echo "SMOKE TEST — reading quotes, writing nothing"
+            npx tsx scripts/ingest/recordSpreads.ts --window "$WINDOW" --now
+            exit 0
           fi
           echo "capturing window: $WINDOW"
           npx tsx scripts/ingest/recordSpreads.ts --window "$WINDOW"
