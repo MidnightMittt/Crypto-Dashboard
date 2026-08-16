@@ -8,6 +8,7 @@ import { Depth, EvidenceBullet, EvidenceGroup, InvalidationTrigger, Read, Ticker
 import { MetricVerdict } from "@/lib/signals/types";
 import { describeLiveness } from "@/lib/dossier/pipelineLiveness";
 import { composeTrustLine } from "@/lib/dossier/narrative";
+import { describeConvictionLevel } from "@/lib/signals/conviction";
 import { CheckState } from "@/lib/dossier/checklist";
 import { StructureLadder, LadderMarker } from "@/components/markets/StructureLadder";
 
@@ -142,40 +143,43 @@ export function VerdictPanel({ d }: { d: TickerDossier }) {
               <span className="text-ink-faint">{"○".repeat(5 - v.stars)}</span>
             </span>
           </Stat>
-          <Stat label="Evidence">
-            <span
-              className={`text-sm capitalize ${
-                v.evidence === "strong" ? "text-success" : v.evidence === "moderate" ? "text-amber" : "text-danger"
-              }`}
-            >
-              {v.evidence}
-            </span>
-          </Stat>
-          <Stat label="Signals">
-            <span className="text-sm text-ink-muted">{v.agreementLine}</span>
-          </Stat>
           {/*
-            A SEPARATE AXIS FROM "Evidence" TO ITS LEFT, and the two are
-            routinely confused. Evidence grades the INPUTS — are the feeds
-            fresh and complete. This grades whether the signals underneath
-            have ever predicted anything. A pristine reading from a coin flip
-            scores high on the first and zero on this one, which is exactly
-            the case a reader needs to see before sizing.
+            THREE STATS, NOT FIVE. "Evidence" and "Proven signal" used to sit
+            here beside Conviction — but Conviction is a deterministic
+            function of exactly those two plus Signals, so the row was showing
+            an answer next to three of its own inputs. That is the same
+            redundancy as a section heading restating the panel beneath it.
+            Both moved into the trust fold, which already explains each in
+            full; nothing was lost and the row went from five readings to
+            three.
+
+            CONVICTION — the question a "Trade Quality 9.2 / 10" was asking.
+            A word, not a decimal, because the resolution behind it does not
+            support a tenth of a point. When a ceiling binds, the word is
+            suffixed rather than silently lowered, so a reader can tell the
+            difference between "this ticker looked average" and "no ticker can
+            currently read higher".
           */}
-          <Stat label="Proven signal">
+          <Stat label="Conviction">
             <span
               className={`text-sm capitalize ${
-                v.evidenceGrade.label === "validated"
+                v.conviction.level === "high"
                   ? "text-success"
-                  : v.evidenceGrade.label === "mixed"
+                  : v.conviction.level === "moderate"
                     ? "text-amber"
                     : "text-ink-muted"
               }`}
             >
-              {v.evidenceGrade.label === "descriptive"
-                ? "descriptive"
-                : `${Math.round(v.evidenceGrade.validatedWeightPct)}% of weight`}
+              {v.conviction.level}
+              {v.conviction.cappedBy && (
+                <span className="ml-1 text-[10px] uppercase tracking-[0.12em] text-ink-faint">
+                  capped
+                </span>
+              )}
             </span>
+          </Stat>
+          <Stat label="Signals">
+            <span className="text-sm text-ink-muted">{v.agreementLine}</span>
           </Stat>
         </div>
 
@@ -220,6 +224,14 @@ export function VerdictPanel({ d }: { d: TickerDossier }) {
           </summary>
 
           <div className="flex flex-col gap-2 border-t border-hairline px-3 py-2">
+            <p className="text-[11px] leading-relaxed text-ink-muted">
+              <span className="font-semibold uppercase tracking-[0.12em] text-cyan">Conviction</span> ·{" "}
+              {describeConvictionLevel(v.conviction)}{" "}
+              <span className="text-ink-faint">
+                Input quality reads {v.evidence}; {v.agreementLine.toLowerCase()}
+              </span>
+            </p>
+
             <p className="text-[11px] leading-relaxed text-ink-muted">
               <span className="font-semibold uppercase tracking-[0.12em] text-cyan">Proven signal</span> ·{" "}
               {v.evidenceGrade.sentence}

@@ -201,6 +201,12 @@ export interface VerdictSection {
    * hide each of them.
    */
   evidenceGrade: EvidenceGrade;
+  /**
+   * HOW MUCH CONVICTION SHOULD I HAVE — the question a "9.2 / 10" was asked
+   * for. A word rather than a decimal, and capped by whether anything behind
+   * the read has a forward record, with the cap stated. See conviction.ts.
+   */
+  conviction: import("@/lib/signals/conviction").Conviction;
   /** How this verdict has actually done since forward scoring began. */
   forward: VerdictForwardRecord | null;
 }

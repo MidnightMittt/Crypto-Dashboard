@@ -12,6 +12,7 @@ import { gradeForComposite } from "@/lib/signals/evidenceGrade";
 import { weightForBasis } from "@/lib/signals/scoring";
 import metricStats from "@/data/backtestMetricStats.json";
 import { buildPassRules } from "./passRules";
+import { assessConviction } from "@/lib/signals/conviction";
 import { LivenessRead, StoreInput, assessLiveness } from "./pipelineLiveness";
 import signalLedgerJson from "@/data/signalLedger.json";
 import equityMarketsJson from "@/data/equityMarkets.json";
@@ -221,6 +222,12 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
    * so that "what changes my mind" is a level on every ticker rather than
    * only on the ones carrying a plan. One computation, so they cannot drift.
    */
+  const grade = gradeForComposite(
+    bias,
+    weightForBasis(bias.basis),
+    metricStats.moduleGrades as Parameters<typeof gradeForComposite>[2]
+  );
+
   const nextEntry = buildNextEntry(
     analysis,
     inputs.plannedRecords ?? null,
@@ -259,11 +266,18 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
        * so the denominator is literally the weight that produced the score —
        * not a second opinion about what should have counted.
        */
-      evidenceGrade: gradeForComposite(
-        bias,
-        weightForBasis(bias.basis),
-        metricStats.moduleGrades as Parameters<typeof gradeForComposite>[2]
-      ),
+      evidenceGrade: grade,
+      /*
+       * Computed from the SAME grade object rendered beside it, so the
+       * conviction word and the validated-weight figure can never disagree
+       * about how much of this read is proven.
+       */
+      conviction: assessConviction({
+        confidencePct: bias.confidence,
+        agreementPct: bias.agreement,
+        grade: grade.label,
+        validatedWeightPct: grade.validatedWeightPct,
+      }),
       forward: inputs.verdictForward ?? null,
     },
 
