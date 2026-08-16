@@ -45,6 +45,20 @@ const FDR_Q = 0.1;
 interface Row {
   symbol: string;
   benchmark: boolean;
+  /** Last adjusted close, so a consumer can price the tick without bars. */
+  lastClose: number | null;
+  /** Modelled round trip at that price — the legibility number. */
+  costBpAtLastClose: number | null;
+  /** ISO date of that close, so freshness travels with the price. */
+  asOf: string | null;
+  /**
+   * Guard interventions on THIS symbol's bars. Counted here because the study
+   * runs the guard and the raw bars are gitignored, so no consumer can
+   * recompute it. Spikes are auto-repaired and steps are judged, and both
+   * count — reporting only the judged ones under-stated MARA at zero when it
+   * has two repaired placeholder prints.
+   */
+  guardRepairs: number;
   window: number;
   observations: number;
   meanCostBp: number;
@@ -72,14 +86,21 @@ function main(): void {
     }
     const raw = JSON.parse(fs.readFileSync(file, "utf8"));
     const guarded = adjustForCorporateActions((raw.bars ?? []) as Bar[], symbol);
-    adjustments += guarded.notes.filter((n) => n.barsAffected > 0).length;
+    const repairs = guarded.notes.filter((n) => n.barsAffected > 0).length;
+    adjustments += repairs;
 
     const d = decomposeSymbol(symbol, guarded.bars);
+    const lastBar = guarded.bars.length ? guarded.bars[guarded.bars.length - 1] : null;
+    const asOf = lastBar ? new Date(lastBar.t).toISOString().slice(0, 10) : null;
     for (const w of d.windows) {
       if (w.used < MIN_SESSIONS || !w.overnightNet || !w.overnightGross || !w.intradayGross) continue;
       rows.push({
         symbol,
         benchmark: isBenchmark(symbol),
+        lastClose: d.lastClose,
+        costBpAtLastClose: d.costBpAtLastClose,
+        asOf,
+        guardRepairs: repairs,
         window: w.sessions,
         observations: w.used,
         meanCostBp: w.meanCostBp ?? 0,

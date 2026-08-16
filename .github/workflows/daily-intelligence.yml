@@ -107,7 +107,11 @@ jobs:
       # whole run, and the job's own log reports per-source coverage so a dead
       # source is visible rather than silently null.
       - name: Record positioning history
-        run: npx tsx scripts/ingest/recordPositioning.ts || echo "::warning::positioning recorder failed — one session lost"
+        run: |
+          npx tsx scripts/ingest/recordPositioning.ts || echo "::warning::positioning recorder failed — one session lost"
+          # The projection /api/pretrade reads. Regenerated every run so the
+          # small artefact can never disagree with the store it projects.
+          npx tsx scripts/ingest/buildPositioningLatest.ts || echo "::warning::positioning projection failed"
 
       # WHY THIS DOES NOT REBASE, and it is not a style preference.
       #
@@ -138,7 +142,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          DATA_PATHS="src/data/marketIntelligence.json src/data/equityMarkets.json src/data/signalLedger.json src/data/earningsCalendar.json src/data/forwardReachRecord.json src/data/forwardVerdictRecord.json src/data/equityCrossSection.json src/data/macroSeries.json src/data/positioningHistory.json"
+          DATA_PATHS="src/data/marketIntelligence.json src/data/equityMarkets.json src/data/signalLedger.json src/data/earningsCalendar.json src/data/forwardReachRecord.json src/data/forwardVerdictRecord.json src/data/equityCrossSection.json src/data/macroSeries.json src/data/positioningHistory.json src/data/positioningLatest.json src/data/overnightPremium.json"
 
           stage_onto_tip() {
             # Explicit refspec: `git fetch origin main` only updates the

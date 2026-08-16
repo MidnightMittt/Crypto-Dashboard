@@ -11,6 +11,7 @@ import {
 import { fetchOptionsSummary } from "../../src/lib/dossier/providers/cboeOptions";
 import { fetchShortVolume } from "../../src/lib/dossier/providers/finraShortVolume";
 import { EQUITY_PANEL } from "../../src/lib/markets/equityPanel";
+import { resolveUniverse } from "../../src/lib/markets/scannerUniverse";
 import { adjustForCorporateActions } from "../../src/lib/research/corporateActions";
 import { atrPctSeries } from "../../src/lib/technicals/indicators";
 import { Bar } from "../../src/lib/research/types";
@@ -79,7 +80,15 @@ async function main(): Promise<void> {
   let optionsOk = 0;
   let shortOk = 0;
 
-  for (const symbol of EQUITY_PANEL) {
+  /*
+   * The declared panel PLUS the scanned names. They are different sets: APLD,
+   * RIOT, CLSK, CORZ, IONQ and OKLO are traded but are not panel members, and
+   * iterating the panel alone left the six highest-interest symbols with no
+   * gamma, no short volume and no ATR — invisible until the pre-trade
+   * endpoint returned nulls for the top-ranked name in the study.
+   */
+  const covered = [...new Set([...EQUITY_PANEL, ...resolveUniverse()])].sort();
+  for (const symbol of covered) {
     const bars = loadBars(symbol);
     /*
      * The row is dated by the DATA's last session, not the wall clock. A run
