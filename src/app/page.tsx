@@ -93,6 +93,9 @@ export default function BriefPage() {
             <Link href="/intelligence" className="hover:text-ink">
               Intelligence
             </Link>
+            <Link href="/validation" className="hover:text-ink">
+              Validation
+            </Link>
             <Link href="/scanner" className="hover:text-ink">
               Scanner
             </Link>
@@ -202,7 +205,10 @@ export default function BriefPage() {
           <p className="mt-3 text-[10px] leading-relaxed text-ink-faint">
             Items appear here only when a signal has beaten its own baseline out of sample and survived
             correction for multiple testing. An empty section is the normal output and is a conclusion, not a
-            gap — a brief that always finds three ideas is a content schedule.
+            gap — a brief that always finds three ideas is a content schedule.{" "}
+            <Link href="/validation" className="text-ink-muted underline decoration-hairline hover:text-ink">
+              Every signal we have measured, including the failures →
+            </Link>
           </p>
         </section>
       </main>
