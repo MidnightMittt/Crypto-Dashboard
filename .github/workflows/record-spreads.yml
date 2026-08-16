@@ -110,11 +110,23 @@ jobs:
 
       # Same no-rebase discipline as the daily job: regenerated JSON conflicts
       # with regenerated JSON, so land on the tip first and never replay.
+      # Skipped entirely on a smoke dispatch, which writes nothing by design.
       - name: Commit and push
+        if: github.event.inputs.smoke != 'true'
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # `git add <missing path>` exits 128 and, under `set -e`, fails the
+          # step. That is not hypothetical: it failed the first dispatch, and
+          # it would equally have failed the first REAL run, because a missed
+          # window on day one also leaves no file. A capture that produced
+          # nothing is a lost session, not a broken pipeline.
+          if [ ! -f src/data/spreadHistory.json ]; then
+            echo "No spread history written this run (window missed, holiday, or provider down) — nothing to commit."
+            exit 0
+          fi
 
           stage_onto_tip() {
             git fetch origin +refs/heads/main:refs/remotes/origin/main
