@@ -47,6 +47,7 @@ const inputs = (over: Partial<BuildInputs> = {}): BuildInputs => ({
   earnings: { generatedAt: NOW, entries: [{ symbol: "APLD", date: "2026-10-08" }] },
   measuredRoundTripBp: new Map(),
   dataQuality: new Map([["APLD", { adjustments: 0, undeclared: 0 }]]),
+  catalysts: new Map(),
   ...over,
 });
 
@@ -137,7 +138,7 @@ describe("buildPretrade — null carries a reason, never a default", () => {
     const s = buildPretrade(inputs()).symbols[0];
     expect((s.tradability.status as { reason: string }).reason).toBe("no_venue_status_feed");
     expect((s.catalysts.filings_since_prior_close as { reason: string }).reason).toBe(
-      "edgar_intraday_feed_not_wired"
+      "edgar_not_fetched"
     );
   });
 
@@ -202,6 +203,51 @@ describe("buildPretrade — earnings is three-state", () => {
     };
     expect(detail.reason).toBe("calendar_stale");
     expect(detail.detail.calendar_age_days).toBe(30);
+  });
+});
+
+describe("buildPretrade — after-hours filings", () => {
+  it("serves filings with the window baked into the method string", () => {
+    const r = buildPretrade(
+      inputs({
+        catalysts: new Map([
+          [
+            "APLD",
+            {
+              ok: true,
+              windowStart: "2026-08-14T20:00:00.000Z",
+              filings: [
+                { form: "8-K", items: ["2.02"], filed_at: "2026-08-14T21:05:00.000Z", accession: "acc-1" },
+              ],
+            },
+          ],
+        ]),
+      })
+    );
+    const f = measured(r.symbols[0].catalysts.filings_since_prior_close);
+    expect(f.value).toHaveLength(1);
+    expect(f.value[0].accession).toBe("acc-1");
+    expect(f.method).toContain("2026-08-14T20:00:00.000Z");
+    expect(f.source).toBe("sec_edgar_submissions");
+  });
+
+  /* An empty list from a SUCCESSFUL fetch is a real answer: nothing filed. */
+  it("distinguishes confirmed-quiet from could-not-look", () => {
+    const quiet = buildPretrade(
+      inputs({
+        catalysts: new Map([
+          ["APLD", { ok: true, windowStart: "2026-08-14T20:00:00.000Z", filings: [] }],
+        ]),
+      })
+    ).symbols[0];
+    expect(measured(quiet.catalysts.filings_since_prior_close).value).toEqual([]);
+
+    const failed = buildPretrade(
+      inputs({ catalysts: new Map([["APLD", { ok: false, reason: "edgar_http_503" }]]) })
+    ).symbols[0];
+    expect((failed.catalysts.filings_since_prior_close as { reason: string }).reason).toBe(
+      "edgar_http_503"
+    );
   });
 });
 

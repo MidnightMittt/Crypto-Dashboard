@@ -3,6 +3,7 @@ import {
   earningsStatus,
 } from "@/lib/markets/earningsVeto";
 import { PositioningPoint } from "@/lib/history/positioningHistory";
+import { CatalystFiling } from "@/lib/dossier/providers/edgarCatalysts";
 
 /**
  * THE AGENT-FACING PRE-TRADE PAYLOAD.
@@ -109,7 +110,7 @@ export interface PretradeSymbol {
     /** Three states, never a boolean. See earningsVeto.ts. */
     earnings_status: "confirmed_date" | "confirmed_none" | "lookup_failed";
     earnings_detail: Field<string>;
-    filings_since_prior_close: Field<unknown[]>;
+    filings_since_prior_close: Field<CatalystFiling[]>;
   };
   positioning: {
     net_dealer_gamma_per_1pct: Field<number>;
@@ -161,6 +162,17 @@ export interface BuildInputs {
   measuredRoundTripBp: Map<string, { bp: number | null; reason: string | null }>;
   /** Corporate-action counts per symbol, from the ingest guard. */
   dataQuality: Map<string, { adjustments: number; undeclared: number }>;
+  /**
+   * After-hours EDGAR filings per symbol, fetched live by the route. Absent
+   * from the map means the fetch was not attempted; an entry with ok:false
+   * carries the failure so "no filings" and "could not look" stay opposite
+   * answers.
+   */
+  catalysts: Map<
+    string,
+    | { ok: true; filings: CatalystFiling[]; windowStart: string }
+    | { ok: false; reason: string }
+  >;
 }
 
 const iso = (ms: number): string => new Date(ms).toISOString();
@@ -275,8 +287,18 @@ export function buildPretrade(input: BuildInputs): PretradeResponse {
             : es.status === "confirmed_none"
               ? { value: es.nextDate, unit: "iso_date", as_of: iso(now), source: "earnings_calendar", method: "next_report_outside_window" }
               : unmeasured(es.reason, es.calendarAgeDays !== null ? { calendar_age_days: es.calendarAgeDays } : undefined),
-        // EDGAR after-hours filings are not wired yet; saying so beats omitting it.
-        filings_since_prior_close: unmeasured("edgar_intraday_feed_not_wired"),
+        filings_since_prior_close: (() => {
+          const c = input.catalysts.get(symbol);
+          if (!c) return unmeasured("edgar_not_fetched");
+          if (!c.ok) return unmeasured(c.reason);
+          return {
+            value: c.filings,
+            unit: "filings",
+            as_of: iso(now),
+            source: "sec_edgar_submissions",
+            method: `accepted_after_${c.windowStart}_forms_8K(1.01,2.02,3.02,7.01,8.01)_424B*_S-3ASR`,
+          };
+        })(),
       },
       positioning: {
         net_dealer_gamma_per_1pct:

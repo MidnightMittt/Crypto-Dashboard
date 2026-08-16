@@ -7,6 +7,7 @@ import { EarningsCalendar } from "@/lib/markets/earningsVeto";
 import { PositioningPoint } from "@/lib/history/positioningHistory";
 import { resolveUniverse } from "@/lib/markets/scannerUniverse";
 import { DECLARED_PRICE_EVENTS } from "@/lib/research/corporateActions";
+import { CatalystResult, fetchCatalysts } from "@/lib/dossier/providers/edgarCatalysts";
 
 /**
  * GET /api/pretrade?symbols=APLD,RIOT,CLSK
@@ -93,15 +94,32 @@ export async function GET(req: Request) {
     });
   }
 
+  /*
+   * EDGAR is fetched live because after-hours filings are the one input here
+   * that cannot be precomputed — they land at any minute after the close and
+   * the whole point is catching tonight's. Bounded concurrency out of respect
+   * for the SEC's 10-req/s guidance; per-symbol failures degrade to a reason
+   * on that symbol rather than failing the call.
+   */
+  const now = Date.now();
+  const catalysts = new Map<string, CatalystResult>();
+  const CONCURRENCY = 5;
+  for (let i = 0; i < symbols.length; i += CONCURRENCY) {
+    const batch = symbols.slice(i, i + CONCURRENCY);
+    const results = await Promise.all(batch.map((s) => fetchCatalysts(s, now)));
+    batch.forEach((s, j) => catalysts.set(s, results[j]));
+  }
+
   const inputs: BuildInputs = {
     symbols,
-    now: Date.now(),
+    now,
     overnight,
     positioningLatest,
     earnings: earningsJson as unknown as EarningsCalendar,
     // Empty until spreadHistory clears MIN_SPREAD_SESSIONS in both windows.
     measuredRoundTripBp: new Map(),
     dataQuality,
+    catalysts,
   };
 
   return NextResponse.json(buildPretrade(inputs));
