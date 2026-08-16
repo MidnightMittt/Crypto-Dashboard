@@ -151,12 +151,24 @@ export interface ReachCell {
   distanceAtrMax: number;
   /** Minimum swing touches on the zone. */
   touchesMin: number;
+  /**
+   * Which population the cell was measured on. The replay universe holds 95
+   * operating companies and 30 index/sector funds; a fund is a weighted
+   * average of its holdings, so it carries a fraction of the idiosyncratic
+   * volatility and mean-reverts differently. Pooling the two is a claim, and
+   * carrying the cohort is what makes that claim checkable rather than
+   * implicit. Absent on records written before the split, so a reader must
+   * treat `undefined` as "all".
+   */
+  kind?: ReachCohort;
   attempts: number;
   reached: number;
   reachRatePct: number;
   /** Median sessions to reach it, among those that did. */
   medianSessionsToReach: number | null;
 }
+
+export type ReachCohort = "all" | "company" | "fund";
 
 export interface EquityExecutionSnapshot {
   generatedAt: number;
@@ -411,16 +423,35 @@ export function reachRateFor(
    * first in the array would silently quote one population's rate for the
    * other's question.
    */
-  prefer: "plan" | "zone" = "plan"
+  prefer: "plan" | "zone" = "plan",
+  /**
+   * Which cohort to quote. Defaults to the pooled table so every existing
+   * caller is unchanged. Passing "company" or "fund" asks for the matching
+   * population and falls back to pooled rather than to the OTHER cohort —
+   * quoting an index fund's reach rate on a single stock would be worse than
+   * quoting the blend, not better.
+   */
+  cohort: ReachCohort = "all"
 ): ReachCell | null {
   if (!snapshot?.reach || !Number.isFinite(distanceAtr)) return null;
   const distBucket = REACH_DISTANCE_ATR_BUCKETS.find((b) => distanceAtr <= b);
   if (distBucket === undefined) return null;
   const touchBucket = [...REACH_TOUCH_BUCKETS].reverse().find((t) => touches >= t) ?? 0;
-  const matches = snapshot.reach.filter(
+  /*
+   * Cohort is filtered FIRST and never falls through to a sibling. Before the
+   * split every cell was pooled and untagged, so `undefined` reads as "all";
+   * after it, an untagged match cannot exist. Without this filter the old
+   * `matches[0]` fallback could hand a caller the fund cell for a stock,
+   * which is exactly the contamination the split was added to expose.
+   */
+  const inCohort = snapshot.reach.filter((c) => (c.kind ?? "all") === cohort);
+  const pool = inCohort.length > 0 || cohort === "all"
+    ? inCohort
+    : snapshot.reach.filter((c) => (c.kind ?? "all") === "all");
+  const matches = pool.filter(
     (c) => c.distanceAtrMax === distBucket && c.touchesMin === touchBucket
   );
-  // Fall back to the other population rather than returning nothing: a
-  // stated rate from a near-identical measurement beats a shrug.
+  // Fall back to the other SOURCE rather than returning nothing: a stated
+  // rate from a near-identical measurement beats a shrug.
   return matches.find((c) => (c.source ?? "plan") === prefer) ?? matches[0] ?? null;
 }

@@ -5,6 +5,8 @@ import {
   EquityExecutionSnapshot,
   equityCellKey,
   equityExpectationsFor,
+  ReachCell,
+  reachRateFor,
   volRegimeFromMetrics,
 } from "./equityExpectations";
 import { MetricVerdict } from "@/lib/signals/types";
@@ -190,5 +192,78 @@ describe("equityPlanConstraints — the gate", () => {
       equityPlanConstraints("long", [metric("equityVolatilityRegime", "bearish")], snapshot({}))
     ).toBeNull();
     expect(equityPlanConstraints("long", [], snapshot({ "long:normal-vol": cell() }))).toBeNull();
+  });
+});
+
+/**
+ * COHORT SELECTION. The replay universe pools 95 operating companies with 30
+ * index/sector funds, and a fund is a weighted average of its holdings — less
+ * idiosyncratic volatility, different mean reversion. These pin the rule that
+ * a stock is never quoted a fund's number, including the failure mode that
+ * existed before the split: an unfiltered `matches[0]` handing back whichever
+ * cohort happened to be first in the array.
+ */
+describe("reachRateFor — cohort", () => {
+  const reachCell = (over: Partial<ReachCell>): ReachCell => ({
+    source: "zone",
+    distanceAtrMax: 1,
+    touchesMin: 0,
+    attempts: 5_000,
+    reached: 2_500,
+    reachRatePct: 50,
+    medianSessionsToReach: 4,
+    ...over,
+  });
+
+  const withReach = (reach: ReachCell[]): EquityExecutionSnapshot =>
+    ({ ...snapshot({}), reach }) as EquityExecutionSnapshot;
+
+  const split = withReach([
+    reachCell({ kind: "all", reachRatePct: 60 }),
+    reachCell({ kind: "company", reachRatePct: 55 }),
+    reachCell({ kind: "fund", reachRatePct: 90 }),
+  ]);
+
+  it("quotes the pooled table by default, so existing callers are unchanged", () => {
+    expect(reachRateFor(0.9, 0, split, "zone")!.reachRatePct).toBe(60);
+  });
+
+  it("quotes each cohort's own rate when asked", () => {
+    expect(reachRateFor(0.9, 0, split, "zone", "company")!.reachRatePct).toBe(55);
+    expect(reachRateFor(0.9, 0, split, "zone", "fund")!.reachRatePct).toBe(90);
+  });
+
+  /*
+   * The regression. Funds are listed FIRST here, so any lookup that filtered
+   * on bucket alone and took the first match would hand a single stock the
+   * index's 90% — a wrong number that looks perfectly reasonable.
+   */
+  it("never falls through to the other cohort when one is ordered first", () => {
+    const fundsFirst = withReach([
+      reachCell({ kind: "fund", reachRatePct: 90 }),
+      reachCell({ kind: "company", reachRatePct: 55 }),
+      reachCell({ kind: "all", reachRatePct: 60 }),
+    ]);
+    expect(reachRateFor(0.9, 0, fundsFirst, "zone", "company")!.reachRatePct).toBe(55);
+  });
+
+  /*
+   * A cohort thin enough that no bucket published falls back to POOLED, never
+   * to the sibling: the blend is a worse answer than the matching population
+   * and a better one than the opposite population.
+   */
+  it("falls back to pooled, not to the sibling cohort, when a cohort is absent", () => {
+    const noCompanyCells = withReach([
+      reachCell({ kind: "all", reachRatePct: 60 }),
+      reachCell({ kind: "fund", reachRatePct: 90 }),
+    ]);
+    expect(reachRateFor(0.9, 0, noCompanyCells, "zone", "company")!.reachRatePct).toBe(60);
+  });
+
+  /* Records written before the split carry no `kind` and must read as pooled. */
+  it("treats untagged legacy cells as the pooled population", () => {
+    const legacy = withReach([reachCell({ reachRatePct: 71 })]);
+    expect(reachRateFor(0.9, 0, legacy, "zone")!.reachRatePct).toBe(71);
+    expect(reachRateFor(0.9, 0, legacy, "zone", "company")!.reachRatePct).toBe(71);
   });
 });

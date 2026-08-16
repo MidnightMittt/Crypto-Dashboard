@@ -3,7 +3,8 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { buildLiveAnalysis, MIN_BARS_FOR_ANALYSIS } from "../../src/lib/search/liveAnalysis";
 import { buildEquityEvidence, EquityInstrumentInput } from "../../src/lib/markets/equityEvidence";
-import { EQUITY_PANEL } from "../../src/lib/markets/equityPanel";
+import { EQUITY_PANEL, isPanelMember } from "../../src/lib/markets/equityPanel";
+import { adjustForCorporateActions, formatAdjustmentNotes } from "../../src/lib/research/corporateActions";
 import { resolveTrade, TradePlan as ExecPlan } from "../../src/lib/research/tradeExecution";
 import { effectiveSampleSize } from "../../src/lib/research/overlap";
 import { RollingStandardiser, standardise } from "../../src/lib/research/fingerprintInputs";
@@ -23,6 +24,7 @@ import {
   equityAnalogKey,
   equityCellKey,
   ReachCell,
+  ReachCohort,
   REACH_DISTANCE_ATR_BUCKETS,
   REACH_TOUCH_BUCKETS,
 } from "../../src/lib/dossier/equityExpectations";
@@ -162,9 +164,27 @@ function load(): Map<string, Loaded> {
   for (const f of fs.readdirSync(DATA_DIR).filter((x) => x.endsWith(".json"))) {
     const raw = JSON.parse(fs.readFileSync(path.join(DATA_DIR, f), "utf8"));
     const symbol = (raw.meta?.displaySymbol ?? f.replace(".US.json", "")) as string;
-    const bars: Bar[] = (raw.bars ?? []).map((b: Bar) => ({
+    const fetched: Bar[] = (raw.bars ?? []).map((b: Bar) => ({
       t: b.t, open: b.open, high: b.high, low: b.low, close: b.close, volume: b.volume,
     }));
+
+    /*
+     * The guard runs HERE as well as at ingest, and that is deliberate rather
+     * than redundant. The replay reads the committed bar files directly, so
+     * without this it would keep replaying whatever contamination was written
+     * before the guard existed — NVR's 1993 relisting and two MARA placeholder
+     * prints, each of which poisons every ATR, momentum and forward return
+     * that spans it. Re-applying is a no-op on already-clean data, so the
+     * cost of the belt-and-braces is nothing.
+     */
+    const adj = adjustForCorporateActions(fetched, symbol);
+    for (const line of formatAdjustmentNotes(symbol, adj.notes)) console.log(line);
+    if (adj.undeclared.length > 0) {
+      console.log(
+        `[corporate-action] ${symbol}: ${adj.undeclared.length} UNDECLARED step(s) left untouched — replayed as-is.`
+      );
+    }
+    const bars = adj.bars;
     if (bars.length > 0) out.set(symbol, { symbol, assetClass: raw.meta?.assetClass ?? "unknown", bars });
   }
   return out;
@@ -238,11 +258,34 @@ interface ZoneWatch {
 /** Ten sessions is the same window the planned-entry card quotes. */
 const ZONE_REACH_SESSIONS = 10;
 
+/**
+ * Watches too close to the end of history to have a full window, dropped
+ * rather than scored. Reported by the run so the size of the exclusion is
+ * visible instead of silent.
+ */
+let zoneWatchesTruncated = 0;
+
 function buildZoneReachCells(watches: ZoneWatch[], all: Map<string, Loaded>): ReachCell[] {
   const rows: ReachRow[] = [];
   for (const w of watches) {
     const bars = all.get(w.symbol)!.bars;
     const from = firstIndexAfter(bars, w.t);
+    /*
+     * THE TRUNCATED WINDOW, and it is not a rounding detail. `slice` and a
+     * bounded loop both shorten themselves without complaint at the end of
+     * history, so a watch registered in the last nine sessions used to run
+     * out of bars, find no hit, and be recorded as a MISS — a failure scored
+     * on evidence that does not exist. It is the same censoring that made the
+     * forward record read 100%, pointing the other way: there, only hits
+     * could resolve early; here, only misses could be manufactured late.
+     *
+     * A window that cannot complete is not a result. It is dropped.
+     */
+    if (bars.length - from < ZONE_REACH_SESSIONS) {
+      zoneWatchesTruncated++;
+      continue;
+    }
+    const kind = kindOf(w.symbol);
     let reached = false;
     let sessions: number | null = null;
     for (let i = from; i < Math.min(bars.length, from + ZONE_REACH_SESSIONS); i++) {
@@ -252,7 +295,7 @@ function buildZoneReachCells(watches: ZoneWatch[], all: Map<string, Loaded>): Re
     const distanceAtrMax = REACH_DISTANCE_ATR_BUCKETS.find((b) => w.distanceAtr <= b);
     if (distanceAtrMax === undefined) continue;
     const touchesMin = [...REACH_TOUCH_BUCKETS].reverse().find((t) => w.touches >= t) ?? 0;
-    rows.push({ distanceAtrMax, touchesMin, reached, sessions });
+    rows.push({ distanceAtrMax, touchesMin, reached, sessions, kind });
   }
   return buildReachCells(rows).map((c) => ({ ...c, source: "zone" as const }));
 }
@@ -272,39 +315,84 @@ interface ReachRow {
   touchesMin: number;
   reached: boolean;
   sessions: number | null;
+  kind: InstrumentKind;
+}
+
+/**
+ * WHAT THE INSTRUMENT IS, which the replay universe never asked.
+ *
+ * The universe is selected by `assetClass === "equity-etf"`, and that class
+ * holds 95 operating companies AND 30 index/sector funds — SPY, QQQ, XLK,
+ * GDX and the rest. Every reach rate and every expectancy the dossier quotes
+ * was pooled across both, so a reader on a single stock's page was being
+ * shown a number measured partly on the index. A fund is a weighted average
+ * of its holdings: it has a fraction of the idiosyncratic volatility and it
+ * mean-reverts differently. These are not the same population and pooling
+ * them is a claim, not a convenience.
+ *
+ * Classification comes from the DECLARED panel rather than a name pattern,
+ * for the same reason the momentum study uses it: a scraped universe gave
+ * two callers different answers once already. `unclassified` is fatal here —
+ * a symbol nobody has judged must stop the run, not pick a default.
+ */
+type InstrumentKind = "company" | "fund";
+
+function kindOf(symbol: string): InstrumentKind {
+  return isPanelMember(symbol) ? "company" : "fund";
 }
 
 /**
  * At-market plans are excluded: they fill by construction, and folding a
  * guaranteed fill into a reach rate would inflate every bucket it touches.
  */
-function recordReach(out: ReachRow[], p: PendingTrade, reached: boolean, sessions: number | null): void {
+function recordReach(
+  out: ReachRow[],
+  p: PendingTrade,
+  reached: boolean,
+  sessions: number | null,
+  kind: InstrumentKind
+): void {
   if (p.atMarket) return;
   const distanceAtrMax = REACH_DISTANCE_ATR_BUCKETS.find((b) => p.distanceAtr <= b);
   if (distanceAtrMax === undefined) return;
   const touchesMin = [...REACH_TOUCH_BUCKETS].reverse().find((t) => p.zoneTouches >= t) ?? 0;
-  out.push({ distanceAtrMax, touchesMin, reached, sessions });
+  out.push({ distanceAtrMax, touchesMin, reached, sessions, kind });
 }
 
 /** Fewer attempts than this and the bucket is not published. */
 const MIN_REACH_N = 300;
 
+/*
+ * Cells are emitted THREE times: pooled, companies only, funds only. The
+ * pooled set keeps every existing consumer working unchanged; the cohorts
+ * are what make the pooling assumption checkable instead of implicit. A
+ * cohort that misses MIN_REACH_N simply does not publish, which is the same
+ * rule the pooled table already lives by.
+ */
 function buildReachCells(rows: ReachRow[]): ReachCell[] {
   const cells: ReachCell[] = [];
-  for (const d of REACH_DISTANCE_ATR_BUCKETS) {
-    for (const t of REACH_TOUCH_BUCKETS) {
-      const bucket = rows.filter((r) => r.distanceAtrMax === d && r.touchesMin === t);
-      if (bucket.length < MIN_REACH_N) continue;
-      const hit = bucket.filter((r) => r.reached);
-      const sessions = hit.map((r) => r.sessions).filter((x): x is number => x !== null);
-      cells.push({
-        distanceAtrMax: d,
-        touchesMin: t,
-        attempts: bucket.length,
-        reached: hit.length,
-        reachRatePct: (hit.length / bucket.length) * 100,
-        medianSessionsToReach: sessions.length ? Math.round(quantile(sessions, 0.5)) : null,
-      });
+  const cohorts: Array<{ kind: ReachCohort; rows: ReachRow[] }> = [
+    { kind: "all", rows },
+    { kind: "company", rows: rows.filter((r) => r.kind === "company") },
+    { kind: "fund", rows: rows.filter((r) => r.kind === "fund") },
+  ];
+  for (const { kind, rows: cohortRows } of cohorts) {
+    for (const d of REACH_DISTANCE_ATR_BUCKETS) {
+      for (const t of REACH_TOUCH_BUCKETS) {
+        const bucket = cohortRows.filter((r) => r.distanceAtrMax === d && r.touchesMin === t);
+        if (bucket.length < MIN_REACH_N) continue;
+        const hit = bucket.filter((r) => r.reached);
+        const sessions = hit.map((r) => r.sessions).filter((x): x is number => x !== null);
+        cells.push({
+          distanceAtrMax: d,
+          touchesMin: t,
+          kind,
+          attempts: bucket.length,
+          reached: hit.length,
+          reachRatePct: (hit.length / bucket.length) * 100,
+          medianSessionsToReach: sessions.length ? Math.round(quantile(sessions, 0.5)) : null,
+        });
+      }
     }
   }
   return cells;
@@ -584,6 +672,16 @@ function main() {
   const reachRows: ReachRow[] = [];
   const maxHoldMs = MAX_HOLD_SESSIONS * 5 * SESSION_MS; // calendar slack for weekends/holidays
   let neverFilled = 0;
+  /** Plans whose entry window ran past the end of history — excluded from the rate. */
+  let entryWindowsTruncated = 0;
+  /*
+   * The same two counts restricted to plans that actually got their full
+   * window. `coverage.reachRatePct` is a PUBLISHED field, not a log line, so
+   * it needs the same correction as the cells: a plan history could not
+   * finish testing is not a plan that failed to fill.
+   */
+  let plansWithCompleteWindow = 0;
+  let neverFilledWithCompleteWindow = 0;
   let unresolved = 0;
 
   for (const p of pending) {
@@ -592,6 +690,15 @@ function main() {
     let entryPrice: number | null = null;
     let entryT = p.signalT;
     let sessionsToFill: number | null = null;
+    /*
+     * Whether the entry window had room to run to its end. A short window is
+     * fine for the TRADE — a fill inside it really happened and its P&L is
+     * real — but it cannot contribute to the reach RATE, because the plans
+     * that would have filled on the sessions history does not have are
+     * missing from the same bucket. Counting one side and not the other is
+     * how a rate drifts away from the thing it claims to measure.
+     */
+    let entryWindowComplete = true;
 
     if (p.atMarket) {
       // Bracketing the close means the plan was takeable that session.
@@ -600,6 +707,7 @@ function main() {
       // The near edge is what price reaches first coming back.
       const limit = p.side === "long" ? p.entryHigh : p.entryLow;
       const from = firstIndexAfter(inst.bars, p.signalT);
+      entryWindowComplete = inst.bars.length - from >= ENTRY_VALID_SESSIONS;
       const window = inst.bars.slice(from, from + ENTRY_VALID_SESSIONS);
       for (let wi = 0; wi < window.length; wi++) {
         const b = window[wi];
@@ -618,12 +726,19 @@ function main() {
       }
     }
 
+    if (entryWindowComplete) plansWithCompleteWindow++;
+    else entryWindowsTruncated++;
+
     if (entryPrice === null || entryPrice <= 0) {
       neverFilled++;
-      recordReach(reachRows, p, false, null);
+      // A non-fill is only a non-fill if the window it was given actually ran out.
+      if (entryWindowComplete) {
+        neverFilledWithCompleteWindow++;
+        recordReach(reachRows, p, false, null, kindOf(p.symbol));
+      }
       continue;
     }
-    recordReach(reachRows, p, true, sessionsToFill);
+    if (entryWindowComplete) recordReach(reachRows, p, true, sessionsToFill, kindOf(p.symbol));
 
     const from = firstIndexAfter(inst.bars, entryT);
     const future: Bar[] = [];
@@ -681,8 +796,12 @@ function main() {
     filledByStyle.set(k, (filledByStyle.get(k) ?? 0) + 1);
   }
 
-  const reachRatePct = pending.length > 0 ? ((pending.length - neverFilled) / pending.length) * 100 : 0;
+  const reachRatePct =
+    plansWithCompleteWindow > 0
+      ? ((plansWithCompleteWindow - neverFilledWithCompleteWindow) / plansWithCompleteWindow) * 100
+      : 0;
   console.log(`[replay] ${neverFilled.toLocaleString()} plans never filled (reach rate ${reachRatePct.toFixed(1)}%)`);
+
 
   console.log(`[replay] ${rows.length.toLocaleString()} resolved trades (${unresolved} unresolved), ${((Date.now() - t0) / 1000 / 60).toFixed(1)} min`);
 
@@ -696,14 +815,62 @@ function main() {
     ...buildZoneReachCells(zonePending, all),
   ];
   console.log(`[replay] ${zonePending.length.toLocaleString()} zone-watch observations`);
+  /*
+   * Printed HERE, not beside the fill statistics, because zoneWatchesTruncated
+   * is not populated until buildZoneReachCells has run. It was reported
+   * earlier for one run and always read 0 — an exclusion count that lies about
+   * being zero is worse than none, since the whole point is that the drops are
+   * never silent.
+   */
+  console.log(
+    `[replay] excluded from reach rates — ${entryWindowsTruncated.toLocaleString()} plans and ` +
+      `${zoneWatchesTruncated.toLocaleString()} zone watches whose window ran past the end of history`
+  );
   console.log("\n[replay] REACH — does price actually get to a resting level?");
-  for (const c of reachCells) {
+  for (const c of reachCells.filter((c) => (c.kind ?? "all") === "all")) {
     const d = c.distanceAtrMax === Infinity ? ">8" : `<=${c.distanceAtrMax}`;
     console.log(
       `  [${c.source ?? "plan"}] ${d.padStart(4)} ATR away, ${String(c.touchesMin).padStart(1)}+ touches: ` +
         `${c.reachRatePct.toFixed(1)}% reached (${c.reached.toLocaleString()}/${c.attempts.toLocaleString()}) ` +
         `median ${c.medianSessionsToReach ?? "-"} sessions`
     );
+  }
+
+  /*
+   * THE POOLING CHECK. Printed every run so the assumption behind a published
+   * number stays visible: if operating companies and index funds reach their
+   * levels at materially different rates, a single-stock page must not quote
+   * the blend. Reported per bucket as well as overall, because an aggregate
+   * gap can hide inside offsetting buckets — and because the overall figure
+   * mixes distances, whose mix differs between the cohorts.
+   */
+  console.log("\n[replay] POOLING CHECK — companies vs funds");
+  for (const src of ["plan", "zone"] as const) {
+    const rate = (k: string) => {
+      const cs = reachCells.filter((c) => c.source === src && (c.kind ?? "all") === k);
+      const n = cs.reduce((s, c) => s + c.attempts, 0);
+      const h = cs.reduce((s, c) => s + c.reached, 0);
+      return n > 0 ? { pct: (h / n) * 100, n } : null;
+    };
+    const a = rate("all"), co = rate("company"), fu = rate("fund");
+    console.log(
+      `  ${src}: pooled ${a ? a.pct.toFixed(2) + "% (n=" + a.n.toLocaleString() + ")" : "n/a"}  |  ` +
+        `company ${co ? co.pct.toFixed(2) + "% (n=" + co.n.toLocaleString() + ")" : "n/a"}  |  ` +
+        `fund ${fu ? fu.pct.toFixed(2) + "% (n=" + fu.n.toLocaleString() + ")" : "n/a"}` +
+        (co && fu ? `  ->  gap ${(co.pct - fu.pct >= 0 ? "+" : "") + (co.pct - fu.pct).toFixed(2)}pp` : "")
+    );
+    for (const d of REACH_DISTANCE_ATR_BUCKETS) {
+      const pick = (k: string) =>
+        reachCells.find((c) => c.source === src && (c.kind ?? "all") === k && c.distanceAtrMax === d && c.touchesMin === 0);
+      const c1 = pick("company"), f1 = pick("fund");
+      if (!c1 || !f1) continue;
+      const label = d === Infinity ? ">8" : `<=${d}`;
+      console.log(
+        `     ${label.padStart(4)} ATR, 0+ touches: company ${c1.reachRatePct.toFixed(2)}% ` +
+          `(n=${c1.attempts.toLocaleString()})  fund ${f1.reachRatePct.toFixed(2)}% (n=${f1.attempts.toLocaleString()})  ` +
+          `gap ${(c1.reachRatePct - f1.reachRatePct >= 0 ? "+" : "") + (c1.reachRatePct - f1.reachRatePct).toFixed(2)}pp`
+      );
+    }
   }
   console.log("");
 
@@ -952,7 +1119,8 @@ function aggregate(
     caveats: [
       "Trades overlap in time and across correlated names, so even the overlap-corrected effective sample is optimistic — the temporal correction does not remove cross-sectional correlation between simultaneous positions.",
       "Historical earnings dates were not available offline, so the replay could not apply the live engine's earnings veto. Some replayed trades are ones the live page would refuse to plan, which makes these numbers if anything noisier than the gated engine's.",
-      "The universe is 125 large and mid-cap US instruments that exist TODAY. Companies that failed and delisted are not represented, so the sample carries survivorship bias in the optimistic direction.",
+      "The universe is 125 US instruments that exist TODAY: 95 operating companies and 30 index or sector ETFs. Companies that failed and delisted are not represented, so the sample carries survivorship bias in the optimistic direction.",
+      "A fund is a weighted average of its holdings, so it carries less idiosyncratic volatility than a single stock and mean-reverts differently. Reach rates are therefore published per cohort as well as pooled — if the two disagree, the pooled number describes neither, and the cohort figures are the ones to read.",
       "Costs are modelled as 10 basis points round trip (spread and impact, commission-free). Real fills on thinner names would be worse.",
       "Expectancy is reported beside its DRIFT NULL — the average return of a random entry over the same holding period. US equities rose across this window, so most of any positive long expectancy is the market rather than the signal; the excess is the only number that describes edge.",
       "These are in-sample statistics over one fixed history, not a forward-tested record. They describe how this engine's plans resolved historically; they are not a promise about the next one.",
