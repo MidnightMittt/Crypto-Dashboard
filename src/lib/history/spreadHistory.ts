@@ -64,6 +64,35 @@ export interface SpreadObservation {
   /** (ask - bid) / mid, in basis points. */
   spreadBp: number;
   last: number | null;
+  /**
+   * TOP-OF-BOOK DEPTH, and null is load-bearing.
+   *
+   * Venues return an EMPTY book outside market hours. Storing that as zero
+   * would manufacture a "thin book" reading on every holiday and every
+   * mistimed capture, and a study of whether the overnight premium is larger
+   * when the closing book is thin would then be reading its own artefact.
+   * Absent depth is null with the row still recorded, never 0.
+   */
+  bidSize: number | null;
+  askSize: number | null;
+  /**
+   * (bidSize − askSize) / (bidSize + askSize), in [−1, 1]. Positive is more
+   * size resting on the bid. Null whenever either side is unknown.
+   */
+  imbalance: number | null;
+}
+
+/**
+ * Order-book imbalance at the touch, or null.
+ *
+ * Null rather than 0 when a side is missing: no-information and
+ * perfectly-balanced are different states, and 0 means the second one.
+ */
+export function bookImbalance(bidSize: number | null, askSize: number | null): number | null {
+  if (bidSize === null || askSize === null) return null;
+  const total = bidSize + askSize;
+  if (!(total > 0)) return null;
+  return (bidSize - askSize) / total;
 }
 
 export interface SpreadHistory {
@@ -94,6 +123,13 @@ export function spreadBp(bid: number, ask: number): number {
 }
 
 /**
+ * A depth value, or null. Zero from a closed book is NOT zero depth — it is
+ * an absence of information, and the two must never render the same.
+ */
+const size = (v: number | null | undefined): number | null =>
+  typeof v === "number" && v > 0 ? v : null;
+
+/**
  * Build one observation, or refuse.
  *
  * Refuses rather than records when the book is crossed, zero-width, or
@@ -110,6 +146,8 @@ export function observe(input: {
   bid: number | null | undefined;
   ask: number | null | undefined;
   last: number | null | undefined;
+  bidSize?: number | null;
+  askSize?: number | null;
 }): SpreadObservation | null {
   const { bid, ask } = input;
   if (typeof bid !== "number" || typeof ask !== "number") return null;
@@ -128,6 +166,9 @@ export function observe(input: {
     mid,
     spreadBp: spreadBp(bid, ask),
     last: typeof input.last === "number" && input.last > 0 ? input.last : null,
+    bidSize: size(input.bidSize),
+    askSize: size(input.askSize),
+    imbalance: bookImbalance(size(input.bidSize), size(input.askSize)),
   };
 }
 
@@ -233,10 +274,21 @@ export interface RoundTripCost {
 /**
  * The measured round trip: crossing the spread at entry and again at exit.
  *
- * Half the spread per leg is the mid-to-touch cost of a marketable order, so
- * a full round trip is one entry spread plus one exit spread in total. Null
- * with a reason until BOTH windows clear the session minimum — a round trip
- * measured on one leg is not a round trip.
+ * HALF the spread per leg, so a round trip costs ONE spread in total — not
+ * two. Buy at the ask and sell at the bid with price unchanged and you are
+ * out exactly the spread once: 31.19 / 31.20 costs $0.01, which is 3.21bp,
+ * not 6.41bp.
+ *
+ * This was wrong until 2026-08-16 and the docstring above it contained the
+ * refutation — it stated "half the spread per leg" and then summed two FULL
+ * spreads. The error was conservative in direction, so it could never invent
+ * an edge, but net_edge is the field that decides a trade and a 2x cost
+ * overcharge suppresses real ones. On a one-tick book it is the difference
+ * between charging 3.2bp and 6.4bp against a premium measured in tens of
+ * basis points.
+ *
+ * Null with a reason until BOTH windows clear the session minimum — a round
+ * trip measured on one leg is not a round trip.
  */
 export function roundTripCostBp(
   observations: SpreadObservation[],
@@ -253,7 +305,13 @@ export function roundTripCostBp(
       exit,
     };
   }
-  return { bp: (entry.medianBp ?? 0) + (exit.medianBp ?? 0), reason: null, entry, exit };
+  // Half of each leg's spread: mid-to-touch at entry, touch-to-mid at exit.
+  return {
+    bp: ((entry.medianBp ?? 0) + (exit.medianBp ?? 0)) / 2,
+    reason: null,
+    entry,
+    exit,
+  };
 }
 
 /** Keep the artefact bounded; captures are small but daily and forever. */

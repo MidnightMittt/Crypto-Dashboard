@@ -3,6 +3,7 @@ import {
   MIN_SPREAD_SESSIONS,
   SpreadObservation,
   appendObservations,
+  bookImbalance,
   observe,
   pruneObservations,
   roundTripCostBp,
@@ -84,6 +85,46 @@ describe("observe — refusing rather than recording", () => {
       targetMinute: "15:50", bid: 31.2, ask: 31.2, last: 31.2,
     })!;
     expect(o.spreadBp).toBe(0);
+  });
+});
+
+describe("top-of-book depth — null is not zero", () => {
+  /*
+   * THE FAKE-THIN-BOOK TRAP. Venues return an EMPTY book outside market
+   * hours. Recorded as zero depth, every holiday and every mistimed capture
+   * becomes a "thin book" reading — and a study of whether the overnight
+   * premium is larger when the closing book is thin would then be measuring
+   * its own artefact rather than the market.
+   */
+  it("records absent depth as null, never as zero", () => {
+    const o = observe({
+      t: new Date(), session: "2026-08-14", symbol: "APLD", window: "entry",
+      targetMinute: "15:50", bid: 31.19, ask: 31.2, last: 31.2,
+      bidSize: 0, askSize: null,
+    })!;
+    expect(o.bidSize).toBeNull();
+    expect(o.askSize).toBeNull();
+    expect(o.imbalance).toBeNull();
+  });
+
+  it("records real depth and the imbalance it implies", () => {
+    const o = observe({
+      t: new Date(), session: "2026-08-14", symbol: "APLD", window: "entry",
+      targetMinute: "15:50", bid: 31.19, ask: 31.2, last: 31.2,
+      bidSize: 100, askSize: 3200,
+    })!;
+    expect(o.bidSize).toBe(100);
+    expect(o.askSize).toBe(3200);
+    // Heavily offered: (100 - 3200) / 3300.
+    expect(o.imbalance!).toBeCloseTo(-0.9394, 4);
+  });
+
+  /* Balanced and unknown are different states; 0 means the first. */
+  it("distinguishes a balanced book from an unknown one", () => {
+    expect(bookImbalance(500, 500)).toBe(0);
+    expect(bookImbalance(500, null)).toBeNull();
+    expect(bookImbalance(null, null)).toBeNull();
+    expect(bookImbalance(0, 0)).toBeNull();
   });
 });
 
@@ -205,7 +246,13 @@ describe("roundTripCostBp — null until measured, never modelled", () => {
     expect(c.exit.sessions).toBe(0);
   });
 
-  it("sums both legs once both clear the minimum", () => {
+  /*
+   * ONE spread per round trip, not two. Buy at the ask, sell at the bid,
+   * price unchanged: you are out the spread exactly once. This summed two
+   * full spreads until 2026-08-16 — a 2x overcharge in the field that
+   * decides a trade.
+   */
+  it("charges HALF of each leg, so a round trip costs one spread", () => {
     const rows = [
       ...sessions(MIN_SPREAD_SESSIONS, "entry", 10, 10.01),
       ...sessions(MIN_SPREAD_SESSIONS, "exit", 10, 10.02),
@@ -214,7 +261,17 @@ describe("roundTripCostBp — null until measured, never modelled", () => {
     expect(c.reason).toBeNull();
     const entryBp = (0.01 / 10.005) * 10_000;
     const exitBp = (0.02 / 10.01) * 10_000;
-    expect(c.bp!).toBeCloseTo(entryBp + exitBp, 6);
+    expect(c.bp!).toBeCloseTo((entryBp + exitBp) / 2, 6);
+  });
+
+  /* The concrete case, so the arithmetic is checkable against a real book. */
+  it("costs one tick on a one-tick book at both ends", () => {
+    const rows = [
+      ...sessions(MIN_SPREAD_SESSIONS, "entry", 31.19, 31.2),
+      ...sessions(MIN_SPREAD_SESSIONS, "exit", 31.19, 31.2),
+    ];
+    // $0.01 lost once on a $31.195 mid = 3.206bp, NOT 6.41bp.
+    expect(roundTripCostBp(rows, "APLD").bp!).toBeCloseTo(3.206, 3);
   });
 
   it("does not let three capture minutes fake twenty sessions", () => {
