@@ -9,6 +9,7 @@ import { fetchOptionsSummary } from "@/lib/dossier/providers/cboeOptions";
 import { fetchTradierChains } from "@/lib/dossier/providers/tradierOptions";
 import { buildOptionsIntelligence } from "@/lib/dossier/providers/optionsIntelligence";
 import { fetchCatalysts } from "@/lib/dossier/providers/edgarCatalysts";
+import { Evidence, undeclaredEvidence } from "@/lib/dossier/types";
 import { fetchEtfFlows } from "@/lib/providers/etfFlows";
 import { crossConfirm } from "@/lib/dossier/providers/crossVenueOptions";
 import { fetchInsiderSummary } from "@/lib/dossier/providers/edgarInsiders";
@@ -340,10 +341,15 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
     momentum,
     closes: history.history.bars.map((b) => b.close),
     optionsIntel: optionsIntel
-      ? available(optionsIntel, "advanced", {
-          to: "institutional" as const,
-          when: "a year of this symbol's own implied volatility is recorded, so IV rank and percentile become measurable and today's reading gains a distribution to sit in",
-        })
+      ? available(
+          optionsIntel,
+          "advanced",
+          {
+            to: "institutional" as const,
+            when: "a year of this symbol's own implied volatility is recorded, so IV rank and percentile become measurable and today's reading gains a distribution to sit in",
+          },
+          undeclaredEvidence()
+        )
       : isCrypto
         ? unavailable(
             "not-measured-yet",
@@ -483,19 +489,19 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
     options: toRead(options, "advanced", {
       to: "institutional" as const,
       when: "positioning is tracked across sessions, so today's cross-venue snapshot becomes a trend rather than a single reading",
-    }),
+    }, undeclaredEvidence()),
     insiders: toRead(insiders, "advanced", {
       to: "institutional" as const,
       when: "cluster-buy patterns are scored against their own forward record instead of reported as raw filings",
-    }),
+    }, undeclaredEvidence()),
     shortVolume: toRead(shortVolume, "basic", {
       to: "advanced" as const,
       when: "bi-monthly short interest is ingested, so the standing short position is measured rather than one day's flow",
-    }),
+    }, undeclaredEvidence()),
     newsSection: toRead(news, "basic", {
       to: "advanced" as const,
       when: "coverage volume is measured against this symbol's own baseline, so unusual attention becomes detectable",
-    }),
+    }, undeclaredEvidence()),
     /*
      * A SUCCESSFUL fetch returning zero filings is a real answer — nothing was
      * filed — and must not be confused with a lookup that failed. The provider
@@ -526,15 +532,15 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
     social: toRead(social, "basic", {
       to: "advanced" as const,
       when: "message velocity is baselined per symbol, so a crowd arriving is distinguishable from a crowd that was always there",
-    }),
+    }, undeclaredEvidence()),
     business: toRead(fundamentals, "advanced", {
       to: "institutional" as const,
       when: "fundamental trends are scored against forward returns, so growth and dilution carry measured consequences rather than descriptions",
-    }),
+    }, undeclaredEvidence()),
     street: toRead(street, "basic", {
       to: "advanced" as const,
       when: "target accuracy and rating changes are scored against realised outcomes, so the consensus carries a track record instead of a caveat",
-    }),
+    }, undeclaredEvidence()),
     backdropLines: backdrop?.lines ?? null,
   });
 
@@ -551,9 +557,15 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
 function toRead<T>(
   result: { ok: true; summary: T } | { ok: false; reason: string } | null,
   depth: "basic" | "advanced",
-  upgrade: { to: "advanced" | "institutional"; when: string }
+  upgrade: { to: "advanced" | "institutional"; when: string },
+  /*
+   * REQUIRED, with no default. Seven provider sections flow through this
+   * helper, and a default here would have hidden all seven behind one
+   * signature — the exact failure that made the gap uncountable before.
+   */
+  evidence: Evidence
 ): Read<T> | undefined {
   if (result === null) return undefined;
-  if (result.ok) return available(result.summary, depth, upgrade);
+  if (result.ok) return available(result.summary, depth, upgrade, evidence);
   return unavailable("provider-error", result.reason);
 }

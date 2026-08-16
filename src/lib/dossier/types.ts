@@ -138,13 +138,20 @@ export type Read<T> =
   | { status: "unavailable"; reason: string; blockedBy: BlockedBy };
 
 /**
- * Evidence for a module that has not yet had its provenance wired.
+ * Evidence for a module whose provenance has not been wired yet.
  *
- * Deliberately NOT a silent default: it states, in the payload, that the
- * sourcing is undeclared. An empty `provenance: []` would be
- * indistinguishable from "this value has no sources", which is never true —
- * every read here comes from somewhere. Modules are migrated off this as
- * their provenance is filled in, and a grep for it is the remaining work.
+ * IT IS A REQUIRED ARGUMENT, not a default, and that is the entire point.
+ *
+ * It used to be `available()`'s default parameter, which made the gap
+ * invisible: `grep undeclaredEvidence` returned zero hits outside this file
+ * while eighteen call sites were producing reads with no sourcing at all. A
+ * work queue nobody can count is not a work queue. Now every unwired site
+ * says so in its own source, so the number is greppable and the ratchet test
+ * in evidenceCoverage.test.ts stops it climbing.
+ *
+ * An empty `provenance: []` reached any other way would be a different and
+ * worse claim — "this value has no sources" — which is never true. Every read
+ * here comes from somewhere.
  */
 export const undeclaredEvidence = (): Evidence => ({
   confidence: null,
@@ -158,11 +165,16 @@ export const unavailable = <T>(blockedBy: BlockedBy, reason: string): Read<T> =>
   blockedBy,
 });
 
+/**
+ * `evidence` is REQUIRED and deliberately has no default. A module that has
+ * not declared where its numbers came from must say so at the call site,
+ * where it is countable, rather than inheriting silence from this signature.
+ */
 export const available = <T>(
   data: T,
-  depth: Depth = "basic",
-  upgrade: Upgrade | null = null,
-  evidence: Evidence = undeclaredEvidence()
+  depth: Depth,
+  upgrade: Upgrade | null,
+  evidence: Evidence
 ): Read<T> => ({
   status: "available",
   depth,

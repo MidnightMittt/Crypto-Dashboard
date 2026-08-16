@@ -16,6 +16,7 @@ import {
   WatchLevel,
   available,
   unavailable,
+  undeclaredEvidence,
 } from "./types";
 
 const metric = (id: string, verdict: Verdict, over: Partial<MetricVerdict> = {}): MetricVerdict => ({
@@ -230,15 +231,20 @@ describe("composeBullCase / composeBearCase", () => {
 
 /** A next-entry read shaped like the builder's own output. */
 const nextEntry = (over: Partial<PlannedEntryRead> = {}): Read<PlannedEntryRead> =>
-  available({
-    anchorPrice: 100,
-    favoured: "long",
-    rationale: "",
-    entries: [],
-    watchLevels: [],
-    forward: null,
-    ...over,
-  });
+  available(
+    {
+      anchorPrice: 100,
+      favoured: "long",
+      rationale: "",
+      entries: [],
+      watchLevels: [],
+      forward: null,
+      ...over,
+    },
+    "basic",
+    null,
+    undeclaredEvidence()
+  );
 
 const watch = (direction: "long" | "short", price: number): WatchLevel => ({
   direction,

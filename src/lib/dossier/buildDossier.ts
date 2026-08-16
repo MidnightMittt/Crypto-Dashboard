@@ -13,6 +13,7 @@ import { weightForBasis } from "@/lib/signals/scoring";
 import metricStats from "@/data/backtestMetricStats.json";
 import { buildPassRules } from "./passRules";
 import { assessConviction } from "@/lib/signals/conviction";
+import { undeclaredEvidence } from "./types";
 import { LivenessRead, StoreInput, assessLiveness } from "./pipelineLiveness";
 import signalLedgerJson from "@/data/signalLedger.json";
 import equityMarketsJson from "@/data/equityMarkets.json";
@@ -486,10 +487,15 @@ function buildExpectations(expectations: PlanExpectations | null, isCrypto: bool
     // in-sample and re-earn themselves each regeneration. Institutional
     // requires the registered forward hypotheses to accumulate a real
     // out-of-sample record first.
-    return available(expectations, "advanced", {
-      to: "institutional",
-      when: "the registered forward hypotheses accumulate enough out-of-sample days to condition expectations on a forward-tested record rather than an in-sample replay",
-    });
+    return available(
+      expectations,
+      "advanced",
+      {
+        to: "institutional",
+        when: "the registered forward hypotheses accumulate enough out-of-sample days to condition expectations on a forward-tested record rather than an in-sample replay",
+      },
+      undeclaredEvidence()
+    );
   }
   /*
    * The equity replay now EXISTS, so this reason can no longer say it does
@@ -527,10 +533,15 @@ function buildValidatedSignal(
   }
   if (!outcome.ok) return unavailable(outcome.blockedBy, outcome.reason);
 
-  return available(outcome.read, "advanced", {
-    to: "institutional",
-    when: "this ranking has published forward calls for long enough to be scored out of sample, the way the daily verdict record already is — a backtest with a lower bound is evidence, but it is not yet a track record",
-  });
+  return available(
+    outcome.read,
+    "advanced",
+    {
+      to: "institutional",
+      when: "this ranking has published forward calls for long enough to be scored out of sample, the way the daily verdict record already is — a backtest with a lower bound is evidence, but it is not yet a track record",
+    },
+    undeclaredEvidence()
+  );
 }
 
 /**
@@ -548,10 +559,15 @@ function buildAnalogs(
   blockedReason: string | null
 ): Read<NeighbourhoodStats> {
   if (analogs) {
-    return available(analogs, "advanced", {
-      to: "institutional",
-      when: "these neighbourhoods are scored against their own post-registration forward record, so the distribution quoted is out-of-sample rather than found in the same history it was measured on",
-    });
+    return available(
+      analogs,
+      "advanced",
+      {
+        to: "institutional",
+        when: "these neighbourhoods are scored against their own post-registration forward record, so the distribution quoted is out-of-sample rather than found in the same history it was measured on",
+      },
+      undeclaredEvidence()
+    );
   }
   if (barsUsed < MIN_BARS_FOR_ANALYSIS) {
     return unavailable(
@@ -602,6 +618,8 @@ function buildMoneyFlow(
         to: "institutional",
         when: "options positioning and dealer exposure are ingested, so flow can be confirmed by a second independent source rather than read from one venue family",
       }
+    ,
+      undeclaredEvidence()
     );
   }
   return unavailable(
@@ -662,7 +680,8 @@ function buildNextEntry(
       {
         to: "advanced",
         when: "planned levels are scored on how often price actually reached them and what happened next, so a conditional entry carries its own hit rate rather than only its geometry",
-      }
+      },
+      undeclaredEvidence()
     );
   }
 
@@ -704,10 +723,15 @@ function buildNextEntry(
    * tier rises only when the reach rate and outcome of PLANNED entries are
    * scored against their own out-of-sample record.
    */
-  return available({ anchorPrice: view.anchorPrice, favoured: view.favoured, rationale: view.rationale, entries, watchLevels, forward }, "basic", {
-    to: "advanced",
-    when: "planned levels are scored on how often price actually reached them and what happened next, so a conditional entry carries its own hit rate rather than only its geometry",
-  });
+  return available(
+    { anchorPrice: view.anchorPrice, favoured: view.favoured, rationale: view.rationale, entries, watchLevels, forward },
+    "basic",
+    {
+      to: "advanced",
+      when: "planned levels are scored on how often price actually reached them and what happened next, so a conditional entry carries its own hit rate rather than only its geometry",
+    },
+    undeclaredEvidence()
+  );
 }
 
 /**

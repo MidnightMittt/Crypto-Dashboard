@@ -2,6 +2,7 @@ import { INDUSTRIES } from "@/lib/markets/industries";
 import { IndustryRead } from "@/lib/markets/industryIntelligence";
 import { RegimeRead } from "@/lib/markets/riskRegime";
 import { RotationRead, RotationState } from "@/lib/markets/rotation";
+import { undeclaredEvidence } from "./types";
 import { composeMacroSummary } from "./narrative";
 import { available, MacroContext, Read, unavailable } from "./types";
 
@@ -122,7 +123,8 @@ export function buildMacroContext(inputs: MacroInputs): Read<MacroContext> {
     {
       to: "institutional",
       when: "the regime and backdrop reads are scored against their own forward record, so 'risk-off' carries a measured consequence rather than a description",
-    }
+    },
+    undeclaredEvidence()
   );
 }
 
