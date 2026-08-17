@@ -14,33 +14,44 @@
 # capture a closed book and stamp it as the entry window, which is worse than
 # capturing nothing because nothing downstream could detect it.
 #
-# So each cron fires ~30 minutes ahead and recordSpreads.ts waits on the wall
-# clock itself, then SKIPS any target that has already passed rather than
+# So each cron fires well ahead and recordSpreads.ts waits on the wall clock
+# itself, then SKIPS any target that has already passed rather than
 # back-stamping it. Drift only has to be smaller than the head start.
 #
-# ── Two crons per window, because the US observes DST and runners do not ──
+# ── One cron per window, and why the pair had to go ───────────────────
 #
-# The pair brackets both halves of the year; whichever invocation finds
-# itself more than 45 minutes early exits immediately. That is deliberately
-# not a calendar rule — a hardcoded DST rule is one that rots silently at the
-# next transition.
+# This used to run two crons an hour apart to bracket both halves of the DST
+# year, with a 45-minute head start rejecting whichever one belonged to the
+# other half. That worked, but it CAPPED the drift tolerance at 45 minutes:
+# any longer head start and both crons would have captured.
 #
-# ── This is best-effort, and the misses are counted ───────────────────
+# On 2026-08-17 GitHub delivered the entry cron 41 minutes late and the exit
+# cron 113 minutes late. Both jobs arrived after their last target, both
+# correctly refused to back-stamp, and all four runs of the day reported
+# success while writing nothing. A full session was lost silently.
 #
-# GitHub cannot guarantee minute-accurate scheduling, so some sessions WILL
-# be missed. The job reports how many targets it skipped, so the capture rate
-# is measurable rather than assumed. If it proves poor, the answer is a
-# different scheduler, not a looser tolerance.
+# So there is now ONE cron per window, placed at the UTC time that is early in
+# BOTH halves of the year: 90 minutes ahead under EDT, 150 under EST. The job
+# waits longer in winter. No DST rule is encoded anywhere — the wait is
+# computed from the Eastern wall clock on every run.
+#
+# ── A lost window now FAILS ───────────────────────────────────────────
+#
+# Because there is no second cron whose job is to no-op, "captured nothing"
+# is no longer ambiguous, and the script exits non-zero on it. Market holidays
+# are excluded first via Tradier's calendar, so this alarm fires only when
+# something is genuinely wrong. A red run is the point: the previous design
+# could lose every session indefinitely without a single failed check.
 name: record-spreads
 
 on:
   schedule:
-    # Entry window, 15:50-15:58 ET. 19:20 UTC = 15:20 EDT; 20:20 UTC = 15:20 EST.
-    - cron: "20 19 * * 1-5"
-    - cron: "20 20 * * 1-5"
-    # Exit window, 09:35-09:50 ET. 13:05 UTC = 09:05 EDT; 14:05 UTC = 09:05 EST.
-    - cron: "5 13 * * 1-5"
-    - cron: "5 14 * * 1-5"
+    # Exit window, targets 09:35-09:50 ET.
+    # 12:05 UTC is 08:05 EDT (90 min early) / 07:05 EST (150 min early).
+    - cron: "5 12 * * 1-5"
+    # Entry window, targets 15:50-15:58 ET.
+    # 18:20 UTC is 14:20 EDT (90 min early) / 13:20 EST (150 min early).
+    - cron: "20 18 * * 1-5"
   workflow_dispatch:
     inputs:
       window:
@@ -66,8 +77,10 @@ concurrency:
 jobs:
   capture:
     runs-on: ubuntu-latest
-    # Generous: the job spends most of its life asleep waiting for a minute.
-    timeout-minutes: 75
+    # The job spends nearly all of its life asleep. Must clear the WINTER head
+    # start (150 min) plus the wait across the window itself, or the runner
+    # would be killed mid-doze every day from November to March.
+    timeout-minutes: 200
     steps:
       - uses: actions/checkout@v4
         with:
@@ -80,7 +93,7 @@ jobs:
 
       - run: npm ci
 
-      # The morning crons take the exit window, the afternoon ones the entry
+      # The morning cron takes the exit window, the afternoon one the entry
       # window. A manual dispatch says which it wants.
       - name: Capture quotes
         env:
@@ -92,7 +105,7 @@ jobs:
           WINDOW="${{ github.event.inputs.window }}"
           if [ -z "$WINDOW" ]; then
             case "$SCHED" in
-              "5 13 * * 1-5"|"5 14 * * 1-5") WINDOW=exit ;;
+              "5 12 * * 1-5") WINDOW=exit ;;
               *) WINDOW=entry ;;
             esac
           fi
@@ -119,12 +132,13 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           # `git add <missing path>` exits 128 and, under `set -e`, fails the
-          # step. That is not hypothetical: it failed the first dispatch, and
-          # it would equally have failed the first REAL run, because a missed
-          # window on day one also leaves no file. A capture that produced
-          # nothing is a lost session, not a broken pipeline.
+          # step. That is not hypothetical: it failed the first dispatch.
+          #
+          # This is now only reachable on a market holiday, where the capture
+          # step exits 0 without writing. Every other empty outcome fails in
+          # the step above and never gets here.
           if [ ! -f src/data/spreadHistory.json ]; then
-            echo "No spread history written this run (window missed, holiday, or provider down) — nothing to commit."
+            echo "No spread history written this run (market holiday) — nothing to commit."
             exit 0
           fi
 

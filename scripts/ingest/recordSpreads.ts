@@ -55,14 +55,27 @@ const MAX_LATENESS_MS = 90_000;
 /**
  * Longest the job will sit waiting for its first target.
  *
- * Two UTC crons cover the window because the US switches DST and the runner
- * does not: one fires in the right half of the year and the other lands an
- * hour early. Rather than encode which is which — a rule that would silently
- * rot at the next DST change — whichever invocation finds itself more than
- * this far ahead simply exits. The correct one proceeds, and no calendar
- * arithmetic has to be maintained.
+ * ── Why this is hours, and why there is now ONE cron per window ────────
+ *
+ * The previous design ran two crons an hour apart, relying on a 45-minute
+ * head start to reject whichever one belonged to the other half of the DST
+ * year. That coupling capped the drift tolerance at 45 minutes, because a
+ * longer head start would have let BOTH crons capture.
+ *
+ * It cost a full day of data on 2026-08-17. GitHub delivered the entry cron
+ * 41 minutes late and the exit cron 113 minutes late; both jobs arrived after
+ * their last target and correctly skipped, and all four runs reported success.
+ *
+ * So the pair is gone. A single cron is placed at the UTC time that is early
+ * in BOTH halves of the year — 90 minutes ahead under EDT, 150 under EST —
+ * and the job simply waits longer in winter. Nothing here encodes which half
+ * we are in; the wait is computed from the Eastern wall clock every time.
+ *
+ * The ceiling is the winter head start plus margin. Waiting is nearly free
+ * (an idle runner on a public repository); a lost session is not recoverable
+ * at any price.
  */
-const MAX_HEAD_START_MS = 45 * 60_000;
+const MAX_HEAD_START_MS = 170 * 60_000;
 
 function tradierBase(): string {
   return process.env.TRADIER_ENV === "production"
@@ -138,6 +151,43 @@ async function fetchQuotes(symbols: string[]): Promise<Quote[] | null> {
   }
 }
 
+/**
+ * Whether the US equity market trades on a given Eastern date.
+ *
+ * This exists so that "captured nothing" can be a hard failure. A holiday and
+ * a lost window are indistinguishable from the capture count alone, and a job
+ * that fails ten times a year for Thanksgiving is a job whose failures get
+ * ignored — which is how the silent misses survived in the first place.
+ *
+ * The CALENDAR is asked, not the clock. The clock reports `closed` at 07:05 ET
+ * on a perfectly normal trading day, which is exactly when the winter exit
+ * job starts, so a clock check would refuse to run on the days it matters.
+ *
+ * Returns null when the answer could not be obtained. The caller treats that
+ * as a trading day: mistaking a holiday for a failure costs one false alarm a
+ * decade, while mistaking an outage for a holiday hides the real thing.
+ */
+async function isTradingDay(dateEt: string): Promise<boolean | null> {
+  const key = process.env.TRADIER_API_KEY;
+  if (!key) return null;
+  const [year, month] = dateEt.split("-");
+  try {
+    const res = await fetch(
+      `${tradierBase()}/v1/markets/calendar?month=${Number(month)}&year=${Number(year)}`,
+      { headers: { Authorization: `Bearer ${key}`, Accept: "application/json" } }
+    );
+    if (!res.ok) return null;
+    const json = (await res.json()) as { calendar?: { days?: { day?: unknown } } };
+    const raw = json.calendar?.days?.day;
+    const days = (Array.isArray(raw) ? raw : raw ? [raw] : []) as Array<Record<string, unknown>>;
+    const today = days.find((d) => d.date === dateEt);
+    if (!today || typeof today.status !== "string") return null;
+    return today.status === "open";
+  } catch {
+    return null;
+  }
+}
+
 async function captureAt(
   window: ExecutionWindow,
   targetMinute: string,
@@ -196,6 +246,20 @@ async function main(): Promise<void> {
     console.log(`[spreads] smoke test only — ${probe.length} quotes read, nothing written.`);
     return;
   }
+  const sessionEt = easternParts(new Date()).date;
+  const trading = await isTradingDay(sessionEt);
+  if (trading === false) {
+    /*
+     * A holiday. Exit before the wait, both to free the runner and to keep the
+     * stale book out of the store: Tradier still serves the PREVIOUS session's
+     * bid and ask on a closed day, and `observe` would accept them happily.
+     * Stamped with today's session and target minute they would be
+     * indistinguishable from a real capture.
+     */
+    console.log(`[spreads] ${sessionEt} is not a trading day — nothing to capture.`);
+    return;
+  }
+
   {
     const firstWait = msUntilEastern(CAPTURE_MINUTES[window][0], new Date());
     if (firstWait > MAX_HEAD_START_MS) {
@@ -232,9 +296,24 @@ async function main(): Promise<void> {
   }
 
   if (fresh.length === 0) {
-    console.log(`[spreads] nothing captured (${missed} target(s) missed) — writing nothing.`);
-    // Exit 0: a missed window is a lost session, not a broken pipeline.
-    return;
+    /*
+     * FAIL. A trading day that produced no observation is a lost session, and
+     * a lost session is permanent — the book at 15:50 ET today cannot be
+     * bought back tomorrow at any price.
+     *
+     * This used to exit 0 on the reasoning that a missed window is not a
+     * broken pipeline. That reasoning was wrong in the only way that matters:
+     * it made a miss and a success look identical from outside. Four green
+     * runs on 2026-08-17 captured nothing at all, and the failure was found
+     * days later by inspecting the data directory, not by any alarm.
+     *
+     * Holidays are already excluded above, so this fires only when something
+     * actually went wrong: cron drift beyond the head start, or a provider
+     * that would not answer.
+     */
+    throw new Error(
+      `nothing captured on ${sessionEt} — ${missed} target(s) missed. The window is gone.`
+    );
   }
 
   const observations = pruneObservations(appendObservations(record.observations, fresh));
