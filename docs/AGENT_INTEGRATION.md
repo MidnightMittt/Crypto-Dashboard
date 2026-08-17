@@ -149,15 +149,50 @@ its own decision.**
 
 ---
 
-## 7. Portfolio context — the shape, when it lands
+## 7. Portfolio exposure
 
-This site will not connect to a broker. Robinhood publishes no official API,
-so any integration would be an unofficial client, which `ROADMAP.md` forbids,
-and it would mean automating credentials.
+```
+POST /api/portfolio
+{ "positions": [ { "symbol": "APLD", "quantity": 100, "price": 31.20 } ] }
+```
 
-The inverse works and needs neither: **the agent already holds its positions,
-so it POSTs them and receives analysis.** No brokerage client, no credentials,
-no scraped session. Given the beta finding, the interesting output is
-portfolio-level exposure — four of these names is not a diversified basket, it
-is roughly 4x levered SPY overnight with four names' worth of single-name risk
-stacked on top.
+`price` is optional and falls back to our last close, with the provenance
+saying which was used. `quantity` is **signed** — a negative quantity is a
+short and genuinely offsets market beta. Cap is 200 positions.
+
+This site never connects to a broker. Robinhood publishes no official API, so
+an integration could only be an unofficial client, which `ROADMAP.md` forbids,
+and it would mean automating credentials. Inverting the direction removes the
+problem entirely: the agent already knows its holdings, posts them, and gets
+analysis back. Nothing is stored.
+
+**The number this exists to produce.** Measured on a real four-name book:
+
+| | |
+|---|---|
+| `gross_value_usd` | $10,015 |
+| `market_equivalent_usd` | **$40,319** |
+| `weighted_beta_of_covered` | **4.03** |
+
+Ten thousand dollars of these names is forty thousand dollars of overnight
+SPY. That is not a diversified basket; it is a 4x levered index trade with
+four names' worth of single-name risk on top. Add a short 30 SPY and the same
+book reads $17,029 equivalent at beta 0.51 — the hedge is visible in one
+number.
+
+**Coverage is reported, and refusals are deliberate.** A weighted beta
+computed over only the positions we have betas for is not the portfolio's
+beta, and it reads LOW — understating leverage, the dangerous direction. So
+`price_coverage_pct` and `beta_coverage_pct` are always present, and
+`weighted_beta_of_covered` plus `market_equivalent_usd` are **refused**
+outright below 60% beta coverage, with the coverage in `detail`. An unpriced
+position stays in the response with its reason rather than vanishing and
+inflating everyone else's weight.
+
+`concentration.by_basket` weights **overlap by design** — "scanned" contains
+"datacenter" — so the shares do not sum to 100 and must not be read as a
+partition.
+
+**No P&L, no score, no recommendation.** At $100 a night the strategy's
+expected gain is $0.374 against $2.828 of noise; a prominent P&L invites
+abandoning a working strategy after an unlucky fortnight.

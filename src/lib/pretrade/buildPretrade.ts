@@ -127,6 +127,17 @@ export interface MarketExposure {
    * "share explained", which would be an interpretation.
    */
   proxy_net_bp: number;
+  /**
+   * HOW the beta was arrived at, because one row here is not a measurement.
+   *
+   * The proxy's beta against itself is exactly 1 — arithmetic, not an
+   * estimate — and the study correctly refuses to regress SPY on SPY, which
+   * would report a zero residual and an infinite t. But a consumer cannot
+   * tell an identity from a fit by looking at the number, and labelling one
+   * "ols_overnight_on_SPY_250_sessions" would be a false claim about how it
+   * was obtained. Caught by reading live output on a hedged book.
+   */
+  derivation: "regressed_ols" | "identity_by_definition";
 }
 
 export interface OvernightLeg {

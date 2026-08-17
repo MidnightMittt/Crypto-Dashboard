@@ -339,6 +339,7 @@ describe("buildPretrade — beta before premium", () => {
     detectable_alpha_at_t3_bp: 53.6,
     r_squared: 0.44,
     proxy_net_bp: 6.36,
+    derivation: "regressed_ols" as const,
   };
 
   /*
@@ -571,6 +572,7 @@ describe("buildPretrade — no verdicts, and data quality is never silent", () =
               proxy: "SPY", window_sessions: 250, observations: 250, beta: 4.63,
               alpha_bp: 25.1, alpha_t: 1.4, alpha_significant_after_fdr: false,
               detectable_alpha_at_t3_bp: 53.6, r_squared: 0.44, proxy_net_bp: 6.36,
+              derivation: "regressed_ols" as const,
             },
           ])
         ),
