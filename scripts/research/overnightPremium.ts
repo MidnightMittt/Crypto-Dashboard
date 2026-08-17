@@ -13,6 +13,7 @@ import {
 import { adjustForCorporateActions } from "../../src/lib/research/corporateActions";
 import { benjaminiHochberg } from "../../src/lib/research/multipleTesting";
 import { SCANNED, BENCHMARKS, resolveUniverse, isBenchmark } from "../../src/lib/markets/scannerUniverse";
+import { BASKETS } from "../../src/lib/markets/baskets";
 import { DatedReturn, Regression, regressOnMarket } from "../../src/lib/research/alphaBeta";
 import {
   BasketObservation,
@@ -92,43 +93,6 @@ interface Row {
    */
   detectableAtT3Bp: number | null;
 }
-
-/**
- * DECLARED BASKETS — defined by a rule, never by realised return.
- *
- * A basket assembled from the names with the largest premium is not a test:
- * the selection has already used the answer, and the resulting t is a
- * measure of how hard we looked. Every basket here is fixed by membership of
- * a declared set.
- *
- * `benchmarks` is the CONTROL. If the premium is a real feature of these
- * small, volatile, heavily shorted names, the four index ETFs should show
- * markedly less of it. If they show the same thing, what is being measured
- * is the market's own overnight drift and not this cohort at all — which
- * would be the most important finding available here.
- */
-const BASKETS: { name: string; symbols: readonly string[]; note: string }[] = [
-  {
-    name: "scanned",
-    symbols: SCANNED,
-    note: "Every scanned non-benchmark name. The basket the strategy actually holds.",
-  },
-  {
-    name: "miners",
-    symbols: ["RIOT", "CLSK", "MARA", "WULF", "CIFR", "HUT", "BTDR"],
-    note: "Bitcoin miners, declared by business model rather than by return.",
-  },
-  {
-    name: "datacenter",
-    symbols: ["APLD", "IREN", "CORZ"],
-    note: "Datacenter/HPC names. Declared by business model, not by premium.",
-  },
-  {
-    name: "benchmarks",
-    symbols: BENCHMARKS,
-    note: "CONTROL. Index ETFs, where a cohort-specific effect should be absent.",
-  },
-];
 
 interface AlphaRow {
   subject: string;
