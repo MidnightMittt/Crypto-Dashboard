@@ -1,8 +1,8 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { PositioningHistory, PositioningPoint } from "../../src/lib/history/positioningHistory";
-import { BaselineSet, baselinesFor } from "../../src/lib/history/positioningBaseline";
+import { PositioningHistory } from "../../src/lib/history/positioningHistory";
+import { buildLatest } from "../../src/lib/history/positioningLatest";
 
 /**
  * THE LATEST POSITIONING ROW PER SYMBOL — a small artefact for a fast route.
@@ -23,35 +23,6 @@ import { BaselineSet, baselinesFor } from "../../src/lib/history/positioningBase
 const __dirname_ = path.dirname(fileURLToPath(import.meta.url));
 const IN = path.join(__dirname_, "..", "..", "src", "data", "positioningHistory.json");
 const OUT = path.join(__dirname_, "..", "..", "src", "data", "positioningLatest.json");
-
-/**
- * The latest row PLUS where each of its numbers sits in that symbol's own
- * history — the positional read, precomputed.
- *
- * It is computed HERE rather than in the API route because the history is
- * 6.5MB and the projection is 33KB. A route importing the store to rank one
- * number against it would carry the whole archive into every serverless
- * bundle, for a figure that changes once a day.
- */
-export type PositioningLatestRow = PositioningPoint & { baselines: BaselineSet };
-
-export function buildLatest(points: PositioningPoint[]): PositioningLatestRow[] {
-  const bySymbol = new Map<string, PositioningPoint>();
-  for (const p of points) {
-    const prior = bySymbol.get(p.symbol);
-    /*
-     * Latest DATE wins, and a live row beats a backfill on the same date —
-     * the same precedence appendPoints enforces, restated here so a
-     * projection can never disagree with the store it projects.
-     */
-    if (!prior || p.date > prior.date || (p.date === prior.date && p.origin === "live")) {
-      bySymbol.set(p.symbol, p);
-    }
-  }
-  return [...bySymbol.values()]
-    .sort((a, b) => a.symbol.localeCompare(b.symbol))
-    .map((p) => ({ ...p, baselines: baselinesFor(points, p) }));
-}
 
 function main(): void {
   if (!fs.existsSync(IN)) {

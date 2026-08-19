@@ -108,6 +108,56 @@ export interface PositioningPoint {
   socialSpanHours: number | null;
 }
 
+/**
+ * FIELDS THAT WERE OBSERVED TOGETHER, and must therefore travel together.
+ *
+ * Two writers fill these rows with different coverage: recordPositioning
+ * writes a LIVE row carrying every group, while backfillShortVolume writes
+ * short volume ONLY, because CBOE publishes no chain archive. Once backfill
+ * reaches a date past the newest live row, "the latest row" stops being the
+ * latest of everything — which erased gamma from all 105 symbols the first
+ * time the wider backfill ran.
+ *
+ * The projection therefore takes the latest observation PER GROUP. It must not
+ * do so per field: `atmIvPct` taken from one session and `atmIvDaysToExpiry`
+ * from another is an annualised vol without its own tenor, which this file
+ * already refuses to allow, and a bullish share separated from its
+ * self-tagged count is the claim that was nine votes out of ten pretending to
+ * be twenty-seven out of thirty.
+ *
+ * A group is one provider, one fetch, one instant. That is why the grouping is
+ * exactly the shape of recordPositioning's `Promise.all`.
+ */
+export type FieldGroup = "options" | "shortVolume" | "price" | "street" | "social";
+
+export const GROUP_FIELDS: Record<FieldGroup, readonly (keyof PositioningPoint)[]> = {
+  /** One CBOE chain read. Gamma, its sign, put/call, ATM IV with its tenor, chain OI. */
+  options: [
+    "netGexUsdPer1Pct",
+    "gammaSign",
+    "putCallOiRatio",
+    "putCallVolumeRatio",
+    "atmIvPct",
+    "atmIvDaysToExpiry",
+    "chainOi",
+  ],
+  /** One FINRA daily file. The only group a backfill can supply. */
+  shortVolume: ["shortRatioPct"],
+  /** Derived from the bar series, not fetched. */
+  price: ["typicalDailyMovePct"],
+  /** One Nasdaq consensus read; the target is meaningless without its count. */
+  street: ["analystCount", "analystMeanTargetUsd"],
+  /** One StockTwits window; the share is meaningless without count and span. */
+  social: ["socialBullishPctOfTagged", "socialTaggedCount", "socialSpanHours"],
+} as const;
+
+export const FIELD_GROUPS = Object.keys(GROUP_FIELDS) as FieldGroup[];
+
+/** True when a row carries an observation for this group at all. */
+export function hasGroup(p: PositioningPoint, group: FieldGroup): boolean {
+  return GROUP_FIELDS[group].some((f) => p[f] !== null && p[f] !== undefined);
+}
+
 export interface PositioningHistory {
   version: 1;
   generatedAt: number;

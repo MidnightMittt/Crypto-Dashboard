@@ -2,7 +2,7 @@ import {
   EarningsCalendar,
   earningsStatus,
 } from "@/lib/markets/earningsVeto";
-import { PositioningPoint } from "@/lib/history/positioningHistory";
+import { FieldGroup, PositioningPoint } from "@/lib/history/positioningHistory";
 import {
   BaselineSet,
   FieldBaseline,
@@ -103,7 +103,28 @@ export type Ranked<T> = (Measured<T> & { baseline: Positional | Unmeasured }) | 
  * `baselines` is optional so a projection written before this shipped still
  * parses — the fields then report the refusal rather than throwing.
  */
-export type RankedPoint = PositioningPoint & { baselines?: BaselineSet };
+export type RankedPoint = PositioningPoint & {
+  baselines?: BaselineSet;
+  /**
+   * The date each provider GROUP was observed. Optional so a projection
+   * written before this shipped still parses.
+   */
+  observedAt?: Partial<Record<FieldGroup, string>>;
+};
+
+/**
+ * The date a field was actually observed, never the row's newest date.
+ *
+ * Two writers fill the projection with different coverage, so a row dated
+ * 08-18 by its short volume can carry gamma observed on 08-14. Stamping both
+ * with the row date would be the same provenance lie already fixed once in
+ * marketExposure.ts, where SPY's beta claimed an OLS fit for a value that is 1
+ * by definition. Falls back to the row date only for a projection that
+ * predates `observedAt`.
+ */
+function observed(pos: RankedPoint, group: FieldGroup): string {
+  return pos.observedAt?.[group] ?? pos.date;
+}
 
 /**
  * Attach the positional read to a measured envelope.
@@ -578,7 +599,7 @@ export function buildPretrade(input: BuildInputs): PretradeResponse {
                 {
                   value: pos.netGexUsdPer1Pct,
                   unit: "usd_per_1pct",
-                  as_of: pos.date,
+                  as_of: observed(pos, "options"),
                   source: "cboe_delayed_chain",
                   method: "call_gamma_minus_put_gamma_x_oi_x_100_x_spot_x_1pct",
                 },
@@ -587,7 +608,12 @@ export function buildPretrade(input: BuildInputs): PretradeResponse {
             : unmeasured("no_options_chain"),
         gamma_sign:
           pos?.gammaSign != null
-            ? { value: pos.gammaSign, unit: "sign", as_of: pos.date, source: "cboe_delayed_chain" }
+            ? {
+                value: pos.gammaSign,
+                unit: "sign",
+                as_of: observed(pos, "options"),
+                source: "cboe_delayed_chain",
+              }
             : unmeasured("no_options_chain"),
         short_sale_volume_share_pct:
           pos?.shortRatioPct != null
@@ -595,7 +621,7 @@ export function buildPretrade(input: BuildInputs): PretradeResponse {
                 {
                   value: pos.shortRatioPct,
                   unit: "pct",
-                  as_of: pos.date,
+                  as_of: observed(pos, "shortVolume"),
                   source: "finra_reg_sho_daily",
                   // Named precisely: this is FLOW, not the standing short interest.
                   method: "short_volume_over_total_volume_NOT_short_interest",
