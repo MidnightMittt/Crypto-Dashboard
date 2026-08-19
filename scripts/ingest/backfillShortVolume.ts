@@ -10,6 +10,7 @@ import {
 } from "../../src/lib/history/positioningHistory";
 import { parseShortVolumeRow } from "../../src/lib/dossier/providers/finraShortVolume";
 import { EQUITY_PANEL } from "../../src/lib/markets/equityPanel";
+import { resolveUniverse } from "../../src/lib/markets/scannerUniverse";
 
 /**
  * SHORT-VOLUME BACKFILL — the only half of the positioning history that has
@@ -49,7 +50,22 @@ function arg(name: string, fallback: number): number {
 
 async function main(): Promise<void> {
   const days = arg("days", 400);
-  const wanted = new Set<string>(EQUITY_PANEL);
+  /*
+   * THE SAME SET THE RECORDER COVERS, which is not the panel.
+   *
+   * This read `new Set(EQUITY_PANEL)` and therefore never asked FINRA for
+   * APLD, CLSK, CORZ, IONQ, OKLO or RIOT — the six tracked-outside-panel
+   * names, which are exactly the ones the overnight work is about. The
+   * recorder writes them a live row every session while this wrote them no
+   * history at all, so each had ONE session of short volume against 275 for
+   * every panel member, and no positional read was possible on the six
+   * symbols that most needed one.
+   *
+   * FINRA's per-date archive had the data the whole time. It was never asked.
+   * The scope now mirrors recordPositioning's `covered` exactly, so the two
+   * cannot drift apart again.
+   */
+  const wanted = new Set<string>([...EQUITY_PANEL, ...resolveUniverse()]);
 
   const record: PositioningHistory = fs.existsSync(OUT)
     ? (JSON.parse(fs.readFileSync(OUT, "utf8")) as PositioningHistory)
