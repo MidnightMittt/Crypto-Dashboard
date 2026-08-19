@@ -66,16 +66,30 @@ const MAX_LATENESS_MS = 90_000;
  * 41 minutes late and the exit cron 113 minutes late; both jobs arrived after
  * their last target and correctly skipped, and all four runs reported success.
  *
- * So the pair is gone. A single cron is placed at the UTC time that is early
- * in BOTH halves of the year — 90 minutes ahead under EDT, 150 under EST —
- * and the job simply waits longer in winter. Nothing here encodes which half
- * we are in; the wait is computed from the Eastern wall clock every time.
+ * So the pair is gone. A single cron per window is placed at the UTC time
+ * that is early in BOTH halves of the year, and the job simply waits longer
+ * in winter. Nothing here encodes which half we are in; the wait is computed
+ * from the Eastern wall clock every time.
+ *
+ * ── Sized from MEASURED drift, not from a guess ───────────────────────
+ *
+ * The first version allowed 90 minutes under EDT, chosen as roughly double
+ * the typical delay. Four observed deliveries then said otherwise:
+ *
+ *   2026-08-17  entry  +41 min      2026-08-17  exit  +112 min
+ *   2026-08-18  entry  +80 min      2026-08-18  exit  +123 min
+ *
+ * The morning cron misses by two hours on consecutive days, and the afternoon
+ * one cleared its 90-minute allowance by ten. So the head start is now 180
+ * minutes under EDT and 240 under EST — 46% margin over the worst delivery
+ * seen — and the alarm added alongside it is what will say whether even that
+ * is enough, instead of the silence that hid the problem for three days.
  *
  * The ceiling is the winter head start plus margin. Waiting is nearly free
  * (an idle runner on a public repository); a lost session is not recoverable
- * at any price.
+ * at any price. That asymmetry is the whole argument for a long sleep.
  */
-const MAX_HEAD_START_MS = 170 * 60_000;
+const MAX_HEAD_START_MS = 260 * 60_000;
 
 function tradierBase(): string {
   return process.env.TRADIER_ENV === "production"

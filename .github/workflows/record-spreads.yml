@@ -47,11 +47,11 @@ name: record-spreads
 on:
   schedule:
     # Exit window, targets 09:35-09:50 ET.
-    # 12:05 UTC is 08:05 EDT (90 min early) / 07:05 EST (150 min early).
-    - cron: "5 12 * * 1-5"
+    # 10:35 UTC is 06:35 EDT (180 min early) / 05:35 EST (240 min early).
+    - cron: "35 10 * * 1-5"
     # Entry window, targets 15:50-15:58 ET.
-    # 18:20 UTC is 14:20 EDT (90 min early) / 13:20 EST (150 min early).
-    - cron: "20 18 * * 1-5"
+    # 16:50 UTC is 12:50 EDT (180 min early) / 11:50 EST (240 min early).
+    - cron: "50 16 * * 1-5"
   workflow_dispatch:
     inputs:
       window:
@@ -78,9 +78,9 @@ jobs:
   capture:
     runs-on: ubuntu-latest
     # The job spends nearly all of its life asleep. Must clear the WINTER head
-    # start (150 min) plus the wait across the window itself, or the runner
+    # start (240 min) plus the wait across the window itself, or the runner
     # would be killed mid-doze every day from November to March.
-    timeout-minutes: 200
+    timeout-minutes: 300
     steps:
       - uses: actions/checkout@v4
         with:
@@ -105,7 +105,7 @@ jobs:
           WINDOW="${{ github.event.inputs.window }}"
           if [ -z "$WINDOW" ]; then
             case "$SCHED" in
-              "5 12 * * 1-5") WINDOW=exit ;;
+              "35 10 * * 1-5") WINDOW=exit ;;
               *) WINDOW=entry ;;
             esac
           fi

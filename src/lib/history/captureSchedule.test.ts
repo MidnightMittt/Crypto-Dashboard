@@ -68,7 +68,7 @@ function crons(): Cron[] {
       utcMinute: Number(minute),
       // Mirrors the workflow's own case statement: the morning cron is the
       // exit window, anything else is entry.
-      window: (expr === "5 12 * * 1-5" ? "exit" : "entry") as ExecutionWindow,
+      window: (expr === "35 10 * * 1-5" ? "exit" : "entry") as ExecutionWindow,
     };
   });
 }
@@ -150,13 +150,23 @@ describe("the spread capture schedule", () => {
   });
 
   /*
-   * The measured drift that caused the outage was 113 minutes. This does not
-   * demand the schedule survive that — it records what the schedule currently
-   * tolerates, so a change that quietly halves it has to say so.
+   * Sized from MEASURED deliveries, not from a guess. Four observed:
+   *
+   *   2026-08-17  entry  +41 min      2026-08-17  exit  +112 min
+   *   2026-08-18  entry  +80 min      2026-08-18  exit  +123 min
+   *
+   * The first schedule allowed 90 minutes and lost the exit window twice. The
+   * floor below is the worst delivery seen plus margin, so any future change
+   * that quietly drops back under it fails here with the evidence attached.
    */
-  it("tolerates at least an hour of cron drift in the worse (summer) half", () => {
+  const WORST_OBSERVED_DRIFT_MIN = 123;
+
+  it("tolerates more drift than the worst delivery actually observed", () => {
     for (const c of crons()) {
-      expect(headStartMinutes(c, SUMMER), `${c.window} drift tolerance`).toBeGreaterThanOrEqual(60);
+      expect(
+        headStartMinutes(c, SUMMER),
+        `${c.window} must beat the ${WORST_OBSERVED_DRIFT_MIN}-min worst case`
+      ).toBeGreaterThan(WORST_OBSERVED_DRIFT_MIN);
     }
   });
 });
