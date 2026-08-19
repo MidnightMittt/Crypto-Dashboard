@@ -1,5 +1,9 @@
 import Link from "next/link";
-import { Outcome, buildValidationReport } from "@/lib/validation/buildValidationReport";
+import {
+  Outcome,
+  RowDecomposition,
+  buildValidationReport,
+} from "@/lib/validation/buildValidationReport";
 import labJson from "@/data/signalValidation.json";
 import metricStats from "@/data/backtestMetricStats.json";
 
@@ -61,6 +65,75 @@ const GROUPS: Array<{ outcome: Outcome; title: string; blurb: string; tone: stri
 
 function pct(v: number | null): string {
   return v === null ? "—" : `${v.toFixed(1)}%`;
+}
+
+function signed(v: number): string {
+  return `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
+}
+
+/**
+ * THE THREE COLUMNS THAT SEPARATE PICKING FROM POOL DRIFT.
+ *
+ * The win rate above answers "does the ranking beat its own universe". It
+ * cannot answer "should I buy this instead of the index", and those have
+ * opposite trading implications: a signal that picks the best names in a pool
+ * which itself trailed the benchmark is a real finding about the ranking and
+ * a bad reason to put money on it.
+ *
+ * All three are rendered, always, including when the middle row is the
+ * unflattering part. Showing only the third would let the pool's drift be
+ * read as the signal's skill.
+ */
+function Decomposition({ d }: { d: RowDecomposition }) {
+  const rows = [
+    { c: d.selection, note: "the ranking's own contribution" },
+    { c: d.poolDrift, note: `whether the panel beat ${d.benchmark} regardless of the ranking` },
+    { c: d.versusIndex, note: "the only column that pays" },
+  ];
+  return (
+    <details className="rounded-md border border-line/60 bg-surface/40">
+      <summary className="cursor-pointer px-3 py-2 text-[11px] text-ink-muted">
+        <span className="uppercase tracking-[0.12em] text-ink-faint">vs {d.benchmark}</span>{" "}
+        <span className="font-mono text-ink">{signed(d.versusIndex.meanPct)}</span>{" "}
+        <span className="text-ink-faint">
+          per period, of which {signed(d.poolDrift.meanPct)} is the pool
+        </span>
+      </summary>
+      <div className="flex flex-col gap-2 px-3 pb-3">
+        <table className="w-full font-mono text-[11px]">
+          <tbody>
+            {rows.map(({ c, note }) => (
+              <tr key={c.label} className="align-top">
+                <td className="py-0.5 pr-3 text-ink-muted">{c.label}</td>
+                <td className="py-0.5 pr-3 text-right text-ink">{signed(c.meanPct)}</td>
+                <td className="py-0.5 pr-3 text-right text-ink-muted">t={c.t.toFixed(2)}</td>
+                {/*
+                  The smallest effect this sample could have resolved. Without
+                  it a small number reads as "no effect" when the test could
+                  never have seen one.
+                */}
+                <td className="py-0.5 pr-3 text-right text-ink-faint">
+                  needs {c.detectablePctAtT3.toFixed(2)}%
+                </td>
+                <td className="py-0.5 font-sans text-ink-faint">{note}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="text-[11px] leading-relaxed text-ink-muted">{d.reading}</p>
+        {/*
+          The benchmark's history is shorter than the panel's, so these three
+          columns describe FEWER periods than the win rate above. Saying so is
+          the difference between one sample and two presented as one.
+        */}
+        <p className="text-[10px] leading-relaxed text-ink-faint">
+          {d.n} periods, {d.fromDate} to {d.toDate} — the span {d.benchmark} covers, which is shorter
+          than the window behind the win rate above. Each column is a mean of per-period
+          differences over exactly these dates, so the first two add to the third.
+        </p>
+      </div>
+    </details>
+  );
 }
 
 export default function ValidationPage() {
@@ -171,6 +244,8 @@ export default function ValidationPage() {
                         {r.caution}
                       </p>
                     )}
+
+                    {r.decomposition && <Decomposition d={r.decomposition} />}
 
                     {r.killCriteria && (
                       <p className="text-[11px] leading-relaxed text-ink-faint">

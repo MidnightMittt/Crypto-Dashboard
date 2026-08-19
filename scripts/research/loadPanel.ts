@@ -93,6 +93,37 @@ export function loadEquityPanel(): PanelLoad {
   };
 }
 
+/**
+ * Load ONE instrument by symbol, panel member or not.
+ *
+ * Exists for the benchmark leg. QQQ is deliberately excluded from the panel —
+ * an ETF is a basket of the panel, not a member of it — but comparing the
+ * panel's ranking to it is exactly the control the study needs. Loading it
+ * through the same reader as everything else keeps one definition of "what a
+ * bar file means"; a second parser would be free to disagree about which
+ * closes are usable.
+ *
+ * Returns null rather than throwing: a missing benchmark should cost the
+ * comparison, not the whole run.
+ */
+export function loadOne(symbol: string): LabSeries | null {
+  const file = path.join(DATA_DIR, `${symbol}.US.json`);
+  if (!fs.existsSync(file)) return null;
+  const raw = JSON.parse(fs.readFileSync(file, "utf8")) as {
+    bars?: Array<{ t: number; open: number; high: number; low: number; close: number; volume: number }>;
+  };
+  const bars = (raw.bars ?? []).filter((b) => Number.isFinite(b.close) && b.close > 0);
+  if (bars.length < MIN_BARS) return null;
+  return {
+    symbol,
+    t: bars.map((b) => b.t),
+    close: bars.map((b) => b.close),
+    high: bars.map((b) => b.high),
+    low: bars.map((b) => b.low),
+    volume: bars.map((b) => b.volume),
+  };
+}
+
 /** One line, printed by every consumer, so the composition is never implicit. */
 export function describeLoad(load: PanelLoad): string {
   const parts = [

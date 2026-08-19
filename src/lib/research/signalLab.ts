@@ -131,11 +131,38 @@ export interface Hypothesis {
   rank: (ctx: RankContext) => number | null;
 }
 
+/**
+ * One period's legs, kept so a benchmark can be measured against the SAME
+ * entries and exits the hypothesis actually traded.
+ *
+ * Emitted rather than recomputed. A second pass rebuilding the calendar would
+ * be free to drift from this one — a different warmup, a different skip, a
+ * different idea of where a period starts — and the resulting comparison
+ * would be against dates the signal never held.
+ */
+export interface PeriodLeg {
+  /** Bar time of entry. The benchmark is read at exactly this instant. */
+  entryTime: number;
+  exitTime: number;
+  /** Top-decile mean forward return, as a fraction. What a trader would hold. */
+  top: number;
+  /** Equal-weight mean over every ranked name — the universe leg. */
+  universe: number;
+}
+
 export interface HypothesisResult {
   id: string;
   statement: string;
   /** Non-overlapping periods with a full panel. */
   n: number;
+  /**
+   * Per-period legs, in period order. `n` is their count.
+   *
+   * Present so `decompose` can separate selection skill from pool drift
+   * without this function needing to know a benchmark exists — ranking a
+   * panel and comparing to an index are different jobs.
+   */
+  periods: PeriodLeg[];
   winRate: number;
   /** Mean long-short spread per period, as a fraction. */
   meanSpread: number;
@@ -216,6 +243,7 @@ const median = (xs: number[]) => {
 export function runHypothesis(series: LabSeries[], h: Hypothesis): HypothesisResult {
   const calendar = [...new Set(series.flatMap((s) => s.t))].sort((a, b) => a - b);
   const spreads: number[] = [];
+  const periods: PeriodLeg[] = [];
 
   const offset = h.entryOffset ?? 0;
   let gatedOut = 0;
@@ -255,13 +283,19 @@ export function runHypothesis(series: LabSeries[], h: Hypothesis): HypothesisRes
     scored.sort((a, b) => b.score - a.score);
     const k = Math.max(1, Math.floor(scored.length * DECILE));
     const top = mean(scored.slice(0, k).map((x) => x.fwd));
+    const universe = mean(scored.map((x) => x.fwd));
     // See `leg`. The short leg is the bottom decile, or the panel itself when
     // the hypothesis is about a long position rather than a spread.
     const reference =
-      h.leg === "long-vs-panel"
-        ? mean(scored.map((x) => x.fwd))
-        : mean(scored.slice(-k).map((x) => x.fwd));
+      h.leg === "long-vs-panel" ? universe : mean(scored.slice(-k).map((x) => x.fwd));
     spreads.push(top - reference);
+    /*
+     * Recorded on EVERY period the hypothesis counted, gated ones excluded —
+     * `spreads` and `periods` grow together and are therefore the same
+     * sample. A benchmark compared against a different set of dates would
+     * answer a question nobody asked.
+     */
+    periods.push({ entryTime, exitTime, top, universe });
   }
 
   const n = spreads.length;
@@ -283,6 +317,7 @@ export function runHypothesis(series: LabSeries[], h: Hypothesis): HypothesisRes
     id: h.id,
     statement: h.statement,
     n,
+    periods,
     winRate,
     meanSpread: mean(spreads),
     medianSpread: median(spreads),

@@ -137,6 +137,40 @@ describe("describeDecomposition", () => {
     expect(describeDecomposition(d)).toContain("composition is doing the work");
   });
 
+  /*
+   * THE DIRECTION WORD MUST MATCH THE SIGN.
+   *
+   * The first version said "moved against the index" for any significant
+   * drift, and shipped that sentence directly under a measured +0.76% — the
+   * pool had beaten the index. The prose contradicted the number it was
+   * explaining, and no test noticed because every test checked the branch
+   * rather than the wording. These two do check the wording.
+   */
+  it("says the pool BEAT the index when the drift is positive", () => {
+    const d = decompose(
+      twenty((k) => 0.03 + 0.002 * Math.sin(k)),
+      twenty((k) => 0.02 + 0.0005 * Math.sin(k)),
+      twenty(() => 0.005)
+    )!;
+    expect(d.universeMinusIndex.meanPct).toBeGreaterThan(0);
+    const text = describeDecomposition(d);
+    expect(text).toContain("also beat the index");
+    expect(text).not.toContain("trailed");
+    expect(text).not.toContain("against the index");
+  });
+
+  it("says the pool TRAILED the index when the drift is negative", () => {
+    const d = decompose(
+      twenty((k) => 0.03 + 0.002 * Math.sin(k)),
+      twenty((k) => 0.008 + 0.0005 * Math.sin(k)),
+      twenty(() => 0.02)
+    )!;
+    expect(d.universeMinusIndex.meanPct).toBeLessThan(0);
+    const text = describeDecomposition(d);
+    expect(text).toContain("trailed the index");
+    expect(text).not.toContain("beat the index");
+  });
+
   it("says plainly when nothing separates", () => {
     const d = decompose(
       twenty((k) => 0.01 * Math.sin(k)),

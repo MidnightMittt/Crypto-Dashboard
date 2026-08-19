@@ -32,6 +32,11 @@
  */
 
 import { breakevenCostPp } from "@/lib/research/edgeGate";
+import {
+  Decomposition,
+  PairedDifference,
+  describeDecomposition,
+} from "@/lib/research/decomposition";
 
 export type Outcome = "cleared" | "indistinct" | "below" | "unmeasured";
 
@@ -87,6 +92,33 @@ export interface ValidationRow {
    * verdict when present.
    */
   caution: string | null;
+  /**
+   * Selection skill separated from pool drift, against a declared benchmark.
+   *
+   * Null on long-short hypotheses BY DESIGN, not for want of data: a
+   * dollar-neutral spread carries roughly no market exposure, so comparing it
+   * to an index answers nothing. The page renders that as "does not apply"
+   * rather than as a gap.
+   */
+  decomposition: RowDecomposition | null;
+}
+
+export interface RowDecomposition {
+  benchmark: string;
+  /**
+   * Periods the BENCHMARK could cover, which is not the hypothesis's own `n`.
+   * QQQ begins in 1999 while the panel reaches back to 1984, so these three
+   * columns describe a shorter window than the win rate beside them. Carried
+   * so the page can say so rather than implying one sample.
+   */
+  n: number;
+  fromDate: string;
+  toDate: string;
+  selection: PairedDifference;
+  poolDrift: PairedDifference;
+  versusIndex: PairedDifference;
+  /** Plain-English read, refusing to call selection skill an edge on its own. */
+  reading: string;
 }
 
 export interface ValidationReport {
@@ -96,6 +128,12 @@ export interface ValidationReport {
   equityFamilySize: number;
   equityInstruments: number;
   costPp: number;
+}
+
+/** The artifact's own decomposition block, exactly as runLab writes it. */
+interface LabDecomposition {
+  benchmark: string;
+  decomposition: Decomposition;
 }
 
 interface LabResult {
@@ -108,6 +146,7 @@ interface LabResult {
   lowerBound: number | null;
   killCriteria: string;
   retiredBy: string | null;
+  decomposition?: LabDecomposition | null;
 }
 
 interface ModuleGrade {
@@ -176,6 +215,30 @@ const CAUTIONS: Record<string, string> = {
     "removes the reason to care.",
 };
 
+/**
+ * Reshape the artifact's decomposition for display, or null.
+ *
+ * The reading is composed HERE rather than stored, so the words and the
+ * numbers cannot drift apart in the file — the same rule the narrative
+ * composer follows for verdicts.
+ */
+function toRowDecomposition(d: LabDecomposition | null | undefined): RowDecomposition | null {
+  if (!d) return null;
+  const c = d.decomposition;
+  const periods = c.periods;
+  if (periods.length === 0) return null;
+  return {
+    benchmark: d.benchmark,
+    n: c.signalMinusIndex.n,
+    fromDate: periods[0],
+    toDate: periods[periods.length - 1],
+    selection: c.signalMinusUniverse,
+    poolDrift: c.universeMinusIndex,
+    versusIndex: c.signalMinusIndex,
+    reading: describeDecomposition(c),
+  };
+}
+
 export function buildValidationReport(inputs: ValidationInputs): ValidationReport {
   const rows: ValidationRow[] = [];
 
@@ -195,6 +258,7 @@ export function buildValidationReport(inputs: ValidationInputs): ValidationRepor
       sentence: null,
       inUse: IN_USE.has(r.id),
       caution: CAUTIONS[r.id] ?? null,
+      decomposition: toRowDecomposition(r.decomposition),
     });
   }
 
@@ -214,6 +278,12 @@ export function buildValidationReport(inputs: ValidationInputs): ValidationRepor
       sentence: g.sentence ?? null,
       inUse: IN_USE.has(id),
       caution: null,
+      /*
+       * Crypto modules are graded, not ranked against a panel. There is no
+       * universe leg to separate from, so the decomposition is not merely
+       * absent here — it is undefined for this kind of result.
+       */
+      decomposition: null,
     });
   }
 

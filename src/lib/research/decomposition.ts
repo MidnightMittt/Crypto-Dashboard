@@ -210,11 +210,24 @@ export function describeDecomposition(d: Decomposition, atT = 2): string {
   const picks = Math.abs(d.signalMinusUniverse.t) >= atT && d.signalMinusUniverse.meanPct > 0;
   const beatsIndex = d.signalMinusIndex.t >= atT && d.signalMinusIndex.meanPct > 0;
   const poolDrifted = Math.abs(d.universeMinusIndex.t) >= atT;
+  /*
+   * The DIRECTION of the drift, read from its sign rather than assumed.
+   *
+   * The first version of this said "moved against the index" whenever drift
+   * was significant, and rendered that sentence one line under a measured
+   * +0.76% — the pool had BEATEN the index. The words contradicted the number
+   * they were explaining. Only reading live output caught it, so the sign is
+   * now load-bearing and a test pins each phrase to it.
+   */
+  const poolBeat = d.universeMinusIndex.meanPct > 0;
 
   if (picks && beatsIndex) {
-    return poolDrifted
-      ? "The ranking selects well AND the result clears the index — but the pool itself moved against the index over the same periods, so part of the headline is the universe rather than the signal."
-      : "The ranking selects well and the result clears the index, with no meaningful drift in the pool to explain it away.";
+    if (!poolDrifted) {
+      return "The ranking selects well and the result clears the index, with no meaningful drift in the pool to explain it away.";
+    }
+    return poolBeat
+      ? "The ranking selects well AND the result clears the index — but the pool itself also beat the index over the same periods, so part of the headline belongs to the universe rather than to the ranking."
+      : "The ranking selects well and the result still clears the index, having done so while the pool itself trailed the index — the ranking is recovering ground the universe lost.";
   }
   if (picks && !beatsIndex) {
     return "The ranking selects well inside its own universe, but the result does not clear the index. That is a real finding about the ranking and not a reason to trade it over the benchmark.";

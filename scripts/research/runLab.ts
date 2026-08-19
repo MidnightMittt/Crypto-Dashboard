@@ -2,8 +2,9 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { runHypothesis, HypothesisResult, resolveDependencies, excludeCorruptSeries } from "../../src/lib/research/signalLab";
-import { describeLoad, loadEquityPanel } from "./loadPanel";
+import { describeLoad, loadEquityPanel, loadOne } from "./loadPanel";
 import { benjaminiHochberg } from "../../src/lib/research/multipleTesting";
+import { BENCHMARK_SYMBOL, benchmarkDecomposition } from "../../src/lib/research/benchmark";
 import { FAMILY } from "./hypotheses";
 
 /**
@@ -47,6 +48,42 @@ function main(): void {
     );
     return r;
   });
+
+  /*
+   * THE BENCHMARK CONTROL.
+   *
+   * Only long-only hypotheses get it. A dollar-neutral long-short spread has
+   * roughly no market exposure by construction, so "spread minus QQQ" is not
+   * a question anyone asks and publishing it would be a number in search of a
+   * meaning.
+   */
+  const bench = loadOne(BENCHMARK_SYMBOL);
+  if (!bench) {
+    console.log(`\n[benchmark] ${BENCHMARK_SYMBOL} not in the ingest — no decomposition this run.`);
+  }
+  const decompositions = new Map<string, ReturnType<typeof benchmarkDecomposition>>();
+  if (bench) {
+    console.log(`\n${"─".repeat(76)}`);
+    console.log(`DECOMPOSITION vs ${BENCHMARK_SYMBOL}, long-only hypotheses only`);
+    for (const r of results) {
+      const h = FAMILY.find((x) => x.id === r.id)!;
+      if ((h.leg ?? "long-short") !== "long-vs-panel") continue;
+      const d = benchmarkDecomposition(r.periods, bench);
+      decompositions.set(r.id, d);
+      if (!d) {
+        console.log(`  ${r.id.padEnd(34)} refused — benchmark covers too few periods`);
+        continue;
+      }
+      const c = d.decomposition;
+      console.log(`  ${r.id}  (n=${c.signalMinusIndex.n})`);
+      for (const col of [c.signalMinusUniverse, c.universeMinusIndex, c.signalMinusIndex]) {
+        console.log(
+          `      ${col.label.padEnd(20)} ${col.meanPct >= 0 ? "+" : ""}${col.meanPct.toFixed(3)}%  ` +
+            `t=${col.t.toFixed(2).padStart(6)}   detectable at t=3: ${col.detectablePctAtT3.toFixed(3)}%`
+        );
+      }
+    }
+  }
 
   const fdr = benjaminiHochberg(results.map((r) => r.pValue), 0.05);
   results.forEach((r, i) => (r.survivesFdr = fdr[i]?.significant ?? false));
@@ -114,6 +151,12 @@ function main(): void {
             earnsEdge: r.earnsEdge,
             retiredBy: r.retiredBy,
             sentence: r.assessment.sentence,
+            /*
+             * Null on long-short by design, not by omission — see the
+             * decomposition block above. The page must render the absence as
+             * "does not apply" rather than as missing data.
+             */
+            decomposition: decompositions.get(r.id) ?? null,
           };
         }),
       },
