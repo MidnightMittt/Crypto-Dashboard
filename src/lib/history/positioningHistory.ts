@@ -71,6 +71,22 @@ export interface PositioningPoint {
    */
   atmIvDaysToExpiry: number | null;
 
+  /**
+   * THE VENDOR'S OWN INSTANT PER GROUP, never our write time.
+   *
+   * `date` is the SESSION this row describes, derived from the price bars.
+   * That is a different clock belonging to a different provider, and using it
+   * for everything meant a CBOE chain read at 20:43:18Z was filed under the
+   * bars' last session — which ran four days stale while the backfill was
+   * behind. The envelope's `as_of` is defined as the instant the VALUE was
+   * true, so the vendor's stamp wins wherever the vendor publishes one.
+   *
+   * Absent for a group whose vendor publishes no instant. Never our clock
+   * standing in for theirs: that is the write date wearing the value's name,
+   * which is the specific substitution this whole file exists to refuse.
+   */
+  sourceAsOf?: Partial<Record<FieldGroup, string>>;
+
   /** ATR as a percent of close — the same figure the page calls "typical daily move". */
   typicalDailyMovePct: number | null;
 

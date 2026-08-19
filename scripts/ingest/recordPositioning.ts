@@ -12,6 +12,7 @@ import { fetchOptionsSummary } from "../../src/lib/dossier/providers/cboeOptions
 import { fetchShortVolume } from "../../src/lib/dossier/providers/finraShortVolume";
 import { fetchSocial } from "../../src/lib/dossier/providers/attention";
 import { fetchStreet } from "../../src/lib/dossier/providers/nasdaqStreet";
+import { FieldGroup } from "../../src/lib/history/positioningHistory";
 import { EQUITY_PANEL } from "../../src/lib/markets/equityPanel";
 import { resolveUniverse } from "../../src/lib/markets/scannerUniverse";
 import { adjustForCorporateActions } from "../../src/lib/research/corporateActions";
@@ -144,10 +145,31 @@ async function main(): Promise<void> {
     if (consensus) streetOk++;
     if (tags) socialOk++;
 
+    /*
+     * EACH VENDOR'S OWN INSTANT, and only where the vendor publishes one.
+     *
+     *   options      CBOE stamps the payload it serves.
+     *   shortVolume  FINRA's file is per-DATE and the row carries it; using
+     *                the bars' session instead mislabelled the value whenever
+     *                the two diverged, which they did for four days while the
+     *                backfill was behind.
+     *   street/social  Nasdaq and StockTwits serve "now" with no stamp of
+     *                their own, so nothing is recorded rather than our clock
+     *                being dressed up as theirs.
+     *   price        derived from the bars, so the session date IS the instant.
+     */
+    const sourceAsOf: Partial<Record<FieldGroup, string>> = { price: date };
+    if (options.ok && options.summary.sourceAsOf) sourceAsOf.options = options.summary.sourceAsOf;
+    if (shortVol.ok) {
+      const d = shortVol.summary.latest.date; // YYYYMMDD, as FINRA publishes it
+      if (/^\d{8}$/.test(d)) sourceAsOf.shortVolume = `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`;
+    }
+
     fresh.push({
       date,
       symbol,
       origin: "live",
+      sourceAsOf,
       netGexUsdPer1Pct: gex,
       gammaSign: gex === null ? null : gex >= 0 ? "positive" : "negative",
       shortRatioPct: shortVol.ok ? shortVol.summary.latest.shortRatioPct : null,

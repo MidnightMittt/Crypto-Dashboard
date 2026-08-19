@@ -40,6 +40,15 @@ export type PositioningLatestRow = PositioningPoint & {
    * an OLS fit for a value that is 1 by definition.
    */
   observedAt: Partial<Record<FieldGroup, string>>;
+  /**
+   * The VENDOR's own instant per group, where the vendor publishes one.
+   *
+   * `observedAt` is the SESSION the group belongs to; this is when the value
+   * was actually true according to whoever produced it. They differ: CBOE
+   * stamps a chain 2026-08-19T20:43:18Z inside the 2026-08-19 session, and
+   * only the first is an answer to "when was this true".
+   */
+  sourceAsOf: Partial<Record<FieldGroup, string>>;
 };
 
 /**
@@ -81,15 +90,19 @@ export function buildLatest(points: PositioningPoint[]): PositioningLatestRow[] 
     }
 
     const observedAt: Partial<Record<FieldGroup, string>> = {};
+    const sourceAsOf: Partial<Record<FieldGroup, string>> = {};
     for (const g of FIELD_GROUPS) {
       const source = ordered.find((p) => hasGroup(p, g));
       if (!source) continue;
       for (const f of GROUP_FIELDS[g]) merged[f] = source[f];
       observedAt[g] = source.date;
+      // Taken from the SAME row the fields came from, never the newest row's.
+      const vendor = source.sourceAsOf?.[g];
+      if (vendor) sourceAsOf[g] = vendor;
     }
 
     const point = merged as unknown as PositioningPoint;
-    rows.push({ ...point, symbol, baselines: baselinesFor(points, point), observedAt });
+    rows.push({ ...point, symbol, baselines: baselinesFor(points, point), observedAt, sourceAsOf });
   }
   return rows.sort((a, b) => a.symbol.localeCompare(b.symbol));
 }

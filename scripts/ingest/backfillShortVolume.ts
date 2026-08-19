@@ -120,6 +120,10 @@ async function main(): Promise<void> {
         date: iso,
         symbol,
         origin: "backfill",
+        // FINRA's file IS dated, and that date is the vendor's own instant for
+        // this value. It is the same `iso` only because a backfill reads the
+        // file for exactly that session.
+        sourceAsOf: { shortVolume: iso },
         netGexUsdPer1Pct: null,
         gammaSign: null,
         shortRatioPct: row.shortRatioPct,

@@ -110,6 +110,8 @@ export type RankedPoint = PositioningPoint & {
    * written before this shipped still parses.
    */
   observedAt?: Partial<Record<FieldGroup, string>>;
+  /** The vendor's own instant per group, preferred over the session date. */
+  sourceAsOf?: Partial<Record<FieldGroup, string>>;
 };
 
 /**
@@ -123,7 +125,13 @@ export type RankedPoint = PositioningPoint & {
  * predates `observedAt`.
  */
 function observed(pos: RankedPoint, group: FieldGroup): string {
-  return pos.observedAt?.[group] ?? pos.date;
+  /*
+   * The VENDOR's instant first. `as_of` is defined as when the value was true,
+   * and CBOE knows that to the second while the session date is a bucket the
+   * value happens to fall in. Falls back to the session date, then the row
+   * date, for a projection written before either existed.
+   */
+  return pos.sourceAsOf?.[group] ?? pos.observedAt?.[group] ?? pos.date;
 }
 
 /**

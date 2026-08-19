@@ -65,6 +65,11 @@ export interface OptionsSummary {
   callVolume: number;
   putVolume: number;
   putCallVolumeRatio: number | null;
+  /**
+   * CBOE's own timestamp for the chain, ISO-8601, or null when absent.
+   * NOT the fetch time and NOT the session date — see CboeResponse.timestamp.
+   */
+  sourceAsOf: string | null;
   /** IV of the contracts nearest the money on the nearest listed expiry, in percent. */
   atmIvPct: number | null;
   nearestExpiry: string | null;
@@ -263,7 +268,15 @@ const MIN_DAYS_TO_EXPIRY = 1;
 export function summariseParsed(
   parsed: ParsedContract[],
   spot: number,
-  now: number = Date.now()
+  now: number = Date.now(),
+  /**
+   * CBOE's own stamp for the payload. Optional because summariseParsed is
+   * also called on the cross-venue path, where the second venue supplies its
+   * own. Null rather than a fetch time: an absent vendor instant is a fact
+   * about the vendor, and substituting our clock would be the write date
+   * wearing the value's name.
+   */
+  sourceAsOf: string | null = null
 ): OptionsSummary | null {
   if (!Number.isFinite(spot) || spot <= 0 || parsed.length === 0) return null;
 
@@ -364,6 +377,7 @@ export function summariseParsed(
 
   return {
     spot,
+    sourceAsOf,
     contractCount: parsed.length,
     callOi,
     putOi,
@@ -385,6 +399,17 @@ export function summariseParsed(
 // ── Fetch layer ─────────────────────────────────────────────────────────
 
 interface CboeResponse {
+  /**
+   * CBOE's OWN instant for the payload, e.g. "2026-08-19 20:40:18".
+   *
+   * This is the closest thing to when the chain was true, and it was being
+   * discarded — every gamma reading was stamped with a session date derived
+   * from the price BARS instead, which is a different clock belonging to a
+   * different provider. The envelope's `as_of` is defined as the instant the
+   * VALUE was true, so the vendor's own stamp is the right answer whenever it
+   * exists.
+   */
+  timestamp?: string;
   data?: { current_price?: number; options?: CboeContract[] };
 }
 
@@ -419,7 +444,15 @@ export async function fetchOptionsSummary(symbol: string): Promise<OptionsResult
   const options = json.data?.options ?? [];
   if (spot === undefined) return { ok: false, reason: `CBOE returned no price for ${symbol}.` };
   const contracts = parseCboeContracts(options);
-  const summary = summariseParsed(contracts, spot);
+  /*
+   * CBOE stamps its payload "YYYY-MM-DD HH:MM:SS" in UTC with no zone marker.
+   * Normalised to ISO here so every consumer reads one shape, and left null
+   * when absent rather than defaulted to now().
+   */
+  const vendorAsOf = typeof json.timestamp === "string" && json.timestamp.length >= 19
+    ? `${json.timestamp.trim().replace(" ", "T")}Z`
+    : null;
+  const summary = summariseParsed(contracts, spot, Date.now(), vendorAsOf);
   if (!summary) return { ok: false, reason: `CBOE returned no usable contracts for ${symbol}.` };
   return { ok: true, summary, spot, contracts };
 }

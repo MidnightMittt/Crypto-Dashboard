@@ -111,6 +111,32 @@ describe("buildLatest — precedence and shape", () => {
     expect(row.observedAt.shortVolume).toBe("2026-08-14");
   });
 
+  /*
+   * THE VENDOR'S INSTANT, carried from the row the fields came from.
+   *
+   * CBOE stamps its chain to the second; the session date is only the bucket
+   * that instant falls in. Taking sourceAsOf from the newest row rather than
+   * the SOURCE row would re-introduce the mislabelling this whole change is
+   * about, just one level up.
+   */
+  it("carries each group's vendor instant from the row that supplied it", () => {
+    const chain = { ...live("2026-08-14"), sourceAsOf: { options: "2026-08-14T20:43:18Z" } };
+    const finra = { ...backfill("2026-08-18"), sourceAsOf: { shortVolume: "2026-08-18" } };
+    const [row] = buildLatest([chain, finra]);
+    expect(row.sourceAsOf.options).toBe("2026-08-14T20:43:18Z");
+    expect(row.sourceAsOf.shortVolume).toBe("2026-08-18");
+    // ...and the session date is still available, separately.
+    expect(row.observedAt.options).toBe("2026-08-14");
+  });
+
+  it("omits a vendor instant the vendor never published", () => {
+    // Nasdaq and StockTwits serve "now" with no stamp; our clock must not
+    // stand in for theirs.
+    const [row] = buildLatest([live("2026-08-14")]);
+    expect(row.sourceAsOf.street).toBeUndefined();
+    expect(row.sourceAsOf.social).toBeUndefined();
+  });
+
   it("omits observedAt for a group never observed", () => {
     const [row] = buildLatest([backfill("2026-08-18")]);
     expect(row.observedAt.shortVolume).toBe("2026-08-18");
