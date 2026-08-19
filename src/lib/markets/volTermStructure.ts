@@ -34,6 +34,8 @@
  * roadmap classifies it the same way.
  */
 
+
+import { midRankPercentile } from "@/lib/stats/midRankPercentile";
 export type TermStructureState = "backwardation" | "flat" | "contango";
 
 export interface VolTermRead {
@@ -142,12 +144,12 @@ function describe(ratio: number, percentile: number, state: TermStructureState, 
  * zero-variance trap the relative-strength read documents.
  */
 function percentileOf(value: number, history: readonly number[]): number {
-  if (history.length === 0) return 0.5;
-  let below = 0;
-  let equal = 0;
-  for (const h of history) {
-    if (h < value) below++;
-    else if (h === value) equal++;
-  }
-  return (below + 0.5 * equal) / history.length;
+  /*
+   * An empty history reads as the MIDDLE here rather than as a refusal, which
+   * is this caller's own convention: a term-structure percentile feeds a
+   * continuous read that has no null branch, and 0.5 is "no information"
+   * expressed in its units. The shared estimator returns null instead, so the
+   * mapping is written down rather than buried in a default.
+   */
+  return midRankPercentile(value, history) ?? 0.5;
 }

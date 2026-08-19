@@ -4,6 +4,7 @@ import { MetricVerdict, Verdict } from "@/lib/signals/types";
 // Market structure is SHARED, not equity-specific — see its own doc comment.
 import { evaluateMarketStructure } from "@/lib/signals/marketStructureEvidence";
 import { atrPctSeries } from "@/lib/technicals/indicators";
+import { midRankPercentile } from "@/lib/stats/midRankPercentile";
 export { evaluateMarketStructure } from "@/lib/signals/marketStructureEvidence";
 
 /**
@@ -57,30 +58,20 @@ function trailingReturnPct(bars: Bar[], n: number): number | null {
  * because it crossed a number someone picked.
  */
 function percentileOf(value: number, history: number[]): number | null {
-  if (history.length < 60) return null;
-
-  let below = 0;
-  let equal = 0;
-  for (const h of history) {
-    if (h < value) below++;
-    else if (h === value) equal++;
-  }
-
   /*
-   * MID-RANK, not the count below.
+   * SIXTY SESSIONS, and the threshold stays HERE rather than moving into the
+   * shared estimator. A band that moves a decision needs a distribution worth
+   * speaking about; the short-volume read is informative at eight and the vol
+   * term structure asks for none. Those are three different judgements about
+   * sufficiency, and merging them under the banner of removing duplication
+   * would silently change all three.
    *
-   * The naive `below / n` returns 0 when the value ties the entire
-   * distribution — which is exactly what happens when two series move
-   * identically and their relative strength is 0 at every point. That read
-   * as the 0th percentile, i.e. a maximally BEARISH signal manufactured out
-   * of zero variance. Caught by the "both rise together" test.
-   *
-   * Splitting the tied mass puts a value that equals everything at 0.5,
-   * which is the honest answer: a measure with no variation carries no
-   * directional information. Same failure mode, same fix, as the
-   * zero-variance p-value in the panel estimator.
+   * The mid-rank arithmetic — and the zero-variance trap it exists to avoid,
+   * which the "both rise together" test caught here — is in
+   * `midRankPercentile`, shared with the other two callers.
    */
-  return (below + 0.5 * equal) / history.length;
+  if (history.length < 60) return null;
+  return midRankPercentile(value, history);
 }
 
 

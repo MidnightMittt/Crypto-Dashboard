@@ -17,6 +17,8 @@
  * bi-monthly stock is the named upgrade, not a substitute.
  */
 
+
+import { midRankPercentilePct } from "@/lib/stats/midRankPercentile";
 export interface ShortVolumeDay {
   date: string; // YYYYMMDD as published
   shortVolume: number;
@@ -85,13 +87,16 @@ export const MIN_BASELINE_SESSIONS = 8;
 export function baselineShortRatio(today: ShortVolumeDay, prior: ShortVolumeDay[]): ShortVolumeBaseline | null {
   if (prior.length < MIN_BASELINE_SESSIONS) return null;
 
-  let below = 0;
-  let equal = 0;
-  for (const d of prior) {
-    if (d.shortRatioPct < today.shortRatioPct) below++;
-    else if (d.shortRatioPct === today.shortRatioPct) equal++;
-  }
-  const percentile = Math.round(((below + 0.5 * equal) / prior.length) * 100);
+  /*
+   * EIGHT sessions is this read's own sufficiency bar, deliberately lower
+   * than the sixty a directional equity band demands: "heavier than usual for
+   * this name" is informative long before a tradeable band would be. The
+   * arithmetic is shared, the threshold is not — see midRankPercentile.
+   */
+  const percentile = midRankPercentilePct(
+    today.shortRatioPct,
+    prior.map((d) => d.shortRatioPct)
+  )!;
   const typical = prior.reduce((s, d) => s + d.shortRatioPct, 0) / prior.length;
 
   const stance =
