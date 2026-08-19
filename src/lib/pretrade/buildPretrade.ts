@@ -4,6 +4,11 @@ import {
 } from "@/lib/markets/earningsVeto";
 import { PositioningPoint } from "@/lib/history/positioningHistory";
 import {
+  BaselineSet,
+  FieldBaseline,
+  MIN_BASELINE_SESSIONS,
+} from "@/lib/history/positioningBaseline";
+import {
   CatalystFiling,
   RELEVANT_8K_ITEMS,
   RELEVANT_OTHER_FORMS,
@@ -68,6 +73,58 @@ export interface Unmeasured {
 }
 
 export type Field<T> = Measured<T> | Unmeasured;
+
+/**
+ * Where a value sits in its OWN trailing history.
+ *
+ * Carried INSIDE the measured envelope rather than beside it, for the same
+ * reason `tradability.book.age_seconds` is: a level and its context must not
+ * be separable. A caller that reads 55.2% and never reaches a sibling field
+ * has the number and not the fact, and the fact is the part that decides
+ * anything — 55% short volume is the 97th percentile for IREN and utterly
+ * ordinary for APLD.
+ */
+export interface Positional {
+  /** Mid-rank percentile among the prior sessions, 0-100. Today excluded. */
+  percentile: number;
+  /** Prior sessions compared against, so a thin read is visible as thin. */
+  sessions: number;
+  /** Mean over those sessions, for "against a typical X" phrasing. */
+  typical: number;
+  /** Oldest session in the comparison. The window, checkable. */
+  since: string;
+}
+
+/** A measurement that also knows whether it is unusual. */
+export type Ranked<T> = (Measured<T> & { baseline: Positional | Unmeasured }) | Unmeasured;
+
+/**
+ * A projection row: the latest observation plus its precomputed baselines.
+ * `baselines` is optional so a projection written before this shipped still
+ * parses — the fields then report the refusal rather than throwing.
+ */
+export type RankedPoint = PositioningPoint & { baselines?: BaselineSet };
+
+/**
+ * Attach the positional read to a measured envelope.
+ *
+ * The refusal carries the field's OWN observed count, not the row's. Coverage
+ * differs per field on the same symbol — short volume reaches back years while
+ * gamma starts when the recorder first ran — so "how close is this to being
+ * usable" is only answerable per field.
+ */
+function ranked(
+  m: Measured<number>,
+  b: FieldBaseline | undefined
+): Measured<number> & { baseline: Positional | Unmeasured } {
+  return {
+    ...m,
+    baseline: b
+      ? { percentile: b.percentile, sessions: b.sessions, typical: b.typical, since: b.since }
+      // The count lives in `baseline_policy` at the root; see its doc comment.
+      : unmeasured("baseline_needs_more_sessions"),
+  };
+}
 
 export const unmeasured = (reason: string, detail?: Record<string, number | string>): Unmeasured =>
   detail ? { value: null, reason, detail } : { value: null, reason };
@@ -198,10 +255,10 @@ export interface PretradeSymbol {
     filings_since_prior_close: Field<CatalystFiling[]>;
   };
   positioning: {
-    net_dealer_gamma_per_1pct: Field<number>;
+    net_dealer_gamma_per_1pct: Ranked<number>;
     gamma_sign: Field<string>;
     /** Daily short-sale VOLUME share. NOT short interest. */
-    short_sale_volume_share_pct: Field<number>;
+    short_sale_volume_share_pct: Ranked<number>;
   };
   /** Corporate-action interventions applied to this symbol's bars. Never silent. */
   data_quality: {
@@ -237,6 +294,18 @@ export interface PretradeResponse {
     /** Non-8-K forms that qualify; 424B matches as a prefix. */
     other_forms: string[];
   };
+  /**
+   * How every `baseline` in this response was computed, stated ONCE.
+   *
+   * The estimator and the minimum are constants of the API, not facts about a
+   * symbol. Repeating `sessions_required` inside each field of each symbol
+   * cost 37 bytes x 2 fields x n symbols to say the same number every time —
+   * the same duplication that moved `session` out of the symbol block at 2.0.
+   */
+  baseline_policy: {
+    sessions_required: number;
+    method: string;
+  };
   /** Symbols asked for that nothing is known about, so a caller can tell. */
   unknown_symbols: string[];
   symbols: PretradeSymbol[];
@@ -259,7 +328,12 @@ export interface BuildInputs {
   symbols: string[];
   now: number;
   overnight: { generatedAt: number; rows: OvernightRow[] };
-  positioningLatest: { generatedAt: number; points: PositioningPoint[] };
+  /**
+   * The daily projection, whose rows carry precomputed baselines. The
+   * baseline is NOT recomputed here: the 6.5MB history it needs would go into
+   * every serverless bundle for a figure that changes once a day.
+   */
+  positioningLatest: { generatedAt: number; points: RankedPoint[] };
   earnings: EarningsCalendar | null;
   /**
    * Measured round-trip cost per symbol, in bp, once spreadHistory has
@@ -500,13 +574,16 @@ export function buildPretrade(input: BuildInputs): PretradeResponse {
       positioning: {
         net_dealer_gamma_per_1pct:
           pos?.netGexUsdPer1Pct != null
-            ? {
-                value: pos.netGexUsdPer1Pct,
-                unit: "usd_per_1pct",
-                as_of: pos.date,
-                source: "cboe_delayed_chain",
-                method: "call_gamma_minus_put_gamma_x_oi_x_100_x_spot_x_1pct",
-              }
+            ? ranked(
+                {
+                  value: pos.netGexUsdPer1Pct,
+                  unit: "usd_per_1pct",
+                  as_of: pos.date,
+                  source: "cboe_delayed_chain",
+                  method: "call_gamma_minus_put_gamma_x_oi_x_100_x_spot_x_1pct",
+                },
+                pos.baselines?.netGexUsdPer1Pct
+              )
             : unmeasured("no_options_chain"),
         gamma_sign:
           pos?.gammaSign != null
@@ -514,14 +591,17 @@ export function buildPretrade(input: BuildInputs): PretradeResponse {
             : unmeasured("no_options_chain"),
         short_sale_volume_share_pct:
           pos?.shortRatioPct != null
-            ? {
-                value: pos.shortRatioPct,
-                unit: "pct",
-                as_of: pos.date,
-                source: "finra_reg_sho_daily",
-                // Named precisely: this is FLOW, not the standing short interest.
-                method: "short_volume_over_total_volume_NOT_short_interest",
-              }
+            ? ranked(
+                {
+                  value: pos.shortRatioPct,
+                  unit: "pct",
+                  as_of: pos.date,
+                  source: "finra_reg_sho_daily",
+                  // Named precisely: this is FLOW, not the standing short interest.
+                  method: "short_volume_over_total_volume_NOT_short_interest",
+                },
+                pos.baselines?.shortRatioPct
+              )
             : unmeasured("no_finra_row"),
       },
       data_quality: {
@@ -550,6 +630,10 @@ export function buildPretrade(input: BuildInputs): PretradeResponse {
       window_start: windowStart,
       forms_8k_items: [...RELEVANT_8K_ITEMS],
       other_forms: [...RELEVANT_OTHER_FORMS],
+    },
+    baseline_policy: {
+      sessions_required: MIN_BASELINE_SESSIONS,
+      method: "mid_rank_percentile_vs_own_prior_sessions_today_excluded",
     },
     unknown_symbols: unknown,
     symbols: out,

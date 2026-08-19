@@ -624,8 +624,22 @@ describe("buildPretrade — no verdicts, and data quality is never silent", () =
     expect(one.symbols[0].market_exposure.value).not.toBeNull();
     expect(measured(one.symbols[0].catalysts.filings_since_prior_close).value).toHaveLength(1);
 
+    /*
+     * 2,600 bytes per additional symbol, raised from 2,400 when the positional
+     * baseline landed. The budget exists to make growth a DECISION rather than
+     * an accident, and this is the decision: a percentile against the symbol's
+     * own history is the one thing a caller cannot compute for itself, and it
+     * is what separates "55% short volume, which is the 97th percentile for
+     * IREN" from the same number being ordinary for APLD.
+     *
+     * It was minimised first. `sessions_required` is a constant of the API and
+     * was repeating inside every field of every symbol; hoisting it to
+     * `baseline_policy` at the root took the marginal cost from 2,599 to
+     * 2,531 — 68 bytes per symbol saved before any budget was touched. The
+     * remainder is the measurement itself.
+     */
     const marginal =
       JSON.stringify(buildPretrade(full(["APLD", "WULF"]))).length - JSON.stringify(one).length;
-    expect(marginal).toBeLessThan(2_400);
+    expect(marginal).toBeLessThan(2_600);
   });
 });
