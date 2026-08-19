@@ -112,6 +112,14 @@ async function main(): Promise<void> {
         atmIvPct: null,
         atmIvDaysToExpiry: null,
         typicalDailyMovePct: null,
+        // Same reason as the options fields: no archive exists to read these
+        // from. FINRA's file carries short volume and nothing else.
+        chainOi: null,
+        analystCount: null,
+        analystMeanTargetUsd: null,
+        socialBullishPctOfTagged: null,
+        socialTaggedCount: null,
+        socialSpanHours: null,
       });
     }
 

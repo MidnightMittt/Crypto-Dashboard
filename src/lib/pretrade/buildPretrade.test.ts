@@ -27,6 +27,12 @@ const position = (over: Partial<PositioningPoint> = {}): PositioningPoint => ({
   atmIvPct: 81.7,
   atmIvDaysToExpiry: 5,
   typicalDailyMovePct: 9.2,
+  chainOi: 819_240,
+  analystCount: 12,
+  analystMeanTargetUsd: 23.58,
+  socialBullishPctOfTagged: 90,
+  socialTaggedCount: 30,
+  socialSpanHours: 7.6,
   ...over,
 });
 

@@ -73,6 +73,39 @@ export interface PositioningPoint {
 
   /** ATR as a percent of close — the same figure the page calls "typical daily move". */
   typicalDailyMovePct: number | null;
+
+  /**
+   * Total listed open interest, calls plus puts.
+   *
+   * The DENOMINATOR that makes putCallOiRatio a fact rather than a number. A
+   * ratio of 0.55 on 819,240 contracts and the same 0.55 on eight hundred are
+   * different observations, and the ratio alone cannot tell them apart.
+   */
+  chainOi: number | null;
+
+  /**
+   * Sell-side consensus. Nasdaq serves only the CURRENT survey — there is no
+   * date parameter and no archive — so a revision series exists only if it is
+   * recorded as it happens. Count travels with target for the same reason
+   * chainOi travels with the ratio.
+   */
+  analystCount: number | null;
+  analystMeanTargetUsd: number | null;
+
+  /**
+   * Retail self-reported direction, StockTwits. Bullish share among the
+   * SELF-TAGGED, so it is already a conditional figure, and the two fields
+   * below are what make it interpretable rather than decorative.
+   *
+   * The sample is small — tens of messages, not thousands — and the provider
+   * refuses a percentage below MIN_TAGGED. Recorded because the window is
+   * rolling and unrecoverable, NOT because a single day's read is evidence of
+   * anything: at n=30 the standard error on a share is about nine points.
+   */
+  socialBullishPctOfTagged: number | null;
+  socialTaggedCount: number | null;
+  /** Hours the sample spans. 30 messages in 2 hours is not 30 in 4 days. */
+  socialSpanHours: number | null;
 }
 
 export interface PositioningHistory {

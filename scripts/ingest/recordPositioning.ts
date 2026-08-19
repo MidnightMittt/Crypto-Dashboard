@@ -10,6 +10,8 @@ import {
 } from "../../src/lib/history/positioningHistory";
 import { fetchOptionsSummary } from "../../src/lib/dossier/providers/cboeOptions";
 import { fetchShortVolume } from "../../src/lib/dossier/providers/finraShortVolume";
+import { fetchSocial } from "../../src/lib/dossier/providers/attention";
+import { fetchStreet } from "../../src/lib/dossier/providers/nasdaqStreet";
 import { EQUITY_PANEL } from "../../src/lib/markets/equityPanel";
 import { resolveUniverse } from "../../src/lib/markets/scannerUniverse";
 import { adjustForCorporateActions } from "../../src/lib/research/corporateActions";
@@ -37,6 +39,23 @@ import { Bar } from "../../src/lib/research/types";
  * begin the day this job first runs and can never be given a past. FINRA's
  * files are per-date and reach back years — see backfillShortVolume.ts, which
  * writes `origin: "backfill"` rows so the two are never confused.
+ *
+ * ── The inclusion test, and the field that fails it ───────────────────
+ *
+ * A field belongs here only if it CANNOT be reconstructed later. That is the
+ * whole justification for the storage: chain OI, analyst consensus and social
+ * sentiment are all served as "now" by their providers, with no date
+ * parameter and no archive, so a series exists only if it is written down as
+ * it happens.
+ *
+ * Insider activity was requested alongside them and is deliberately NOT here.
+ * SEC Form 4 is a permanent, dated public archive: a 90-day net for any past
+ * date can be computed from EDGAR at any time in the future, exactly as FINRA
+ * lets short volume be backfilled. Storing it would add a field that carries
+ * no unique information — and worse, a stored snapshot would silently
+ * disagree with a later recomputation whenever a filing is amended or arrives
+ * late. The archive is the better record; this file should not compete with
+ * it.
  *
  * Run: npx tsx scripts/ingest/recordPositioning.ts
  */
@@ -79,6 +98,8 @@ async function main(): Promise<void> {
   const fresh: PositioningPoint[] = [];
   let optionsOk = 0;
   let shortOk = 0;
+  let streetOk = 0;
+  let socialOk = 0;
 
   /*
    * The declared panel PLUS the scanned names. They are different sets: APLD,
@@ -99,14 +120,29 @@ async function main(): Promise<void> {
       ? new Date(bars[bars.length - 1].t).toISOString().slice(0, 10)
       : new Date().toISOString().slice(0, 10);
 
-    const [options, shortVol] = await Promise.all([
+    /*
+     * fetchStreet needs a price to compute its implied move. It gets the same
+     * adjusted close everything else here is dated by, so a row's consensus
+     * and its ATR describe one session rather than two.
+     */
+    const lastClose = bars ? bars[bars.length - 1].close : null;
+
+    const [options, shortVol, street, social] = await Promise.all([
       fetchOptionsSummary(symbol).catch(() => ({ ok: false, reason: "threw" }) as const),
       fetchShortVolume(symbol).catch(() => ({ ok: false, reason: "threw" }) as const),
+      lastClose === null
+        ? Promise.resolve({ ok: false, reason: "no_price" } as const)
+        : fetchStreet(symbol, lastClose).catch(() => ({ ok: false, reason: "threw" }) as const),
+      fetchSocial(symbol).catch(() => ({ ok: false, reason: "threw" }) as const),
     ]);
 
     const gex = options.ok ? options.summary.netGexUsdPer1Pct : null;
+    const consensus = street.ok ? street.summary.consensus : null;
+    const tags = social.ok ? social.summary : null;
     if (options.ok) optionsOk++;
     if (shortVol.ok) shortOk++;
+    if (consensus) streetOk++;
+    if (tags) socialOk++;
 
     fresh.push({
       date,
@@ -120,6 +156,12 @@ async function main(): Promise<void> {
       atmIvPct: options.ok ? options.summary.atmIvPct : null,
       atmIvDaysToExpiry: options.ok ? options.summary.atmIvDaysToExpiry : null,
       typicalDailyMovePct: bars ? typicalDailyMovePct(bars) : null,
+      chainOi: options.ok ? options.summary.callOi + options.summary.putOi : null,
+      analystCount: consensus ? consensus.coveringAnalysts : null,
+      analystMeanTargetUsd: consensus ? consensus.targetPrice : null,
+      socialBullishPctOfTagged: tags ? tags.bullishPctOfTagged : null,
+      socialTaggedCount: tags ? tags.taggedCount : null,
+      socialSpanHours: tags ? tags.sampleSpanHours : null,
     });
 
     await new Promise((r) => setTimeout(r, THROTTLE_MS));
@@ -138,7 +180,8 @@ async function main(): Promise<void> {
    */
   console.log(
     `[positioning] ${fresh.length} symbols — options ${optionsOk}/${fresh.length}, ` +
-      `short volume ${shortOk}/${fresh.length}`
+      `short volume ${shortOk}/${fresh.length}, consensus ${streetOk}/${fresh.length}, ` +
+      `social ${socialOk}/${fresh.length}`
   );
   if (optionsOk === 0) console.log("[positioning] WARNING: no options data at all — CBOE may have changed or blocked.");
   if (shortOk === 0) console.log("[positioning] WARNING: no short volume at all — FINRA may have changed or blocked.");

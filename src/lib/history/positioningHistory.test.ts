@@ -20,6 +20,12 @@ const point = (over: Partial<PositioningPoint> = {}): PositioningPoint => ({
   atmIvPct: 96.4,
   atmIvDaysToExpiry: 4,
   typicalDailyMovePct: 9.2,
+  chainOi: 412_800,
+  analystCount: 9,
+  analystMeanTargetUsd: 21.4,
+  socialBullishPctOfTagged: 78,
+  socialTaggedCount: 23,
+  socialSpanHours: 6.1,
   ...over,
 });
 
@@ -36,7 +42,57 @@ const backfilled = (date: string, symbol = "IREN"): PositioningPoint =>
     atmIvPct: null,
     atmIvDaysToExpiry: null,
     typicalDailyMovePct: null,
+    chainOi: null,
+    analystCount: null,
+    analystMeanTargetUsd: null,
+    socialBullishPctOfTagged: null,
+    socialTaggedCount: null,
+    socialSpanHours: null,
   });
+
+/**
+ * WHAT IS STORED, AND THE ONE FIELD DELIBERATELY ABSENT.
+ *
+ * The justification for this file is that its fields cannot be reconstructed:
+ * CBOE, Nasdaq and StockTwits all serve "now" with no date parameter and no
+ * archive, so a series exists only if written down as it happens.
+ */
+describe("the recorded field set", () => {
+  /*
+   * Every share needs its denominator IN THE ROW. This is the same rule the
+   * type already applies to atmIvPct and atmIvDaysToExpiry, and it is not
+   * academic: CLSK on 2026-08-18 read "90% bullish" on a 30-message sample,
+   * but only 10 of those 30 self-tagged a direction. The headline is 9 votes
+   * out of 10, not 27 out of 30. Without socialTaggedCount the row would
+   * record the stronger-sounding of those two claims and lose the true one.
+   */
+  it("stores every ratio next to the count it was computed over", () => {
+    const p = point();
+    for (const [share, denominator] of [
+      ["putCallOiRatio", "chainOi"],
+      ["analystMeanTargetUsd", "analystCount"],
+      ["socialBullishPctOfTagged", "socialTaggedCount"],
+      ["atmIvPct", "atmIvDaysToExpiry"],
+    ] as const) {
+      expect(p[share], `${share} must exist`).not.toBeUndefined();
+      expect(p[denominator], `${share} without ${denominator} is uninterpretable`).not.toBeUndefined();
+    }
+  });
+
+  /*
+   * Insider activity was requested for this row and refused. SEC Form 4 is a
+   * permanent dated archive, so any past 90-day net is recomputable from
+   * EDGAR forever — storing it adds no unique information, and a stored
+   * snapshot would silently diverge from the archive whenever a filing is
+   * amended or filed late. If this assertion ever fails, the field was added
+   * without that argument being answered.
+   */
+  it("does not store anything recoverable from a dated public archive", () => {
+    const keys = Object.keys(point());
+    const recomputable = keys.filter((k) => /insider|form4|filing|earningsDate/i.test(k));
+    expect(recomputable, "EDGAR is the record for these, not this file").toEqual([]);
+  });
+});
 
 describe("appendPoints", () => {
   it("is idempotent per symbol and date, so a re-run cannot stuff the series", () => {
