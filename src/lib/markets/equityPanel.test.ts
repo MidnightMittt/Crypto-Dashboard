@@ -3,6 +3,7 @@ import {
   EQUITY_PANEL,
   EXCLUDED_FUNDS,
   EXCLUDED_NON_EQUITY,
+  TRACKED_OUTSIDE_PANEL,
   isClassified,
   isPanelMember,
   unclassified,
@@ -23,19 +24,26 @@ describe("the declared equity panel", () => {
       ["panel", EQUITY_PANEL],
       ["funds", EXCLUDED_FUNDS],
       ["non-equity", EXCLUDED_NON_EQUITY],
+      ["tracked-outside-panel", TRACKED_OUTSIDE_PANEL],
     ] as const) {
       expect(new Set(list).size, `${name} contains a duplicate`).toBe(list.length);
     }
   });
 
-  it("keeps the three lists disjoint", () => {
-    const panel = new Set(EQUITY_PANEL);
-    for (const s of [...EXCLUDED_FUNDS, ...EXCLUDED_NON_EQUITY]) {
-      expect(panel.has(s), `${s} is both a member and excluded`).toBe(false);
-    }
-    const funds = new Set(EXCLUDED_FUNDS);
-    for (const s of EXCLUDED_NON_EQUITY) {
-      expect(funds.has(s), `${s} is classified twice`).toBe(false);
+  it("keeps the four lists disjoint", () => {
+    const lists = [
+      ["panel", EQUITY_PANEL],
+      ["funds", EXCLUDED_FUNDS],
+      ["non-equity", EXCLUDED_NON_EQUITY],
+      ["tracked-outside-panel", TRACKED_OUTSIDE_PANEL],
+    ] as const;
+    for (let i = 0; i < lists.length; i++) {
+      for (let j = i + 1; j < lists.length; j++) {
+        const [aName, a] = lists[i];
+        const [bName, b] = lists[j];
+        const overlap = a.filter((s) => b.includes(s));
+        expect(overlap, `${aName} and ${bName} both claim ${overlap.join(", ")}`).toEqual([]);
+      }
     }
   });
 
@@ -44,6 +52,26 @@ describe("the declared equity panel", () => {
    * exists to fix. Pinned individually so a well-meaning edit that "restores
    * the full universe" fails with a name attached rather than a count.
    */
+  /*
+   * These six are the ONLY exclusions not justified by instrument kind — they
+   * are operating companies held out to keep the panel's composition frozen
+   * while results computed on it are published. That makes them the likeliest
+   * to be "corrected" into the panel by someone reading the inclusion rule and
+   * noticing they satisfy it. Doing so would move every decile boundary under
+   * figures already on the site, so it must fail here first, by name.
+   */
+  it("keeps the tracked-outside-panel names classified but out of the ranking", () => {
+    expect(TRACKED_OUTSIDE_PANEL.length).toBeGreaterThan(0);
+    for (const s of TRACKED_OUTSIDE_PANEL) {
+      expect(isPanelMember(s), `${s} must not rank inside the declared panel`).toBe(false);
+      expect(isClassified(s), `${s} must be classified, or the nightly job fails`).toBe(true);
+    }
+    // The specific cohort, pinned by name rather than by count.
+    expect([...TRACKED_OUTSIDE_PANEL].sort()).toEqual([
+      "APLD", "CLSK", "CORZ", "IONQ", "OKLO", "RIOT",
+    ]);
+  });
+
   it("excludes the instruments that contaminated the original ranking", () => {
     for (const s of ["SPY", "QQQ", "TLT", "HYG", "GLD", "USO", "SMH", "WGMI", "XLK"]) {
       expect(isPanelMember(s), `${s} must not be a panel member`).toBe(false);

@@ -98,11 +98,53 @@ export const EXCLUDED_NON_EQUITY: readonly string[] = [
   "BTC-USD", "SOL-USD", "BNB-USD", "XRP-USD",
 ] as const;
 
+/**
+ * TRACKED, BUT DELIBERATELY OUTSIDE THE PANEL.
+ *
+ * These are the only exclusions here that are NOT about instrument kind.
+ * Every name below is a US-listed operating company and satisfies the
+ * inclusion rule above. They are held out for a different reason, and saying
+ * so plainly matters more than the exclusion itself.
+ *
+ * ── Why ───────────────────────────────────────────────────────────────
+ *
+ * The panel was declared, and results were then computed and PUBLISHED on
+ * it — cross-sectional momentum among them. Adding names later moves every
+ * decile boundary underneath figures already on the site, so a reader
+ * comparing two dates would be comparing two different experiments while the
+ * page named only one.
+ *
+ * These six also share a mechanism: they are the datacenter/mining cohort,
+ * which a control-basket test measured at +32.2bp/t=1.88 against index ETFs
+ * at +7.0bp/t=1.80 — equal Sharpe on unequal magnitude, which is beta rather
+ * than edge. Dropping six correlated high-beta names into a 95-name panel
+ * would move the cross-section by more than their count suggests.
+ *
+ * ── What this is NOT ──────────────────────────────────────────────────
+ *
+ * Not a quality judgement, and not a claim they are untradeable — they are
+ * precisely the names the overnight work is about, and they are ingested,
+ * scanned, quoted and served like any other. They are absent from ONE thing:
+ * the cross-sectional ranking.
+ *
+ * ── How a name leaves this list ───────────────────────────────────────
+ *
+ * Not by being moved into EQUITY_PANEL quietly. The exit is a VERSIONED
+ * panel — a second declared composition, run alongside this one, with the
+ * difference between them reported. That makes the effect of adding them
+ * measurable instead of invisible, which is the whole reason this file
+ * exists.
+ */
+export const TRACKED_OUTSIDE_PANEL: readonly string[] = [
+  "APLD", "CLSK", "CORZ", "IONQ", "OKLO", "RIOT",
+] as const;
+
 const PANEL_SET: ReadonlySet<string> = new Set(EQUITY_PANEL);
 const KNOWN: ReadonlySet<string> = new Set([
   ...EQUITY_PANEL,
   ...EXCLUDED_FUNDS,
   ...EXCLUDED_NON_EQUITY,
+  ...TRACKED_OUTSIDE_PANEL,
 ]);
 
 export function isPanelMember(symbol: string): boolean {

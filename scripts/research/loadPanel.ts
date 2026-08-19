@@ -48,8 +48,9 @@ export function loadEquityPanel(): PanelLoad {
   if (unknown.length > 0) {
     throw new Error(
       `${unknown.length} instrument(s) in the ingest are not classified as panel member, ` +
-        `fund or non-equity: ${unknown.join(", ")}. Add each to src/lib/markets/equityPanel.ts ` +
-        `before running research over this directory — the panel is a claim and it has to stay one.`
+        `fund, non-equity or tracked-outside-panel: ${unknown.join(", ")}. Add each to ` +
+        `src/lib/markets/equityPanel.ts before running research over this directory — ` +
+        `the panel is a claim and it has to stay one.`
     );
   }
 
