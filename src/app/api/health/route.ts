@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { configuredChannels } from "@/lib/alerts/configured";
 import { kvConfigured, kvGet, kvSet } from "@/lib/store/kv";
 import { readHistory } from "@/lib/history/store";
 import { ALL_ASSETS } from "@/lib/exchanges/registry";
@@ -177,6 +178,15 @@ export async function GET() {
       branch: process.env.VERCEL_GIT_COMMIT_REF ?? null,
       environment: process.env.VERCEL_ENV ?? null,
     },
+    /*
+     * Whether THIS deployment can deliver an alert — not whether the
+     * dashboard lists a secret. Vercel snapshots env vars when a build
+     * starts, so saving one changes nothing until a redeploy, and the
+     * symptom of skipping that step is an alert path that silently does
+     * nothing while everyone believes it is armed. Booleans only; no value
+     * ever leaves the process.
+     */
+    alerts: configuredChannels(),
     storage: {
       backend: kvConfigured() ? "redis" : "filesystem",
       kvRoundTrip,
