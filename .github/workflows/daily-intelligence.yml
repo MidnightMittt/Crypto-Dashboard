@@ -108,7 +108,11 @@ jobs:
       # source is visible rather than silently null.
       - name: Record positioning history
         run: |
-          npx tsx scripts/ingest/recordPositioning.ts || echo "::warning::positioning recorder failed — one session lost"
+          # NO `|| echo`. A swallowed exit code made a lost session look green,
+          # and the warning text beside it named the consequence while hiding
+          # it. CBOE has no chain archive: a session lost here is gone for
+          # good, so the run must go RED while it can still be re-triggered.
+          npx tsx scripts/ingest/recordPositioning.ts
           # The projection /api/pretrade reads. Regenerated every run so the
           # small artefact can never disagree with the store it projects.
           npx tsx scripts/ingest/buildPositioningLatest.ts || echo "::warning::positioning projection failed"
@@ -142,7 +146,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          DATA_PATHS="src/data/marketIntelligence.json src/data/equityMarkets.json src/data/signalLedger.json src/data/earningsCalendar.json src/data/forwardReachRecord.json src/data/forwardVerdictRecord.json src/data/equityCrossSection.json src/data/macroSeries.json src/data/positioningHistory.json src/data/positioningLatest.json src/data/overnightPremium.json src/data/universeHistory.json"
+          DATA_PATHS="src/data/marketIntelligence.json src/data/equityMarkets.json src/data/signalLedger.json src/data/earningsCalendar.json src/data/forwardReachRecord.json src/data/forwardVerdictRecord.json src/data/equityCrossSection.json src/data/macroSeries.json src/data/positioningHistory.json src/data/positioningLatest.json src/data/overnightPremium.json src/data/universeHistory.json src/data/captureLog.json"
 
           stage_onto_tip() {
             # Explicit refspec: `git fetch origin main` only updates the

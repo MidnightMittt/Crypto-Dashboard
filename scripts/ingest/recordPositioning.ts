@@ -68,6 +68,24 @@ const OUT = path.join(__dirname_, "..", "..", "src", "data", "positioningHistory
 /** Wilder ATR over 14, the same period the dossier's "typical daily move" uses. */
 const ATR_PERIOD = 14;
 
+/**
+ * Below this share of symbols the run FAILS rather than committing a partial
+ * session. Not zero: a handful of delisted or thinly-covered names failing is
+ * routine, and failing on one would make the alarm noise. 80% is the line
+ * between "a few names were unavailable" and "the session was lost".
+ */
+const MIN_CAPTURE_SHARE = 0.8;
+
+interface CaptureRun {
+  date: string;
+  ranAt: string;
+  attempted: number;
+  captured: number;
+  coverage: { options: number; shortVolume: number; street: number; social: number };
+  failed: string[];
+  errors: Record<string, string>;
+}
+
 /** Courtesy delay between symbols; both sources are free public endpoints. */
 const THROTTLE_MS = 350;
 
@@ -110,7 +128,11 @@ async function main(): Promise<void> {
    * endpoint returned nulls for the top-ranked name in the study.
    */
   const covered = [...new Set([...EQUITY_PANEL, ...resolveUniverse()])].sort();
+  /** Symbols whose row could not be built at all, with the reason. */
+  const failed: Record<string, string> = {};
+
   for (const symbol of covered) {
+    try {
     const bars = loadBars(symbol);
     /*
      * The row is dated by the DATA's last session, not the wall clock. A run
@@ -186,8 +208,78 @@ async function main(): Promise<void> {
       socialSpanHours: tags ? tags.sampleSpanHours : null,
     });
 
+    } catch (err) {
+      /*
+       * ONE BAD SYMBOL MUST NOT COST THE SESSION.
+       *
+       * The loop had no guard, and the write happens only after it finishes —
+       * so a single throw anywhere in 105 symbols discarded every row already
+       * collected. A truncated bar file, an unexpected provider shape, any of
+       * it. The session is unrecoverable once lost, so a symbol that fails is
+       * recorded and skipped rather than allowed to end the run.
+       */
+      failed[symbol] = err instanceof Error ? err.message : String(err);
+    }
+
     await new Promise((r) => setTimeout(r, THROTTLE_MS));
   }
+
+  /*
+   * WHAT WAS ATTEMPTED, not just what landed.
+   *
+   * A silent 6-of-105 is indistinguishable from a market holiday when all you
+   * can see is the resulting rows — and on 2026-08-18 exactly that happened,
+   * behind a green check. The log makes the difference legible after the fact
+   * and is the thing a stale-data alarm can be built on.
+   */
+  const LOG = path.join(__dirname_, "..", "..", "src", "data", "captureLog.json");
+  const runDate = fresh[0]?.date ?? new Date().toISOString().slice(0, 10);
+  /*
+   * NEVER REWRITE A SETTLED SESSION.
+   *
+   * `runDate` is the PRICE date, but the options and short-volume readings on
+   * the same row carry their own, later `sourceAsOf`. Those two only agree
+   * when the bar ingest ran first and advanced — which is exactly what this
+   * workflow does, and exactly what it stops doing the day the ingest fails
+   * quietly.
+   *
+   * Observed, not hypothesised: run locally against bars ending 2026-08-14
+   * while the store already held 2026-08-19, this replaced all 105 rows of
+   * 08-14 with today's positioning — ABT's ATM IV went 32.7% to 24.3% and its
+   * expiry 1 day to 8, a reading from a different week stamped with the old
+   * date. CBOE has no chain archive, so the overwritten session would have
+   * been gone permanently.
+   *
+   * A row may be added or re-recorded for the newest date. Reaching backwards
+   * past it is always a bug upstream, and the loud stop is the cheap outcome.
+   */
+  const newest = record.points.reduce((m, p) => (p.date > m ? p.date : m), "");
+  if (newest && runDate < newest) {
+    throw new Error(
+      `refusing to write: this run's price date is ${runDate}, but the store already holds ` +
+        `${newest}. Writing would overwrite the settled ${runDate} session with positioning ` +
+        `captured today, and CBOE gamma/IV cannot be re-fetched for a past date. ` +
+        `The bar ingest almost certainly did not advance — fix that first.`
+    );
+  }
+
+  const priorLog: { runs: CaptureRun[] } = fs.existsSync(LOG)
+    ? (JSON.parse(fs.readFileSync(LOG, "utf8")) as { runs: CaptureRun[] })
+    : { runs: [] };
+  const run: CaptureRun = {
+    date: runDate,
+    ranAt: new Date().toISOString(),
+    attempted: covered.length,
+    captured: fresh.length,
+    coverage: { options: optionsOk, shortVolume: shortOk, street: streetOk, social: socialOk },
+    failed: Object.keys(failed).sort(),
+    errors: failed,
+  };
+  // Idempotent by date: a re-run replaces its own entry rather than growing.
+  const runs = [...priorLog.runs.filter((r) => r.date !== runDate), run].sort((a, b) =>
+    a.date.localeCompare(b.date)
+  );
+  fs.writeFileSync(LOG, JSON.stringify({ version: 1, runs }, null, 0));
 
   const points = prunePoints(appendPoints(record.points, fresh));
   fs.writeFileSync(
@@ -205,6 +297,30 @@ async function main(): Promise<void> {
       `short volume ${shortOk}/${fresh.length}, consensus ${streetOk}/${fresh.length}, ` +
       `social ${socialOk}/${fresh.length}`
   );
+  console.log(
+    `[positioning] capture log -> ${LOG} (${run.captured}/${run.attempted}` +
+      (run.failed.length ? `, failed: ${run.failed.join(", ")}` : "") +
+      ")"
+  );
+
+  /*
+   * A LOST SESSION IS A RED RUN.
+   *
+   * The workflow invoked this as `|| echo "::warning::"`, so a failure
+   * produced a green check — the comment beside it even named the
+   * consequence. Of four trading days, one captured nothing and one captured
+   * six symbols, and nothing went red. CBOE publishes no chain archive, so
+   * these sessions cannot be recovered at any price; the run must fail while
+   * someone can still re-trigger it the same day.
+   */
+  if (fresh.length < covered.length * MIN_CAPTURE_SHARE) {
+    throw new Error(
+      `only ${fresh.length}/${covered.length} symbols captured on ${runDate} — ` +
+        `below the ${Math.round(MIN_CAPTURE_SHARE * 100)}% floor. ` +
+        (run.failed.length ? `Failed: ${run.failed.slice(0, 8).join(", ")}. ` : "") +
+        "Gamma, put/call and ATM IV for this session cannot be backfilled."
+    );
+  }
   if (optionsOk === 0) console.log("[positioning] WARNING: no options data at all — CBOE may have changed or blocked.");
   if (shortOk === 0) console.log("[positioning] WARNING: no short volume at all — FINRA may have changed or blocked.");
   console.log(`[positioning] ${points.length} rows total -> ${OUT}`);
