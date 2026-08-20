@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sendDiscord } from "@/lib/alerts/channels/discord";
+import { DiscordDelivery, sendDiscordDetailed } from "@/lib/alerts/channels/discord";
 import { sendTelegram } from "@/lib/alerts/channels/telegram";
 import { sendEmail } from "@/lib/alerts/channels/email";
 import { AlertChannel } from "@/types/market";
@@ -26,8 +26,20 @@ export async function POST(req: NextRequest) {
     }
 
     const results: Record<string, boolean> = {};
+    /*
+     * WHERE the message landed, not merely that it was accepted.
+     *
+     * A 2xx and "I never saw it" is a standoff no status code can settle: a
+     * webhook posts to the channel it was created in, and nothing in the
+     * response says which that is. Discord's own message and channel ids
+     * turn it into a lookup.
+     */
+    let discord: DiscordDelivery | undefined;
 
-    if (channels?.includes("discord")) results.discord = await sendDiscord(message);
+    if (channels?.includes("discord")) {
+      discord = await sendDiscordDetailed(message);
+      results.discord = discord.ok;
+    }
     if (channels?.includes("telegram")) results.telegram = await sendTelegram(message);
     if (channels?.includes("email") && email) results.email = await sendEmail(message, email);
 
@@ -37,6 +49,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       delivered: results,
+      // Message id, channel id, and Discord's own words on failure.
+      discord,
       // Surfaced in the UI so an un-set env var reads as "not configured"
       // rather than silently doing nothing.
       unconfigured,
