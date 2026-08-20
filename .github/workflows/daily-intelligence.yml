@@ -89,6 +89,14 @@ jobs:
       - name: Rebuild equity cross-section panel
         run: npx tsx scripts/research/buildCrossSection.ts
 
+      # Matched daily bars for the positioning universe. Same reason as the
+      # cross-section: the raw bar files are 146MB and gitignored, so nothing
+      # outside this runner can read them — and a cross-sectional test of
+      # positioning without committed bars silently shrinks to whichever
+      # symbols happen to have bars elsewhere (measured: 10 of 105, n=32).
+      - name: Rebuild matched bars panel
+        run: npx tsx scripts/ingest/buildBarsPanel.ts
+
       - name: Append signal history ledger
         run: npx tsx scripts/ingest/appendHistory.ts
 
@@ -146,7 +154,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          DATA_PATHS="src/data/marketIntelligence.json src/data/equityMarkets.json src/data/signalLedger.json src/data/earningsCalendar.json src/data/forwardReachRecord.json src/data/forwardVerdictRecord.json src/data/equityCrossSection.json src/data/macroSeries.json src/data/positioningHistory.json src/data/positioningLatest.json src/data/overnightPremium.json src/data/universeHistory.json src/data/captureLog.json"
+          DATA_PATHS="src/data/marketIntelligence.json src/data/equityMarkets.json src/data/signalLedger.json src/data/earningsCalendar.json src/data/forwardReachRecord.json src/data/forwardVerdictRecord.json src/data/equityCrossSection.json src/data/macroSeries.json src/data/positioningHistory.json src/data/positioningLatest.json src/data/overnightPremium.json src/data/universeHistory.json src/data/captureLog.json src/data/barsPanel.json"
 
           stage_onto_tip() {
             # Explicit refspec: `git fetch origin main` only updates the

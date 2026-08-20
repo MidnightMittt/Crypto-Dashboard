@@ -13,8 +13,7 @@ import { fetchShortVolume } from "../../src/lib/dossier/providers/finraShortVolu
 import { fetchSocial } from "../../src/lib/dossier/providers/attention";
 import { fetchStreet } from "../../src/lib/dossier/providers/nasdaqStreet";
 import { FieldGroup } from "../../src/lib/history/positioningHistory";
-import { EQUITY_PANEL } from "../../src/lib/markets/equityPanel";
-import { resolveUniverse } from "../../src/lib/markets/scannerUniverse";
+import { positioningUniverse } from "../../src/lib/markets/scannerUniverse";
 import { adjustForCorporateActions } from "../../src/lib/research/corporateActions";
 import { atrPctSeries } from "../../src/lib/technicals/indicators";
 import { Bar } from "../../src/lib/research/types";
@@ -127,7 +126,7 @@ async function main(): Promise<void> {
    * gamma, no short volume and no ATR — invisible until the pre-trade
    * endpoint returned nulls for the top-ranked name in the study.
    */
-  const covered = [...new Set([...EQUITY_PANEL, ...resolveUniverse()])].sort();
+  const covered = positioningUniverse();
   /** Symbols whose row could not be built at all, with the reason. */
   const failed: Record<string, string> = {};
 

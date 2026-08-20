@@ -21,6 +21,8 @@
  * claim belongs somewhere it can be read by everyone who depends on it.
  */
 
+import { EQUITY_PANEL } from "./equityPanel";
+
 /** Index and sector ETFs. Kept as the control group, never scanned for entries. */
 export const BENCHMARKS = ["SPY", "QQQ", "DIA", "IWM"] as const;
 
@@ -71,4 +73,20 @@ export function resolveUniverse(env = process.env.SCANNER_SYMBOLS): readonly str
     .map((s) => s.trim().toUpperCase())
     .filter(Boolean);
   return parsed.length > 0 ? parsed : SCANNER_UNIVERSE;
+}
+
+/**
+ * Everything the positioning recorder covers: the declared equity panel plus
+ * the scanner universe, deduplicated, sorted.
+ *
+ * Declared HERE because two jobs now depend on the same set — the daily
+ * positioning recorder and the bars-panel builder — and the bars panel is
+ * only useful if it covers exactly the symbols positioning is recorded for.
+ * A cross-sectional test joins the two on (symbol, date); every symbol the
+ * lists disagree on is a row silently dropped from the join, which is how a
+ * 105-symbol hypothesis ended up tested on 10. Deriving both from one
+ * function makes that disagreement impossible rather than unlikely.
+ */
+export function positioningUniverse(env = process.env.SCANNER_SYMBOLS): readonly string[] {
+  return [...new Set([...EQUITY_PANEL, ...resolveUniverse(env)])].sort();
 }
