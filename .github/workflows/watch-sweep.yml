@@ -1,0 +1,159 @@
+# THE LEVEL WATCHDOG'S CLOCK.
+#
+# Vercel Cron would be the natural home for this and is not available: crons
+# more frequent than daily are a paid-plan feature, and on Hobby the platform
+# does not fail the deployment — it declines to CREATE one. Commit 2cad036
+# carried `*/5 13-21 * * 1-5` and produced no deployment at all, so the
+# watchdog routes 404'd in production while the commit sat on main looking
+# shipped. See 9b1bd76.
+#
+# ── The drift problem, and why this does not fight it ─────────────────
+#
+# GitHub's scheduler is late, and in this repository it is late by a lot:
+# 41, 80, 112 and 123 minutes past the requested slot, measured. A naive
+# `*/5` cron here would not give five-minute sweeps; it would give whatever
+# the queue felt like, which is exactly the false promise a stop must not be
+# built on.
+#
+# So the cron is used only to START a job, never to pace one. Once a runner
+# is alive, `sleep` is accurate to the second. Each run therefore waits on
+# the Eastern wall clock and then sweeps every SWEEP_SECONDS itself, turning
+# an unreliable scheduler into a reliable cadence.
+#
+# ── Why several overlapping starts, deliberately ──────────────────────
+#
+# A single daily start would put the whole session behind one drifting
+# trigger. Instead there are several, each covering a couple of hours, and
+# they are ALLOWED to overlap — no cancel-in-progress, no concurrency group.
+#
+# Overlap is free because sweeps are idempotent: a level fires exactly once
+# (see src/lib/watch/levels.ts), so two runners sweeping the same minute
+# cannot double-alert. That property is what lets redundancy substitute for
+# precision. If one start is ninety minutes late, another is already running.
+#
+# ── What this does NOT cover ─────────────────────────────────────────
+#
+# Regular US hours only. Levels are not swept overnight or at weekends, so a
+# gap through a stop is seen at the next sweep after the open, not when it
+# happens. Extended-hours coverage would need a quote source that prices it
+# honestly; the daily bars behind this endpoint do not.
+name: watch-sweep
+
+on:
+  schedule:
+    # Staggered starts across the session, in UTC. Deliberately more than the
+    # minimum: each is a chance to be on time, and being early costs nothing
+    # because the job waits for the open on the Eastern clock.
+    - cron: "15 13 * * 1-5"
+    - cron: "45 14 * * 1-5"
+    - cron: "15 16 * * 1-5"
+    - cron: "45 17 * * 1-5"
+    - cron: "15 19 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    # Comfortably longer than one run's coverage, far short of the 6h ceiling.
+    timeout-minutes: 170
+    steps:
+      - name: Sweep armed levels until the close
+        env:
+          BASE: https://crypto-dashboard-65d9.vercel.app
+          # Optional. Set it as a repository secret AND in Vercel to close the
+          # endpoint to the public; unset, the route accepts the call and says
+          # so in its own source rather than pretending to be protected.
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          # Five minutes: the cadence the alerting was specified around, and
+          # the same window the endpoint refuses to fire on a quote older than.
+          SWEEP_SECONDS: "300"
+          # Stop sweeping a few minutes past 16:00 ET so the closing print is
+          # evaluated rather than missed by a race with the bell.
+          END_ET: "1605"
+          OPEN_ET: "0930"
+        run: |
+          set -uo pipefail
+
+          auth=()
+          if [ -n "${CRON_SECRET}" ]; then
+            auth=(-H "authorization: Bearer ${CRON_SECRET}")
+          else
+            echo "::warning::CRON_SECRET is not set — /api/watch/sweep is publicly callable."
+          fi
+
+          # Minutes-since-midnight in US market time. Base-10 forced: 0930
+          # would otherwise be read as octal and fail.
+          et_now() { TZ=America/New_York date +%H%M; }
+          as_int() { echo $((10#$1)); }
+
+          end=$(as_int "$END_ET")
+          open=$(as_int "$OPEN_ET")
+          fired_total=0
+          sweeps=0
+
+          # A start that lands after the close is drift doing its worst, not a
+          # broken watchdog. The two must not fail the same way: distinguishing
+          # them is the difference between an alarm worth reading and one that
+          # cries wolf every evening until it is ignored.
+          started_after_close=0
+          if [ "$(as_int "$(et_now)")" -ge "$end" ]; then
+            started_after_close=1
+          fi
+
+          while true; do
+            now=$(as_int "$(et_now)")
+
+            if [ "$now" -ge "$end" ]; then
+              echo "Past $END_ET ET — session covered. $sweeps sweeps, $fired_total level(s) fired."
+              break
+            fi
+
+            if [ "$now" -lt "$open" ]; then
+              echo "$(et_now) ET — before the open, waiting."
+              sleep "$SWEEP_SECONDS"
+              continue
+            fi
+
+            # A failed request must cost one sweep, never the run: a transient
+            # 5xx or a cold start is not a reason to stop watching stops.
+            body=$(curl -sS --max-time 60 "${auth[@]}" "${BASE}/api/watch/sweep" || echo '{"error":"request failed"}')
+            sweeps=$((sweeps + 1))
+
+            n=$(printf '%s' "$body" | python3 -c 'import json,sys
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    print(-1); raise SystemExit
+f = d.get("fired")
+print(len(f) if isinstance(f, list) else -1)' 2>/dev/null || echo -1)
+
+            if [ "$n" = "-1" ]; then
+              echo "::warning::sweep at $(et_now) ET returned an unreadable response: $(printf '%s' "$body" | head -c 200)"
+            elif [ "$n" -gt 0 ]; then
+              fired_total=$((fired_total + n))
+              # Loud, because this is the entire point of the workflow.
+              echo "::notice::$(et_now) ET — $n level(s) FIRED"
+              printf '%s\n' "$body" | head -c 2000
+            else
+              echo "$(et_now) ET — swept, nothing fired."
+            fi
+
+            sleep "$SWEEP_SECONDS"
+          done
+
+          if [ "$sweeps" -eq 0 ]; then
+            if [ "$started_after_close" -eq 1 ]; then
+              # Worth surfacing — repeated warnings here mean the schedule
+              # needs moving earlier — but not a failure. Nothing is broken.
+              echo "::warning::Started at $(et_now) ET, after the $END_ET close: this trigger was lost to scheduler drift and swept nothing."
+            else
+              # Inside market hours and never swept once: a broken watchdog
+              # wearing a green check, which is the shape of failure this
+              # whole workflow exists to avoid.
+              echo "::error::Ran during market hours without completing a single sweep — the watchdog did not run."
+              exit 1
+            fi
+          fi
