@@ -117,6 +117,7 @@ export type ModuleId =
   | "checklist"
   | "invalidation"
   | "stopGrid"
+  | "trendState"
   | "passRules"
   | "analogs"
   | "validatedSignal"
@@ -173,6 +174,13 @@ export const MODULES: readonly ModuleDef[] = [
    * the thesis breaks, this is whether a stop there survives ordinary noise.
    */
   { id: "stopGrid", section: "riskFactors", serves: ["risk", "execution"] },
+  /*
+   * The mechanical exit level, in dollars. Sits with the other two because
+   * together they are one answer to "how does this end": invalidation is where
+   * the thesis breaks, stopGrid is whether a stop there survives noise, and
+   * this is the line to act on when it does not.
+   */
+  { id: "trendState", section: "riskFactors", serves: ["risk", "execution"] },
   /* Reasons to stand aside, as distinct from reasons to exit. */
   { id: "passRules", section: "riskFactors", serves: ["risk", "decision"] },
 

@@ -4,6 +4,7 @@ import { buildLiveAnalysis, LiveAnalysis } from "./liveAnalysis";
 import { MetricVerdict } from "@/lib/signals/types";
 import { EarningsCalendar } from "@/lib/markets/earningsVeto";
 import { stopGrid } from "@/lib/research/stopViability";
+import { trendState } from "@/lib/research/trendState";
 import { buildDossier } from "@/lib/dossier/buildDossier";
 import { available, Read, TickerDossier, unavailable } from "@/lib/dossier/types";
 import { fetchOptionsSummary } from "@/lib/dossier/providers/cboeOptions";
@@ -344,10 +345,17 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
    * windows without reaching back into a different volatility regime.
    */
   const stops = stopGrid(result.analysis.symbol, history.history.bars.slice(-756));
+  /*
+   * Sixty sessions for the trailing high — a quarter, long enough that the
+   * line follows a real trend rather than last week's chop, short enough that
+   * a high from a different regime cannot hold the exit hostage.
+   */
+  const trend = trendState(result.analysis.symbol, history.history.bars);
 
   const dossier = buildDossier({
     analysis: result.analysis,
     stopGrid: stops,
+    trendState: trend,
     momentum,
     closes: history.history.bars.map((b) => b.close),
     optionsIntel: optionsIntel

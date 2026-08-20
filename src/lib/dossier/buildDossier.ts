@@ -64,6 +64,8 @@ export interface DossierInputs {
    * arrives pre-built rather than being derived here.
    */
   stopGrid?: import("@/lib/research/stopViability").StopGrid | null;
+  /** The exit line, computed by the caller for the same raw-bars reason. */
+  trendState?: import("@/lib/research/trendState").TrendState | null;
   regime: RegimeRead | null;
   rotation: RotationRead | null;
   industries: IndustryRead[];
@@ -360,6 +362,54 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
       nextEntry,
     }),
 
+    trendState: inputs.trendState
+      ? available(
+          inputs.trendState,
+          "advanced",
+          {
+            to: "institutional" as const,
+            when: "positions are known, so the trailing high can be measured from YOUR entry rather than from a rolling window — a high made before you owned it is not one you could have sold into",
+          },
+          {
+            /*
+             * DESCRIPTIVE. This states a level derived from the bars; it makes
+             * no claim that holding to it beats any alternative. The multiple
+             * is declared, not fitted, and calling it validated would claim a
+             * standing it has never been tested for.
+             */
+            confidence: {
+              grade: "strong",
+              validated: {
+                label: "descriptive",
+                validatedWeightPct: 0,
+                validatedCount: 0,
+                contributingCount: 0,
+                validatedModules: [],
+                sentence:
+                  "Descriptive: a level read off this name's own range, not a forecast that holding to it is optimal.",
+              },
+              n: inputs.trendState.lookback,
+            },
+            reasoning: [
+              inputs.trendState.sentence,
+              `Trailing high is taken on CLOSES over ${inputs.trendState.lookback} sessions, so an intraday spike cannot ratchet the line up to a level the position never had the chance to sell into.`,
+              "The multiple is 1.5 ATR — declared, not optimised. It is a session and a half of this name's own movement.",
+            ],
+            provenance: [
+              {
+                field: "trailStop",
+                unit: "usd",
+                as_of: new Date(inputs.analysis.asOf).toISOString(),
+                source: "adjusted_daily_bars",
+                method: "trailing_high_of_closes_minus_1_5_wilder_atr_14",
+              },
+            ],
+          }
+        )
+      : unavailable(
+          "not-measured-yet",
+          "Too few sessions to compute an ATR, so there is no reference level to place."
+        ),
     stopGrid: inputs.stopGrid
       ? available(
           inputs.stopGrid,

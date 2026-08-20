@@ -546,6 +546,13 @@ export interface TickerDossier {
    */
   stopGrid: Read<import("@/lib/research/stopViability").StopGrid>;
   /**
+   * The mechanical exit level in DOLLARS — trailing high less 1.5 ATR.
+   *
+   * Exists because an exit taken with no reference level on screen is a
+   * decision made by the tape. One number, visible before the moment arrives.
+   */
+  trendState: Read<import("@/lib/research/trendState").TrendState>;
+  /**
    * Similar historical ENVIRONMENTS, from fingerprint matching. Replaced the
    * broad-bucket analogs, whose "71,585 times seen" counted the same
    * environments thousands of times over.
