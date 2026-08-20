@@ -20,6 +20,26 @@ Everything an agent needs is in this response. The other routes
 (`/api/positioning/{symbol}` for full history, `/api/health`,
 `/api/market-data`) are for depth, not for the decision loop.
 
+For ONE symbol's context — where the price has been, how much room a stop
+needs, whether the current 20-day return is unusual for this name — there is
+a flat companion:
+
+```
+GET /api/asset/{SYMBOL}
+```
+
+Milliseconds, no envelopes, snake_case. Carries `ret_pctile_20d`
+(p05/p25/p50/p75/p95 of the name's OWN 20-session returns — the distribution
+position sizing reads; `independent_n` is the honest sample size because the
+windows overlap), the Wilder ATR and 1.5-ATR trail line, stop-grid survival
+widths, and the latest positioning row with each group's own instant. Three
+rules travel with it: missing is `null` and never `0`; `earnings_status` is
+three-state (`confirmed` / `none` / `lookup_failed` — a failed lookup does
+NOT clear an event veto); and `asof` (compute time) is a different clock
+from `price_asof` (the close's own session — currently the last daily close,
+so expect it to trail by up to one session plus the overnight). Covers the
+positioning universe only; anything else is a 404 that says so.
+
 **Pin the schema.** The response carries `schema_version`, currently `"2.0"`.
 Additive changes bump MINOR; a field removal or a change of meaning bumps
 MAJOR. Refuse to trade on a MAJOR you have not read.
