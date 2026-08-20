@@ -198,3 +198,28 @@ describe("buildAssetFacts", () => {
     expect(f.narrowest_viable_stop_pct_5d).toBeNull();
   });
 });
+
+describe("price staleness on the facts object", () => {
+  /*
+   * The P0 this closes: the panel's newest session is 60 sessions back from
+   * "now", so the price must be labelled stale even though it is a perfectly
+   * real close that was correct on the day it was taken.
+   */
+  it("marks a price stale when the panel has fallen behind", () => {
+    const f = buildAssetFacts(inputs({ now: Date.UTC(2026, 7, 27, 20, 30) }));
+    expect(f.price).not.toBeNull();
+    expect(f.price_stale).toBe(true);
+    expect(f.price_age_sessions).toBeGreaterThan(0);
+    expect(f.price_stale_reason).toContain("Do not size or trigger from it");
+    expect(f.latest_completed_session).toBe("2026-08-27");
+  });
+
+  /* Mid-session, yesterday's close is current and must not be flagged. */
+  it("does not flag the latest close mid-session", () => {
+    // Panel ends 2026-08-19; 2026-08-20 15:00 ET is before that day's close.
+    const f = buildAssetFacts(inputs({ now: Date.UTC(2026, 7, 20, 15, 0) }));
+    expect(f.price_stale).toBe(false);
+    expect(f.price_age_sessions).toBe(0);
+    expect(f.price_stale_reason).toBeNull();
+  });
+});

@@ -1,4 +1,5 @@
 import { EarningsCalendar } from "@/lib/markets/earningsVeto";
+import { assessPriceStaleness } from "./priceStaleness";
 import { PositioningPoint } from "@/lib/history/positioningHistory";
 import { PanelRow, SymbolPanel } from "@/lib/research/barsPanel";
 import { stopGrid, narrowestViable } from "@/lib/research/stopViability";
@@ -46,6 +47,24 @@ export interface AssetFacts {
   /** The session that close belongs to. Its distance from `asof` is real information. */
   price_asof: string | null;
   price_source: "daily-close";
+  /**
+   * WHETHER THIS PRICE IS THE LATEST CLOSE, stated rather than left to be
+   * inferred from `price_asof`.
+   *
+   * A consumer cannot tell a healthy one-day-old close from a pipeline that
+   * stopped updating four sessions ago by looking at a date alone, and it
+   * cannot tell either from the VALUE: a 2026-08-14 close read 10.6% from
+   * the live price one morning and 3.6% from it that same afternoon, having
+   * become no more current in between. `price_stale` is a claim about
+   * provenance only — nothing here inspects the number.
+   */
+  price_stale: boolean;
+  /** Completed sessions between `price_asof` and the latest close. 0 = current. */
+  price_age_sessions: number;
+  /** What is wrong and what not to do with it. Null when current. */
+  price_stale_reason: string | null;
+  /** The session this price SHOULD have been, so the arithmetic is checkable. */
+  latest_completed_session: string;
 
   /** Current 20-session return, percent. Null until the panel holds 21 sessions. */
   ret_20d_pct: number | null;
@@ -211,6 +230,8 @@ export function buildAssetFacts(inputs: AssetFactsInputs): AssetFacts {
     }
   }
 
+  const staleness = assessPriceStaleness(priceAsof, new Date(now));
+
   const closes = closesWithFills(panel);
   const rets: number[] = [];
   for (let i = RET_WINDOW_SESSIONS; i < closes.length; i++) {
@@ -238,6 +259,10 @@ export function buildAssetFacts(inputs: AssetFactsInputs): AssetFacts {
     price,
     price_asof: priceAsof,
     price_source: "daily-close",
+    price_stale: staleness.stale,
+    price_age_sessions: staleness.ageSessions,
+    price_stale_reason: staleness.reason,
+    latest_completed_session: staleness.latestCompletedSession,
 
     ret_20d_pct: retNow,
     ret_pctile_20d: {
