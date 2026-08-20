@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/watch/sweep",
+      "schedule": "*/5 13-21 * * 1-5"
+    }
+  ]
+}
