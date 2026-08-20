@@ -536,6 +536,16 @@ export interface TickerDossier {
   bearCase: EvidenceBullet[];
   invalidation: InvalidationTrigger[];
   /**
+   * How much room a stop needs on THIS name, measured from its own intraday
+   * lows rather than chosen as a round number.
+   *
+   * Sits beside invalidation because they answer adjacent questions:
+   * invalidation is where the thesis breaks, this is whether a stop placed
+   * there survives ordinary noise. A 5% stop is not a risk setting on a name
+   * whose typical session already ranges 9%.
+   */
+  stopGrid: Read<import("@/lib/research/stopViability").StopGrid>;
+  /**
    * Similar historical ENVIRONMENTS, from fingerprint matching. Replaced the
    * broad-bucket analogs, whose "71,585 times seen" counted the same
    * environments thousands of times over.

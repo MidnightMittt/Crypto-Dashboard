@@ -3,6 +3,7 @@ import { fetchIntradayHistory, fetchQuoteHistory } from "./fetchQuoteHistory";
 import { buildLiveAnalysis, LiveAnalysis } from "./liveAnalysis";
 import { MetricVerdict } from "@/lib/signals/types";
 import { EarningsCalendar } from "@/lib/markets/earningsVeto";
+import { stopGrid } from "@/lib/research/stopViability";
 import { buildDossier } from "@/lib/dossier/buildDossier";
 import { available, Read, TickerDossier, unavailable } from "@/lib/dossier/types";
 import { fetchOptionsSummary } from "@/lib/dossier/providers/cboeOptions";
@@ -336,8 +337,17 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
     now: Date.now(),
   });
 
+  /*
+   * Computed here rather than inside buildDossier for the same reason
+   * momentum is: it needs the raw adjusted bars, and LiveAnalysis carries only
+   * `barsUsed`. Three years is enough for the 21-session horizon to have real
+   * windows without reaching back into a different volatility regime.
+   */
+  const stops = stopGrid(result.analysis.symbol, history.history.bars.slice(-756));
+
   const dossier = buildDossier({
     analysis: result.analysis,
+    stopGrid: stops,
     momentum,
     closes: history.history.bars.map((b) => b.close),
     optionsIntel: optionsIntel

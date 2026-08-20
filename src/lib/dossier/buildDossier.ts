@@ -1,4 +1,5 @@
 import { LiveAnalysis, MIN_BARS_FOR_ANALYSIS } from "@/lib/search/liveAnalysis";
+import { describeStop } from "@/lib/research/stopViability";
 import { equityVerdict } from "@/lib/markets/equityVerdict";
 import { nearestWatchLevels, SupportResistanceZone, watchEdge } from "@/lib/technicals/marketStructure";
 import { TRADE_PLAN_REFUSAL_SHORT } from "@/lib/signals/tradePlan";
@@ -57,6 +58,12 @@ const SPARKLINE_POINTS = 220;
 
 export interface DossierInputs {
   analysis: LiveAnalysis;
+  /**
+   * Stop survival, computed by the CALLER because it needs the raw adjusted
+   * bars and LiveAnalysis carries only `barsUsed` — the same reason `analogs`
+   * arrives pre-built rather than being derived here.
+   */
+  stopGrid?: import("@/lib/research/stopViability").StopGrid | null;
   regime: RegimeRead | null;
   rotation: RotationRead | null;
   industries: IndustryRead[];
@@ -353,7 +360,60 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
       nextEntry,
     }),
 
-    analogs: buildAnalogs(inputs.analogs ?? null, isCrypto, analysis.barsUsed, inputs.analogsBlockedReason ?? null),
+    stopGrid: inputs.stopGrid
+      ? available(
+          inputs.stopGrid,
+          "advanced",
+          {
+            to: "institutional" as const,
+            when: "intraday bars replace daily lows, so a stop's fill can be modelled within the session rather than assumed at the low",
+          },
+          {
+            /*
+             * NOT validated: this is a MEASUREMENT of what the bars did, not a
+             * forecast that anything will keep doing it. It has no forward
+             * record because there is no prediction to score.
+             */
+            confidence: {
+              grade: "strong",
+              /*
+               * DESCRIPTIVE, not validated. This measures what the bars did;
+               * it forecasts nothing, so there is no prediction to score and
+               * no forward record to earn. Grading it "validated" would claim
+               * a standing this has not been put up for.
+               */
+              validated: {
+                label: "descriptive",
+                validatedWeightPct: 0,
+                validatedCount: 0,
+                contributingCount: 0,
+                validatedModules: [],
+                sentence:
+                  "Descriptive: this measures what the bars did and forecasts nothing, so there is no prediction to score.",
+              },
+              n: inputs.stopGrid.cells[0]?.n ?? null,
+            },
+            reasoning: [
+              describeStop(inputs.stopGrid, 5),
+              "Measured from intraday LOWS, not closes: a stop is a resting order and a session that traded down 6% then closed flat still took out a 5% stop.",
+              "Still optimistic — within-session path is invisible in daily bars, so a real fill is likelier to be worse than the low than better.",
+            ],
+            provenance: [
+              {
+                field: "survivalPct",
+                unit: "pct",
+                as_of: inputs.stopGrid.toDate,
+                source: "adjusted_daily_bars",
+                method: "share_of_entries_whose_low_never_reached_the_stop_entry_bar_excluded",
+              },
+            ],
+          }
+        )
+      : unavailable(
+          "not-measured-yet",
+          "Too few sessions to measure stop survival — the grid needs enough complete windows at the longest horizon before a rate means anything."
+        ),
+        analogs: buildAnalogs(inputs.analogs ?? null, isCrypto, analysis.barsUsed, inputs.analogsBlockedReason ?? null),
 
     nextEntry,
 

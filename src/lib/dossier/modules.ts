@@ -116,6 +116,7 @@ export type ModuleId =
   | "nextEntry"
   | "checklist"
   | "invalidation"
+  | "stopGrid"
   | "passRules"
   | "analogs"
   | "validatedSignal"
@@ -166,6 +167,12 @@ export const MODULES: readonly ModuleDef[] = [
 
   // ── RISK ────────────────────────────────────────────────────────────
   { id: "invalidation", section: "riskFactors", serves: ["risk", "execution"] },
+  /*
+   * How much room the stop needs, measured rather than chosen. Sits beside
+   * invalidation because they answer adjacent questions: invalidation is WHERE
+   * the thesis breaks, this is whether a stop there survives ordinary noise.
+   */
+  { id: "stopGrid", section: "riskFactors", serves: ["risk", "execution"] },
   /* Reasons to stand aside, as distinct from reasons to exit. */
   { id: "passRules", section: "riskFactors", serves: ["risk", "decision"] },
 

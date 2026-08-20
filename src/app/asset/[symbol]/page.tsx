@@ -40,6 +40,7 @@ import {
   sectionsOf,
 } from "@/lib/dossier/modules";
 import { TickerDossier } from "@/lib/dossier/types";
+import StopGridPanel from "@/components/dossier/StopGridPanel";
 import { analyseTicker } from "@/lib/search/analyseTicker";
 import { formatPrice } from "@/lib/utils/format";
 
@@ -124,6 +125,7 @@ const MODULE_COMPONENTS: Record<ModuleId, (props: { d: TickerDossier }) => React
   nextEntry: NextEntryPanel,
   checklist: ChecklistPanel,
   invalidation: InvalidationPanel,
+  stopGrid: StopGridPanel,
   passRules: PassRulesPanel,
   analogs: AnalogsPanel,
   validatedSignal: ValidatedSignalPanel,
