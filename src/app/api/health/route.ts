@@ -157,6 +157,26 @@ export async function GET() {
     : { ok: false, balanceEth: null, hint: "Set ETHERSCAN_API_KEY to enable" };
 
   return NextResponse.json({
+    /*
+     * WHICH COMMIT IS ACTUALLY SERVING, so "pushed" and "deployed" can be
+     * told apart from the outside.
+     *
+     * On 2026-08-20 a commit adding a sub-daily cron to vercel.json caused
+     * Vercel to decline to CREATE a deployment rather than to fail one.
+     * There was no red build to read, just absence: the routes 404'd in
+     * production while the commit sat on main looking shipped, and it was
+     * found only because someone asked. Publishing the deployed SHA turns
+     * that silent class of failure into something a workflow can assert on.
+     * See .github/workflows/verify-deploy.yml.
+     *
+     * Null locally, where the variable does not exist — a real state,
+     * reported as one rather than defaulted into a lie.
+     */
+    deployment: {
+      commit: process.env.VERCEL_GIT_COMMIT_SHA ?? null,
+      branch: process.env.VERCEL_GIT_COMMIT_REF ?? null,
+      environment: process.env.VERCEL_ENV ?? null,
+    },
     storage: {
       backend: kvConfigured() ? "redis" : "filesystem",
       kvRoundTrip,

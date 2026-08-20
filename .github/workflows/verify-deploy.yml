@@ -1,0 +1,85 @@
+# DID THE PUSH ACTUALLY DEPLOY?
+#
+# This exists because on 2026-08-20 the answer was no, and nothing said so.
+#
+# Commit 2cad036 added vercel.json with a `*/5` cron. Sub-daily schedules are
+# a paid-plan feature, and on Hobby Vercel does not fail the build — it
+# declines to CREATE the deployment. So there was no red check to notice: the
+# previous commit kept serving, /api/watch returned 404 for nearly two hours,
+# and the level watchdog was reported as shipped while no level could be
+# armed at all. It surfaced only because someone thought to ask.
+#
+# "Pushed" and "deployed" had quietly become different things, and no signal
+# in this repository could tell them apart. This is that signal.
+#
+# It asserts one fact: the SHA production reports at /api/health is the SHA
+# that was just pushed. That catches the cron case, a rejected config, an
+# exhausted deployment quota, a disconnected Git integration, and a build
+# that dies before promotion — without needing to know which happened.
+#
+# Deliberately NOT part of daily-intelligence: that job pushes data commits
+# and its own success is about the data. This is about the platform, and a
+# platform failure should not be buried inside a data job's log.
+name: verify-deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # Only the newest push matters. If three land in a minute, verifying the
+  # first two tells you nothing — they were superseded, not lost.
+  group: verify-deploy
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Wait for production to serve this commit
+        env:
+          BASE: https://crypto-dashboard-65d9.vercel.app
+          SHA: ${{ github.sha }}
+          # Deploys here run ~2 minutes; 12 gives room for a queue without
+          # letting a genuinely dead deploy sit undetected for long.
+          DEADLINE_SECONDS: "720"
+          POLL_SECONDS: "20"
+        run: |
+          set -uo pipefail
+          echo "Expecting production to serve ${SHA}"
+          deadline=$(( $(date +%s) + DEADLINE_SECONDS ))
+          live=""
+
+          while [ "$(date +%s)" -lt "$deadline" ]; do
+            # A failed request is not a verdict: a cold start or a blip must
+            # cost one poll, not the run.
+            body=$(curl -sS --max-time 30 "${BASE}/api/health" || echo '{}')
+            live=$(printf '%s' "$body" | python3 -c 'import json,sys
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    print(""); raise SystemExit
+print((d.get("deployment") or {}).get("commit") or "")' 2>/dev/null || echo "")
+
+            if [ "$live" = "$SHA" ]; then
+              echo "::notice::Production is serving ${SHA}."
+              exit 0
+            fi
+
+            echo "$(date -u +%H:%M:%S) — production has '${live:-unknown}', waiting."
+            sleep "$POLL_SECONDS"
+          done
+
+          # Two genuinely different situations, reported as such rather than
+          # merged into one unhelpful "timeout".
+          if [ -z "$live" ]; then
+            echo '::error::/api/health never reported a deployment commit. Either the endpoint is down, or the deployment block has not shipped yet.'
+          else
+            echo "::error::After ${DEADLINE_SECONDS}s production still serves '${live}', not '${SHA}'. The push did not deploy. Check the Vercel dashboard: a rejected vercel.json, an exhausted deployment quota and a disconnected Git integration all look like this — no failed build, just nothing."
+          fi
+          exit 1
