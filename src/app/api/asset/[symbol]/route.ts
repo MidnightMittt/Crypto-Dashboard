@@ -4,8 +4,8 @@ import earningsJson from "@/data/earningsCalendar.json";
 import positioningLatestJson from "@/data/positioningLatest.json";
 import { PositioningPoint } from "@/lib/history/positioningHistory";
 import { BarsPanel } from "@/lib/research/barsPanel";
-import { fetchStreet } from "@/lib/dossier/providers/nasdaqStreet";
-import { AssetFacts, buildAssetFacts, EarningsProbe } from "@/lib/asset/buildAssetFacts";
+import { EarningsCalendar } from "@/lib/markets/earningsVeto";
+import { AssetFacts, buildAssetFacts } from "@/lib/asset/buildAssetFacts";
 
 /**
  * GET /api/asset/{SYMBOL} — one symbol, flat JSON, built for a machine.
@@ -15,11 +15,18 @@ import { AssetFacts, buildAssetFacts, EarningsProbe } from "@/lib/asset/buildAss
  * HTML, /api/asset-composites was measured at 16.3 seconds, and pulling raw
  * bars from the broker blew a token limit three times in one session. The
  * budget here is ~2s, and the design that meets it is: EVERYTHING from
- * committed artifacts (the matched bars panel, the positioning projection,
- * the earnings calendar) plus exactly ONE live probe — earnings, because it
- * is the one three-state fact no committed file can answer alone — bounded
- * by a hard deadline so a slow provider degrades the answer, never the
- * latency.
+ * committed artifacts — the matched bars panel, the positioning projection,
+ * the earnings calendar — and NO provider call at all.
+ *
+ * The first version of this route did carry one live probe, for earnings,
+ * on the theory that only a provider could separate "no earnings" from "we
+ * could not find out". Production disproved it on the first measurement: the
+ * probe timed out on EVERY request (Nasdaq rejects datacenter IPs, which
+ * this repository's own daily workflow already documented), spending 1.2s of
+ * a 1.7s response to learn nothing, and returning a different
+ * earnings_status on a laptop than on the server for the same symbol. The
+ * calendar now records whether its sweep completed, which answers the same
+ * question from a committed file — see resolveEarnings.
  *
  * Coverage is the positioning universe, deliberately: this endpoint exists
  * to join what the recorder measures with where the price has been, and a
@@ -32,31 +39,9 @@ import { AssetFacts, buildAssetFacts, EarningsProbe } from "@/lib/asset/buildAss
 
 export const dynamic = "force-dynamic";
 
-/**
- * The live probe's whole budget. Nasdaq from a datacenter IP either answers
- * fast or hangs; past this the committed calendar takes over and the status
- * degrades to lookup_failed / calendar-confirmed. Chosen to keep worst-case
- * response comfortably inside the ~2s acceptance bound.
- */
-const EARNINGS_PROBE_MS = 1_200;
-
 const panel = barsPanelJson as unknown as BarsPanel;
 const positioningPoints = (positioningLatestJson as { points: PositioningPoint[] }).points;
-const calendarEntries = (earningsJson as { entries: { symbol: string; date: string }[] }).entries;
-
-async function probeEarnings(symbol: string, lastClose: number | null): Promise<EarningsProbe> {
-  if (lastClose === null) return { kind: "unreachable" };
-  try {
-    const street = await Promise.race([
-      fetchStreet(symbol, lastClose),
-      new Promise<null>((r) => setTimeout(() => r(null), EARNINGS_PROBE_MS)),
-    ]);
-    if (street && street.ok) return { kind: "live", nextEarningsDate: street.summary.nextEarningsDate };
-    return { kind: "unreachable" };
-  } catch {
-    return { kind: "unreachable" };
-  }
-}
+const calendar = earningsJson as EarningsCalendar;
 
 export async function GET(
   _req: Request,
@@ -76,28 +61,12 @@ export async function GET(
     );
   }
 
-  // Last real close, needed by the probe before the builder runs. Same
-  // walk-back the builder does; cheap enough that sharing it isn't worth
-  // widening the builder's contract.
-  const filled = new Set(symbolPanel.interpolated);
-  let lastClose: number | null = null;
-  for (let i = panel.sessions.length - 1; i >= 0; i--) {
-    const row = symbolPanel.bars[i];
-    if (row && !filled.has(i)) {
-      lastClose = row[3];
-      break;
-    }
-  }
-
-  const earnings = await probeEarnings(symbol, lastClose);
-
   const facts: AssetFacts = buildAssetFacts({
     symbol,
     sessions: panel.sessions,
     panel: symbolPanel,
     positioning: positioningPoints.find((p) => p.symbol === symbol) ?? null,
-    earnings,
-    calendarEntries,
+    calendar,
     now: Date.now(),
   });
 

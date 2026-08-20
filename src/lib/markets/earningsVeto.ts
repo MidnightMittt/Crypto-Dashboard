@@ -25,6 +25,27 @@ export interface EarningsCalendar {
   generatedAt: number;
   /** ISO dates (YYYY-MM-DD, exchange calendar days) per symbol. */
   entries: Array<{ symbol: string; date: string }>;
+  /**
+   * WHETHER THE SWEEP FINISHED, which is what makes absence meaningful.
+   *
+   * The fetch walks EVERY day in the lookahead window and records every
+   * in-universe symbol reporting on it. So a COMPLETED sweep is authoritative
+   * about the whole universe: a covered symbol with no entry has no earnings
+   * before `throughDate`. Without this block a reader cannot separate that
+   * from "the fetch died on day three" or "this symbol was never in scope" —
+   * three situations with different trading consequences that an entry list
+   * alone renders identical.
+   *
+   * Optional because a calendar written before this field existed is still
+   * valid for the veto; a consumer needing certainty treats its absence as
+   * "unknown" rather than as "no earnings".
+   */
+  sweep?: {
+    /** Last date the sweep actually covered. Past it, absence proves nothing. */
+    throughDate: string;
+    /** Every symbol in scope, so absence is distinguishable from out-of-scope. */
+    universe: string[];
+  };
 }
 
 /**

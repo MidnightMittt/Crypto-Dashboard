@@ -1,3 +1,4 @@
+import { EarningsCalendar } from "@/lib/markets/earningsVeto";
 import { PositioningPoint } from "@/lib/history/positioningHistory";
 import { PanelRow, SymbolPanel } from "@/lib/research/barsPanel";
 import { stopGrid, narrowestViable } from "@/lib/research/stopViability";
@@ -10,11 +11,13 @@ import { Bar } from "@/lib/research/types";
  * The consumer is the trading agent, mid-decision. Pulling raw bars from the
  * broker to answer "is a −8% twenty-day return unusual for this name?" blew
  * a token limit three times in one session — 200KB of bars to reach one
- * percentile. This module answers from data the repository already commits,
- * which is what keeps the route's latency in the milliseconds: no provider
- * is consulted here at all. The route may add ONE live probe (earnings);
- * everything else is computed from the bars panel and the positioning
- * projection.
+ * percentile. This module answers from data the repository already commits —
+ * the bars panel, the positioning projection, the earnings calendar — and
+ * consults NO provider at all. That is what keeps the route in milliseconds,
+ * and it is not merely an optimisation: the one live probe this originally
+ * carried failed on every production request (Nasdaq rejects datacenter IPs)
+ * while spending its full 1.2s timeout, and answered differently on a laptop
+ * than on the server for the same symbol.
  *
  * Four rules, from the brief that commissioned this, each load-bearing:
  *
@@ -91,13 +94,8 @@ export interface AssetFacts {
 
   earnings_status: "confirmed" | "none" | "lookup_failed";
   earnings_date: string | null;
-  earnings_source: "nasdaq-live" | "committed-calendar" | null;
+  earnings_source: "committed-calendar" | null;
 }
-
-/** What the route learned from its one live probe, already discriminated. */
-export type EarningsProbe =
-  | { kind: "live"; nextEarningsDate: string | null }
-  | { kind: "unreachable" };
 
 export interface AssetFactsInputs {
   symbol: string;
@@ -105,9 +103,14 @@ export interface AssetFactsInputs {
   sessions: readonly string[];
   panel: SymbolPanel;
   positioning: PositioningPoint | null;
-  earnings: EarningsProbe;
-  /** Committed calendar entries, the fallback when the live probe fails. */
-  calendarEntries: readonly { symbol: string; date: string }[];
+  /**
+   * The committed calendar, sweep block included. NOT a live provider call:
+   * Nasdaq rejects datacenter IPs, so a request-time probe fails every time
+   * in production while costing its full timeout — measured at 1.2s of a
+   * 1.7s response, and it made the same symbol answer differently on a
+   * laptop than on the server.
+   */
+  calendar: EarningsCalendar;
   now: number;
 }
 
@@ -158,23 +161,35 @@ function closesWithFills(panel: SymbolPanel): number[] {
   return panel.bars.filter((r): r is PanelRow => r !== null).map((r) => r[3]);
 }
 
+/**
+ * THE THREE STATES, from a swept calendar rather than a live probe.
+ *
+ * A confirmed date needs only an entry. The hard state is `none`, and it is
+ * earned by three conditions together: the sweep completed, it still covers
+ * today, and this symbol was in its scope. Then — and only then — does the
+ * absence of an entry mean "no earnings before throughDate" rather than
+ * "nobody looked". Any condition missing degrades to `lookup_failed`, which
+ * does NOT clear an event veto.
+ */
 function resolveEarnings(
   symbol: string,
-  probe: EarningsProbe,
-  entries: readonly { symbol: string; date: string }[],
+  calendar: EarningsCalendar,
   today: string
 ): Pick<AssetFacts, "earnings_status" | "earnings_date" | "earnings_source"> {
-  if (probe.kind === "live") {
-    return probe.nextEarningsDate
-      ? { earnings_status: "confirmed", earnings_date: probe.nextEarningsDate, earnings_source: "nasdaq-live" }
-      : { earnings_status: "none", earnings_date: null, earnings_source: "nasdaq-live" };
+  const entry = calendar.entries.find((e) => e.symbol === symbol && e.date >= today);
+  if (entry) {
+    return { earnings_status: "confirmed", earnings_date: entry.date, earnings_source: "committed-calendar" };
   }
-  // Probe unreachable. The committed calendar can still CONFIRM a date — but
-  // its silence is not "none": it only ever records positive findings, so a
-  // symbol it lacks is a symbol nobody successfully looked up.
-  const entry = entries.find((e) => e.symbol === symbol && e.date >= today);
-  return entry
-    ? { earnings_status: "confirmed", earnings_date: entry.date, earnings_source: "committed-calendar" }
+
+  const sweep = calendar.sweep;
+  const swept =
+    sweep !== undefined &&
+    // A window that ended before today proves nothing about what is ahead.
+    sweep.throughDate >= today &&
+    sweep.universe.includes(symbol);
+
+  return swept
+    ? { earnings_status: "none", earnings_date: null, earnings_source: "committed-calendar" }
     : { earnings_status: "lookup_failed", earnings_date: null, earnings_source: null };
 }
 
@@ -257,6 +272,6 @@ export function buildAssetFacts(inputs: AssetFactsInputs): AssetFacts {
     atm_iv_days_to_expiry: pos?.atmIvDaysToExpiry ?? null,
     options_asof: pos?.sourceAsOf?.options ?? null,
 
-    ...resolveEarnings(symbol, inputs.earnings, inputs.calendarEntries, new Date(now).toISOString().slice(0, 10)),
+    ...resolveEarnings(symbol, inputs.calendar, new Date(now).toISOString().slice(0, 10)),
   };
 }

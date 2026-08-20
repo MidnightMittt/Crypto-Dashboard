@@ -1,10 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { PositioningPoint } from "@/lib/history/positioningHistory";
 import { SymbolPanel } from "@/lib/research/barsPanel";
+import { EarningsCalendar } from "@/lib/markets/earningsVeto";
 import { AssetFactsInputs, buildAssetFacts, quantile, RET_WINDOW_SESSIONS } from "./buildAssetFacts";
 
 const NOW = Date.UTC(2026, 7, 20, 12);
 const DAY = 86_400_000;
+
+/** A completed sweep covering TEST — the only state in which absence means "none". */
+const swept = (over: Partial<EarningsCalendar> = {}): EarningsCalendar => ({
+  generatedAt: NOW,
+  entries: [],
+  sweep: { throughDate: "2026-09-17", universe: ["TEST", "OTHER"] },
+  ...over,
+});
 
 /** n sessions ending 2026-08-19, ISO dates. Weekends don't matter to the math. */
 const sessions = (n: number): string[] =>
@@ -20,8 +29,7 @@ const inputs = (over: Partial<AssetFactsInputs> = {}): AssetFactsInputs => ({
   sessions: sessions(60),
   panel: panelOf(Array.from({ length: 60 }, () => 100)),
   positioning: null,
-  earnings: { kind: "unreachable" },
-  calendarEntries: [],
+  calendar: swept(),
   now: NOW,
   ...over,
 });
@@ -121,37 +129,56 @@ describe("buildAssetFacts", () => {
   });
 
   /*
-   * THE THREE STATES, each with its opposite trading consequence:
-   * a live "no date" clears an event veto; an unreachable provider does not.
+   * THE THREE STATES, each with its opposite trading consequence. `none` is
+   * the hard one: it is earned only by a COMPLETED sweep that still covers
+   * today and had this symbol in scope, because the sweep visits every day in
+   * its window — so absence is then a finding rather than a gap.
    */
   it("distinguishes confirmed / none / lookup_failed", () => {
-    const live = buildAssetFacts(inputs({ earnings: { kind: "live", nextEarningsDate: "2026-11-20" } }));
-    expect(live.earnings_status).toBe("confirmed");
-    expect(live.earnings_date).toBe("2026-11-20");
-    expect(live.earnings_source).toBe("nasdaq-live");
+    const confirmed = buildAssetFacts(
+      inputs({ calendar: swept({ entries: [{ symbol: "TEST", date: "2026-09-01" }] }) })
+    );
+    expect(confirmed.earnings_status).toBe("confirmed");
+    expect(confirmed.earnings_date).toBe("2026-09-01");
+    expect(confirmed.earnings_source).toBe("committed-calendar");
 
-    const none = buildAssetFacts(inputs({ earnings: { kind: "live", nextEarningsDate: null } }));
+    // Swept, in scope, no entry -> genuinely no earnings in the window.
+    const none = buildAssetFacts(inputs({ calendar: swept() }));
     expect(none.earnings_status).toBe("none");
     expect(none.earnings_date).toBeNull();
 
-    const failed = buildAssetFacts(inputs({ earnings: { kind: "unreachable" } }));
-    expect(failed.earnings_status).toBe("lookup_failed");
-    expect(failed.earnings_source).toBeNull();
+    // No sweep block at all: an older calendar cannot support the claim.
+    const noSweep = buildAssetFacts(inputs({ calendar: { generatedAt: NOW, entries: [] } }));
+    expect(noSweep.earnings_status).toBe("lookup_failed");
+    expect(noSweep.earnings_source).toBeNull();
   });
 
-  it("falls back to the committed calendar only for a CONFIRMED future date", () => {
-    const confirmed = buildAssetFacts(
-      inputs({ earnings: { kind: "unreachable" }, calendarEntries: [{ symbol: "TEST", date: "2026-09-01" }] })
+  it("refuses to call it 'none' for a symbol the sweep never covered", () => {
+    const f = buildAssetFacts(
+      inputs({ calendar: swept({ sweep: { throughDate: "2026-09-17", universe: ["OTHER"] } }) })
     );
-    expect(confirmed.earnings_status).toBe("confirmed");
-    expect(confirmed.earnings_source).toBe("committed-calendar");
+    expect(f.earnings_status).toBe("lookup_failed");
+  });
 
-    // A PAST calendar entry confirms nothing about the next report, and the
-    // calendar's silence is not "none" — it records only positive findings.
-    const stale = buildAssetFacts(
-      inputs({ earnings: { kind: "unreachable" }, calendarEntries: [{ symbol: "TEST", date: "2026-08-01" }] })
+  /*
+   * A window that closed before today proves nothing about what is ahead —
+   * the exact failure a stale committed file would otherwise cause, silently
+   * clearing an event veto on a name about to report.
+   */
+  it("refuses to call it 'none' when the swept window has already expired", () => {
+    const f = buildAssetFacts(
+      inputs({ calendar: swept({ sweep: { throughDate: "2026-08-19", universe: ["TEST"] } }) })
     );
-    expect(stale.earnings_status).toBe("lookup_failed");
+    expect(f.earnings_status).toBe("lookup_failed");
+  });
+
+  /* A PAST entry confirms nothing about the NEXT report. */
+  it("ignores an entry that has already happened", () => {
+    const f = buildAssetFacts(
+      inputs({ calendar: swept({ entries: [{ symbol: "TEST", date: "2026-08-01" }] }) })
+    );
+    expect(f.earnings_status).toBe("none");
+    expect(f.earnings_date).toBeNull();
   });
 
   it("emits the trend line and ATR from the same formulas the dossier uses", () => {

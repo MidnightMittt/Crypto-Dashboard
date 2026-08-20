@@ -3,6 +3,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { industryUniverse } from "../../src/lib/markets/industries";
 import { instrumentsByProvider } from "../../src/lib/research/universe";
+import { positioningUniverse } from "../../src/lib/markets/scannerUniverse";
 import { EarningsCalendar } from "../../src/lib/markets/earningsVeto";
 
 /**
@@ -48,17 +49,46 @@ async function fetchDay(dateIso: string): Promise<string[]> {
 async function main() {
   /*
    * The universe this veto protects: every symbol the equity surfaces can
-   * build a plan for — industry constituents plus the research universe's
-   * US listings. ETFs in the list simply never appear in the earnings
-   * calendar, which costs nothing.
+   * build a plan for — industry constituents, the research universe's US
+   * listings, and the positioning universe. ETFs in the list simply never
+   * appear in the earnings calendar, which costs nothing.
+   *
+   * Because the sweep visits every day in the window, this set also defines
+   * what a COMPLETED sweep can speak to: a symbol in here with no entry has
+   * no report before `throughDate`, and one outside it was never asked
+   * about. That distinction is recorded in the output.
    */
   const universe = new Set<string>([
     ...industryUniverse(),
     ...instrumentsByProvider("yahoo").map((c) => c.meta.displaySymbol),
+    /*
+     * The positioning universe, which is NOT a subset of the two above.
+     *
+     * Six actively-traded names — APLD, CLSK, CORZ, IONQ, OKLO, RIOT — are
+     * TRACKED_OUTSIDE_PANEL: ingested for bars, never registered as research
+     * instruments. So the sweep never asked about them, and the event veto
+     * has consequently never fired for any of them. That is a safety hole,
+     * not a coverage nicety: they are among the highest-volatility names the
+     * scanner surfaces, and a plan into an unflagged earnings print is
+     * exactly what the veto exists to refuse.
+     *
+     * Reading the declaration rather than repeating a list also means a
+     * symbol added to the scanner acquires earnings coverage automatically.
+     */
+    ...positioningUniverse(),
   ]);
 
   const entries: EarningsCalendar["entries"] = [];
   const today = new Date();
+  /*
+   * The last day actually swept. Recorded because a COMPLETED sweep is the
+   * only thing that makes a symbol's ABSENCE informative: this loop visits
+   * every day in the window, so a covered symbol with no entry genuinely has
+   * no report before this date. Consumers that must distinguish "no earnings"
+   * from "we never found out" — /api/asset's three-state earnings_status —
+   * cannot do it from the entry list alone.
+   */
+  let throughDate: string | null = null;
 
   try {
     for (let i = 0; i < LOOKAHEAD_DAYS; i++) {
@@ -70,6 +100,9 @@ async function main() {
       for (const s of symbols) {
         if (universe.has(s)) entries.push({ symbol: s, date: dateIso });
       }
+      // Only after the day's fetch SUCCEEDS. A throw leaves this at the last
+      // good day, so a partial sweep claims only what it actually covered.
+      throughDate = dateIso;
       // Courtesy delay; this is a free public endpoint.
       await new Promise((r) => setTimeout(r, 300));
     }
@@ -81,7 +114,11 @@ async function main() {
     process.exit(0);
   }
 
-  const calendar: EarningsCalendar = { generatedAt: Date.now(), entries };
+  const calendar: EarningsCalendar = {
+    generatedAt: Date.now(),
+    entries,
+    ...(throughDate ? { sweep: { throughDate, universe: [...universe].sort() } } : {}),
+  };
   fs.writeFileSync(OUT_PATH, JSON.stringify(calendar, null, 2));
   console.log(
     `[earnings] ${entries.length} in-universe report date(s) over the next ${LOOKAHEAD_DAYS} days -> src/data/earningsCalendar.json`
