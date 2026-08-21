@@ -31,10 +31,31 @@ import { isArmed } from "@/lib/watch/levels";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-/** One minute of bars over the last day: the freshest keyless print available. */
+/**
+ * One minute of bars over the last day, INCLUDING pre- and post-market.
+ *
+ * Without `includePrePost` the feed carries regular hours only — 6.5 of 24
+ * clock hours — so the watchdog was awake exactly when the trading loop was
+ * and asleep exactly when it was not, which inverts its entire purpose. A
+ * sweep at 05:35Z found every level skipped on a 597-minute-old quote while
+ * two disaster stops sat armed on real positions.
+ *
+ * Measured on CIFR from the dead zone before the pre-market open:
+ *
+ *   interval=1m                    391 bars, last $17.21, 671 min old
+ *   interval=1m&includePrePost     891 bars, last $17.01, 431 min old
+ *
+ * The extended feed does not merely arrive sooner — it saw a price 1.2%
+ * LOWER that the regular feed hid completely. On a stop, that difference is
+ * the whole question.
+ *
+ * Coverage becomes roughly 04:00-20:00 ET rather than 09:30-16:00. The
+ * 20:00-04:00 gap remains genuinely unpriced: no prints exist, so the
+ * staleness guard refuses, which is correct rather than a shortfall.
+ */
 const QUOTE_URL = (symbol: string) =>
   `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}` +
-  `?range=1d&interval=1m`;
+  `?range=1d&interval=1m&includePrePost=true`;
 
 /**
  * Vercel Cron sends this header. When CRON_SECRET is set the route requires
