@@ -20,6 +20,8 @@
  * swept 4 minutes ago, 3 levels armed, 3 quotes fresh, 0 fired since armed".
  */
 
+import { easternDate, isWeekend } from "@/lib/asset/priceStaleness";
+
 /** One sweep's own account of itself. */
 export interface SweepRecord {
   /** When the sweep ran, ISO. */
@@ -45,7 +47,30 @@ export interface SweepRecord {
  */
 export const SWEEP_SILENT_AFTER_MINUTES = 120;
 
-export type SweepHealth = "never_ran" | "silent" | "blind" | "watching";
+export type SweepHealth = "never_ran" | "silent" | "blind" | "watching" | "closed";
+
+/**
+ * The window the watchdog covers: regular US hours, plus a few minutes past
+ * the bell so the closing print is evaluated rather than raced. Mirrors the
+ * OPEN_ET/END_ET the sweep workflow paces itself by.
+ */
+const OPEN_MINUTES = 9 * 60 + 30;
+const CLOSE_MINUTES = 16 * 60 + 5;
+
+/**
+ * Is the market open, and therefore is silence a problem?
+ *
+ * Without this the endpoint reads "silent — levels are NOT being watched"
+ * every night and all weekend, which is true but useless: levels are not
+ * swept overnight by design. An alarm that fires every evening is one nobody
+ * reads by the second week, and then the real one is missed too.
+ */
+export function withinSweepWindow(now: Date): boolean {
+  const { date, hour, minute } = easternDate(now);
+  if (isWeekend(date)) return false;
+  const mins = hour * 60 + minute;
+  return mins >= OPEN_MINUTES && mins < CLOSE_MINUTES;
+}
 
 export interface SweepLiveness {
   health: SweepHealth;
@@ -71,6 +96,31 @@ export function assessSweepLiveness(
 ): SweepLiveness {
   const sorted = [...records].sort((a, b) => a.at.localeCompare(b.at));
   const last = sorted[sorted.length - 1];
+  const open = withinSweepWindow(now);
+
+  /*
+   * Outside the session, not sweeping is the design rather than a fault, and
+   * must not be reported as one. This branch comes FIRST because both the
+   * never-ran and silent tests would otherwise fire every night on a
+   * perfectly healthy watchdog.
+   */
+  if (!open) {
+    const fired = sorted.reduce((s, r) => s + r.fired, 0);
+    return {
+      health: "closed",
+      lastSweptAt: last?.at ?? null,
+      minutesSinceSweep: last ? Math.floor((now.getTime() - Date.parse(last.at)) / 60_000) : null,
+      armed: last?.armed ?? 0,
+      firedRecently: fired,
+      sentence:
+        `The market is closed, so the watchdog is not sweeping — that is by design, not a fault. ` +
+        (last
+          ? `Its last sweep was ${last.at}. `
+          : `It has no sweep on record yet, which outside market hours proves nothing either way. `) +
+        `Levels are not watched overnight or at weekends: a gap through a stop is seen at the ` +
+        `first sweep after the open, not when it happens.`,
+    };
+  }
 
   if (!last) {
     return {

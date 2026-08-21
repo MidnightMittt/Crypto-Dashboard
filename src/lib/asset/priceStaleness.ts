@@ -38,24 +38,35 @@ export interface PriceStaleness {
   latestCompletedSession: string;
 }
 
-/** Wall-clock date in US market time, which is the clock sessions are named by. */
-function easternDate(now: Date): { date: string; hour: number } {
+/**
+ * Wall-clock date in US market time, which is the clock sessions are named by.
+ *
+ * Exported because more than one subsystem needs "what time is it where the
+ * market is", and a second copy of this would drift from this one. Timezone
+ * arithmetic done twice is timezone arithmetic done differently.
+ */
+export function easternDate(now: Date): { date: string; hour: number; minute: number } {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/New_York",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
     hour: "2-digit",
+    minute: "2-digit",
     hourCycle: "h23",
   }).formatToParts(now);
   const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
-  return { date: `${get("year")}-${get("month")}-${get("day")}`, hour: Number(get("hour")) };
+  return {
+    date: `${get("year")}-${get("month")}-${get("day")}`,
+    hour: Number(get("hour")),
+    minute: Number(get("minute")),
+  };
 }
 
 /** US regular close, 16:00 ET. A session is only "completed" after it. */
 const CLOSE_HOUR_ET = 16;
 
-const isWeekend = (iso: string): boolean => {
+export const isWeekend = (iso: string): boolean => {
   const d = new Date(`${iso}T12:00:00Z`).getUTCDay();
   return d === 0 || d === 6;
 };

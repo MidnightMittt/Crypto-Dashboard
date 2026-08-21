@@ -38,8 +38,12 @@ export async function GET(): Promise<NextResponse> {
        * 503 when the watchdog is not watching, so an uptime checker pointed
        * here fails without having to parse the body. A monitor that always
        * answers 200 is a monitor nobody notices.
+       *
+       * `closed` is a 200. Outside market hours the watchdog is idle BY
+       * DESIGN, and a check that failed every night and all weekend would be
+       * muted inside a fortnight — taking the real alerts down with it.
        */
-      status: liveness.health === "watching" ? 200 : 503,
+      status: liveness.health === "watching" || liveness.health === "closed" ? 200 : 503,
     }
   );
 }
