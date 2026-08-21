@@ -119,8 +119,24 @@ jobs:
 
             # A failed request must cost one sweep, never the run: a transient
             # 5xx or a cold start is not a reason to stop watching stops.
-            body=$(curl -sS --max-time 60 "${auth[@]}" "${BASE}/api/watch/sweep" || echo '{"error":"request failed"}')
+            # 401 is the one exception — see below.
+            code=$(curl -sS --max-time 60 -o /tmp/sweep.json -w '%{http_code}' \
+              "${auth[@]}" "${BASE}/api/watch/sweep" || echo 000)
+            body=$(cat /tmp/sweep.json 2>/dev/null || echo '{"error":"request failed"}')
             sweeps=$((sweeps + 1))
+
+            # A 401 MEANS THE WATCHDOG IS DISARMED, and it must not read as a
+            # blip. It happens when this runner's CRON_SECRET does not match
+            # the deployment's — a stray newline in a pasted value is enough.
+            # Every sweep would then be rejected, every stop would go
+            # unwatched, and the run would keep looping while emitting
+            # warnings nobody reads. That is the exact shape of failure this
+            # repository has hit repeatedly: a component reporting something
+            # true while the thing it protects is dead. So this stops the run.
+            if [ "$code" = "401" ]; then
+              echo "::error::Sweep rejected with 401 — this runner's CRON_SECRET does not match the deployment's. THE WATCHDOG IS NOT RUNNING. Check the secret in both GitHub and Vercel; Vercel needs a REDEPLOY to pick up a changed value."
+              exit 1
+            fi
 
             n=$(printf '%s' "$body" | python3 -c 'import json,sys
 try:
