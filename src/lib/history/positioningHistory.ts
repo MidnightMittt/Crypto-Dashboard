@@ -72,6 +72,32 @@ export interface PositioningPoint {
   atmIvDaysToExpiry: number | null;
 
   /**
+   * ATM implied vol interpolated to a FIXED tenor, in percent.
+   *
+   * The field above cannot be ranked over time and this one can, which is why
+   * both exist. `atmIvPct` is whatever expiry happened to sit nearest the
+   * money — 1 day on every row recorded so far — and a tenor that drifts
+   * moves the number far more than the market does. A percentile over that
+   * mixture measures days-to-expiry, not volatility.
+   *
+   * This is interpolated to the same point on the curve every session (see
+   * CONSTANT_MATURITY_DAYS in src/lib/options/ivTermStructure.ts), in total
+   * variance rather than in vol, from the same single CBOE chain the row's
+   * other options fields come from — no extra request.
+   *
+   * Null when the listed expiries do not bracket that tenor. The
+   * interpolator refuses to extrapolate, and a fabricated vol is
+   * indistinguishable from a quoted one once it is in the store.
+   *
+   * OPTIONAL, like `sourceAsOf`, and for the same reason: rows recorded
+   * before this field existed genuinely do not have it, and declaring it
+   * required would assert a measurement for every past session that was
+   * never taken. Absent and null mean different things here — absent is "not
+   * recorded in that era", null is "recorded and unavailable".
+   */
+  ivConstantMaturityPct?: number | null;
+
+  /**
    * THE VENDOR'S OWN INSTANT PER GROUP, never our write time.
    *
    * `date` is the SESSION this row describes, derived from the price bars.

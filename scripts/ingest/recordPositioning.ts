@@ -9,6 +9,8 @@ import {
   prunePoints,
 } from "../../src/lib/history/positioningHistory";
 import { fetchOptionsSummary } from "../../src/lib/dossier/providers/cboeOptions";
+import { atmCurve } from "../../src/lib/options/atmCurve";
+import { constantMaturityIv } from "../../src/lib/options/ivTermStructure";
 import { fetchShortVolume } from "../../src/lib/dossier/providers/finraShortVolume";
 import { fetchSocial } from "../../src/lib/dossier/providers/attention";
 import { fetchStreet } from "../../src/lib/dossier/providers/nasdaqStreet";
@@ -159,6 +161,17 @@ async function main(): Promise<void> {
     ]);
 
     const gex = options.ok ? options.summary.netGexUsdPer1Pct : null;
+
+    /*
+     * The rankable vol, from the chain already in hand.
+     *
+     * fetchOptionsSummary returns every parsed contract alongside its
+     * nearest-expiry summary, so the whole term structure is a local
+     * computation — no second request, no extra rate limit. Only the front
+     * expiry was ever being read.
+     */
+    const curve = options.ok ? atmCurve(options.contracts, options.spot) : [];
+    const cmIv = curve.length > 0 ? constantMaturityIv(curve) : null;
     const consensus = street.ok ? street.summary.consensus : null;
     const tags = social.ok ? social.summary : null;
     if (options.ok) optionsOk++;
@@ -198,6 +211,7 @@ async function main(): Promise<void> {
       putCallVolumeRatio: options.ok ? options.summary.putCallVolumeRatio : null,
       atmIvPct: options.ok ? options.summary.atmIvPct : null,
       atmIvDaysToExpiry: options.ok ? options.summary.atmIvDaysToExpiry : null,
+      ivConstantMaturityPct: cmIv && cmIv.ok ? cmIv.ivPct : null,
       typicalDailyMovePct: bars ? typicalDailyMovePct(bars) : null,
       chainOi: options.ok ? options.summary.callOi + options.summary.putOi : null,
       analystCount: consensus ? consensus.coveringAnalysts : null,

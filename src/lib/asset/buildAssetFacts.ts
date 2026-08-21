@@ -1,5 +1,6 @@
 import { EarningsCalendar } from "@/lib/markets/earningsVeto";
 import { assessPriceStaleness } from "./priceStaleness";
+import { CONSTANT_MATURITY_DAYS, ivRichness } from "@/lib/options/ivTermStructure";
 import { PositioningPoint } from "@/lib/history/positioningHistory";
 import { PanelRow, SymbolPanel } from "@/lib/research/barsPanel";
 import { stopGrid, narrowestViable } from "@/lib/research/stopViability";
@@ -111,6 +112,26 @@ export interface AssetFacts {
   atm_iv_days_to_expiry: number | null;
   options_asof: string | null;
 
+  /**
+   * IMPLIED VOL YOU CAN RANK, and the rank itself.
+   *
+   * `atm_iv_pct` above is whatever expiry sat nearest the money — 1 day on
+   * every row recorded so far — which is dominated by pin risk and useless
+   * as a baseline. This is the same curve read at a FIXED tenor every
+   * session, so today's number and last month's describe the same point.
+   *
+   * `iv_percentile` is null with a reason until the series is deep enough;
+   * `iv_percentile_reason` says which. A rank over a handful of sessions is
+   * arithmetic wearing the costume of evidence.
+   */
+  iv_constant_maturity_pct: number | null;
+  iv_constant_maturity_days: number;
+  iv_percentile: number | null;
+  iv_percentile_n: number;
+  iv_percentile_reason: string | null;
+  /** One sentence naming which side of the trade the reading argues for. */
+  iv_sentence: string | null;
+
   earnings_status: "confirmed" | "none" | "lookup_failed";
   earnings_date: string | null;
   earnings_source: "committed-calendar" | null;
@@ -130,6 +151,12 @@ export interface AssetFactsInputs {
    * laptop than on the server.
    */
   calendar: EarningsCalendar;
+  /**
+   * This symbol's past constant-maturity vols, oldest first. Must all be at
+   * CONSTANT_MATURITY_DAYS — a precondition the caller owns, because an array
+   * of numbers cannot carry its own tenor.
+   */
+  ivHistory?: readonly number[];
   now: number;
 }
 
@@ -232,6 +259,18 @@ export function buildAssetFacts(inputs: AssetFactsInputs): AssetFacts {
 
   const staleness = assessPriceStaleness(priceAsof, new Date(now));
 
+  /*
+   * Ranked ONLY against readings at the same constant maturity. Mixing tenors
+   * would make the percentile a measure of days-to-expiry rather than of
+   * volatility, which is the defect the constant-maturity series exists to
+   * remove — so a missing field is skipped rather than substituted.
+   */
+  const ivHistory = inputs.ivHistory ?? [];
+  const richness =
+    pos?.ivConstantMaturityPct != null
+      ? ivRichness(pos.ivConstantMaturityPct, ivHistory)
+      : ({ ok: false, reason: "no constant-maturity implied vol recorded for this session" } as const);
+
   const closes = closesWithFills(panel);
   const rets: number[] = [];
   for (let i = RET_WINDOW_SESSIONS; i < closes.length; i++) {
@@ -296,6 +335,13 @@ export function buildAssetFacts(inputs: AssetFactsInputs): AssetFacts {
     atm_iv_pct: pos?.atmIvPct ?? null,
     atm_iv_days_to_expiry: pos?.atmIvDaysToExpiry ?? null,
     options_asof: pos?.sourceAsOf?.options ?? null,
+
+    iv_constant_maturity_pct: pos?.ivConstantMaturityPct ?? null,
+    iv_constant_maturity_days: CONSTANT_MATURITY_DAYS,
+    iv_percentile: richness.ok ? richness.percentile : null,
+    iv_percentile_n: ivHistory.length,
+    iv_percentile_reason: richness.ok ? null : richness.reason,
+    iv_sentence: richness.ok ? richness.sentence : null,
 
     ...resolveEarnings(symbol, inputs.calendar, new Date(now).toISOString().slice(0, 10)),
   };

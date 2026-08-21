@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import barsPanelJson from "@/data/barsPanel.json";
 import earningsJson from "@/data/earningsCalendar.json";
 import positioningLatestJson from "@/data/positioningLatest.json";
+import positioningHistoryJson from "@/data/positioningHistory.json";
 import { PositioningPoint } from "@/lib/history/positioningHistory";
 import { BarsPanel } from "@/lib/research/barsPanel";
 import { EarningsCalendar } from "@/lib/markets/earningsVeto";
@@ -43,6 +44,32 @@ const panel = barsPanelJson as unknown as BarsPanel;
 const positioningPoints = (positioningLatestJson as { points: PositioningPoint[] }).points;
 const calendar = earningsJson as EarningsCalendar;
 
+/*
+ * THE CONSTANT-MATURITY VOL SERIES, per symbol, built once at module load.
+ *
+ * positioningHistory.json is the large store — parsing it per request would
+ * undo the millisecond budget this route was built for — but the projection
+ * carries only the latest row, and a percentile needs the past. So it is
+ * indexed once on cold start and shared by every request the instance serves.
+ *
+ * Only rows that actually recorded a constant-maturity reading contribute.
+ * Sessions predating the field are ABSENT rather than null, and skipping them
+ * is what keeps the series comparable — the entire point of holding a fixed
+ * tenor.
+ */
+const ivHistoryBySymbol: Map<string, number[]> = (() => {
+  const index = new Map<string, number[]>();
+  const points = (positioningHistoryJson as { points: PositioningPoint[] }).points;
+  for (const p of points) {
+    const v = p.ivConstantMaturityPct;
+    if (typeof v !== "number" || !Number.isFinite(v) || v <= 0) continue;
+    const bucket = index.get(p.symbol);
+    if (bucket) bucket.push(v);
+    else index.set(p.symbol, [v]);
+  }
+  return index;
+})();
+
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ symbol: string }> }
@@ -67,6 +94,7 @@ export async function GET(
     panel: symbolPanel,
     positioning: positioningPoints.find((p) => p.symbol === symbol) ?? null,
     calendar,
+    ivHistory: ivHistoryBySymbol.get(symbol) ?? [],
     now: Date.now(),
   });
 

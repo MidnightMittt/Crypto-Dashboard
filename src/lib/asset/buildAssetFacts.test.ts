@@ -223,3 +223,69 @@ describe("price staleness on the facts object", () => {
     expect(f.price_stale_reason).toBeNull();
   });
 });
+
+describe("implied vol", () => {
+  const pos = (over: Partial<PositioningPoint> = {}) =>
+    ({
+      date: "2026-08-20",
+      symbol: "TEST",
+      origin: "live",
+      sourceAsOf: { options: "2026-08-20T21:00:00Z" },
+      netGexUsdPer1Pct: null,
+      gammaSign: null,
+      shortRatioPct: null,
+      putCallOiRatio: null,
+      putCallVolumeRatio: null,
+      atmIvPct: 130,
+      atmIvDaysToExpiry: 1,
+      ivConstantMaturityPct: 78,
+      typicalDailyMovePct: null,
+      chainOi: null,
+      analystCount: null,
+      analystMeanTargetUsd: null,
+      socialBullishPctOfTagged: null,
+      socialTaggedCount: null,
+      socialSpanHours: null,
+      ...over,
+    }) as PositioningPoint;
+
+  const series = (n: number) => Array.from({ length: n }, (_, i) => 20 + (60 * i) / (n - 1));
+
+  /*
+   * The front-week figure and the rankable one are DIFFERENT fields and must
+   * both survive: 130% at 1 DTE is pin risk, 78% at constant maturity is the
+   * number a percentile can be built on.
+   */
+  it("carries the constant-maturity reading beside the front-expiry one", () => {
+    const f = buildAssetFacts(inputs({ positioning: pos(), ivHistory: series(40) }));
+    expect(f.atm_iv_pct).toBe(130);
+    expect(f.atm_iv_days_to_expiry).toBe(1);
+    expect(f.iv_constant_maturity_pct).toBe(78);
+    expect(f.iv_constant_maturity_days).toBeGreaterThan(1);
+  });
+
+  it("ranks it and says which side of the trade it argues for", () => {
+    const f = buildAssetFacts(inputs({ positioning: pos(), ivHistory: series(40) }));
+    expect(f.iv_percentile).toBeGreaterThan(80);
+    expect(f.iv_percentile_n).toBe(40);
+    expect(f.iv_percentile_reason).toBeNull();
+    expect(f.iv_sentence).toContain("favours selling premium");
+  });
+
+  /* A thin series must produce a REASON, never a number. */
+  it("withholds the percentile while the series is accruing", () => {
+    const f = buildAssetFacts(inputs({ positioning: pos(), ivHistory: series(5) }));
+    expect(f.iv_percentile).toBeNull();
+    expect(f.iv_sentence).toBeNull();
+    expect(f.iv_percentile_reason).toContain("sessions");
+    // The reading itself still ships — it is the RANK that is unsupported.
+    expect(f.iv_constant_maturity_pct).toBe(78);
+  });
+
+  it("says so when the session recorded no constant-maturity vol at all", () => {
+    const f = buildAssetFacts(inputs({ positioning: pos({ ivConstantMaturityPct: null }), ivHistory: series(40) }));
+    expect(f.iv_constant_maturity_pct).toBeNull();
+    expect(f.iv_percentile).toBeNull();
+    expect(f.iv_percentile_reason).toContain("no constant-maturity implied vol recorded");
+  });
+});
