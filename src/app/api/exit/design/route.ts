@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import barsPanelJson from "@/data/barsPanel.json";
 import { BarsPanel, SymbolPanel } from "@/lib/research/barsPanel";
 import { Bar } from "@/lib/research/types";
-import { SURVIVAL_FLOOR_PCT, narrowestViable, stopGrid } from "@/lib/research/stopViability";
+import {
+  DEFAULT_WIDTHS_PCT,
+  SURVIVAL_FLOOR_PCT,
+  narrowestViable,
+  stopGrid,
+} from "@/lib/research/stopViability";
 import {
   DEFAULT_TARGETS_PCT,
   compareToHold,
@@ -76,7 +81,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const curve = reachCurve(bars, holdSessions, targets);
   const peak = peakOfCurve(curve);
 
-  const grid = stopGrid(symbol, bars);
+  /*
+   * Built AT the requested horizon. The default grid measures 1/5/10/21
+   * sessions, so a 20-session hold matched no cell and narrowestViable
+   * returned null — which this route rendered as "no stop survives", the
+   * opposite of the truth and a refusal to trade on an artefact.
+   */
+  const grid = stopGrid(symbol, bars, DEFAULT_WIDTHS_PCT, [holdSessions]);
   const viable = grid ? narrowestViable(grid, holdSessions) : null;
 
   /*
