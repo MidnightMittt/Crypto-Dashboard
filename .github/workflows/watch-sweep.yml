@@ -173,3 +173,33 @@ print(len(f) if isinstance(f, list) else -1)' 2>/dev/null || echo -1)
               exit 1
             fi
           fi
+
+          # THE SWEEP'S OWN 200 IS NOT PROOF IT WATCHED ANYTHING.
+          #
+          # A sweep answers 200 when it runs and judges nothing, because every
+          # quote was too stale to trust. That is the failure mode that looks
+          # most like success: zero alerts, green check, nothing watched.
+          #
+          # So the run is graded on what the deployment says about itself
+          # afterwards, not on the status code we just received. The health
+          # endpoint needs no secret, so this check works even when the
+          # mismatch it is looking for is the secret itself.
+          if [ "$sweeps" -gt 0 ]; then
+            health=$(curl -sS --max-time 30 "${BASE}/api/watch/health" \
+              | sed -n 's/.*"health":"\([a-z_]*\)".*/\1/p')
+            echo "post-sweep health: ${health:-unreadable}"
+            case "$health" in
+              watching) : ;;
+              blind)
+                echo "::error::Swept $sweeps time(s) and judged NOTHING — every quote was too stale. The watchdog is running and blind, which reports the same silence as a quiet market. Check the quote feed, not the scheduler."
+                exit 1 ;;
+              never_ran)
+                echo "::error::Swept $sweeps time(s) but the deployment has no record of any sweep. This runner and the deployment being swept are not the same environment, or the heartbeat store is unreachable."
+                exit 1 ;;
+              "")
+                # Never fail the watchdog because its monitor was unreachable.
+                echo "::warning::Could not read /api/watch/health — liveness unverified for this run." ;;
+              *)
+                echo "::warning::Unexpected health state '$health' after sweeping." ;;
+            esac
+          fi
