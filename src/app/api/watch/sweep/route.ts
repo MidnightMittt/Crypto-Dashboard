@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sendDiscord } from "@/lib/alerts/channels/discord";
 import { WatchQuote, evaluateAll, markFired } from "@/lib/watch/levels";
 import { WatchStoreUnavailable, loadLevels, saveLevels } from "@/lib/watch/store";
+import { recordSweep } from "@/lib/watch/heartbeatStore";
 import { isArmed } from "@/lib/watch/levels";
 
 /**
@@ -157,6 +158,9 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const levels = await loadLevels();
     const armed = levels.filter(isArmed);
     if (armed.length === 0) {
+      // A sweep with nothing armed still ran, and must say so. Otherwise an
+      // empty watchlist is indistinguishable from a dead scheduler.
+      await recordSweep({ at: now.toISOString(), armed: 0, judged: 0, fired: 0, skippedStale: 0 });
       return NextResponse.json({ sweptAt: now.toISOString(), armed: 0, fired: [], skipped: [] });
     }
 
@@ -184,6 +188,22 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     if (updates.size > 0) {
       await saveLevels(levels.map((l) => updates.get(l.id) ?? l));
     }
+
+    /*
+     * The sweep records what it did before answering. "Never fired" is
+     * consistent with never running and with running blind on stale quotes;
+     * without this note those three are the same silence from outside.
+     */
+    const skippedStale = results.filter(
+      (r) => r.kind === "skipped" && !r.reason.startsWith("already fired")
+    ).length;
+    await recordSweep({
+      at: now.toISOString(),
+      armed: armed.length,
+      judged: armed.length - skippedStale,
+      fired: fired.length,
+      skippedStale,
+    });
 
     return NextResponse.json({
       sweptAt: now.toISOString(),
