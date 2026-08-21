@@ -138,13 +138,17 @@ jobs:
               exit 1
             fi
 
-            n=$(printf '%s' "$body" | python3 -c 'import json,sys
-try:
-    d = json.load(sys.stdin)
-except Exception:
-    print(-1); raise SystemExit
-f = d.get("fired")
-print(len(f) if isinstance(f, list) else -1)' 2>/dev/null || echo -1)
+            # *** MUST STAY ON ONE LINE. This broke the workflow for 18 consecutive runs. ***
+            # A YAML block scalar ends the moment a line's indentation drops below the
+            # block's. The previous version continued this python at COLUMN 0, so YAML
+            # closed `run:` and then tried to parse `try:` as a top-level mapping key.
+            # The document was invalid, GitHub refused to create any job, and every run
+            # completed as `failure` with ZERO jobs — including the very first one.
+            # `workflow_dispatch` also 422'd, because triggers cannot register on a file
+            # that does not validate. The scheduled sweep never executed once.
+            # The try/except was redundant anyway: `|| echo -1` already covers a
+            # non-zero exit, which is what a json parse failure produces.
+            n=$(printf '%s' "$body" | python3 -c 'import json,sys; d=json.load(sys.stdin); f=d.get("fired"); print(len(f) if isinstance(f,list) else -1)' 2>/dev/null || echo -1)
 
             if [ "$n" = "-1" ]; then
               echo "::warning::sweep at $(et_now) ET returned an unreadable response: $(printf '%s' "$body" | head -c 200)"
