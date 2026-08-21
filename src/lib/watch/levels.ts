@@ -59,6 +59,13 @@ export interface WatchQuote {
   asOf: string;
   /** Age in seconds at evaluation time. */
   ageSeconds: number;
+  /**
+   * Bars the provider returned for this quote. Diagnostic only — never used
+   * to decide whether a level fires. Present because a provider can accept a
+   * coverage parameter and silently ignore it for some callers, which makes
+   * correct-looking code produce narrow data.
+   */
+  bars?: number;
 }
 
 /**

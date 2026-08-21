@@ -96,6 +96,7 @@ async function fetchQuote(symbol: string, now: Date): Promise<WatchQuote | null>
      */
     const closes = r.indicators?.quote?.[0]?.close;
     const ts = r.timestamp;
+    const barCount = ts?.length ?? 0;
     let price: number | null = null;
     let asOfMs: number | null = null;
     if (closes && ts) {
@@ -121,6 +122,25 @@ async function fetchQuote(symbol: string, now: Date): Promise<WatchQuote | null>
       price,
       asOf: new Date(asOfMs).toISOString(),
       ageSeconds: Math.max(0, (now.getTime() - asOfMs) / 1000),
+      /*
+       * HOW MANY BARS THE FEED ACTUALLY RETURNED, and it settles a question
+       * the code cannot answer about itself.
+       *
+       * `includePrePost=true` was added and the sweep still reported ages
+       * consistent with the 20:00Z regular close, while the identical URL
+       * from a residential connection returned 891 bars ending 23:59Z. A
+       * parameter that is accepted and silently ignored looks exactly like a
+       * parameter that works. Nasdaq already rejects this platform's
+       * datacenter egress elsewhere in this codebase, so a provider
+       * differentiating by caller is a demonstrated failure mode here, not a
+       * hypothesis about one.
+       *
+       * ~391 bars means regular hours only and the fix is inert in
+       * production; ~891 means the feed is full and the difference lies
+       * elsewhere. Reported per quote so the answer arrives with the data
+       * rather than needing a second investigation.
+       */
+      bars: barCount,
     };
   } catch {
     return null;
@@ -169,6 +189,18 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       sweptAt: now.toISOString(),
       armed: armed.length,
       quoted: quotes.size,
+      /*
+       * The feed, described. `bars` near 391 means this caller is being
+       * served regular hours only regardless of includePrePost — see
+       * fetchQuote. Kept on the response rather than in logs so it can be
+       * read from outside without platform access.
+       */
+      feed: [...quotes.values()].map((q) => ({
+        symbol: q.symbol,
+        bars: q.bars ?? null,
+        lastBarAt: q.asOf,
+        ageMinutes: Math.round(q.ageSeconds / 60),
+      })),
       fired,
       // Reasons, not silence: a stuck feed must not read as a quiet market.
       skipped: results
