@@ -75,12 +75,29 @@ export async function POST(req: Request) {
    * with a reason by the builder rather than dropped here, so the caller can
    * see which of its holdings did not make it in.
    */
+  const num = (v: unknown): number | undefined =>
+    v === undefined || v === null ? undefined : Number(v);
+  const str = (v: unknown): string | undefined =>
+    v === undefined || v === null ? undefined : String(v);
+
   const positions: PositionInput[] = raw.map((p) => {
     const o = (p ?? {}) as Record<string, unknown>;
     return {
       symbol: typeof o.symbol === "string" ? o.symbol : String(o.symbol ?? ""),
       quantity: Number(o.quantity),
-      price: o.price === undefined || o.price === null ? undefined : Number(o.price),
+      price: num(o.price),
+      /*
+       * Option fields pass through untouched; the builder validates the leg
+       * as a whole and rejects it by name if it cannot be modelled. These
+       * used to be dropped here, which valued a 1-lot call as 1.25 shares
+       * of stock — a ~140x silent understatement of real exposure.
+       */
+      strike: num(o.strike),
+      expiry: str(o.expiry),
+      right: str(o.right),
+      delta: num(o.delta),
+      multiplier: num(o.multiplier),
+      underlying_price: num(o.underlying_price),
     };
   });
 
@@ -105,11 +122,29 @@ export function GET() {
     {
       error: "post_required",
       detail: "POST a book of positions; this endpoint reads nothing from any broker.",
-      example: { positions: [{ symbol: "APLD", quantity: 100, price: 31.2 }] },
+      example: {
+        positions: [
+          { symbol: "APLD", quantity: 100, price: 31.2 },
+          {
+            symbol: "BTDR",
+            quantity: 1,
+            price: 1.25,
+            strike: 10.5,
+            expiry: "2026-08-28",
+            right: "call",
+            delta: 0.724,
+          },
+        ],
+      },
       notes: [
-        "price is optional and falls back to our last close, with provenance saying which.",
+        "price is optional for equity and falls back to our last close, with provenance saying which.",
         "quantity is signed: a negative quantity is a short and offsets market beta.",
-        "weighted_beta_of_covered is refused below 60% beta coverage rather than understated.",
+        "Supplying any of strike/expiry/right/delta/multiplier declares an option leg.",
+        "An option leg needs strike, expiry, right and delta; an unmodellable leg is rejected by name, never valued as equity.",
+        "For an option, price is the PER-CONTRACT premium (1.25, not 125); multiplier defaults to 100.",
+        "Option legs return delta_equivalent_usd (real exposure) and capped_downside_usd (max loss) separately.",
+        "underlying_price is optional on an option leg so delta and spot can share one broker snapshot; falls back to our close.",
+        "weighted_beta_of_covered is refused below 60% coverage rather than understated.",
         "No P&L, no score, no recommendation.",
       ],
     },

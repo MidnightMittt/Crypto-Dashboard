@@ -250,3 +250,176 @@ describe("buildPortfolio — refusals", () => {
     expect(p.positions[0].beta.value).toBe(4.63);
   });
 });
+
+/**
+ * The production failure this section guards against: a 1-lot BTDR call
+ * posted with strike/expiry/right/delta was valued at $1.25 of stock —
+ * every option field silently discarded, ~$823 of real delta exposure
+ * reported as $5.88 of market equivalent, 140x understated.
+ *
+ * Hand-computed throughout, on the real position:
+ *   BTDR call, qty 1, premium 1.25, delta 0.724, close 11.37, beta 2.62
+ *   value            1 x 1.25 x 100          =    125
+ *   delta equivalent 1 x 0.724 x 100 x 11.37 =    823.188
+ *   market equiv     823.188 x 2.62          =  2,156.75256
+ *   capped downside  premium paid            =    125
+ */
+const BTDR_CALL = {
+  symbol: "BTDR",
+  quantity: 1,
+  price: 1.25,
+  strike: 10.5,
+  expiry: "2026-08-28",
+  right: "call",
+  delta: 0.724,
+};
+
+const optionInputs = (over: Partial<PortfolioInputs> = {}): PortfolioInputs =>
+  inputs({
+    positions: [BTDR_CALL],
+    lastClose: new Map([["BTDR", { price: 11.37, asOf: "2026-08-14" }]]),
+    marketExposure: new Map([["BTDR", exposure(2.62)]]),
+    ...over,
+  });
+
+describe("buildPortfolio — option legs carry their real exposure", () => {
+  it("models the real BTDR call instead of valuing it as 1.25 shares of stock", () => {
+    const p = buildPortfolio(optionInputs());
+    const r = p.positions[0];
+
+    expect(r.instrument).toBe("option");
+    expect(r.value_usd.value).toBe(125);
+    expect(r.delta_equivalent_usd?.value).toBeCloseTo(823.188, 6);
+    expect(r.capped_downside_usd?.value).toBe(125);
+    expect(r.market_equivalent_usd.value).toBeCloseTo(2156.75256, 6);
+    expect(r.option).toMatchObject({
+      strike: 10.5,
+      expiry: "2026-08-28",
+      right: "call",
+      multiplier: 100,
+      multiplier_source: "default_us_equity_option_100",
+      delta: 0.724,
+    });
+    expect(p.rejected).toEqual([]);
+  });
+
+  it("reads as effective leverage at the book level, which is the point", () => {
+    const p = buildPortfolio(optionInputs());
+    // 2,156.75 of market equivalent on 125 of premium capital: ~17x.
+    expect(p.exposure.market_equivalent_usd.value).toBeCloseTo(2156.75256, 6);
+    expect(p.exposure.weighted_beta_of_covered.value).toBeCloseTo(17.254, 3);
+  });
+
+  it("accepts the right case-insensitively and a supplied multiplier with provenance", () => {
+    const p = buildPortfolio(
+      optionInputs({ positions: [{ ...BTDR_CALL, right: "CALL", multiplier: 10 }] })
+    );
+    const r = p.positions[0];
+    expect(r.option?.right).toBe("call");
+    expect(r.option?.multiplier_source).toBe("client_supplied");
+    expect(r.value_usd.value).toBe(12.5);
+    expect(r.delta_equivalent_usd?.value).toBeCloseTo(82.3188, 6);
+  });
+
+  it("uses a caller-supplied underlying price over our close, with provenance", () => {
+    const p = buildPortfolio(
+      optionInputs({ positions: [{ ...BTDR_CALL, underlying_price: 12.0 }] })
+    );
+    const r = p.positions[0];
+    expect(r.delta_equivalent_usd?.value).toBeCloseTo(0.724 * 100 * 12.0, 6);
+    expect(r.delta_equivalent_usd?.source).toBe("client_supplied_delta_x_client_supplied_mark");
+  });
+
+  it("never falls the premium back to the stock close", () => {
+    const { price: _omitted, ...noPremium } = BTDR_CALL;
+    const p = buildPortfolio(optionInputs({ positions: [noPremium] }));
+    const r = p.positions[0];
+    // The close prices the stock, not the contract: value refuses…
+    expect(r.value_usd.value).toBeNull();
+    // …but delta exposure needs no premium and still reports.
+    expect(r.delta_equivalent_usd?.value).toBeCloseTo(823.188, 6);
+  });
+
+  it("caps a short put at the strike bound net of premium received", () => {
+    const p = buildPortfolio(
+      optionInputs({
+        positions: [{ ...BTDR_CALL, quantity: -1, right: "put", delta: -0.3, price: 0.5 }],
+      })
+    );
+    const r = p.positions[0];
+    // 10.5 x 100 x 1 - 50 of premium received.
+    expect(r.capped_downside_usd?.value).toBe(1000);
+    // A short put is LONG the market: (-1) x (-0.3) x 100 x 11.37.
+    expect(r.delta_equivalent_usd?.value).toBeCloseTo(341.1, 6);
+  });
+
+  it("refuses to state a cap on a short call, because none exists", () => {
+    const p = buildPortfolio(
+      optionInputs({ positions: [{ ...BTDR_CALL, quantity: -1 }] })
+    );
+    const r = p.positions[0];
+    expect(r.capped_downside_usd?.value).toBeNull();
+    expect(r.capped_downside_usd && "reason" in r.capped_downside_usd
+      ? r.capped_downside_usd.reason
+      : ""
+    ).toContain("unbounded");
+    expect(r.delta_equivalent_usd?.value).toBeCloseTo(-823.188, 6);
+  });
+});
+
+describe("buildPortfolio — an unmodellable leg is refused by name", () => {
+  it("rejects a leg missing delta rather than valuing it as an equity", () => {
+    const { delta: _omitted, ...noDelta } = BTDR_CALL;
+    const p = buildPortfolio(optionInputs({ positions: [noDelta] }));
+    expect(p.positions).toHaveLength(0);
+    expect(p.rejected).toHaveLength(1);
+    expect(p.rejected[0].reason).toContain("delta");
+    expect(p.rejected[0].reason).toContain("BTDR 2026-08-28 10.5 call");
+  });
+
+  it("treats a lone multiplier as declaring an option leg, not as noise", () => {
+    const p = buildPortfolio(
+      optionInputs({ positions: [{ symbol: "BTDR", quantity: 1, price: 1.25, multiplier: 100 }] })
+    );
+    expect(p.positions).toHaveLength(0);
+    expect(p.rejected[0].reason).toContain("option_leg_missing_or_invalid");
+  });
+
+  it("rejects an expired contract", () => {
+    const p = buildPortfolio(
+      optionInputs({ positions: [{ ...BTDR_CALL, expiry: "2026-08-14" }] })
+    );
+    expect(p.positions).toHaveLength(0);
+    expect(p.rejected[0].reason).toContain("option_expired");
+  });
+
+  it("rejects a delta whose sign contradicts the right", () => {
+    const p = buildPortfolio(
+      optionInputs({ positions: [{ ...BTDR_CALL, delta: -0.724 }] })
+    );
+    expect(p.positions).toHaveLength(0);
+    expect(p.rejected[0].reason).toContain("option_delta_inconsistent_with_right");
+  });
+
+  it("excludes an option without an underlying price from coverage instead of counting its beta", () => {
+    const p = buildPortfolio(
+      inputs({
+        positions: [{ symbol: "APLD", quantity: 100 }, { ...BTDR_CALL }],
+        // BTDR has a measured beta but NO close, so its market equivalent
+        // cannot be computed; counting it as covered would understate.
+        marketExposure: new Map([
+          ["APLD", exposure(4.63)],
+          ["BTDR", exposure(2.62)],
+        ]),
+      })
+    );
+    const opt = p.positions[1];
+    expect(opt.beta.value).toBe(2.62);
+    expect(opt.delta_equivalent_usd?.value).toBeNull();
+    expect(opt.market_equivalent_usd.value).toBeNull();
+    // gross 3,120 + 125 = 3,245; covered 3,120 -> 96.15%, and the book
+    // market equivalent carries only the equity leg.
+    expect(p.exposure.beta_coverage_pct.value).toBeCloseTo((3120 / 3245) * 100, 6);
+    expect(p.exposure.market_equivalent_usd.value).toBeCloseTo(14445.6, 6);
+  });
+});

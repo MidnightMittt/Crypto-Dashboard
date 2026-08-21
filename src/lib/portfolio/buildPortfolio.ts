@@ -38,26 +38,95 @@ export interface PositionInput {
   /** Signed. Negative is short, and a short genuinely offsets market beta. */
   quantity: number;
   /**
-   * The agent's own mark. Optional: falls back to our last close, and the
-   * provenance says which was used, because a stale close and a live mark are
-   * different claims about what the position is worth.
+   * The agent's own mark. Optional for equity: falls back to our last close,
+   * and the provenance says which was used, because a stale close and a live
+   * mark are different claims about what the position is worth.
+   *
+   * For an option leg this is the PER-CONTRACT premium (1.25, not 125) and
+   * there is no fallback — our stored close is the stock's price, not the
+   * contract's, and substituting one for the other is a category error.
    */
   price?: number;
+
+  /*
+   * ── Option legs ───────────────────────────────────────────────────────
+   *
+   * Supplying ANY of the fields below declares the position an option leg.
+   * A leg that declares itself an option but cannot be fully modelled is
+   * REJECTED by name, never valued as an equity. The alternative was
+   * measured in production: a 1-lot call valued at $5.88 of market
+   * equivalent against ~$823 of real delta exposure — 140x understated,
+   * silently, because these fields were accepted and discarded.
+   */
+  strike?: number;
+  /** Contract expiry, YYYY-MM-DD. An expired leg is rejected, not valued. */
+  expiry?: string;
+  /** "call" or "put" (case-insensitive). */
+  right?: string;
+  /**
+   * The caller's own delta, signed per convention: calls in (0, 1], puts in
+   * [-1, 0). We cannot derive it — there is no options-chain feed here — so
+   * it is client-supplied with provenance saying exactly that.
+   */
+  delta?: number;
+  /** Contract multiplier. Defaults to 100; the provenance says which. */
+  multiplier?: number;
+  /**
+   * The caller's mark for the UNDERLYING, so delta and spot can come from
+   * the same broker snapshot. Optional: falls back to our last close for the
+   * symbol, with provenance saying which was used.
+   */
+  underlying_price?: number;
+}
+
+/** The accepted option contract, echoed so the caller can verify the leg. */
+export interface OptionLegEcho {
+  strike: number;
+  expiry: string;
+  right: "call" | "put";
+  multiplier: number;
+  multiplier_source: "client_supplied" | "default_us_equity_option_100";
+  delta: number;
 }
 
 export interface PositionRow {
   symbol: string;
   quantity: number;
+  /** What kind of instrument the row values. Never inferred silently. */
+  instrument: "equity" | "option";
   price: Field<number>;
-  /** quantity x price. Signed, so a short is negative. */
+  /**
+   * quantity x price for equity; quantity x premium x multiplier for an
+   * option. Signed, so a short is negative. For an option this is the
+   * CAPITAL in the position, not its exposure — exposure is
+   * `delta_equivalent_usd`, and the two differ by an order of magnitude.
+   */
   value_usd: Field<number>;
   /** Share of GROSS book value, using absolute values. */
   weight_pct: Field<number>;
+  /** Beta of the UNDERLYING for an option leg — same lookup, same study. */
   beta: Field<number>;
-  /** value x beta — the index-equivalent notional this holding carries. */
+  /**
+   * The index-equivalent notional this holding carries. value x beta for
+   * equity; delta_equivalent x beta for an option, because the market moves
+   * the underlying and delta transmits that move to the contract.
+   */
   market_equivalent_usd: Field<number>;
   /** Declared baskets this name belongs to. Overlapping by design. */
   baskets: string[];
+  /** Present only on option legs: the contract as accepted. */
+  option?: OptionLegEcho;
+  /**
+   * Present only on option legs: quantity x delta x multiplier x underlying
+   * price — the stock-equivalent dollars the leg actually moves like.
+   */
+  delta_equivalent_usd?: Field<number>;
+  /**
+   * Present only on option legs: the most the leg can lose. Premium paid for
+   * a long; strike-bounded for a short put; REFUSED for a short call,
+   * because an unbounded loss reported as a number would be a lie.
+   */
+  capped_downside_usd?: Field<number>;
 }
 
 export interface PortfolioExposure {
@@ -72,12 +141,19 @@ export interface PortfolioExposure {
   market_equivalent_usd: Field<number>;
   /**
    * market_equivalent / covered gross. Named for what it is: the beta of the
-   * part of the book we can measure, not of the whole book.
+   * part of the book we can measure, not of the whole book. When the book
+   * holds options this is effective leverage per dollar of capital at risk —
+   * a 1-lot call at $125 of premium moving like $800 of stock reads near
+   * 19x here, and that reading is the point, not an artifact.
    */
   weighted_beta_of_covered: Field<number>;
   /** Share of gross value that could be priced at all. */
   price_coverage_pct: Field<number>;
-  /** Share of PRICED gross value that has a measured beta. */
+  /**
+   * Share of PRICED gross value whose market-equivalent is computable —
+   * beta for equity; delta, multiplier and an underlying price besides for
+   * an option leg.
+   */
   beta_coverage_pct: Field<number>;
 }
 
@@ -105,7 +181,7 @@ export interface PortfolioResponse {
   rejected: { symbol: string; reason: string }[];
 }
 
-export const PORTFOLIO_SCHEMA_VERSION = "1.0";
+export const PORTFOLIO_SCHEMA_VERSION = "1.1";
 
 /**
  * Below this share of priced value carrying a measured beta, the weighted beta
@@ -119,6 +195,90 @@ export const PORTFOLIO_SCHEMA_VERSION = "1.0";
 export const MIN_BETA_COVERAGE_PCT = 60;
 
 const iso = (ms: number): string => new Date(ms).toISOString();
+
+/** US listed-equity option contract multiplier, used when none is supplied. */
+const DEFAULT_OPTION_MULTIPLIER = 100;
+
+const EXPIRY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** "BTDR 2026-08-28 10.5 call", with "?" where a part was not supplied. */
+const legName = (symbol: string, p: PositionInput): string =>
+  [
+    symbol,
+    typeof p.expiry === "string" ? p.expiry : "?",
+    Number.isFinite(p.strike) ? String(p.strike) : "?",
+    typeof p.right === "string" ? p.right.toLowerCase() : "?",
+  ].join(" ");
+
+type LegParse = { ok: true; leg: OptionLegEcho } | { ok: false; reason: string };
+
+/**
+ * Validates a declared option leg completely before anything is computed.
+ * Every rejection names the leg and the specific defect, because "refused"
+ * with no reason is as unarguable as a bare BLOCK — and because the failure
+ * this replaces was the opposite: fields accepted, discarded, and the leg
+ * confidently valued as 1.25 shares of stock.
+ */
+function parseOptionLeg(symbol: string, p: PositionInput, nowMs: number): LegParse {
+  const name = legName(symbol, p);
+
+  const missing: string[] = [];
+  if (!(Number.isFinite(p.strike) && (p.strike as number) > 0)) missing.push("strike");
+  if (typeof p.expiry !== "string" || !EXPIRY_RE.test(p.expiry)) missing.push("expiry");
+  const right = typeof p.right === "string" ? p.right.toLowerCase() : "";
+  if (right !== "call" && right !== "put") missing.push("right");
+  if (!Number.isFinite(p.delta)) missing.push("delta");
+  if (missing.length > 0) {
+    return {
+      ok: false,
+      reason:
+        `option_leg_missing_or_invalid: ${missing.join(", ")} — ` +
+        `refusing to value ${name} rather than misprice it as an equity`,
+    };
+  }
+
+  const expiryMs = Date.parse(`${p.expiry}T23:59:59Z`);
+  if (!Number.isFinite(expiryMs)) {
+    return { ok: false, reason: `option_leg_invalid_expiry_date: ${name}` };
+  }
+  if (expiryMs < nowMs) {
+    return {
+      ok: false,
+      reason: `option_expired: ${name} — an expired contract has no forward exposure to model`,
+    };
+  }
+
+  const delta = p.delta as number;
+  if (right === "call" && !(delta > 0 && delta <= 1)) {
+    return {
+      ok: false,
+      reason: `option_delta_inconsistent_with_right: ${name} — a call's delta lies in (0, 1], got ${delta}`,
+    };
+  }
+  if (right === "put" && !(delta >= -1 && delta < 0)) {
+    return {
+      ok: false,
+      reason: `option_delta_inconsistent_with_right: ${name} — a put's delta lies in [-1, 0), got ${delta}`,
+    };
+  }
+
+  const suppliedMult = p.multiplier !== undefined && p.multiplier !== null;
+  if (suppliedMult && !(Number.isFinite(p.multiplier) && (p.multiplier as number) > 0)) {
+    return { ok: false, reason: `option_leg_invalid_multiplier: ${name}` };
+  }
+
+  return {
+    ok: true,
+    leg: {
+      strike: p.strike as number,
+      expiry: p.expiry as string,
+      right: right as "call" | "put",
+      multiplier: suppliedMult ? (p.multiplier as number) : DEFAULT_OPTION_MULTIPLIER,
+      multiplier_source: suppliedMult ? "client_supplied" : "default_us_equity_option_100",
+      delta,
+    },
+  };
+}
 
 export interface PortfolioInputs {
   positions: PositionInput[];
@@ -149,8 +309,167 @@ export function buildPortfolio(input: PortfolioInputs): PortfolioResponse {
       continue;
     }
 
+    /*
+     * ANY option field declares the leg an option. Detection must be this
+     * eager: a leg carrying a lone `multiplier: 100` or a discarded `strike`
+     * is exactly the input that was previously valued as stock, silently,
+     * 140x understated.
+     */
+    const declaresOption =
+      p.strike !== undefined ||
+      p.expiry !== undefined ||
+      p.right !== undefined ||
+      p.delta !== undefined ||
+      p.multiplier !== undefined ||
+      p.underlying_price !== undefined;
+
     const supplied = Number.isFinite(p.price) && (p.price as number) > 0 ? (p.price as number) : null;
     const ours = lastClose.get(symbol) ?? null;
+
+    const m = marketExposure.get(symbol) ?? null;
+    const beta: Field<number> = m
+      ? {
+          value: m.beta,
+          unit: "beta",
+          as_of: iso(now),
+          source: "overnight_premium_study",
+          /*
+           * The proxy's own beta is an identity, not a fit. Labelling it as a
+           * regression would be a false claim about how it was obtained.
+           */
+          method:
+            m.derivation === "identity_by_definition"
+              ? `beta_of_${m.proxy}_against_itself_is_one_by_definition`
+              : `ols_overnight_on_${m.proxy}_${m.window_sessions}_sessions`,
+        }
+      : unmeasured("not_in_overnight_study");
+
+    if (declaresOption) {
+      const parsed = parseOptionLeg(symbol, p, now);
+      if (!parsed.ok) {
+        rejected.push({ symbol, reason: parsed.reason });
+        continue;
+      }
+      const leg = parsed.leg;
+
+      /*
+       * No close-price fallback for the premium: our stored close is the
+       * STOCK's price, not the contract's. A missing premium stays missing.
+       */
+      const price: Field<number> =
+        supplied !== null
+          ? {
+              value: supplied,
+              unit: "usd",
+              as_of: iso(now),
+              source: "client_supplied_mark",
+              method: "per_contract_premium_as_posted_by_the_caller",
+            }
+          : unmeasured("option_premium_not_supplied_and_the_stored_close_prices_the_stock_not_the_contract");
+
+      const value: Field<number> =
+        price.value === null
+          ? unmeasured("no_premium_available")
+          : {
+              value: p.quantity * price.value * leg.multiplier,
+              unit: "usd",
+              as_of: price.as_of,
+              source: price.source,
+              method: "quantity_x_premium_x_multiplier_signed_short_is_negative",
+            };
+
+      const suppliedUnderlying =
+        Number.isFinite(p.underlying_price) && (p.underlying_price as number) > 0
+          ? (p.underlying_price as number)
+          : null;
+      const underlying: Field<number> =
+        suppliedUnderlying !== null
+          ? {
+              value: suppliedUnderlying,
+              unit: "usd",
+              as_of: iso(now),
+              source: "client_supplied_mark",
+              method: "underlying_price_as_posted_by_the_caller",
+            }
+          : ours
+            ? {
+                value: ours.price,
+                unit: "usd",
+                as_of: ours.asOf,
+                source: "yahoo_daily_bars",
+                method: "split_and_dividend_adjusted_close_of_the_underlying",
+              }
+            : unmeasured("no_underlying_price_available");
+
+      const deltaEquivalent: Field<number> =
+        underlying.value === null
+          ? unmeasured("no_underlying_price_available")
+          : {
+              value: p.quantity * leg.delta * leg.multiplier * underlying.value,
+              unit: "usd",
+              as_of: underlying.as_of,
+              source: `client_supplied_delta_x_${underlying.source}`,
+              method: "quantity_x_delta_x_multiplier_x_underlying_price",
+            };
+
+      /*
+       * The cap depends on which side of the contract this book is on. A
+       * long's loss stops at the premium; a short put's at the strike; a
+       * short call's does not stop, and a field that answered anyway would
+       * be reporting a bound that does not exist.
+       */
+      const cappedDownside: Field<number> =
+        p.quantity > 0
+          ? value.value === null
+            ? unmeasured("premium_required_to_state_the_cap")
+            : {
+                value: Math.abs(value.value),
+                unit: "usd",
+                as_of: value.as_of,
+                source: value.source,
+                method: "long_option_maximum_loss_is_the_premium_paid",
+              }
+          : leg.right === "call"
+            ? unmeasured("short_call_downside_is_unbounded")
+            : value.value === null
+              ? unmeasured("premium_required_to_net_against_the_strike_bound")
+              : {
+                  value: leg.strike * leg.multiplier * Math.abs(p.quantity) - Math.abs(value.value),
+                  unit: "usd",
+                  as_of: value.as_of,
+                  source: value.source,
+                  method: "short_put_maximum_loss_is_strike_x_multiplier_less_premium_received",
+                };
+
+      const equivalent: Field<number> =
+        deltaEquivalent.value === null || beta.value === null
+          ? unmeasured(
+              deltaEquivalent.value === null ? "no_underlying_price_available" : "not_in_overnight_study"
+            )
+          : {
+              value: deltaEquivalent.value * beta.value,
+              unit: "usd",
+              as_of: iso(now),
+              source: "overnight_premium_study",
+              method: "delta_equivalent_usd_x_beta_on_overnight_market",
+            };
+
+      rows.push({
+        symbol,
+        quantity: p.quantity,
+        instrument: "option",
+        price,
+        value_usd: value,
+        weight_pct: unmeasured("pending_gross"),
+        beta,
+        market_equivalent_usd: equivalent,
+        baskets: basketsOf(symbol),
+        option: leg,
+        delta_equivalent_usd: deltaEquivalent,
+        capped_downside_usd: cappedDownside,
+      });
+      continue;
+    }
 
     const price: Field<number> =
       supplied !== null
@@ -182,24 +501,6 @@ export function buildPortfolio(input: PortfolioInputs): PortfolioResponse {
             method: "quantity_x_price_signed_short_is_negative",
           };
 
-    const m = marketExposure.get(symbol) ?? null;
-    const beta: Field<number> = m
-      ? {
-          value: m.beta,
-          unit: "beta",
-          as_of: iso(now),
-          source: "overnight_premium_study",
-          /*
-           * The proxy's own beta is an identity, not a fit. Labelling it as a
-           * regression would be a false claim about how it was obtained.
-           */
-          method:
-            m.derivation === "identity_by_definition"
-              ? `beta_of_${m.proxy}_against_itself_is_one_by_definition`
-              : `ols_overnight_on_${m.proxy}_${m.window_sessions}_sessions`,
-        }
-      : unmeasured("not_in_overnight_study");
-
     const equivalent: Field<number> =
       value.value === null || beta.value === null
         ? unmeasured(value.value === null ? "no_price_available" : "not_in_overnight_study")
@@ -214,6 +515,7 @@ export function buildPortfolio(input: PortfolioInputs): PortfolioResponse {
     rows.push({
       symbol,
       quantity: p.quantity,
+      instrument: "equity",
       price,
       value_usd: value,
       // Filled once the gross is known — a weight needs a denominator.
@@ -235,10 +537,17 @@ export function buildPortfolio(input: PortfolioInputs): PortfolioResponse {
    */
   const priceCoveragePct = rows.length > 0 ? (priced.length / rows.length) * 100 : null;
 
-  const withBeta = priced.filter((r) => r.beta.value !== null);
-  const grossWithBeta = withBeta.reduce((s, r) => s + Math.abs(r.value_usd.value as number), 0);
+  /*
+   * "Covered" means the market-equivalent could actually be computed, not
+   * merely that a beta exists. An option leg with a measured underlying beta
+   * but no underlying price contributes nothing to the sum, and counting it
+   * as covered would understate the exposure silently — the defect class
+   * this file exists to refuse.
+   */
+  const withEquivalent = priced.filter((r) => r.market_equivalent_usd.value !== null);
+  const grossWithBeta = withEquivalent.reduce((s, r) => s + Math.abs(r.value_usd.value as number), 0);
   const betaCoveragePct = grossPriced > 0 ? (grossWithBeta / grossPriced) * 100 : null;
-  const marketEquivalent = withBeta.reduce(
+  const marketEquivalent = withEquivalent.reduce(
     (s, r) => s + (r.market_equivalent_usd.value as number),
     0
   );
@@ -312,7 +621,7 @@ export function buildPortfolio(input: PortfolioInputs): PortfolioResponse {
             unit: "pct",
             as_of: iso(now),
             source: "derived",
-            method: "gross_value_with_measured_beta_over_gross_priced_value",
+            method: "gross_value_with_computable_market_equivalent_over_gross_priced_value",
           },
   };
 
