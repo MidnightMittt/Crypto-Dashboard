@@ -91,6 +91,17 @@ export const EXCLUDED_FUNDS: readonly string[] = [
   "TLT", "IEF", "SHY", "LQD", "HYG", "TIP",
   // Commodity
   "GLD", "SLV", "USO", "DBA",
+  /*
+   * Leveraged, daily-rebalanced crypto vehicles. Excluded as funds like every
+   * other entry here, but they would be wrong in the panel twice over: they
+   * are not operating companies, AND their multi-session returns are
+   * path-dependent because exposure resets each day. A 2x fund does not
+   * deliver 2x the underlying's 20-day move, so a cross-sectional momentum
+   * rank on one would be measuring decay alongside direction.
+   * See LEVERAGED_VEHICLES in scannerUniverse.ts.
+   */
+  "BITX", "BITU", "ETHU", "ETHT", "SOLT", "SOLZ",
+  "MSTX", "MSTU", "CONL", "XXRP", "PUR",
 ] as const;
 
 /** Different asset class, different calendar. */
@@ -137,6 +148,30 @@ export const EXCLUDED_NON_EQUITY: readonly string[] = [
  */
 export const TRACKED_OUTSIDE_PANEL: readonly string[] = [
   "APLD", "CLSK", "CORZ", "IONQ", "OKLO", "RIOT",
+  /*
+   * The crypto-treasury and crypto-financial cohort, added 2026-08-21 because
+   * the book holds them and every dossier was blind to them.
+   *
+   * Each is a US-listed operating company — verified against the provider,
+   * not assumed — so each satisfies the inclusion rule and could sit in the
+   * panel. They are held out for the same two reasons as the six above.
+   *
+   * First, the panel was declared and results were PUBLISHED on it. Adding
+   * seven names moves every decile boundary underneath figures already on the
+   * site, so a reader comparing two dates would be comparing two experiments
+   * while the page named one.
+   *
+   * Second, they share a mechanism: each reprices on the coin it holds or the
+   * flow it intermediates, which makes them mutually correlated and correlated
+   * with the datacenter cohort already excluded. Dropping seven more
+   * high-beta, tightly-coupled names into a 95-name panel would move the
+   * cross-section by far more than their count suggests — the concentration
+   * problem this list was created to avoid, repeated at larger scale.
+   *
+   * The exit remains the same: a VERSIONED panel run alongside this one, with
+   * the difference reported. Never a quiet promotion.
+   */
+  "BMNR", "COIN", "GLXY", "HOOD", "MSTR", "PURR", "SBET",
 ] as const;
 
 const PANEL_SET: ReadonlySet<string> = new Set(EQUITY_PANEL);

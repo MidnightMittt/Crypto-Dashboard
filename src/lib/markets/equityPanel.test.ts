@@ -53,12 +53,18 @@ describe("the declared equity panel", () => {
    * the full universe" fails with a name attached rather than a count.
    */
   /*
-   * These six are the ONLY exclusions not justified by instrument kind — they
-   * are operating companies held out to keep the panel's composition frozen
-   * while results computed on it are published. That makes them the likeliest
-   * to be "corrected" into the panel by someone reading the inclusion rule and
+   * These are the ONLY exclusions not justified by instrument kind — operating
+   * companies held out to keep the panel's composition frozen while results
+   * computed on it are published. That makes them the likeliest to be
+   * "corrected" into the panel by someone reading the inclusion rule and
    * noticing they satisfy it. Doing so would move every decile boundary under
    * figures already on the site, so it must fail here first, by name.
+   *
+   * The list grew from 6 to 13 on 2026-08-21: the crypto-treasury cohort was
+   * added because the book holds it and every dossier was blind to it. This
+   * pin failing was the intended behaviour, not an obstacle — changing panel
+   * composition is meant to be a deliberate act, and updating this assertion
+   * is what makes it one.
    */
   it("keeps the tracked-outside-panel names classified but out of the ranking", () => {
     expect(TRACKED_OUTSIDE_PANEL.length).toBeGreaterThan(0);
@@ -68,8 +74,11 @@ describe("the declared equity panel", () => {
     }
     // The specific cohort, pinned by name rather than by count.
     expect([...TRACKED_OUTSIDE_PANEL].sort()).toEqual([
+      // datacenter / mining
       "APLD", "CLSK", "CORZ", "IONQ", "OKLO", "RIOT",
-    ]);
+      // crypto treasury / crypto financial
+      "BMNR", "COIN", "GLXY", "HOOD", "MSTR", "PURR", "SBET",
+    ].sort());
   });
 
   it("excludes the instruments that contaminated the original ranking", () => {
