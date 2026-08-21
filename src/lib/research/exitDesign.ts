@@ -157,6 +157,33 @@ export function ladderOutcome(
   rungs: ReadonlyArray<readonly [number, number]>,
   stopPct: number | null
 ): LadderOutcome | null {
+  const outcomes = replayWindows(bars, horizonDays, rungs, stopPct);
+  if (outcomes === null || outcomes.length < MIN_ENTRIES) return null;
+  return {
+    meanPct: Math.round((outcomes.reduce((s, v) => s + v, 0) / outcomes.length) * 100) / 100,
+    medianPct: Math.round(median(outcomes) * 100) / 100,
+    n: outcomes.length,
+    independentN: Math.floor(outcomes.length / horizonDays),
+  };
+}
+
+/**
+ * The per-window realised returns behind `ladderOutcome`, unaggregated.
+ *
+ * Exposed because comparing two rule settings needs the PAIRED differences
+ * window by window, not two means. Both settings run over the same entries, so
+ * the difference series cancels the market path they share — computing it from
+ * summary statistics would throw that away and understate the power available.
+ *
+ * Same replay, same pessimistic stop tie-break. One implementation, so a rule
+ * cannot be judged against a different simulator than the one that sets exits.
+ */
+export function replayWindows(
+  bars: readonly Bar[],
+  horizonDays: number,
+  rungs: ReadonlyArray<readonly [number, number]>,
+  stopPct: number | null
+): number[] | null {
   const last = bars.length - horizonDays;
   if (last < MIN_ENTRIES) return null;
 
@@ -199,13 +226,7 @@ export function ladderOutcome(
     outcomes.push(realised);
   }
 
-  if (outcomes.length < MIN_ENTRIES) return null;
-  return {
-    meanPct: Math.round((outcomes.reduce((s, v) => s + v, 0) / outcomes.length) * 100) / 100,
-    medianPct: Math.round(median(outcomes) * 100) / 100,
-    n: outcomes.length,
-    independentN: Math.floor(outcomes.length / horizonDays),
-  };
+  return outcomes;
 }
 
 /**
