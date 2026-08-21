@@ -1,14 +1,6 @@
 {
-  "generatedAt": 1787267193879,
+  "generatedAt": 1787353408763,
   "entries": [
-    {
-      "symbol": "WMT",
-      "date": "2026-08-20"
-    },
-    {
-      "symbol": "ROST",
-      "date": "2026-08-20"
-    },
     {
       "symbol": "NVDA",
       "date": "2026-08-26"
@@ -19,6 +11,10 @@
     },
     {
       "symbol": "IREN",
+      "date": "2026-08-27"
+    },
+    {
+      "symbol": "PURR",
       "date": "2026-08-27"
     },
     {
@@ -52,10 +48,14 @@
     {
       "symbol": "ADBE",
       "date": "2026-09-10"
+    },
+    {
+      "symbol": "LEN",
+      "date": "2026-09-17"
     }
   ],
   "sweep": {
-    "throughDate": "2026-09-16",
+    "throughDate": "2026-09-17",
     "universe": [
       "ABT",
       "ADBE",
@@ -71,8 +71,11 @@
       "AVGO",
       "BA",
       "BIIB",
+      "BITU",
+      "BITX",
       "BKR",
       "BLK",
+      "BMNR",
       "BNB",
       "BSX",
       "BTC",
@@ -82,6 +85,8 @@
       "CIFR",
       "CLSK",
       "CME",
+      "COIN",
+      "CONL",
       "COPX",
       "CORZ",
       "COST",
@@ -93,6 +98,8 @@
       "DHR",
       "DIA",
       "DUK",
+      "ETHT",
+      "ETHU",
       "EURUSD",
       "FCX",
       "FDX",
@@ -103,11 +110,13 @@
       "GDX",
       "GILD",
       "GLD",
+      "GLXY",
       "GOLD",
       "GS",
       "HAL",
       "HBAN",
       "HD",
+      "HOOD",
       "HUT",
       "HYG",
       "ICE",
@@ -138,6 +147,9 @@
       "MDT",
       "MS",
       "MSFT",
+      "MSTR",
+      "MSTU",
+      "MSTX",
       "MTB",
       "MU",
       "NEE",
@@ -154,6 +166,8 @@
       "PANW",
       "PHM",
       "PLTR",
+      "PUR",
+      "PURR",
       "QCOM",
       "QQQ",
       "REGN",
@@ -161,6 +175,7 @@
       "RIOT",
       "ROST",
       "RTX",
+      "SBET",
       "SCCO",
       "SCHW",
       "SHY",
@@ -170,6 +185,8 @@
       "SNOW",
       "SO",
       "SOL",
+      "SOLT",
+      "SOLZ",
       "SPY",
       "SYK",
       "TECK",
@@ -207,7 +224,8 @@
       "XLV",
       "XLY",
       "XRP",
-      "XRT"
+      "XRT",
+      "XXRP"
     ]
   }
 }
