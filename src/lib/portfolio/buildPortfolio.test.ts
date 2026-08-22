@@ -327,7 +327,9 @@ describe("buildPortfolio — option legs carry their real exposure", () => {
     );
     const r = p.positions[0];
     expect(r.delta_equivalent_usd?.value).toBeCloseTo(0.724 * 100 * 12.0, 6);
-    expect(r.delta_equivalent_usd?.source).toBe("client_supplied_delta_x_client_supplied_mark");
+    expect(r.delta_equivalent_usd).toMatchObject({
+      source: "client_supplied_delta_x_client_supplied_mark",
+    });
   });
 
   it("never falls the premium back to the stock close", () => {
