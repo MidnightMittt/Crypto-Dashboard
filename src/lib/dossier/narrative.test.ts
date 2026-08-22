@@ -513,7 +513,12 @@ describe("contradiction between the chart and the verdict", () => {
   it("NAMES the disagreement instead of printing both facts in sequence", () => {
     const t = composeTldr({ bias: conflicted, plan, symbol: "NVDA", name: "NVDA" });
     expect(t.state).toContain("lower highs and lower lows");
-    expect(t.support).toContain("comes from the backdrop rather than from the chart itself");
+    // The clause names the ACTUAL supports and claims nothing about where
+    // they live — the old "comes from the backdrop" wording became false
+    // the day the market-wide metrics stopped voting in the score.
+    expect(t.support).toContain("rests on");
+    expect(t.support).toContain("not on the chart's own structure");
+    expect(t.support).not.toContain("backdrop");
   });
 
   it("attributes the supports correctly — they hold the verdict UP, they do not oppose it", () => {
@@ -525,8 +530,11 @@ describe("contradiction between the chart and the verdict", () => {
      * by hand.
      */
     const t = composeTldr({ bias: conflicted, plan, symbol: "NVDA", name: "NVDA" });
-    expect(t.support).toContain("market breadth and risk appetite are what hold it up");
-    expect(t.support).not.toContain("point the other way");
+    // The supports sit in the "rests on" slot; only the structural read is
+    // ever said to point the other way. Asserting the supports are not the
+    // subject of that clause is the role-inversion guard.
+    expect(t.support).toContain("rests on market breadth and risk appetite");
+    expect(t.support).not.toContain("market breadth and risk appetite point");
   });
 
   it("does not state the same opposition twice in one summary", () => {

@@ -90,10 +90,17 @@ function supportClause(bias: MarketBias, stateConflicts: boolean): string | null
   const joined = named.length === 2 ? `${named[0]} and ${named[1]}` : named[0];
 
   if (stateConflicts) {
-    // The supports named here are what HOLD THE VERDICT UP; the chart is the
-    // thing pointing the other way. Getting that round the wrong way reads as
-    // nonsense to anyone actually checking, which is the reader who matters.
-    return `The ${bias.verdict} read comes from the backdrop rather than from the chart itself — ${joined} are what hold it up.`;
+    /*
+     * The supports named here are what HOLD THE VERDICT UP; the chart is the
+     * thing pointing the other way. This used to read "comes from the
+     * backdrop", which was true while the market-wide metrics voted in the
+     * score and became FALSE the day they stopped (liveAnalysis.ts) — the
+     * supports are now the symbol's own modules, and calling relative
+     * strength "the backdrop" is a wrong sentence in the most-read slot on
+     * the page. The clause names the actual supports and claims nothing
+     * about where they live.
+     */
+    return `The ${bias.verdict} read rests on ${joined}, not on the chart's own structure — the leading structural read points the other way.`;
   }
   return bias.verdict === "bearish"
     ? `${cap(joined)} are pushing the same way.`
