@@ -22,6 +22,8 @@ const clean = (over: Partial<PretradeInputs> = {}): PretradeInputs => ({
   cost: { roundTripBp: 8.7, edgeBp: 29.3 },
   priceAgeSessions: 0,
   today: "2026-08-21",
+  livePrice: null,
+  nowMs: Date.UTC(2026, 7, 21, 19, 0, 0),
   ...over,
 });
 
@@ -181,5 +183,74 @@ describe("runPretradeChecks", () => {
       expect(c.data, `${c.name} needs its numbers`).toBeDefined();
     }
     expect(r.summary).toContain("override only against the specific figure");
+  });
+});
+
+/**
+ * The structural problem live_price exists to cure: during every live
+ * session the stored close is ≥1 session behind BY CONSTRUCTION, so the
+ * auditor failed data_freshness on every trade the caller was actually
+ * about to place. The fix is not to relax the check — it is to judge a
+ * caller-supplied price, dated and with its source named.
+ */
+describe("runPretradeChecks — caller-supplied live price", () => {
+  const NOW = Date.UTC(2026, 7, 21, 19, 0, 0);
+  const at = (secondsBeforeNow: number) => NOW - secondsBeforeNow * 1000;
+
+  it("judges the supplied price during a live session, when the close must be behind", () => {
+    // The close is 1 session behind — previously an unconditional fail.
+    const r = runPretradeChecks(
+      clean({
+        priceAgeSessions: 1,
+        livePrice: { value: 19.9, asOfMs: at(42), source: "broker_bid" },
+      })
+    );
+    const c = check(r, "data_freshness");
+    expect(c.status).toBe("pass");
+    expect(c.detail).toContain('"broker_bid"');
+    expect(c.detail).toContain("42s old");
+    expect(c.data!.price_age_seconds).toBe(42);
+    expect(c.data!.source).toBe("broker_bid");
+    expect(r.verdict).toBe("pass");
+  });
+
+  it("fails a supplied price older than the 15-minute limit", () => {
+    const r = runPretradeChecks(
+      clean({ livePrice: { value: 19.9, asOfMs: at(1000), source: "broker_bid" } })
+    );
+    const c = check(r, "data_freshness");
+    expect(c.status).toBe("fail");
+    expect(c.detail).toContain("1000s old");
+    expect(c.detail).toContain("stored close with extra steps");
+    expect(r.verdict).toBe("block");
+  });
+
+  it("fails a price dated in the future rather than calling it fresh", () => {
+    const r = runPretradeChecks(
+      clean({ livePrice: { value: 19.9, asOfMs: at(-30), source: "broker_bid" } })
+    );
+    const c = check(r, "data_freshness");
+    expect(c.status).toBe("fail");
+    expect(c.detail).toContain("FUTURE");
+  });
+
+  it("reports how far the entry sits from the live price without judging it", () => {
+    // Entry 20 against a live 19.9: +0.5%. A limit away from the market is
+    // legitimate; a fat-fingered entry should still be visible.
+    const r = runPretradeChecks(
+      clean({ livePrice: { value: 19.9, asOfMs: at(5), source: "broker_mid" } })
+    );
+    const c = check(r, "data_freshness");
+    expect(c.status).toBe("pass");
+    expect(c.data!.entry_vs_live_pct).toBeCloseTo(0.5, 1);
+  });
+
+  it("behaves exactly as before when no live price is supplied", () => {
+    const r = runPretradeChecks(clean({ priceAgeSessions: 1 }));
+    const c = check(r, "data_freshness");
+    expect(c.status).toBe("fail");
+    expect(c.detail).toContain("1 session behind");
+    // And the failure now tells the caller the cure.
+    expect(c.detail).toContain("live_price");
   });
 });

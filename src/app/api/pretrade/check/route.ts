@@ -9,7 +9,7 @@ import { DatedReturn, regressOnMarket } from "@/lib/research/alphaBeta";
 import { Bar } from "@/lib/research/types";
 import { survivalAt } from "@/lib/research/stopViability";
 import { latestCompletedSession, sessionsBetween } from "@/lib/asset/priceStaleness";
-import { HeldPosition, PretradeInputs, runPretradeChecks } from "@/lib/pretrade/check";
+import { HeldPosition, LivePrice, PretradeInputs, runPretradeChecks } from "@/lib/pretrade/check";
 
 /**
  * POST /api/pretrade/check — every reason not to place this trade, at once.
@@ -120,6 +120,35 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
+  /*
+   * live_price is all-or-nothing. A supplied price without an as_of cannot
+   * be dated; without a source it cannot be argued with. Accepting a partial
+   * one and quietly falling back would be the exact failure this endpoint
+   * already had once: a field accepted and silently unused. So a malformed
+   * live_price is a 400 naming the defect, never a shrug.
+   */
+  let livePrice: LivePrice | null = null;
+  if (body.live_price !== undefined && body.live_price !== null) {
+    const lp = body.live_price as Record<string, unknown>;
+    const value = Number(lp.value);
+    const asOfMs = typeof lp.as_of === "string" ? Date.parse(lp.as_of) : NaN;
+    const source = typeof lp.source === "string" ? lp.source.trim() : "";
+    const defects: string[] = [];
+    if (!(Number.isFinite(value) && value > 0)) defects.push("value must be a positive number");
+    if (!Number.isFinite(asOfMs)) defects.push("as_of must be an ISO timestamp");
+    if (!source) defects.push("source must name where the price came from (e.g. broker_bid)");
+    if (defects.length > 0) {
+      return NextResponse.json(
+        {
+          error: `live_price is incomplete: ${defects.join("; ")}.`,
+          hint: 'Send all three or none: {"live_price":{"value":15.75,"as_of":"2026-08-21T19:59:59Z","source":"broker_bid"}}',
+        },
+        { status: 400 }
+      );
+    }
+    livePrice = { value, asOfMs, source };
+  }
+
   const sp = panel.symbols[symbol];
   if (!sp) {
     return NextResponse.json(
@@ -182,6 +211,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     cost,
     priceAgeSessions: sessionsBetween(lastSession, today),
     today,
+    livePrice,
+    nowMs: Date.now(),
   };
 
   return NextResponse.json({
@@ -191,6 +222,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       stop_width_pct: Number(widthPct.toFixed(2)),
       price_session: lastSession,
       edge_bp: Number.isFinite(edgeBp) ? edgeBp : null,
+      live_price: livePrice
+        ? { value: livePrice.value, as_of: new Date(livePrice.asOfMs).toISOString(), source: livePrice.source }
+        : null,
     },
   });
 }

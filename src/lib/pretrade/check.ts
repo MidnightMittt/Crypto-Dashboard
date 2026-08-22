@@ -59,6 +59,19 @@ export interface HeldPosition {
   beta: number | null;
 }
 
+/**
+ * A live price the CALLER vouches for, with the provenance that makes it
+ * arguable. The site cannot verify the value — it can only date it and name
+ * where the caller says it came from, and both travel with the verdict.
+ */
+export interface LivePrice {
+  value: number;
+  /** Epoch ms of the caller's `as_of`, parsed by the route so this stays pure. */
+  asOfMs: number;
+  /** Named by the caller, e.g. "broker_bid". Echoed, never interpreted. */
+  source: string;
+}
+
 export interface PretradeInputs {
   symbol: string;
   shares: number;
@@ -80,6 +93,15 @@ export interface PretradeInputs {
   priceAgeSessions: number;
   /** Today, ISO date, for the earnings window. */
   today: string;
+  /**
+   * Optional caller-supplied live price. When present, data_freshness judges
+   * ITS age rather than the stored close's — which otherwise fails during
+   * every live session by construction, because the close it measures does
+   * not exist until tonight. Null means: behave exactly as before.
+   */
+  livePrice: LivePrice | null;
+  /** The route's clock, epoch ms. Here so the engine keeps no clock of its own. */
+  nowMs: number;
 }
 
 /** Survival floor a stop must clear. Matches SURVIVAL_FLOOR_PCT in stopViability. */
@@ -107,6 +129,17 @@ export const MAX_BETA_EXPOSURE = 1.5;
 
 /** Sessions before earnings within which a plan is refused. */
 export const EARNINGS_BUFFER_SESSIONS = 3;
+
+/**
+ * Oldest a caller-supplied live price may be and still count as fresh.
+ *
+ * Fifteen minutes, matching the watchdog sweep's staleness guard, and for
+ * the same reason: a price older than that may not reflect the market, and
+ * judging a trade against it is the stale-close problem with extra steps.
+ * The check fails rather than warns past the limit — the caller holds the
+ * broker connection and can always re-quote.
+ */
+export const LIVE_PRICE_MAX_AGE_SECONDS = 15 * 60;
 
 const pct = (v: number) => `${(v * 100).toFixed(0)}%`;
 const usd = (v: number) => `$${v.toFixed(2)}`;
@@ -293,6 +326,58 @@ function priceBandCheck(i: PretradeInputs): PretradeCheck {
 }
 
 function freshnessCheck(i: PretradeInputs): PretradeCheck {
+  /*
+   * With a caller-supplied live price, freshness judges WHAT WAS SUPPLIED —
+   * its age in seconds, its source by name — never the stored close. Without
+   * one, the old behaviour survives untouched: the close is the only price
+   * there is, and during a live session it is ≥1 session behind by
+   * construction, which is a true fact the caller can only cure by supplying
+   * a live price with provenance.
+   */
+  if (i.livePrice) {
+    const { value, asOfMs, source } = i.livePrice;
+    const ageSeconds = Math.round((i.nowMs - asOfMs) / 1000);
+    /*
+     * Reported, not judged: how far the caller's intended entry sits from
+     * the price they say is live. The auditor has no basis to fail a limit
+     * order placed away from the market, but the gap belongs beside the
+     * verdict so a fat-fingered entry is visible in the same payload.
+     */
+    const entryVsLivePct = value > 0 ? Number((((i.entry - value) / value) * 100).toFixed(2)) : null;
+    const data = {
+      live_price: value,
+      source,
+      price_age_seconds: ageSeconds,
+      limit_seconds: LIVE_PRICE_MAX_AGE_SECONDS,
+      entry_vs_live_pct: entryVsLivePct,
+    };
+
+    if (ageSeconds < 0) {
+      return {
+        name: "data_freshness",
+        status: "fail",
+        detail:
+          `The supplied live price is dated ${-ageSeconds}s in the FUTURE. Clock skew or a ` +
+          `mangled timestamp — either way its age cannot be established, and unverifiable ` +
+          `is not the same as fresh.`,
+        data,
+      };
+    }
+    const ok = ageSeconds <= LIVE_PRICE_MAX_AGE_SECONDS;
+    return {
+      name: "data_freshness",
+      status: ok ? "pass" : "fail",
+      detail: ok
+        ? `Live price ${usd(value)} from "${source}", ${ageSeconds}s old — within the ` +
+          `${LIVE_PRICE_MAX_AGE_SECONDS / 60}-minute limit. The value is the caller's claim; ` +
+          `the site dates it and names its source, it cannot verify it.`
+        : `The supplied "${source}" price is ${ageSeconds}s old against a ` +
+          `${LIVE_PRICE_MAX_AGE_SECONDS}s limit — a live price this stale is a stored ` +
+          `close with extra steps. Re-quote and resubmit.`,
+      data,
+    };
+  }
+
   const ok = i.priceAgeSessions === 0;
   return {
     name: "data_freshness",
@@ -300,7 +385,9 @@ function freshnessCheck(i: PretradeInputs): PretradeCheck {
     detail: ok
       ? `Price is the latest completed session's close.`
       : `Price is ${i.priceAgeSessions} session${i.priceAgeSessions === 1 ? "" : "s"} behind. ` +
-        `Every figure above is derived from it, so the whole check is as stale as the price.`,
+        `Every figure above is derived from it, so the whole check is as stale as the price. ` +
+        `During a live session this is true by construction — supply live_price with ` +
+        `provenance to be judged on the market instead of the close.`,
     data: { price_age_sessions: i.priceAgeSessions },
   };
 }
