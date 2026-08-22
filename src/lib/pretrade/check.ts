@@ -226,7 +226,15 @@ function betaExposureCheck(i: PretradeInputs): PretradeCheck {
     name: "beta_exposure",
     status: ok ? "pass" : "fail",
     detail:
-      `Adds ${usd(added)} market-equivalent (${usd(addedNotional)} notional x beta ${i.beta.toFixed(2)}); ` +
+      /*
+       * The estimand is IN the sentence, because the account has three live
+       * beta numbers for the same symbol — overnight-vs-SPY (the portfolio
+       * endpoint's axis), close-to-close-vs-SPY (the trading session's own
+       * hand fit) and this one — and a bare "beta 2.82" invited a session
+       * of reconciliation against figures measuring something else.
+       */
+      `Adds ${usd(added)} market-equivalent (${usd(addedNotional)} notional x beta ${i.beta.toFixed(2)}, ` +
+      `close-to-close daily returns vs QQQ over the committed panel); ` +
       `the book would reach ${pct(ratio)} of the account against a ${pct(MAX_BETA_EXPOSURE)} ceiling.` +
       (unmeasured > 0
         ? ` ${unmeasured} held position${unmeasured === 1 ? "" : "s"} ha${unmeasured === 1 ? "s" : "ve"} no measurable market-equivalent and contribute${unmeasured === 1 ? "s" : ""} nothing here, so the true figure is HIGHER.`
