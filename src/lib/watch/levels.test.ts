@@ -9,6 +9,7 @@ import {
   isArmed,
   markFired,
   rejectionReason,
+  usSession,
 } from "./levels";
 
 const NOW = new Date("2026-08-20T18:00:00Z");
@@ -161,5 +162,42 @@ describe("rejectionReason", () => {
     expect(rejectionReason({ symbol: "CIFR", level: 0, direction: "below" })).toContain("positive number");
     expect(rejectionReason({ symbol: "CIFR", level: NaN, direction: "below" })).toContain("positive number");
     expect(rejectionReason({ symbol: "CIFR", level: 16, direction: "sideways" })).toContain('"below"');
+  });
+});
+
+/**
+ * The session label the extended feed made necessary: a fire from a thin
+ * 04:30 ET book is a materially different event from one at 11:00, and the
+ * alert is the only thing the reader sees, so the distinction travels on it.
+ */
+describe("usSession and the labelled alert", () => {
+  it("classifies prints by their own ET timestamp", () => {
+    expect(usSession(Date.parse("2026-08-21T08:30:00Z"))).toBe("pre-market"); // 04:30 ET
+    expect(usSession(Date.parse("2026-08-21T15:00:00Z"))).toBe("regular hours"); // 11:00 ET
+    expect(usSession(Date.parse("2026-08-21T21:30:00Z"))).toBe("after-hours"); // 17:30 ET
+    expect(usSession(Date.parse("2026-08-21T06:00:00Z"))).toBe("overnight"); // 02:00 ET
+  });
+
+  it("names the session on a fired alert and adds the thin-book caveat off regular hours", () => {
+    const level: WatchLevel = {
+      id: "w_test", symbol: "CIFR", level: 12.74, direction: "below",
+      note: "", armedAt: "2026-08-21T00:00:00Z", firedAt: null, firedPrice: null, delivered: false,
+    };
+    const preMarket = evaluateLevel(level, {
+      symbol: "CIFR", price: 12.5, asOf: "2026-08-21T08:30:00Z", ageSeconds: 30,
+    }, new Date("2026-08-21T08:30:30Z"));
+    expect(preMarket.kind).toBe("fired");
+    if (preMarket.kind === "fired") {
+      expect(preMarket.message).toContain("pre-market print");
+      expect(preMarket.message).toContain("verify against a second source");
+    }
+
+    const regular = evaluateLevel(level, {
+      symbol: "CIFR", price: 12.5, asOf: "2026-08-21T15:00:00Z", ageSeconds: 30,
+    }, new Date("2026-08-21T15:00:30Z"));
+    if (regular.kind === "fired") {
+      expect(regular.message).toContain("regular hours print");
+      expect(regular.message).not.toContain("verify against a second source");
+    }
   });
 });

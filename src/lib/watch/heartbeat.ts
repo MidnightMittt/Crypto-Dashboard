@@ -50,12 +50,16 @@ export const SWEEP_SILENT_AFTER_MINUTES = 120;
 export type SweepHealth = "never_ran" | "silent" | "blind" | "watching" | "closed";
 
 /**
- * The window the watchdog covers: regular US hours, plus a few minutes past
- * the bell so the closing print is evaluated rather than raced. Mirrors the
- * OPEN_ET/END_ET the sweep workflow paces itself by.
+ * The window the watchdog covers: the quote source's own print window,
+ * 04:00-20:00 ET — pre-market through after-hours — not the exchange bell.
+ * It used to stop at 16:05 ET, which left all_day_hours positions live and
+ * unwatched for ~4 hours every evening; the workflow's envelope was
+ * widened to match the data, and this predicate MUST mirror the
+ * OPEN_ET/END_ET in .github/workflows/watch-sweep.yml or the health page
+ * calls a running sweeper "closed" (or a stopped one healthy).
  */
-const OPEN_MINUTES = 9 * 60 + 30;
-const CLOSE_MINUTES = 16 * 60 + 5;
+const OPEN_MINUTES = 4 * 60;
+const CLOSE_MINUTES = 20 * 60;
 
 /**
  * Is the market open, and therefore is silence a problem?
@@ -117,8 +121,10 @@ export function assessSweepLiveness(
         (last
           ? `Its last sweep was ${last.at}. `
           : `It has no sweep on record yet, which outside market hours proves nothing either way. `) +
-        `Levels are not watched overnight or at weekends: a gap through a stop is seen at the ` +
-        `first sweep after the open, not when it happens.`,
+        `Levels are watched 04:00-20:00 ET on weekdays — the quote source's full print window. ` +
+        `They are NOT watched 20:00-04:00 ET or at weekends, because that tape has no prints on ` +
+        `this source: a gap through a stop there is seen at the first sweep after ~04:00 ET, ` +
+        `not when it happens.`,
     };
   }
 

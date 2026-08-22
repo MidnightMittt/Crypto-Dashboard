@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { WatchLevel, isArmed, rejectionReason } from "@/lib/watch/levels";
+import { SWEEP_COVERAGE, WatchLevel, isArmed, rejectionReason } from "@/lib/watch/levels";
 import { MAX_LEVELS, WatchStoreUnavailable, loadLevels, newId, saveLevels } from "@/lib/watch/store";
 
 /**
@@ -37,8 +37,16 @@ export async function GET(): Promise<NextResponse> {
     const armed = levels.filter(isArmed);
     const fired = levels.filter((l) => !isArmed(l));
     return NextResponse.json({
-      armed,
+      /*
+       * Coverage rides on EVERY armed row, not only at the top: a caller
+       * reading one level must see the hole in its watch window without
+       * needing to have read anything else. The string is identical on each
+       * row because it is a property of the sweeper, and that sameness is
+       * honest rather than redundant.
+       */
+      armed: armed.map((l) => ({ ...l, coverage: SWEEP_COVERAGE })),
       fired,
+      coverage: SWEEP_COVERAGE,
       counts: { armed: armed.length, fired: fired.length },
       /*
        * Fired but undelivered is the state worth surfacing at the top level:
@@ -83,7 +91,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     };
 
     await saveLevels([...levels, level]);
-    return NextResponse.json({ armed: true, level }, { status: 201 });
+    // The hole is stated AT THE ARM, when the caller is deciding what this
+    // level protects — not discovered later on a health page.
+    return NextResponse.json({ armed: true, level, coverage: SWEEP_COVERAGE }, { status: 201 });
   } catch (err) {
     return storeError(err) ?? NextResponse.json({ error: "Could not arm the level." }, { status: 500 });
   }

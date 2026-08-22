@@ -88,15 +88,21 @@ describe("withinSweepWindow", () => {
    * watchdog from a market that had not opened, which is precisely the
    * non-discriminating check this whole module exists to eliminate.
    */
-  it("is closed before the open, when a missing sweep proves nothing", () => {
-    expect(withinSweepWindow(new Date("2026-08-21T10:21:00Z"))).toBe(false); // 06:21 ET
-    expect(withinSweepWindow(new Date("2026-08-21T13:29:00Z"))).toBe(false); // 09:29 ET
+  /*
+   * The window is the QUOTE SOURCE's print window (04:00-20:00 ET), not the
+   * exchange bell — the old 09:30-16:05 envelope called a live after-hours
+   * tape "closed" while all_day_hours positions traded on it.
+   */
+  it("opens at 04:00 ET with the pre-market prints, not at the bell", () => {
+    expect(withinSweepWindow(new Date("2026-08-21T07:59:00Z"))).toBe(false); // 03:59 ET
+    expect(withinSweepWindow(new Date("2026-08-21T08:00:00Z"))).toBe(true); // 04:00 ET
     expect(withinSweepWindow(new Date("2026-08-21T13:30:00Z"))).toBe(true); // 09:30 ET
   });
 
-  it("closes a few minutes past the bell, not at it", () => {
-    expect(withinSweepWindow(new Date("2026-08-21T20:04:00Z"))).toBe(true); // 16:04 ET
-    expect(withinSweepWindow(new Date("2026-08-21T20:05:00Z"))).toBe(false); // 16:05 ET
+  it("closes when the after-hours prints end at 20:00 ET, not at the bell", () => {
+    expect(withinSweepWindow(new Date("2026-08-21T20:05:00Z"))).toBe(true); // 16:05 ET
+    expect(withinSweepWindow(new Date("2026-08-21T23:59:00Z"))).toBe(true); // 19:59 ET
+    expect(withinSweepWindow(new Date("2026-08-22T00:00:00Z"))).toBe(false); // 20:00 ET Fri
   });
 
   it("is closed all weekend", () => {
@@ -106,7 +112,7 @@ describe("withinSweepWindow", () => {
 });
 
 describe("assessSweepLiveness outside market hours", () => {
-  const CLOSED = new Date("2026-08-21T10:21:00Z"); // 06:21 ET Friday
+  const CLOSED = new Date("2026-08-21T06:21:00Z"); // 02:21 ET Friday — overnight, no prints
 
   /*
    * WITHOUT THIS THE ENDPOINT CRIES WOLF NIGHTLY. Overnight is ~17 hours, far

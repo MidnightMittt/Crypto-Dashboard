@@ -128,6 +128,7 @@ export function evaluateLevel(level: WatchLevel, quote: WatchQuote | null, now: 
   }
 
   const word = level.direction === "below" ? "fell to" : "rose to";
+  const session = usSession(Date.parse(quote.asOf));
   return {
     kind: "fired",
     level,
@@ -135,9 +136,59 @@ export function evaluateLevel(level: WatchLevel, quote: WatchQuote | null, now: 
     message:
       `${level.symbol} ${word} ${money(quote.price)}, ${level.direction} your ${money(level.level)} level. ` +
       (level.note ? `${level.note} ` : "") +
-      `Quote as of ${quote.asOf} (${Math.round(quote.ageSeconds)}s old). ` +
+      `Quote as of ${quote.asOf} (${Math.round(quote.ageSeconds)}s old, ${session} print). ` +
+      (session === "regular hours"
+        ? ""
+        : `Extended-session books are thinner — a fire from this print is a materially different ` +
+          `event from a regular-hours one; verify against a second source before selling into it. `) +
       `This is a watch alert — no order has been placed.`,
   };
+}
+
+/**
+ * WHEN A LEVEL IS ACTUALLY WATCHED — declared on every armed row.
+ *
+ * A level armed on an all_day_hours position and swept only part of the
+ * clock is a level with a stated hole, and for a weekend the caller could
+ * not see the hole: four disaster stops were carried in an hourly loop
+ * "as redundancy" while for ~4 hours each evening that loop was the ONLY
+ * cover. The coverage now travels with the level itself, not just the
+ * health endpoint nobody read.
+ *
+ * MUST MATCH .github/workflows/watch-sweep.yml (the cron tiling and the
+ * OPEN_ET/END_ET envelope). They are declared in two places because one is
+ * YAML and one is TypeScript; change them together or this string becomes
+ * the lie it exists to prevent.
+ */
+export const SWEEP_COVERAGE =
+  "Swept weekdays ~04:05-20:00 ET (pre-market, regular and after-hours prints; tiled scheduler " +
+  "windows, one sweep every few minutes). NOT watched 20:00-04:00 ET or weekends — the quote " +
+  "source has no overnight-session prints, so a gap through this level there is seen at the " +
+  "first sweep after ~04:05 ET, not when it happens.";
+
+/**
+ * Which US equity session a print belongs to, from its OWN timestamp.
+ *
+ * On the alert because the reader acts differently on it: a disaster-stop
+ * fire from a thin 04:30 ET book gets verified against a second source
+ * before anything is sold into it, where an 11:00 fire is acted on
+ * immediately — and the alert is the only thing the reader sees, so the
+ * distinction has to travel with it. Asked for explicitly the day the
+ * extended feed shipped; the label is what makes that answer usable.
+ */
+export function usSession(asOfMs: number): "pre-market" | "regular hours" | "after-hours" | "overnight" {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(asOfMs));
+  const [h, m] = parts.split(":").map(Number);
+  const mins = h * 60 + m;
+  if (mins >= 4 * 60 && mins < 9 * 60 + 30) return "pre-market";
+  if (mins >= 9 * 60 + 30 && mins < 16 * 60) return "regular hours";
+  if (mins >= 16 * 60 && mins < 20 * 60) return "after-hours";
+  return "overnight";
 }
 
 /** Every armed level against the quotes a sweep gathered. */

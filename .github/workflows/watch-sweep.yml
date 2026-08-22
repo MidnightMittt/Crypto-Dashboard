@@ -31,24 +31,47 @@
 # cannot double-alert. That property is what lets redundancy substitute for
 # precision. If one start is ninety minutes late, another is already running.
 #
-# ── What this does NOT cover ─────────────────────────────────────────
+# ── What this covers, and what it does NOT ───────────────────────────
 #
-# Regular US hours only. Levels are not swept overnight or at weekends, so a
-# gap through a stop is seen at the next sweep after the open, not when it
-# happens. Extended-hours coverage would need a quote source that prices it
-# honestly; the daily bars behind this endpoint do not.
+# The envelope is 04:00-20:00 ET on weekdays — the full window the quote
+# source actually prints (includePrePost reaches pre-market and after-hours;
+# measured, not assumed). It used to stop at 16:05 ET, which left levels on
+# all_day_hours positions unwatched for ~4 live hours every evening — the
+# IBIT tape printed three new highs 16:00-20:00 ET on 2026-08-21 while
+# nothing swept. That hole was a choice this file made, not a limit of the
+# data, so the file closed it.
+#
+# What remains uncovered is a limit of the data: 20:00-04:00 ET and
+# weekends have NO prints on this quote source (the overnight venue's tape
+# does not reach it), so a sweep there would only find stale quotes and the
+# staleness guard would rightly refuse every level. Covering it needs a
+# different source, not more cron.
+#
+# THE COVERAGE IS DECLARED TWICE: here, and as SWEEP_COVERAGE in
+# src/lib/watch/levels.ts, which every armed level carries to its caller.
+# Change them together or the API starts stating a window this file does
+# not sweep.
 name: watch-sweep
 
 on:
   schedule:
-    # Staggered starts across the session, in UTC. Deliberately more than the
-    # minimum: each is a chance to be on time, and being early costs nothing
-    # because the job waits for the open on the Eastern clock.
-    - cron: "15 13 * * 1-5"
-    - cron: "45 14 * * 1-5"
-    - cron: "15 16 * * 1-5"
-    - cron: "45 17 * * 1-5"
-    - cron: "15 19 * * 1-5"
+    # Staggered starts across the whole 04:00-20:00 ET envelope, in UTC.
+    # 90-minute spacing with 170-minute runtimes doubles coverage everywhere,
+    # so one start lost to scheduler drift leaves another already running.
+    # Being early costs nothing: the job waits for OPEN_ET on the Eastern
+    # clock. (In winter these UTC slots land an hour earlier in ET, which
+    # only lengthens the wait.)
+    - cron: "5 8 * * 1-5"
+    - cron: "35 9 * * 1-5"
+    - cron: "5 11 * * 1-5"
+    - cron: "35 12 * * 1-5"
+    - cron: "5 14 * * 1-5"
+    - cron: "35 15 * * 1-5"
+    - cron: "5 17 * * 1-5"
+    - cron: "35 18 * * 1-5"
+    - cron: "5 20 * * 1-5"
+    - cron: "35 21 * * 1-5"
+    - cron: "5 23 * * 1-5"
   workflow_dispatch:
 
 permissions:
@@ -70,10 +93,12 @@ jobs:
           # Five minutes: the cadence the alerting was specified around, and
           # the same window the endpoint refuses to fire on a quote older than.
           SWEEP_SECONDS: "300"
-          # Stop sweeping a few minutes past 16:00 ET so the closing print is
-          # evaluated rather than missed by a race with the bell.
-          END_ET: "1605"
-          OPEN_ET: "0930"
+          # The quote source's own window: prints exist ~04:00-20:00 ET and
+          # nowhere outside it, so the envelope matches the data rather than
+          # the exchange bell. Past END_ET every quote goes stale and the
+          # guard would skip everything; before OPEN_ET the loop waits.
+          END_ET: "2000"
+          OPEN_ET: "0400"
         run: |
           set -uo pipefail
 
