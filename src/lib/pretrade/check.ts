@@ -347,7 +347,19 @@ function priceBandCheck(i: PretradeInputs): PretradeCheck {
   };
 }
 
-function freshnessCheck(i: PretradeInputs): PretradeCheck {
+/**
+ * Freshness, shared by the equity and option audits — the SAME staleness
+ * rules, because "how old is the price this audit stands on" does not
+ * depend on the instrument being audited. `referenceForGap` is the caller's
+ * intended entry (equity) — null for options, where the live price is the
+ * underlying and no per-share entry exists to compare it against.
+ */
+export function sharedFreshnessCheck(
+  livePrice: LivePrice | null,
+  nowMs: number,
+  priceAgeSessions: number,
+  referenceForGap: number | null
+): PretradeCheck {
   /*
    * With a caller-supplied live price, freshness judges WHAT WAS SUPPLIED —
    * its age in seconds, its source by name — never the stored close. Without
@@ -356,16 +368,19 @@ function freshnessCheck(i: PretradeInputs): PretradeCheck {
    * construction, which is a true fact the caller can only cure by supplying
    * a live price with provenance.
    */
-  if (i.livePrice) {
-    const { value, asOfMs, source } = i.livePrice;
-    const ageSeconds = Math.round((i.nowMs - asOfMs) / 1000);
+  if (livePrice) {
+    const { value, asOfMs, source } = livePrice;
+    const ageSeconds = Math.round((nowMs - asOfMs) / 1000);
     /*
      * Reported, not judged: how far the caller's intended entry sits from
      * the price they say is live. The auditor has no basis to fail a limit
      * order placed away from the market, but the gap belongs beside the
      * verdict so a fat-fingered entry is visible in the same payload.
      */
-    const entryVsLivePct = value > 0 ? Number((((i.entry - value) / value) * 100).toFixed(2)) : null;
+    const entryVsLivePct =
+      value > 0 && referenceForGap !== null
+        ? Number((((referenceForGap - value) / value) * 100).toFixed(2))
+        : null;
     const data = {
       live_price: value,
       source,
@@ -400,18 +415,22 @@ function freshnessCheck(i: PretradeInputs): PretradeCheck {
     };
   }
 
-  const ok = i.priceAgeSessions === 0;
+  const ok = priceAgeSessions === 0;
   return {
     name: "data_freshness",
     status: ok ? "pass" : "fail",
     detail: ok
       ? `Price is the latest completed session's close.`
-      : `Price is ${i.priceAgeSessions} session${i.priceAgeSessions === 1 ? "" : "s"} behind. ` +
+      : `Price is ${priceAgeSessions} session${priceAgeSessions === 1 ? "" : "s"} behind. ` +
         `Every figure above is derived from it, so the whole check is as stale as the price. ` +
         `During a live session this is true by construction — supply live_price with ` +
         `provenance to be judged on the market instead of the close.`,
-    data: { price_age_sessions: i.priceAgeSessions },
+    data: { price_age_sessions: priceAgeSessions },
   };
+}
+
+function freshnessCheck(i: PretradeInputs): PretradeCheck {
+  return sharedFreshnessCheck(i.livePrice, i.nowMs, i.priceAgeSessions, i.entry);
 }
 
 function reachabilityCheck(i: PretradeInputs, buyingPower: number): PretradeCheck {
@@ -458,6 +477,17 @@ export function runPretradeChecks(i: PretradeInputs): PretradeVerdict {
   // Present exactly when the caller declared buying power — see the input's doc.
   if (i.buyingPowerUsd !== null) checks.push(reachabilityCheck(i, i.buyingPowerUsd));
 
+  return reduceChecks(checks);
+}
+
+/**
+ * The verdict reduction, shared by every audit this endpoint runs: `block`
+ * on any failure, `incomplete` when nothing failed but something could not
+ * be evaluated, `pass` only when every check cleared on measured values.
+ * One implementation, so the equity audit and the option audit cannot mean
+ * different things by the same word.
+ */
+export function reduceChecks(checks: PretradeCheck[]): PretradeVerdict {
   const failed = checks.filter((c) => c.status === "fail");
   const unknown = checks.filter((c) => c.status === "unknown");
 
