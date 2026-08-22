@@ -266,6 +266,87 @@ describe("buildTradeRecommendation", () => {
   });
 });
 
+/**
+ * THE OPPOSED-PAIR CASES. The 2026-08-22 bug: the gate tested technicals
+ * against thesis.dominant while the action traded bias.verdict. The two
+ * modules oppose BY DESIGN under crowded positioning, so thesis bearish +
+ * technicals bearish + bias bullish read "confirms" and returned ENTER LONG
+ * — an entry authorised by technicals backing the opposite direction, with
+ * a reason sentence that was false. No prior test exercised an opposed
+ * directional pair; these pin every cell of that grid.
+ */
+describe("opposed bias/thesis pairs — the direction the gate tests is the direction traded", () => {
+  it("never enters long on bearish technicals that 'confirm' only the opposing thesis", () => {
+    // The exact firing case: pullback into crowded longs.
+    const rec = buildTradeRecommendation(
+      baseBias({ verdict: "bullish", score: 70 }),
+      baseThesis({ dominant: "bearish", regime: "Leaning Bearish" }),
+      baseTechnicals("bearish")
+    );
+    expect(rec.action).not.toBe("enter-long");
+    expect(rec.action).toBe("no-trade");
+    expect(rec.blockingLayer).toBe("thesis");
+    expect(rec.reason).not.toContain("Technicals confirm");
+  });
+
+  it("never enters short on bullish technicals that 'confirm' only the opposing thesis", () => {
+    const rec = buildTradeRecommendation(
+      baseBias({ verdict: "bearish", score: 30 }),
+      baseThesis({ dominant: "bullish", regime: "Leaning Bullish" }),
+      baseTechnicals("bullish")
+    );
+    expect(rec.action).not.toBe("enter-short");
+    expect(rec.action).toBe("no-trade");
+    expect(rec.blockingLayer).toBe("thesis");
+  });
+
+  it("names the layer conflict even when technicals side with the bias — crowded but still bid", () => {
+    // The live regime the night this was found: bias bullish, thesis
+    // bearish, technicals bullish. The old code returned a wait state whose
+    // reason claimed price action "hasn't confirmed" — false; technicals
+    // backed the long. The honest state is the conflict itself.
+    const rec = buildTradeRecommendation(
+      baseBias({ verdict: "bullish", score: 70 }),
+      baseThesis({ dominant: "bearish", regime: "Leaning Bearish", invalidation: ["Funding turning positive would flip this reading."] }),
+      baseTechnicals("bullish")
+    );
+    expect(rec.action).toBe("no-trade");
+    expect(rec.blockingLayer).toBe("thesis");
+    expect(rec.reason).toContain('"Leaning Bearish"');
+    expect(rec.reason).toContain("opposite");
+    // The trigger cites the thesis's own real invalidation line.
+    expect(rec.nextTrigger).toContain("funding turning positive");
+  });
+
+  it("vetoes on the conflict regardless of what technicals show — including none at all", () => {
+    const withTech = buildTradeRecommendation(
+      baseBias({ verdict: "bullish", score: 70 }),
+      baseThesis({ dominant: "bearish" }),
+      baseTechnicals("neutral")
+    );
+    const withoutTech = buildTradeRecommendation(
+      baseBias({ verdict: "bullish", score: 70 }),
+      baseThesis({ dominant: "bearish" }),
+      null
+    );
+    expect(withTech.action).toBe("no-trade");
+    expect(withoutTech.action).toBe("no-trade");
+    expect(withTech.blockingLayer).toBe("thesis");
+  });
+
+  it("a NEUTRAL thesis is an evaluated non-objection, not a veto — the entry proceeds", () => {
+    // Distinct from thesis null (the veto layer missing, which waits): here
+    // the veto ran and found no opposition.
+    const rec = buildTradeRecommendation(
+      baseBias({ verdict: "bullish", score: 70 }),
+      baseThesis({ dominant: "neutral" }),
+      baseTechnicals("bullish")
+    );
+    expect(rec.action).toBe("enter-long");
+    expect(rec.blockingLayer).toBeNull();
+  });
+});
+
 describe("the record gate (Layer 3 — measured EV)", () => {
   it("downgrades a confirmed directional entry to NO TRADE when the side's record is EV-negative", () => {
     // Bias bearish + technicals confirm would normally be enter-short; a

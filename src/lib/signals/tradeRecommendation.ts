@@ -31,11 +31,14 @@ import { technicalAgreement } from "@/lib/sentiment/technicals";
 
 /**
  * Five states, not three — the two "wait" cases used to collapse into one
- * undifferentiated label, hiding a real distinction. "no-trade" (Layer 1
- * blocked) means there's no real directional lean yet — nothing to wait
- * FOR. "wait-long/short-confirmation" (Layer 2 blocked) means a real
- * directional thesis already exists and technicals just haven't caught up
- * — a meaningfully different, more actionable state to be in.
+ * undifferentiated label, hiding a real distinction. "no-trade" covers two
+ * facts: Layer 1 blocked (no real directional lean yet — nothing to wait
+ * FOR), and the LAYER CONFLICT (bias and thesis point in opposite
+ * directions, the designed crowded-positioning divergence — no arrangement
+ * of technicals can produce two-layer agreement, so there is no
+ * confirmation to wait for either). "wait-long/short-confirmation" (Layer 2
+ * blocked) means a real directional thesis already exists and technicals
+ * just haven't caught up — a meaningfully different, more actionable state.
  *
  * Deliberately NOT including Hold/Reduce Risk/Take Profit/Exit — this app
  * doesn't track a user's actual open positions (entry price/side/size), so
@@ -64,6 +67,24 @@ const ACTION_LABEL: Record<SuggestedAction, string> = {
   "no-trade": "NO TRADE",
 };
 
+/**
+ * THE ONE-DIRECTION RULE. The direction the confirmation gate tests, the
+ * direction the action takes, and the direction the reason sentence asserts
+ * are all `bias.verdict`'s — one variable, used three times.
+ *
+ * This function previously gated on `technicalAgreement(technicals,
+ * thesis.dominant)` and then acted on `bias.verdict`. Those are different
+ * directions BY DESIGN whenever positioning is crowded — the thesis fades
+ * extremes precisely when the bias is being pushed by them — so the gate
+ * could read "confirms" from technicals that backed the OPPOSITE of the
+ * trade being green-lit: thesis bearish + technicals bearish + bias bullish
+ * returned ENTER LONG with a reason claiming price action backed it.
+ *
+ * Bias leads; the thesis gates. When the thesis actively opposes the bias
+ * the engine's own layers disagree, and that disagreement is returned as a
+ * named state rather than silently resolved by whichever module the gate
+ * happened to reference.
+ */
 export function buildTradeRecommendation(
   bias: MarketBias,
   thesis: MarketThesis | null,
@@ -90,45 +111,6 @@ export function buildTradeRecommendation(
    */
   evConstraint: { evLowerPct: number; n: number; cellKey: string } | null = null
 ): TradeRecommendation {
-  const agreement = thesis && technicals ? technicalAgreement(technicals, thesis.dominant) : "not-yet-confirmed";
-  const htfAgreement = thesis && technicals4h ? technicalAgreement(technicals4h, thesis.dominant) : null;
-
-  if (bias.verdict !== "neutral" && agreement === "confirms") {
-    /*
-     * Layer 3 — THE RECORD. Direction reads, technicals confirm, and yet:
-     * if this side's own replayed trades lose money at the 95% lower bound
-     * of their record, recommending the entry would be the engine
-     * overruling its own evidence. The read is still stated (the reason
-     * names the direction); only the ACTION is withheld.
-     */
-    if (evConstraint && evConstraint.evLowerPct <= 0) {
-      const side = bias.verdict === "bullish" ? "long" : "short";
-      return {
-        action: "no-trade",
-        label: ACTION_LABEL["no-trade"],
-        reason:
-          `${bias.headline} Technicals confirm the direction — but ${side}s in the current ` +
-          `volatility regime carry NEGATIVE measured expectancy at the pessimistic bound of their ` +
-          `own replayed record (${evConstraint.n} trades, ${evConstraint.cellKey}). The engine reads ` +
-          `the market and still refuses the trade; this gate re-opens automatically if the record turns positive.`,
-        blockingLayer: "record",
-        nextTrigger: null,
-      };
-    }
-    const action: SuggestedAction = bias.verdict === "bullish" ? "enter-long" : "enter-short";
-    const htfCaveat =
-      htfAgreement === "weakens" || htfAgreement === "contradicts"
-        ? " Note: the 4-hour higher-timeframe read currently disagrees with this direction — a lower-conviction entry, size accordingly."
-        : "";
-    return {
-      action,
-      label: ACTION_LABEL[action],
-      reason: `${bias.headline} Technicals confirm — price action backs the same direction.${htfCaveat}`,
-      blockingLayer: null,
-      nextTrigger: null,
-    };
-  }
-
   // Layer 1 hasn't crossed the directional threshold yet — the thesis
   // itself is the blocker, regardless of what technicals show. No real
   // lean exists to wait FOR yet, so this is NO TRADE, not a wait state.
@@ -143,7 +125,81 @@ export function buildTradeRecommendation(
     };
   }
 
-  const waitAction: SuggestedAction = bias.verdict === "bullish" ? "wait-long-confirmation" : "wait-short-confirmation";
+  /* The traded direction. Every directional reference below uses this. */
+  const direction: "bullish" | "bearish" = bias.verdict;
+
+  /*
+   * The layer-conflict veto, checked before technicals get a vote. When the
+   * positioning thesis reads the opposite direction from the bias, the two
+   * layers this framework requires to agree are in open disagreement — the
+   * designed "crowded but still bid" regime, not an anomaly. No arrangement
+   * of technicals can manufacture two-layer agreement out of that, so the
+   * refusal cannot depend on which way technicals happen to lean this hour.
+   */
+  if (thesis && thesis.dominant !== "neutral" && thesis.dominant !== direction) {
+    const flip = thesis.invalidation[0] ?? null;
+    return {
+      action: "no-trade",
+      label: ACTION_LABEL["no-trade"],
+      reason:
+        `${bias.headline} But the positioning thesis reads "${thesis.regime}" — the opposite ` +
+        `direction. These layers are designed to diverge when positioning is crowded: the same ` +
+        `one-sided book that pushes the bias is read by the thesis as fuel for the reversal. ` +
+        `With the engine's own layers opposed, the two-layer agreement an entry requires does ` +
+        `not exist in either direction.`,
+      blockingLayer: "thesis",
+      nextTrigger: flip
+        ? `The layers re-aligning — the bias cooling to neutral, or the thesis flipping: ${flip.charAt(0).toLowerCase()}${flip.slice(1)}`
+        : `The layers re-aligning — the bias cooling to neutral, or the positioning thesis turning ${direction}.`,
+    };
+  }
+
+  /*
+   * Agreement is measured against the TRADED direction. `thesis` is still
+   * required: it is the layer that could have vetoed above, and a veto that
+   * could not be evaluated is missing data, not a clearance — so its absence
+   * waits rather than enters, same as before.
+   */
+  const agreement = thesis && technicals ? technicalAgreement(technicals, direction) : "not-yet-confirmed";
+  const htfAgreement = technicals4h ? technicalAgreement(technicals4h, direction) : null;
+
+  if (agreement === "confirms") {
+    /*
+     * Layer 3 — THE RECORD. Direction reads, technicals confirm, and yet:
+     * if this side's own replayed trades lose money at the 95% lower bound
+     * of their record, recommending the entry would be the engine
+     * overruling its own evidence. The read is still stated (the reason
+     * names the direction); only the ACTION is withheld.
+     */
+    if (evConstraint && evConstraint.evLowerPct <= 0) {
+      const side = direction === "bullish" ? "long" : "short";
+      return {
+        action: "no-trade",
+        label: ACTION_LABEL["no-trade"],
+        reason:
+          `${bias.headline} Technicals confirm the direction — but ${side}s in the current ` +
+          `volatility regime carry NEGATIVE measured expectancy at the pessimistic bound of their ` +
+          `own replayed record (${evConstraint.n} trades, ${evConstraint.cellKey}). The engine reads ` +
+          `the market and still refuses the trade; this gate re-opens automatically if the record turns positive.`,
+        blockingLayer: "record",
+        nextTrigger: null,
+      };
+    }
+    const action: SuggestedAction = direction === "bullish" ? "enter-long" : "enter-short";
+    const htfCaveat =
+      htfAgreement === "weakens" || htfAgreement === "contradicts"
+        ? " Note: the 4-hour higher-timeframe read currently disagrees with this direction — a lower-conviction entry, size accordingly."
+        : "";
+    return {
+      action,
+      label: ACTION_LABEL[action],
+      reason: `${bias.headline} Technicals confirm — price action backs the same direction.${htfCaveat}`,
+      blockingLayer: null,
+      nextTrigger: null,
+    };
+  }
+
+  const waitAction: SuggestedAction = direction === "bullish" ? "wait-long-confirmation" : "wait-short-confirmation";
 
   // Layer 1 agrees directionally, but a REGULAR (reversal-warning)
   // divergence undercuts it — technicals nominally back the move, but
@@ -151,7 +207,6 @@ export function buildTradeRecommendation(
   // never routed through thesis.technicalConfirmation[0] (which isn't
   // guaranteed to be about divergence that day).
   if (agreement === "weakens" && technicals) {
-    const direction = bias.verdict === "bullish" ? "bullish" : "bearish";
     const opposingKind = direction === "bullish" ? "regular-bearish" : "regular-bullish";
     const source =
       technicals.rsiDivergence?.kind === opposingKind ? "RSI" : technicals.macdDivergence?.kind === opposingKind ? "MACD" : "Momentum";
@@ -167,7 +222,6 @@ export function buildTradeRecommendation(
 
   // Layer 1 has a real directional read, but technicals either contradict or
   // haven't been evaluated yet — technicals are the blocker.
-  const direction = bias.verdict === "bullish" ? "bullish" : "bearish";
   const confirmationLine = thesis?.technicalConfirmation[0] ?? null;
   const reason = confirmationLine
     ? `${bias.headline} Price action hasn't confirmed yet: ${confirmationLine.charAt(0).toLowerCase()}${confirmationLine.slice(1)}`
