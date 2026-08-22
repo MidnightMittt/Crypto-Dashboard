@@ -61,6 +61,14 @@ export function equityVerdict(inputs: {
   // ── No direction at all ────────────────────────────────────────────
   if (!bullish && !bearish) {
     const distance = Math.abs(bias.score - 50);
+    /*
+     * The symbol's own nearest driver, so 21 balanced pages do not read as
+     * one sentence with a different digit. watchNext is real, per-symbol
+     * data — the metric closest to a threshold and the level that moves it
+     * — and a NO EDGE without it tells the reader to stand aside without
+     * saying what they are standing aside FOR.
+     */
+    const watch = bias.watchNext[0] ?? null;
     return {
       emoji: "⚪",
       word: "NO EDGE",
@@ -69,7 +77,8 @@ export function equityVerdict(inputs: {
       sentence:
         `The evidence is balanced — ${distance.toFixed(0)} point${distance === 1 ? "" : "s"} from neutral, ` +
         `inside the band where this engine will not call a direction. There is nothing to trade here yet, ` +
-        `which is a finding rather than a failure.`,
+        `which is a finding rather than a failure.` +
+        (watch ? ` Closest to moving it: ${watch.label} — ${watch.nextTrigger}` : ""),
     };
   }
 

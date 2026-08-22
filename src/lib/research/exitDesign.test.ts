@@ -4,6 +4,7 @@ import {
   MIN_ENTRIES,
   compareToHold,
   definedRiskBudget,
+  excursionStats,
   ladderOutcome,
   peakOfCurve,
   reachAt,
@@ -190,5 +191,33 @@ describe("definedRiskBudget", () => {
 
   it("refuses a negative floor rather than inflating capacity", () => {
     expect(definedRiskBudget(436, -50, 4)).toBeNull();
+  });
+});
+
+/**
+ * The symbol-side half of the answer-line fix: a refusal shared by a whole
+ * regime cell carries THIS name's own movement beside the cell statistic.
+ */
+describe("excursionStats", () => {
+  const DAY2 = 86_400_000;
+  // Flat closes at 100; every session prints high 106 and low 96, so every
+  // forward window's max-up is +6% and max-down is -4% exactly.
+  const flat = Array.from({ length: 120 }, (_, i) => ({
+    t: Date.UTC(2026, 0, 1) + i * DAY2,
+    open: 100, high: 106, low: 96, close: 100, volume: 1000,
+  }));
+
+  it("measures the median forward excursion in both directions with the honest n", () => {
+    const s = excursionStats(flat, 21)!;
+    expect(s.upMedianPct).toBeCloseTo(6, 5);
+    expect(s.downMedianPct).toBeCloseTo(-4, 5);
+    expect(s.horizonSessions).toBe(21);
+    expect(s.n).toBe(120 - 21);
+    expect(s.independentN).toBe(Math.floor((120 - 21) / 21));
+  });
+
+  it("refuses thin history rather than answering from a handful of windows", () => {
+    expect(excursionStats(flat.slice(0, 40), 21)).toBeNull();
+    expect(excursionStats(flat, 0)).toBeNull();
   });
 });

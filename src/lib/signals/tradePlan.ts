@@ -21,6 +21,7 @@ import {
   STRUCTURAL_STOP_MIN_ATR,
 } from "./entryQuality";
 import { SupportResistanceZone } from "@/lib/technicals/marketStructure";
+import { ExcursionStats } from "@/lib/research/exitDesign";
 
 export type TradeDirection = "long" | "short";
 
@@ -199,6 +200,17 @@ export interface TradePlanInputs {
   requirePullbackEntry?: boolean;
   /** Measured excursion/EV constraints for this side+regime. Omitted by the equity path and the (deliberately ungated) backtest replay. */
   constraints?: PlanConstraints | null;
+  /**
+   * THIS symbol's own excursion distribution, for the refusal sentences.
+   * 50 of 87 answer lines were byte-identical because a refusal citing only
+   * its cell's statistics is about a bucket 29 stocks share; every refusal
+   * below prints a number measured on this symbol beside the cell figure it
+   * is judged against. Optional — the replay passes nothing and loses only
+   * sentence detail, never a gate.
+   */
+  symbolExcursion?: ExcursionStats | null;
+  /** For the refusal sentences only — "MARA itself rises…" beats "This name…". */
+  symbol?: string;
 }
 
 /**
@@ -310,6 +322,24 @@ export function buildTradePlanOutcome(inputs: TradePlanInputs): TradePlanOutcome
   const { direction, anchorPrice, atrPct, zones, quality } = inputs;
   const config = inputs.config ?? DEFAULT_TRADE_PLAN_CONFIG;
   const constraints = inputs.constraints ?? null;
+  const f = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
+  /*
+   * The symbol's own movement, one clause, appended to refusal details so
+   * two names refused by the same cell still read as two names. Direction-
+   * appropriate: a refused short cites how far THIS name actually falls, a
+   * refused long how far it actually rises — the figure that explains why
+   * the trade was tempting, beside the cell figure that refuses it.
+   */
+  const exc = inputs.symbolExcursion ?? null;
+  const symbolClause = (sym?: string): string => {
+    if (!exc) return "";
+    const move = direction === "short" ? exc.downMedianPct : exc.upMedianPct;
+    const dir = direction === "short" ? "falls" : "rises";
+    return (
+      ` ${sym ?? "This name"} itself ${dir} ${f(move)} at the median within ` +
+      `${exc.horizonSessions} sessions (n=${exc.n.toLocaleString()}, independent_n=${exc.independentN}).`
+    );
+  };
 
   /*
    * THE EV GATE (redesign §10), checked before any geometry: it is a
@@ -325,7 +355,6 @@ export function buildTradePlanOutcome(inputs: TradePlanInputs): TradePlanOutcome
    */
   if (constraints && constraints.evLowerPct <= 0) {
     const c = constraints;
-    const f = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
     const side = c.cellKey.startsWith("short") ? "Shorts" : "Longs";
     return {
       plan: null,
@@ -338,8 +367,8 @@ export function buildTradePlanOutcome(inputs: TradePlanInputs): TradePlanOutcome
             (c.medianHoldSessions != null ? `, median hold ${c.medianHoldSessions} sessions` : "") +
             `, n=${c.n.toLocaleString()})`
           : ` (n=${c.n.toLocaleString()})`) +
-        `. The gate refuses on the pessimistic bound, never the average — disagree with the ` +
-        `bound, not with the word.`,
+        `.${symbolClause(inputs.symbol)} The cell is why this is refused; the gate acts on the ` +
+        `pessimistic bound, never the average — disagree with the bound, not with the word.`,
     };
   }
 
@@ -413,7 +442,16 @@ export function buildTradePlanOutcome(inputs: TradePlanInputs): TradePlanOutcome
    * too close for a stop".
    */
   if (riskDistance < STRUCTURAL_STOP_MIN_ATR * atrAbs) {
-    return { plan: null, refusal: "stop-inside-noise" };
+    return {
+      plan: null,
+      refusal: "stop-inside-noise",
+      refusalDetail:
+        `The structural stop sits ${((riskDistance / entryRef) * 100).toFixed(1)}% from the entry, ` +
+        `inside this name's own ${STRUCTURAL_STOP_MIN_ATR}x-ATR noise floor of ` +
+        `${((STRUCTURAL_STOP_MIN_ATR * atrAbs) / entryRef * 100).toFixed(1)}% (ATR ${atrPct.toFixed(1)}% ` +
+        `per session, measured on its own bars). Ordinary movement would take it out before the ` +
+        `thesis could be wrong.${symbolClause(inputs.symbol)}`,
+    };
   }
 
   /*
@@ -422,11 +460,28 @@ export function buildTradePlanOutcome(inputs: TradePlanInputs): TradePlanOutcome
    */
   const riskPct = (riskDistance / entryRef) * 100;
   if (constraints?.winnersMaeP80Pct != null && riskPct < constraints.winnersMaeP80Pct) {
-    return { plan: null, refusal: "stop-tighter-than-winners-drawdown" };
+    return {
+      plan: null,
+      refusal: "stop-tighter-than-winners-drawdown",
+      refusalDetail:
+        `This plan's stop sits ${riskPct.toFixed(1)}% from its entry — measured from this ` +
+        `symbol's own structure — while 80% of winning ${constraints.cellKey} trades drew down ` +
+        `more than ${constraints.winnersMaeP80Pct.toFixed(1)}% before working ` +
+        `(n=${constraints.n.toLocaleString()}). It would convert winners into losers by ` +
+        `construction.${symbolClause(inputs.symbol)}`,
+    };
   }
   const target1DistancePct = (Math.abs(eq.targetPrice - entryRef) / entryRef) * 100;
   if (constraints?.winnersMfeP75Pct != null && target1DistancePct > constraints.winnersMfeP75Pct) {
-    return { plan: null, refusal: "target-beyond-winners-reach" };
+    return {
+      plan: null,
+      refusal: "target-beyond-winners-reach",
+      refusalDetail:
+        `This plan's first target sits ${f(target1DistancePct)} from its entry — this symbol's ` +
+        `own structural level — beyond the ${f(constraints.winnersMfeP75Pct)} that 75% of winning ` +
+        `${constraints.cellKey} trades ever reached (n=${constraints.n.toLocaleString()}).` +
+        `${symbolClause(inputs.symbol)}`,
+    };
   }
   const target2DistancePct = (Math.abs(eq.target2Price - entryRef) / entryRef) * 100;
   const target2BeyondReach =
@@ -434,7 +489,17 @@ export function buildTradePlanOutcome(inputs: TradePlanInputs): TradePlanOutcome
 
   const riskRewardRatio = Math.abs(eq.targetPrice - entryRef) / riskDistance;
   const riskRewardRatio2 = Math.abs(eq.target2Price - entryRef) / riskDistance;
-  if (riskRewardRatio < MIN_RR) return { plan: null, refusal: "reward-too-small" };
+  if (riskRewardRatio < MIN_RR) {
+    return {
+      plan: null,
+      refusal: "reward-too-small",
+      refusalDetail:
+        `Measured from this symbol's own levels — worst fill ${entryRef.toFixed(2)}, stop ` +
+        `${stopPrice.toFixed(2)}, first target ${eq.targetPrice.toFixed(2)} — reward-to-risk is ` +
+        `${riskRewardRatio.toFixed(2)}x against the ${MIN_RR}x minimum. The direction may be ` +
+        `right; the geometry does not pay for the risk it takes.${symbolClause(inputs.symbol)}`,
+    };
+  }
 
   const plan: TradePlan = {
     entryLow: entry.entryLow,

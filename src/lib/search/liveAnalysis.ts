@@ -1,6 +1,7 @@
 import { Bar } from "@/lib/research/types";
 import { MetricVerdict, Verdict } from "@/lib/signals/types";
 import { computeWeightedScore, weightForBasis } from "@/lib/signals/scoring";
+import { excursionStats } from "@/lib/research/exitDesign";
 import {
   EquityInstrumentInput,
   evaluateRelativeStrength,
@@ -375,6 +376,14 @@ export function buildLiveAnalysis(inputs: LiveAnalysisInputs): LiveAnalysisResul
               historicalWinRateN: null,
             },
             constraints: inputs.planConstraints ?? null,
+            /*
+             * The symbol's own excursion medians, so a refusal shared by a
+             * whole regime cell still carries a number measured on THIS
+             * name. 21 sessions — the stop grid's long horizon, stated in
+             * the sentence it feeds.
+             */
+            symbolExcursion: excursionStats(bars, 21),
+            symbol,
           })
         : direction
           ? ({ plan: null, refusal: "no-structure" } as const)

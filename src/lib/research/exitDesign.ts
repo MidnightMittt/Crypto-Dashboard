@@ -98,6 +98,64 @@ export function reachAt(
   };
 }
 
+/**
+ * THE SYMBOL'S OWN EXCURSION DISTRIBUTION — how far THIS name travels.
+ *
+ * Exists because 50 of 87 answer lines shared two sentences: a blocking
+ * reason that cites only its cell's statistics (short:high-vol, n=30,920)
+ * is honest about the bucket and says nothing about the stock, and 29
+ * names in one bucket read byte-identical. The repair is not varied prose
+ * — it is a number measured on the symbol itself, printed beside the cell
+ * statistic it is judged against. This is that number: the median of the
+ * name's own forward excursions, both directions, over a stated horizon,
+ * with the overlap-honest sample size that separates a measurement from a
+ * decoration.
+ *
+ * Median, not mean: one moonshot window would drag the mean into a claim
+ * most windows never supported. No threshold parameter: a median needs no
+ * invented X% to answer "how far does this name usually go".
+ */
+export interface ExcursionStats {
+  /** Median max HIGH excursion over the horizon, % above entry close. */
+  upMedianPct: number;
+  /** Median max LOW excursion, % below entry close. Negative. */
+  downMedianPct: number;
+  n: number;
+  independentN: number;
+  horizonSessions: number;
+}
+
+export function excursionStats(bars: readonly Bar[], horizonSessions: number): ExcursionStats | null {
+  if (!(horizonSessions > 0)) return null;
+  const last = bars.length - horizonSessions;
+  if (last < MIN_ENTRIES) return null;
+
+  const ups: number[] = [];
+  const downs: number[] = [];
+  for (let i = 0; i < last; i++) {
+    const entry = bars[i].close;
+    if (!(entry > 0)) continue;
+    let hi = -Infinity;
+    let lo = Infinity;
+    for (let j = i + 1; j <= i + horizonSessions; j++) {
+      if (bars[j].high > hi) hi = bars[j].high;
+      if (bars[j].low < lo && bars[j].low > 0) lo = bars[j].low;
+    }
+    if (!Number.isFinite(hi) || !Number.isFinite(lo)) continue;
+    ups.push((hi / entry - 1) * 100);
+    downs.push((lo / entry - 1) * 100);
+  }
+  if (ups.length < MIN_ENTRIES) return null;
+
+  return {
+    upMedianPct: Math.round(median(ups) * 10) / 10,
+    downMedianPct: Math.round(median(downs) * 10) / 10,
+    n: ups.length,
+    independentN: Math.floor(ups.length / horizonSessions),
+    horizonSessions,
+  };
+}
+
 /** The reach curve across target levels at one horizon, nearest target first. */
 export function reachCurve(
   bars: readonly Bar[],
