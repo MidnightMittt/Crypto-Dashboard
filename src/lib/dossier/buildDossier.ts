@@ -193,6 +193,37 @@ function describeLivenessReason(read: LivenessRead): string {
     : `${read.degraded} of ${read.stores.length} daily stores are behind by up to ${read.worstSessionsBehind ?? 0} session(s).`;
 }
 
+/**
+ * The backdrop, in one sentence that names its scope. It is the SAME
+ * sentence on every equity page today because it is the same fact — that
+ * sameness is stated rather than disguised as 131 per-symbol opinions,
+ * which is what it used to be when these metrics voted in the score.
+ */
+function describeBackdrop(
+  backdrop: LiveAnalysis["marketBackdrop"],
+  symbolVerdict: string
+): string | null {
+  if (!backdrop) return null;
+  const word =
+    backdrop.verdict === "bullish" ? "risk-on" : backdrop.verdict === "bearish" ? "risk-off" : "mixed";
+  const named = backdrop.metrics
+    .slice(0, 2)
+    .map((m) => m.label.toLowerCase())
+    .join(" and ");
+  const base =
+    `Market backdrop: ${word} (score ${backdrop.score}, from ${named}). ` +
+    `This is one market-wide reading, identical on every equity page — it is context beside ` +
+    `this verdict, not a vote inside it.`;
+  if (backdrop.verdict !== "neutral" && symbolVerdict !== "neutral" && backdrop.verdict !== symbolVerdict) {
+    return (
+      base +
+      ` It currently points the OTHER way from this symbol's own evidence — the strongest argument` +
+      ` against sizing this read aggressively.`
+    );
+  }
+  return base;
+}
+
 export function buildDossier(inputs: DossierInputs): TickerDossier {
   const { analysis, regime, rotation, industries } = inputs;
   const { bias, plan } = analysis;
@@ -223,6 +254,7 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
     bias,
     plan,
     refusal: analysis.planRefusal,
+    refusalDetail: analysis.planRefusalDetail,
     earningsDate: analysis.earnings?.date ?? null,
   });
 
@@ -289,6 +321,7 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
         validatedWeightPct: grade.validatedWeightPct,
       }),
       forward: inputs.verdictForward ?? null,
+      backdrop: describeBackdrop(analysis.marketBackdrop, bias.verdict),
     },
 
     tldr: composeTldr({

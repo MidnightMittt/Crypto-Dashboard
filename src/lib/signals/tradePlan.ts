@@ -87,6 +87,18 @@ export interface PlanConstraints {
   n: number;
   /** Expectancy % per trade with the win rate at its Wilson 95% lower bound. ≤ 0 refuses the plan. */
   evLowerPct: number;
+  /**
+   * The POINT estimate of the same expectancy, carried so a refusal can name
+   * both. The gate acts on the pessimistic bound; when the point estimate is
+   * positive and the bound is not, the reader deserves both numbers — a
+   * refusal citing only "lost money" over a record whose average made money
+   * is a sentence nobody can argue with, which is a sentence nobody reads.
+   */
+  evPointPct?: number | null;
+  /** Point-estimate win rate for the same cell, for the refusal sentence. */
+  winRatePct?: number | null;
+  /** Median sessions held, so the claim carries its horizon. */
+  medianHoldSessions?: number | null;
   /** Adverse move (% of entry) that winning trades typically endured — the plan's honest "expected drawdown". */
   winnersMaeP50Pct: number | null;
   /** A stop closer than this stops out winners: 80% of winning trades drew down less than this before working. */
@@ -261,8 +273,18 @@ export const TRADE_PLAN_REFUSAL_SHORT: Record<TradePlanRefusal, string> = {
 
 /** A plan, or a named reason there is none. Never a degraded plan. */
 export type TradePlanOutcome =
-  | { plan: TradePlan; refusal: null }
-  | { plan: null; refusal: TradePlanRefusal };
+  | { plan: TradePlan; refusal: null; refusalDetail?: null }
+  | {
+      plan: null;
+      refusal: TradePlanRefusal;
+      /**
+       * The refusal with ITS OWN NUMBERS in the sentence — statistic,
+       * horizon, sample — where the constraints carry them. The static
+       * texts above state the rule; this states the measurement, so the
+       * reader can disagree with a specific figure instead of a verdict.
+       */
+      refusalDetail?: string;
+    };
 
 /**
  * Builds the plan, or returns null when no honest one exists.
@@ -302,7 +324,23 @@ export function buildTradePlanOutcome(inputs: TradePlanInputs): TradePlanOutcome
    * starve its own evidence.
    */
   if (constraints && constraints.evLowerPct <= 0) {
-    return { plan: null, refusal: "negative-expectancy" };
+    const c = constraints;
+    const f = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
+    const side = c.cellKey.startsWith("short") ? "Shorts" : "Longs";
+    return {
+      plan: null,
+      refusal: "negative-expectancy",
+      refusalDetail:
+        `${side} in ${c.cellKey} read ${f(c.evLowerPct)} expectancy per trade at the 95% ` +
+        `lower bound of their replayed win rate` +
+        (c.evPointPct != null && c.winRatePct != null
+          ? ` (point estimate ${f(c.evPointPct)}, win rate ${c.winRatePct.toFixed(0)}%` +
+            (c.medianHoldSessions != null ? `, median hold ${c.medianHoldSessions} sessions` : "") +
+            `, n=${c.n.toLocaleString()})`
+          : ` (n=${c.n.toLocaleString()})`) +
+        `. The gate refuses on the pessimistic bound, never the average — disagree with the ` +
+        `bound, not with the word.`,
+    };
   }
 
   if (atrPct === null || atrPct <= 0 || anchorPrice <= 0) {

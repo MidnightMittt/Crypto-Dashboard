@@ -221,6 +221,13 @@ export interface VerdictSection {
   conviction: import("@/lib/signals/conviction").Conviction;
   /** How this verdict has actually done since forward scoring began. */
   forward: VerdictForwardRecord | null;
+  /**
+   * THE MARKET BACKDROP, NAMED AS THE ONE READ IT IS. One sentence, shared
+   * by every equity page, shown beside the verdict and never voted into it
+   * — a backdrop that voted made 131 of 131 verdicts read bullish on
+   * 2026-08-21. Null for crypto and when the shared context is unavailable.
+   */
+  backdrop: string | null;
 }
 
 /**
@@ -412,6 +419,12 @@ export interface VerdictForwardRecord {
     edgeVsBaselinePct: number | null;
   } | null;
   horizonSessions: number;
+  /**
+   * Non-null when the figures describe a RETIRED engine rather than the one
+   * whose call is on the page — shown so the record cannot borrow authority
+   * from a different claim-maker. See forwardVerdict.ts on engines.
+   */
+  engineNote: string | null;
 }
 
 export interface ForwardRecordSummary {

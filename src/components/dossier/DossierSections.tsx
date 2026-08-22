@@ -136,6 +136,16 @@ export function VerdictPanel({ d }: { d: TickerDossier }) {
 
         <p className="text-[15px] leading-relaxed text-ink">{v.sentence}</p>
 
+        {/* The ONE market-wide read, beside the verdict, never inside it.
+            When these metrics voted, 131 of 131 equity verdicts read
+            bullish; naming the backdrop once is what lets the verdict above
+            belong to this symbol. */}
+        {v.backdrop && (
+          <p className="rounded-md border border-hairline bg-surface-2/40 px-3 py-2 text-[12px] leading-relaxed text-ink-muted">
+            {v.backdrop}
+          </p>
+        )}
+
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-hairline pt-3">
           <Stat label="Strength">
             <span className="font-mono text-sm" aria-label={`${v.stars} out of 5`}>
@@ -268,6 +278,12 @@ export function VerdictPanel({ d }: { d: TickerDossier }) {
                       </>
                     )}
                     .
+                    {v.forward.engineNote && (
+                      <>
+                        {" "}
+                        <span className="text-amber">{v.forward.engineNote}</span>
+                      </>
+                    )}
                   </>
                 ) : (
                   <>
@@ -1680,17 +1696,17 @@ export function NextEntryPanel({ d }: { d: TickerDossier }) {
                   </p>
                 )}
 
-                {/* The record for entries taken THIS way — so a level to wait
-                    for arrives with evidence rather than as a bare number. */}
-                {e.record && e.target1Pct > Math.abs(e.record.averageReturnPct) * 3 && (
-                  <p className="text-[11px] leading-relaxed text-amber">
-                    The first target is {e.target1Pct.toFixed(1)}% away, while comparable trades averaged{" "}
-                    {e.record.averageReturnPct >= 0 ? "+" : ""}
-                    {e.record.averageReturnPct.toFixed(1)}%. That level is where structure sits, not where
-                    trades like this one usually get to — treat it as a ceiling, not an expectation.
-                  </p>
-                )}
-
+                {/* A "target is unrealistic" warning used to render here,
+                    triggered by target1Pct > 3x the cell's AVERAGE REALIZED
+                    RETURN — a price distance judged against a P&L mean over
+                    ~3-session median holds. Different units, different
+                    horizon: any structural target fails that comparison, so
+                    the warning was always on and said nothing. The matched-
+                    horizon claims already render beside this: the reach rate
+                    above (same distance, ten-session window) and the plan
+                    gate's winners'-excursion annotation. Removed rather than
+                    reworded — e.record holds no excursion statistic, so no
+                    honest version of the sentence can be built from it. */}
                 {e.record && (
                   <p className="border-t border-hairline pt-2 text-[11px] leading-relaxed text-ink-muted">
                     <span className="text-ink">If it gets there · </span>

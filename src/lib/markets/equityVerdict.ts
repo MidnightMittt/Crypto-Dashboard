@@ -49,10 +49,12 @@ export function equityVerdict(inputs: {
   bias: MarketBias;
   plan: TradePlan | null;
   refusal: TradePlanRefusal | null;
+  /** The refusal's own numbers, when the gate carried them. Preferred over the static text. */
+  refusalDetail?: string | null;
   /** Nearest report date inside the veto window, for a concrete "wait until" line. */
   earningsDate?: string | null;
 }): AssetVerdict {
-  const { bias, plan, refusal, earningsDate = null } = inputs;
+  const { bias, plan, refusal, refusalDetail = null, earningsDate = null } = inputs;
   const bullish = bias.verdict === "bullish";
   const bearish = bias.verdict === "bearish";
 
@@ -75,7 +77,14 @@ export function equityVerdict(inputs: {
 
   // ── Direction, but the plan was refused ────────────────────────────
   if (refusal) {
-    const why = TRADE_PLAN_REFUSAL_SHORT[refusal];
+    /*
+     * The measured sentence beats the static one whenever the gate carried
+     * its own numbers: "trades like this have lost money" is unfalsifiable
+     * as written, and a verdict the reader cannot disagree with is one they
+     * stop reading. The detail names the statistic, the bound, the horizon
+     * and the sample, so the disagreement has something to grip.
+     */
+    const why = refusalDetail ?? TRADE_PLAN_REFUSAL_SHORT[refusal];
     const until =
       refusal === "earnings-imminent" && earningsDate
         ? ` Reconsider after ${earningsDate}.`

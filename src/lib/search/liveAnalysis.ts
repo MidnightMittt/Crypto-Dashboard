@@ -1,5 +1,6 @@
 import { Bar } from "@/lib/research/types";
-import { MetricVerdict } from "@/lib/signals/types";
+import { MetricVerdict, Verdict } from "@/lib/signals/types";
+import { computeWeightedScore, weightForBasis } from "@/lib/signals/scoring";
 import {
   EquityInstrumentInput,
   evaluateRelativeStrength,
@@ -75,11 +76,26 @@ export interface LiveAnalysis {
   bias: MarketBias;
   plan: TradePlan | null;
   planRefusal: TradePlanRefusal | null;
+  /** The refusal with its own numbers in the sentence, when the gate carried them. */
+  planRefusalDetail: string | null;
   earnings: EarningsVetoResult | null;
   zones: SupportResistanceZone[];
   atrPct: number | null;
   /** What backed this read, and what did not. Always rendered. */
   coverage: CoverageFamily[];
+  /**
+   * THE MARKET BACKDROP, AS THE ONE READ IT IS. Identical for every equity
+   * by construction, so it is presented once beside the verdict and never
+   * votes in the symbol's own score — a backdrop that voted made 131 of
+   * 131 verdicts read bullish on 2026-08-21, including charts in intact
+   * downtrends. Null for crypto and when the shared context is unavailable.
+   */
+  marketBackdrop: {
+    verdict: Verdict;
+    score: number;
+    confidence: number;
+    metrics: MetricVerdict[];
+  } | null;
   /** Sessions of history the read is built on. */
   barsUsed: number;
   /**
@@ -274,12 +290,38 @@ export function buildLiveAnalysis(inputs: LiveAnalysisInputs): LiveAnalysisResul
   if (structure) metrics.push(structure);
 
   /*
-   * Market-wide evidence applies to equities only. Bolting the S&P's breadth
-   * onto a crypto asset would import an unrelated market's condition into
-   * its score — the kind of category error that produced "bullish 96" gold
-   * readings before cross-asset instruments were removed from the snapshot.
+   * ── The market backdrop is ONE read, presented once — it does not vote ──
+   *
+   * These metrics used to be pushed into every equity's own score. Measured
+   * on 2026-08-21, that made the verdict incapable of varying with its
+   * input: 131 of 131 equities read bullish with the backdrop voting, while
+   * the same engine on each symbol's own evidence read 52 bullish / 44
+   * bearish / 35 neutral. The backdrop is identical for every symbol, so
+   * adding it to 131 pages adds zero discriminative information per symbol
+   * — it is one market-wide fact wearing 131 per-symbol costumes, and it
+   * was strong enough to overrule every chart it disagreed with (BTDR:
+   * lower highs and lower lows on its own page, verdict "leans up").
+   *
+   * So the symbol's verdict is now the symbol's OWN evidence — chart,
+   * strength vs the market, volatility, trend, structure — and the backdrop
+   * is computed once, as the single read it is, and presented beside the
+   * verdict rather than inside it. This also converges the published
+   * verdict with the engine the forward record has been registering, which
+   * never included the backdrop.
    */
-  if (assetClass === "equity") metrics.push(...marketWide);
+  const backdropScore =
+    assetClass === "equity" && marketWide.length > 0
+      ? computeWeightedScore(marketWide, weightForBasis("state"))
+      : null;
+  const marketBackdrop: LiveAnalysis["marketBackdrop"] =
+    backdropScore === null
+      ? null
+      : {
+          verdict: backdropScore.verdict,
+          score: backdropScore.score,
+          confidence: backdropScore.confidence,
+          metrics: marketWide,
+        };
 
   /*
    * THE ONE VALIDATED SIGNAL. Crypto only — US spot ETFs exist for BTC and
@@ -319,7 +361,7 @@ export function buildLiveAnalysis(inputs: LiveAnalysisInputs): LiveAnalysisResul
    */
   const outcome =
     direction && earnings
-      ? ({ plan: null, refusal: "earnings-imminent" } as const)
+      ? ({ plan: null, refusal: "earnings-imminent", refusalDetail: undefined } as const)
       : direction && bars.length >= MIN_BARS_FOR_PLAN
         ? buildTradePlanOutcome({
             direction,
@@ -418,6 +460,7 @@ export function buildLiveAnalysis(inputs: LiveAnalysisInputs): LiveAnalysisResul
       bias,
       plan: outcome?.plan ?? null,
       planRefusal: outcome?.refusal ?? null,
+      planRefusalDetail: outcome?.refusalDetail ?? null,
       earnings,
       zones,
       atrPct,
@@ -425,6 +468,7 @@ export function buildLiveAnalysis(inputs: LiveAnalysisInputs): LiveAnalysisResul
       plannedSetups: readPlannedSetups(frozenSetups, lastClose),
       plannedGate,
       intraday: intradayRead ? { direction: intradayRead.direction, strength: intradayRead.strength } : null,
+      marketBackdrop,
       coverage: buildCoverage({
         assetClass,
         relativeStrength,
@@ -489,7 +533,7 @@ function buildCoverage(o: {
       note: crypto
         ? "Equity breadth and credit appetite describe the stock market, so they are deliberately not applied here."
         : o.marketWideCount > 0
-          ? "How broad the market is and whether money is paying up for risk."
+          ? "How broad the market is and whether money is paying up for risk — one market-wide read, shown beside the verdict. It does not vote in this symbol's own score."
           : "The shared market context could not be loaded.",
     },
     {
