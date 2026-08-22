@@ -3,6 +3,7 @@ import { Bar } from "./types";
 import {
   MIN_ENTRIES,
   compareToHold,
+  definedRiskBudget,
   ladderOutcome,
   peakOfCurve,
   reachAt,
@@ -161,5 +162,33 @@ describe("compareToHold", () => {
   it("reports independent windows rather than overlapping entries", () => {
     const s = compareToHold(ladder, { meanPct: 2, medianPct: 1, n: 100, independentN: 5 });
     expect(s).toContain("5 independent windows");
+  });
+});
+
+/**
+ * The budget that replaces a stop when no stop exists. Sized on the real
+ * account the night this shipped: 436.04 against a 100 hard floor is 336.04
+ * of capacity; four concurrent defined-risk positions is 84.01 each.
+ */
+describe("definedRiskBudget", () => {
+  it("divides capacity above the hard floor across concurrent positions", () => {
+    const b = definedRiskBudget(436.04, 100, 4)!;
+    expect(b.riskCapacityUsd).toBe(336.04);
+    expect(b.perPositionUsd).toBe(84.01);
+  });
+
+  it("refuses an account at or under its own floor — no negative permission slips", () => {
+    expect(definedRiskBudget(100, 100, 4)).toBeNull();
+    expect(definedRiskBudget(90, 100, 4)).toBeNull();
+  });
+
+  it("refuses a nonsensical position count", () => {
+    expect(definedRiskBudget(436, 100, 0)).toBeNull();
+    expect(definedRiskBudget(436, 100, 2.5)).toBeNull();
+    expect(definedRiskBudget(436, 100, -1)).toBeNull();
+  });
+
+  it("refuses a negative floor rather than inflating capacity", () => {
+    expect(definedRiskBudget(436, -50, 4)).toBeNull();
   });
 });

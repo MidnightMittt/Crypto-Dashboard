@@ -4,13 +4,13 @@ import { BarsPanel, SymbolPanel } from "@/lib/research/barsPanel";
 import { Bar } from "@/lib/research/types";
 import {
   DEFAULT_WIDTHS_PCT,
-  SURVIVAL_FLOOR_PCT,
-  narrowestViable,
   stopGrid,
+  stopVerdictAt,
 } from "@/lib/research/stopViability";
 import {
   DEFAULT_TARGETS_PCT,
   compareToHold,
+  definedRiskBudget,
   ladderOutcome,
   peakOfCurve,
   reachCurve,
@@ -88,7 +88,72 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
    * opposite of the truth and a refusal to trade on an artefact.
    */
   const grid = stopGrid(symbol, bars, DEFAULT_WIDTHS_PCT, [holdSessions]);
-  const viable = grid ? narrowestViable(grid, holdSessions) : null;
+  const stop = stopVerdictAt(grid, holdSessions);
+
+  /*
+   * When no stop survives, the refusal is a ROUTING decision, not a dead
+   * end. Measured across the 24-name watchlist: every name above ~1.6% ATR
+   * refuses at every horizon — the only four with a viable stop are the
+   * barometer ETFs the watchlist itself marks "context only". A framework
+   * whose sole risk control is unavailable on 100% of its tradeable names
+   * is not advising "don't trade"; it is discovering that the downside must
+   * be bounded by CONSTRUCTION (premium paid up front, which cannot be
+   * gapped through) rather than by an exit level (which can).
+   *
+   * The budget arithmetic runs only on the caller's own risk policy —
+   * account value, hard floor, position count. The site holds none of them
+   * and invents none of them: absent any one, the budget is null with the
+   * reason, never a defaulted number.
+   */
+  const accountValue = Number(body.account_value);
+  const hardFloor = Number(body.hard_floor_usd);
+  const concurrent = Number(body.concurrent_positions);
+  const budget =
+    Number.isFinite(accountValue) && Number.isFinite(hardFloor) && Number.isFinite(concurrent)
+      ? definedRiskBudget(accountValue, hardFloor, concurrent)
+      : null;
+  const definedRisk =
+    stop.verdict !== "no_width_survives"
+      ? null
+      : {
+          rationale:
+            `No exit-based control survives at this volatility (${stop.note}) The position's ` +
+            `downside must be bounded by construction: a defined-risk structure's maximum loss ` +
+            `is the premium paid, and a premium cannot be gapped through — which is the ` +
+            `protection the ${stop.floor_pct}% survival floor was trying and failing to buy ` +
+            `with an exit level.`,
+          max_loss_budget_usd: budget ? budget.perPositionUsd : null,
+          budget: budget
+            ? {
+                risk_capacity_usd: budget.riskCapacityUsd,
+                per_position_usd: budget.perPositionUsd,
+                inputs: {
+                  account_value: accountValue,
+                  hard_floor_usd: hardFloor,
+                  concurrent_positions: concurrent,
+                },
+              }
+            : {
+                reason:
+                  "Supply account_value, hard_floor_usd and concurrent_positions to size the " +
+                  "budget. All three are the caller's risk policy; the site will not default " +
+                  "any of them, because a defaulted floor or position count silently sizes " +
+                  "the budget on a policy nobody declared.",
+              },
+          reward_side:
+            "reach_curve above, unchanged — it measures the underlying's forward reach, which " +
+            "is what a premium-defined structure monetises.",
+          caveats: [
+            "The account's own ledger (56 stopless equity trips at -2.39 vs 3 premium-capped " +
+              "option trips at +143.00, per the trading session) is consistent in shape with " +
+              "this routing — but two of the three option trips are the same underlying on " +
+              "the same thesis. That is n=1-repeated, not n=3, and it is NOT evidence that " +
+              "options beat equities here.",
+            "independent_n is 14 on every reach figure at this horizon. The stop-available " +
+              "vs stop-refused split is far outside that power limit; orderings WITHIN the " +
+              "refused group are not, and should not be read as rankings.",
+          ],
+        };
 
   /*
    * The ladder the caller proposes, replayed against this name's own history,
@@ -131,20 +196,20 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         }
       : null,
 
-    stop: viable
-      ? {
-          narrowest_viable_pct: viable.widthPct,
-          survival_pct: viable.survivalPct,
-          floor_pct: SURVIVAL_FLOOR_PCT,
-          independent_n: viable.independentN,
-        }
-      : {
-          narrowest_viable_pct: null,
-          reason: grid
-            ? `No width on the grid survives ${SURVIVAL_FLOOR_PCT}% of ${holdSessions}-session holds. ` +
-              `That is a reason not to take the trade at this horizon, not a reason to widen indefinitely.`
-            : `Too little history for a stop grid on ${symbol}.`,
-        },
+    /*
+     * `narrowest_viable_pct` is kept as an alias of `width_pct` so existing
+     * callers keep working; the verdict and the widest-tested figures are
+     * the §3a carry-the-meaning-through fields — a refusal now says HOW
+     * CLOSE the name came, not just that it failed.
+     */
+    stop: { narrowest_viable_pct: stop.width_pct, ...stop },
+
+    /*
+     * Present exactly when no width survives: the refusal rerouted, not
+     * softened. Null otherwise — a name with a viable stop does not need
+     * its downside bounded by construction.
+     */
+    defined_risk: definedRisk,
 
     ladder:
       ladder && hold

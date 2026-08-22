@@ -6,6 +6,7 @@ import {
   describeStop,
   narrowestViable,
   stopGrid,
+  stopVerdictAt,
   survivalAt,
 } from "./stopViability";
 
@@ -155,5 +156,50 @@ describe("stopGrid and the reading", () => {
     const text = describeStop(stopGrid("TEST", path)!, 5);
     expect(text).toContain("needs at least a 5% stop");
     expect(text).toContain("A 2% stop");
+  });
+});
+
+/**
+ * The §3a shape: a bare `null` used to collapse "no width survives", "too
+ * little history" and "never computed" into one token, and the trading side
+ * spent a session unable to tell them apart. The verdict discriminates, and
+ * a refusal carries how close the name came.
+ */
+describe("stopVerdictAt", () => {
+  it("reports a viable width with its survival and the floor it cleared", () => {
+    const path = bars(
+      Array.from({ length: 200 }, (_, i) => [100, i % 5 === 0 ? 96 : 99.5] as [number, number])
+    );
+    const v = stopVerdictAt(stopGrid("TEST", path), 5);
+    expect(v.verdict).toBe("viable");
+    expect(v.width_pct).toBe(5);
+    expect(v.survival_pct).toBeGreaterThanOrEqual(SURVIVAL_FLOOR_PCT);
+    expect(v.floor_pct).toBe(SURVIVAL_FLOOR_PCT);
+    expect(v.independent_n).toBeGreaterThan(0);
+    expect(v.note).toContain("5% stop survives");
+  });
+
+  it("discriminates no_width_survives and says how close the widest width came", () => {
+    // Every third bar drops 20% intraday — no listed width is safe.
+    const path = bars(
+      Array.from({ length: 200 }, (_, i) => [100, i % 3 === 0 ? 80 : 99] as [number, number])
+    );
+    const v = stopVerdictAt(stopGrid("WILD", path), 5);
+    expect(v.verdict).toBe("no_width_survives");
+    expect(v.width_pct).toBeNull();
+    // The best case is named: the widest tested width and its survival.
+    expect(v.widest_tested_pct).toBe(15);
+    expect(v.survival_at_widest_pct).not.toBeNull();
+    expect(v.survival_at_widest_pct!).toBeLessThan(SURVIVAL_FLOOR_PCT);
+    expect(v.independent_n).toBeGreaterThan(0);
+    expect(v.note).toContain("bounded by construction");
+  });
+
+  it("discriminates insufficient_history from a measured refusal", () => {
+    const v = stopVerdictAt(stopGrid("THIN", calm(MIN_ENTRIES - 1)), 5);
+    expect(v.verdict).toBe("insufficient_history");
+    expect(v.width_pct).toBeNull();
+    expect(v.widest_tested_pct).toBeNull();
+    expect(v.note).toContain("Unmeasured is not the same as safe");
   });
 });

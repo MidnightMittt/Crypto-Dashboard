@@ -230,6 +230,42 @@ export function replayWindows(
 }
 
 /**
+ * The per-position loss budget for defined-risk structures.
+ *
+ * Exists for the case the stop grid keeps discovering: above roughly 1.6%
+ * ATR no tested stop width clears the 70% survival floor, so an exit-based
+ * control is simply unavailable on the names this account actually trades.
+ * The honest routing is not "don't trade" — it is "bound the downside by
+ * construction", and a construction-bounded position needs a budget, not a
+ * width. Capacity is what sits above the account's hard floor; the budget
+ * divides it across the concurrent positions the caller intends to run.
+ *
+ * Pure arithmetic on the CALLER's numbers — the site does not hold the
+ * account and must not pretend to. Null when the inputs cannot describe a
+ * budget (account at or under its floor, or a nonsensical position count),
+ * because a negative budget rendered as a number would read as permission.
+ */
+export interface RiskBudget {
+  riskCapacityUsd: number;
+  perPositionUsd: number;
+}
+
+export function definedRiskBudget(
+  accountValueUsd: number,
+  hardFloorUsd: number,
+  concurrentPositions: number
+): RiskBudget | null {
+  if (!Number.isFinite(accountValueUsd) || !Number.isFinite(hardFloorUsd)) return null;
+  if (hardFloorUsd < 0 || accountValueUsd <= hardFloorUsd) return null;
+  if (!Number.isInteger(concurrentPositions) || concurrentPositions < 1) return null;
+  const capacity = accountValueUsd - hardFloorUsd;
+  return {
+    riskCapacityUsd: Math.round(capacity * 100) / 100,
+    perPositionUsd: Math.round((capacity / concurrentPositions) * 100) / 100,
+  };
+}
+
+/**
  * One sentence on whether the ladder beat holding, naming both statistics.
  *
  * Deliberately refuses a verdict when mean and median disagree in sign. That

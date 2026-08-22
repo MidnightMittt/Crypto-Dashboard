@@ -3,7 +3,7 @@ import { assessPriceStaleness } from "./priceStaleness";
 import { CONSTANT_MATURITY_DAYS, ivRichness } from "@/lib/options/ivTermStructure";
 import { PositioningPoint } from "@/lib/history/positioningHistory";
 import { PanelRow, SymbolPanel } from "@/lib/research/barsPanel";
-import { stopGrid, narrowestViable } from "@/lib/research/stopViability";
+import { StopWidthVerdict, stopGrid, stopVerdictAt } from "@/lib/research/stopViability";
 import { trendState } from "@/lib/research/trendState";
 import { Bar } from "@/lib/research/types";
 
@@ -95,9 +95,15 @@ export interface AssetFacts {
   trend_intact: boolean | null;
   room_atr: number | null;
 
-  /** Narrowest stop width clearing 70% survival. Null means NO width survives — a reason not to trade, not to widen. */
-  narrowest_viable_stop_pct_5d: number | null;
-  narrowest_viable_stop_pct_21d: number | null;
+  /**
+   * The stop question with its reason attached, per horizon. `width_pct`
+   * null used to collapse "no width survives" and "too little history" into
+   * one token; the verdict now discriminates them, and on a refusal the
+   * widest tested width and its survival say how close the name came.
+   * (Replaces the flat `narrowest_viable_stop_pct_5d/21d` numbers.)
+   */
+  narrowest_viable_stop_5d: StopWidthVerdict;
+  narrowest_viable_stop_21d: StopWidthVerdict;
 
   /** Positioning, passed through from the daily recording with each group's own instant. */
   positioning_session: string | null;
@@ -288,8 +294,6 @@ export function buildAssetFacts(inputs: AssetFactsInputs): AssetFacts {
   const bars = realBars(sessions, panel);
   const trend = trendState(symbol, bars);
   const grid = stopGrid(symbol, bars);
-  const viable5 = grid ? narrowestViable(grid, 5) : null;
-  const viable21 = grid ? narrowestViable(grid, 21) : null;
 
   return {
     symbol,
@@ -321,8 +325,8 @@ export function buildAssetFacts(inputs: AssetFactsInputs): AssetFacts {
     trend_intact: trend ? trend.intact : null,
     room_atr: trend ? r2(trend.roomAtr) : null,
 
-    narrowest_viable_stop_pct_5d: viable5?.widthPct ?? null,
-    narrowest_viable_stop_pct_21d: viable21?.widthPct ?? null,
+    narrowest_viable_stop_5d: stopVerdictAt(grid, 5),
+    narrowest_viable_stop_21d: stopVerdictAt(grid, 21),
 
     positioning_session: pos?.date ?? null,
     short_ratio_pct: pos?.shortRatioPct ?? null,

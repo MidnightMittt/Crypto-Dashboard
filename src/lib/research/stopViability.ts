@@ -185,6 +185,93 @@ export function narrowestViable(
 }
 
 /**
+ * The stop question answered WITH its reason attached — the API shape.
+ *
+ * A bare `narrowest_viable_pct: null` collapses three different facts into
+ * one token: no width survives, too little history to measure, and (in a
+ * caller's own bugs) never computed. The library always knew which; the API
+ * destroyed the distinction on the way out, and the trading side spent a
+ * session treating "unmeasurable" and "measured and hopeless" as the same
+ * state. This carries the meaning through.
+ *
+ * `widest_tested_pct` is the most survivable width the grid tried — the
+ * best case, so `survival_at_widest_pct` says how close the name came to
+ * having a stop at all. (The requesting spec called this field "tightest",
+ * but the value it holds is the WIDEST width; naming it tightest would be a
+ * field reporting a true number under a false name.)
+ */
+export interface StopWidthVerdict {
+  /** Narrowest width clearing the floor. Null exactly when verdict is not "viable". */
+  width_pct: number | null;
+  verdict: "viable" | "no_width_survives" | "insufficient_history";
+  floor_pct: number;
+  /** Survival at the viable width. Null when there is none. */
+  survival_pct: number | null;
+  /** The widest (most survivable) width the grid tested at this horizon. */
+  widest_tested_pct: number | null;
+  /** Survival at that widest width — the best case this name achieved. */
+  survival_at_widest_pct: number | null;
+  independent_n: number | null;
+  /** One sentence a reader can act on without the fields. */
+  note: string;
+}
+
+const r1 = (v: number) => Math.round(v * 10) / 10;
+
+export function stopVerdictAt(
+  grid: StopGrid | null,
+  horizonDays: number,
+  floorPct = SURVIVAL_FLOOR_PCT
+): StopWidthVerdict {
+  const atHorizon = grid?.cells.filter((c) => c.horizonDays === horizonDays) ?? [];
+  if (atHorizon.length === 0) {
+    return {
+      width_pct: null,
+      verdict: "insufficient_history",
+      floor_pct: floorPct,
+      survival_pct: null,
+      widest_tested_pct: null,
+      survival_at_widest_pct: null,
+      independent_n: null,
+      note: `Too little history to measure stop survival at ${horizonDays} sessions. Unmeasured is not the same as safe.`,
+    };
+  }
+
+  const widest = [...atHorizon].sort((a, b) => b.widthPct - a.widthPct)[0];
+  const viable = grid ? narrowestViable(grid, horizonDays, floorPct) : null;
+
+  if (!viable) {
+    return {
+      width_pct: null,
+      verdict: "no_width_survives",
+      floor_pct: floorPct,
+      survival_pct: null,
+      widest_tested_pct: widest.widthPct,
+      survival_at_widest_pct: r1(widest.survivalPct),
+      independent_n: widest.independentN,
+      note:
+        `No tested width survives ${floorPct}% of ${horizonDays}-session holds — even ` +
+        `${widest.widthPct}% survives only ${r1(widest.survivalPct)}%. At this volatility the ` +
+        `position's downside must be bounded by construction (a defined-risk structure) or by ` +
+        `time, not by an exit level.`,
+    };
+  }
+
+  return {
+    width_pct: viable.widthPct,
+    verdict: "viable",
+    floor_pct: floorPct,
+    survival_pct: r1(viable.survivalPct),
+    widest_tested_pct: widest.widthPct,
+    survival_at_widest_pct: r1(widest.survivalPct),
+    independent_n: viable.independentN,
+    note:
+      `A ${viable.widthPct}% stop survives ${r1(viable.survivalPct)}% of ${horizonDays}-session ` +
+      `holds — the narrowest tested width clearing the ${floorPct}% floor.`,
+  };
+}
+
+/**
  * One sentence, naming the width and what it costs.
  *
  * Never a bare percentage: the whole point is that "5%" is meaningless until

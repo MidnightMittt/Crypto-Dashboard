@@ -195,7 +195,9 @@ describe("buildAssetFacts", () => {
     expect(f.ret_pctile_20d.p50).toBeNull();
     expect(f.ret_pctile_20d.n).toBe(0);
     expect(f.atr_usd).toBeNull();
-    expect(f.narrowest_viable_stop_pct_5d).toBeNull();
+    // Not a bare null: thin history is DISCRIMINATED from "no width survives".
+    expect(f.narrowest_viable_stop_5d.width_pct).toBeNull();
+    expect(f.narrowest_viable_stop_5d.verdict).toBe("insufficient_history");
   });
 });
 
