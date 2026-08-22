@@ -1,4 +1,5 @@
 import { INDUSTRIES } from "@/lib/markets/industries";
+import { CRYPTO_ALIASES, TickerCollision, collisionFor } from "./tickerCollisions";
 
 /**
  * WHAT DID THE USER JUST TYPE?
@@ -61,14 +62,18 @@ export type ResolvedTicker =
       providerSymbol: string;
       /** True when this name is a constituent of a tracked industry, which adds sector context. */
       inTrackedIndustry: boolean;
+      /** Present when this ticker legitimately names another asset too. */
+      collision?: TickerCollision;
     }
   | {
       kind: "crypto";
       symbol: string;
-      /** Yahoo quotes crypto as `<SYM>-USD`. */
+      /** Yahoo quotes crypto as `<SYM>-USD`, except where it has disambiguated a collision itself. */
       providerSymbol: string;
       /** True when the derivatives layer (funding, OI, basis) is genuinely available. */
       hasDerivatives: boolean;
+      /** Present when this ticker legitimately names another asset too. */
+      collision?: TickerCollision;
     }
   | { kind: "invalid"; input: string; reason: string };
 
@@ -105,12 +110,34 @@ export function resolveTicker(raw: string): ResolvedTicker {
     };
   }
 
+  /*
+   * A NAMED ASSET WHOSE PROVIDER SYMBOL NOBODY WOULD GUESS.
+   *
+   * Checked before every other branch because the provider has already
+   * disambiguated some collisions itself: Stacks is served as
+   * `STX4847-USD`, while plain `STX-USD` is Stox, a different token at
+   * $0.0028. Routing a bare STX to "crypto" would therefore have produced
+   * a worse error than serving Seagate — right asset class, wrong coin,
+   * and nothing on the page to say so.
+   */
+  const alias = CRYPTO_ALIASES[symbol];
+  if (alias) {
+    return {
+      kind: "crypto",
+      symbol,
+      providerSymbol: alias.providerSymbol,
+      hasDerivatives: DEEP_CRYPTO.has(symbol),
+      collision: collisionFor(symbol) ?? undefined,
+    };
+  }
+
   if (explicitCrypto || (KNOWN_CRYPTO.has(symbol) && !PRECOMPUTED_EQUITIES.has(symbol))) {
     return {
       kind: "crypto",
       symbol,
       providerSymbol: `${symbol}-USD`,
       hasDerivatives: DEEP_CRYPTO.has(symbol),
+      collision: collisionFor(symbol) ?? undefined,
     };
   }
 
@@ -123,5 +150,6 @@ export function resolveTicker(raw: string): ResolvedTicker {
     symbol,
     providerSymbol: symbol,
     inTrackedIndustry: INDUSTRY_MEMBERS.has(symbol),
+    collision: collisionFor(symbol) ?? undefined,
   };
 }

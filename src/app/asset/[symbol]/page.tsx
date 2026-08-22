@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { TickerCollision, otherMeanings } from "@/lib/search/tickerCollisions";
 import { Card, CardContent } from "@/components/ui/Card";
 import { TickerSearch } from "@/components/search/TickerSearch";
 import { WatchlistStar, WatchlistStrip } from "@/components/watchlist/WatchlistStrip";
@@ -146,6 +147,46 @@ const MODULE_COMPONENTS: Record<ModuleId, (props: { d: TickerDossier }) => React
   liveness: LivenessPanel,
 };
 
+/**
+ * THIS TICKER MEANS TWO THINGS — said before the page says anything else.
+ *
+ * A confident page about the wrong asset is the worst output this platform
+ * can produce (resolveTicker.ts says so in its own header), and it costs
+ * nothing to name the other reading. Rendered above the identity because a
+ * reader who typed STX meaning the Stacks blockchain must not scroll a
+ * Seagate analysis before learning it is Seagate.
+ */
+function CollisionNotice({ collision }: { collision: TickerCollision }) {
+  const others = otherMeanings(collision);
+  return (
+    <div className="flex flex-col gap-2 rounded-md border border-amber/30 bg-amber/[0.06] px-4 py-3">
+      <p className="text-[13px] leading-relaxed text-ink">
+        <span className="font-semibold uppercase tracking-[0.12em] text-amber">
+          {collision.symbol} means more than one asset
+        </span>{" "}
+        · {collision.servedBecause}
+      </p>
+      <div className="flex flex-col gap-1">
+        {others.map((m) => (
+          <Link
+            key={m.providerSymbol}
+            href={m.href}
+            className="text-[13px] text-cyan underline-offset-2 hover:underline"
+          >
+            Did you mean {m.label}? → {m.href}
+          </Link>
+        ))}
+      </div>
+      {collision.hazard && (
+        <p className="border-t border-amber/20 pt-2 text-[12px] leading-relaxed text-ink-muted">
+          <span className="font-semibold uppercase tracking-[0.12em] text-danger">Costly lookalike</span>{" "}
+          · {collision.hazard}
+        </p>
+      )}
+    </div>
+  );
+}
+
 /** One section: its heading (outside `decide`) and every module inside it. */
 function SectionBlock({ id, title, showTitle, d }: {
   id: (typeof SECTIONS)[number]["id"];
@@ -176,10 +217,16 @@ export default async function AssetPage({ params }: { params: Promise<{ symbol: 
   if (result.status === "error") return <NoRead symbol={result.symbol} message={result.message} />;
 
   const d = result.dossier;
+  const collision =
+    result.resolved.kind === "equity" || result.resolved.kind === "crypto"
+      ? result.resolved.collision
+      : undefined;
 
   return (
     <div className="min-h-screen">
       <main className="mx-auto flex max-w-[1100px] flex-col gap-5 px-4 py-6 sm:px-6">
+        {collision && <CollisionNotice collision={collision} />}
+
         {/* Identity */}
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <div className="flex flex-wrap items-baseline gap-3">

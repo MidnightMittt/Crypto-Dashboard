@@ -104,3 +104,49 @@ describe("resolveTicker", () => {
     ]);
   });
 });
+
+/**
+ * TICKER COLLISIONS. Typing STX served a confident Seagate page to someone
+ * who meant the Stacks blockchain, with nothing saying the other reading
+ * existed — the exact failure this module's header calls the worst output
+ * the platform can produce.
+ */
+describe("resolveTicker — collisions are surfaced, never guessed away", () => {
+  it("keeps serving Seagate for a bare STX but attaches the collision", () => {
+    const r = resolveTicker("STX");
+    expect(r.kind).toBe("equity");
+    if (r.kind === "equity") {
+      expect(r.providerSymbol).toBe("STX");
+      expect(r.collision).toBeDefined();
+      expect(r.collision!.meanings.map((m) => m.label)).toContain("Stacks (the Bitcoin L2)");
+      // The money trap is named, not merely the ambiguity.
+      expect(r.collision!.hazard).toContain("STXL");
+    }
+  });
+
+  it("routes STACKS to the provider symbol that is actually Stacks", () => {
+    // Yahoo serves Stacks as STX4847-USD; plain STX-USD is Stox, a different
+    // token near zero. Routing a bare STX to "crypto" would have been a
+    // WORSE error than Seagate — right asset class, wrong coin.
+    const r = resolveTicker("STACKS");
+    expect(r.kind).toBe("crypto");
+    if (r.kind === "crypto") expect(r.providerSymbol).toBe("STX4847-USD");
+  });
+
+  it("attaches the collision to crypto-routed tickers that shadow real equities", () => {
+    for (const sym of ["LINK", "ATOM", "APT"]) {
+      const r = resolveTicker(sym);
+      expect(r.kind).toBe("crypto");
+      if (r.kind === "crypto") {
+        expect(r.collision, `${sym} shadows a real listing`).toBeDefined();
+        expect(r.collision!.meanings.some((m) => m.kind === "equity")).toBe(true);
+      }
+    }
+  });
+
+  it("leaves uncollided tickers untouched", () => {
+    const r = resolveTicker("NVDA");
+    expect(r.kind).toBe("equity");
+    if (r.kind === "equity") expect(r.collision).toBeUndefined();
+  });
+});
