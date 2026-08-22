@@ -50,13 +50,26 @@ export interface PretradeVerdict {
   checks: PretradeCheck[];
 }
 
-/** A position already held, for book-level exposure. */
+/**
+ * A position already held, for book-level exposure — reduced by the ROUTE to
+ * the two numbers every instrument shares, so the engine has one exposure
+ * semantics and never needs to know how an option is priced.
+ *
+ *   capitalUsd            what the position ties up: shares x price for
+ *                         equity, contracts x premium x multiplier for an
+ *                         option. Signed.
+ *   marketEquivalentUsd   what it moves like: value x beta for equity,
+ *                         delta-equivalent x beta for an option. Null when
+ *                         unmeasurable — never assumed, because a 1-lot call
+ *                         at $125 of premium was measured moving like ~$800
+ *                         of stock, and a book that counts it as $125 (or
+ *                         zero) understates exactly when it matters.
+ */
 export interface HeldPosition {
   symbol: string;
-  shares: number;
-  price: number;
-  /** Beta to the book's driver. Null when unmeasured — never assumed to be 1. */
-  beta: number | null;
+  instrument: "equity" | "option";
+  capitalUsd: number;
+  marketEquivalentUsd: number | null;
 }
 
 /**
@@ -100,6 +113,15 @@ export interface PretradeInputs {
    * not exist until tonight. Null means: behave exactly as before.
    */
   livePrice: LivePrice | null;
+  /**
+   * Optional buying power. When present, a `reachability` check asks the
+   * question no other check does: can THIS account place THIS order at all.
+   * A perfect call on a $186 stock against $137 of buying power is not a
+   * trade — it is advice for a different account, and the auditor saying
+   * PASS over it would be the least useful green light it can produce.
+   * Absent: the check does not appear, so existing callers are unchanged.
+   */
+  buyingPowerUsd: number | null;
   /** The route's clock, epoch ms. Here so the engine keeps no clock of its own. */
   nowMs: number;
 }
@@ -192,10 +214,10 @@ function betaExposureCheck(i: PretradeInputs): PretradeCheck {
   const addedNotional = i.shares * i.entry;
   const added = addedNotional * i.beta;
   const existing = i.existingPositions.reduce(
-    (sum, p) => sum + (p.beta === null ? 0 : p.shares * p.price * p.beta),
+    (sum, p) => sum + (p.marketEquivalentUsd ?? 0),
     0
   );
-  const unmeasured = i.existingPositions.filter((p) => p.beta === null).length;
+  const unmeasured = i.existingPositions.filter((p) => p.marketEquivalentUsd === null).length;
   const total = existing + added;
   const ratio = i.accountValue > 0 ? total / i.accountValue : Infinity;
   const ok = ratio <= MAX_BETA_EXPOSURE;
@@ -207,7 +229,7 @@ function betaExposureCheck(i: PretradeInputs): PretradeCheck {
       `Adds ${usd(added)} market-equivalent (${usd(addedNotional)} notional x beta ${i.beta.toFixed(2)}); ` +
       `the book would reach ${pct(ratio)} of the account against a ${pct(MAX_BETA_EXPOSURE)} ceiling.` +
       (unmeasured > 0
-        ? ` ${unmeasured} held position${unmeasured === 1 ? "" : "s"} ha${unmeasured === 1 ? "s" : "ve"} no measured beta and contribute${unmeasured === 1 ? "s" : ""} nothing here, so the true figure is HIGHER.`
+        ? ` ${unmeasured} held position${unmeasured === 1 ? "" : "s"} ha${unmeasured === 1 ? "s" : "ve"} no measurable market-equivalent and contribute${unmeasured === 1 ? "s" : ""} nothing here, so the true figure is HIGHER.`
         : ""),
     data: {
       beta: i.beta,
@@ -222,7 +244,7 @@ function betaExposureCheck(i: PretradeInputs): PretradeCheck {
 
 function deploymentCapCheck(i: PretradeInputs): PretradeCheck {
   const deployed =
-    i.existingPositions.reduce((s, p) => s + p.shares * p.price, 0) + i.shares * i.entry;
+    i.existingPositions.reduce((s, p) => s + p.capitalUsd, 0) + i.shares * i.entry;
   const ratio = i.accountValue > 0 ? deployed / i.accountValue : Infinity;
   const ok = ratio <= DEPLOYMENT_CAP;
   return {
@@ -392,6 +414,30 @@ function freshnessCheck(i: PretradeInputs): PretradeCheck {
   };
 }
 
+function reachabilityCheck(i: PretradeInputs, buyingPower: number): PretradeCheck {
+  const cost = i.shares * i.entry;
+  const ok = cost <= buyingPower;
+  const sharePrice = i.entry;
+  const maxShares = sharePrice > 0 ? Math.floor(buyingPower / sharePrice) : 0;
+  return {
+    name: "reachability",
+    status: ok ? "pass" : "fail",
+    detail: ok
+      ? `${usd(cost)} for ${i.shares} shares fits inside ${usd(buyingPower)} of buying power, ` +
+        `leaving ${usd(buyingPower - cost)}.`
+      : `${i.shares} shares at ${usd(sharePrice)} costs ${usd(cost)} against ${usd(buyingPower)} of ` +
+        `buying power — this order cannot be placed at this size. ` +
+        (maxShares > 0
+          ? `At most ${maxShares} share${maxShares === 1 ? "" : "s"} is reachable; re-run the check at that size, because every figure above scales with it.`
+          : `Not even one share is reachable at this price. A correct call here is advice for a different account.`),
+    data: {
+      order_cost: Number(cost.toFixed(2)),
+      buying_power: Number(buyingPower.toFixed(2)),
+      max_affordable_shares: maxShares,
+    },
+  };
+}
+
 /**
  * Run every check and reduce to one verdict.
  *
@@ -409,6 +455,8 @@ export function runPretradeChecks(i: PretradeInputs): PretradeVerdict {
     earningsCheck(i),
     costCheck(i),
   ];
+  // Present exactly when the caller declared buying power — see the input's doc.
+  if (i.buyingPowerUsd !== null) checks.push(reachabilityCheck(i, i.buyingPowerUsd));
 
   const failed = checks.filter((c) => c.status === "fail");
   const unknown = checks.filter((c) => c.status === "unknown");

@@ -79,6 +79,15 @@ export interface PositionInput {
   underlying_price?: number;
 }
 
+/** The option fields a leg is validated from — the subset parseOptionLeg reads. */
+export interface OptionLegFields {
+  strike?: number;
+  expiry?: string;
+  right?: string;
+  delta?: number;
+  multiplier?: number;
+}
+
 /** The accepted option contract, echoed so the caller can verify the leg. */
 export interface OptionLegEcho {
   strike: number;
@@ -202,7 +211,7 @@ const DEFAULT_OPTION_MULTIPLIER = 100;
 const EXPIRY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** "BTDR 2026-08-28 10.5 call", with "?" where a part was not supplied. */
-const legName = (symbol: string, p: PositionInput): string =>
+const legName = (symbol: string, p: OptionLegFields): string =>
   [
     symbol,
     typeof p.expiry === "string" ? p.expiry : "?",
@@ -210,7 +219,7 @@ const legName = (symbol: string, p: PositionInput): string =>
     typeof p.right === "string" ? p.right.toLowerCase() : "?",
   ].join(" ");
 
-type LegParse = { ok: true; leg: OptionLegEcho } | { ok: false; reason: string };
+export type LegParse = { ok: true; leg: OptionLegEcho } | { ok: false; reason: string };
 
 /**
  * Validates a declared option leg completely before anything is computed.
@@ -218,8 +227,12 @@ type LegParse = { ok: true; leg: OptionLegEcho } | { ok: false; reason: string }
  * with no reason is as unarguable as a bare BLOCK — and because the failure
  * this replaces was the opposite: fields accepted, discarded, and the leg
  * confidently valued as 1.25 shares of stock.
+ *
+ * Exported: the pre-trade auditor validates held option legs with THIS
+ * function, so one contract cannot be a valid leg to /api/portfolio and an
+ * invalid one to /api/pretrade/check.
  */
-function parseOptionLeg(symbol: string, p: PositionInput, nowMs: number): LegParse {
+export function parseOptionLeg(symbol: string, p: OptionLegFields, nowMs: number): LegParse {
   const name = legName(symbol, p);
 
   const missing: string[] = [];

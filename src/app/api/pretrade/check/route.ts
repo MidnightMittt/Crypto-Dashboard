@@ -169,17 +169,49 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
    * while appearing to have been given one. Two independent audit reports
    * called the check "missing" before the coercion was found. A book this
    * route cannot fully parse is now a 400 naming the row, never a shrink.
+   *
+   * Option legs are validated by the same function /api/portfolio uses and
+   * reduced to the two numbers the engine reads: capital (premium x
+   * multiplier — what deployment_cap counts) and market-equivalent
+   * (delta-equivalent x the underlying's measured beta — what
+   * beta_exposure counts). Beta is MEASURED here rather than trusted from
+   * the caller, so the book's exposure is computed the same way for every
+   * position; the underlying price is the caller's snapshot when supplied,
+   * else our last close.
    */
-  const parsedHeld = parseHeldPositions(body.existing_positions);
+  const parsedHeld = parseHeldPositions(body.existing_positions, Date.now());
   if (!parsedHeld.ok) {
     return NextResponse.json({ error: parsedHeld.error }, { status: 400 });
   }
-  const existingPositions: HeldPosition[] = parsedHeld.positions.map((p) => ({
-    ...p,
-    // Beta is MEASURED here rather than trusted from the caller, so the
-    // book's exposure is computed the same way for every position.
-    beta: betaOf(p.symbol),
-  }));
+  const lastCloseOf = (sym: string): number | null => {
+    const held = panel.symbols[sym];
+    if (!held) return null;
+    const bars = realBars(panel.sessions, held);
+    const close = bars[bars.length - 1]?.close;
+    return Number.isFinite(close) && close > 0 ? close : null;
+  };
+  const existingPositions: HeldPosition[] = parsedHeld.positions.map((p) => {
+    const beta = betaOf(p.symbol);
+    if (p.kind === "equity") {
+      const capital = p.shares * p.price;
+      return {
+        symbol: p.symbol,
+        instrument: "equity",
+        capitalUsd: capital,
+        marketEquivalentUsd: beta === null ? null : capital * beta,
+      };
+    }
+    const underlying = p.underlyingPrice ?? lastCloseOf(p.symbol);
+    return {
+      symbol: p.symbol,
+      instrument: "option",
+      capitalUsd: p.contracts * p.premium * p.leg.multiplier,
+      marketEquivalentUsd:
+        beta === null || underlying === null
+          ? null
+          : p.contracts * p.leg.delta * p.leg.multiplier * underlying * beta,
+    };
+  });
 
   // Stop survival at exactly this width and horizon, not a nearby grid cell.
   const widthPct = entry > 0 ? ((entry - stop) / entry) * 100 : 0;
@@ -219,6 +251,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     priceAgeSessions: sessionsBetween(lastSession, today),
     today,
     livePrice,
+    buyingPowerUsd: Number.isFinite(Number(body.buying_power)) ? Number(body.buying_power) : null,
     nowMs: Date.now(),
   };
 
@@ -233,16 +266,23 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         ? { value: livePrice.value, as_of: new Date(livePrice.asOfMs).toISOString(), source: livePrice.source }
         : null,
       /*
-       * The book AS PARSED, one row per held position, beta included. The
+       * The book AS PARSED and AS REDUCED, one row per held position. The
        * caller can diff this against what it sent; a position it holds
-       * that does not appear here is a bug report, not a shrug.
+       * that does not appear here — or an option leg whose
+       * market_equivalent_usd reads null — is a bug report, not a shrug.
        */
-      existing_positions_used: existingPositions.map((p) => ({
-        symbol: p.symbol,
-        shares: p.shares,
-        price: p.price,
-        beta: p.beta,
-      })),
+      existing_positions_used: parsedHeld.positions.map((src, idx) => {
+        const p = existingPositions[idx];
+        return {
+          symbol: p.symbol,
+          instrument: p.instrument,
+          capital_usd: Number(p.capitalUsd.toFixed(2)),
+          market_equivalent_usd:
+            p.marketEquivalentUsd === null ? null : Number(p.marketEquivalentUsd.toFixed(2)),
+          beta: betaOf(p.symbol),
+          ...(src.kind === "option" ? { option: src.leg } : {}),
+        };
+      }),
     },
   });
 }

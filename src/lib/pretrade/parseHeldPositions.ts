@@ -1,3 +1,5 @@
+import { OptionLegEcho, parseOptionLeg } from "@/lib/portfolio/buildPortfolio";
+
 /**
  * PARSING THE HELD BOOK — loudly, because the silent version cost a week.
  *
@@ -18,20 +20,38 @@
  *   - A position that cannot be fully parsed (symbol, a finite non-zero
  *     share count, a positive price) is an ERROR naming the row — never a
  *     zero-contribution pass-through.
+ *   - Any option field (strike/expiry/right/delta/multiplier/
+ *     underlying_price) declares the row an option leg, validated by the
+ *     SAME function /api/portfolio uses — one contract cannot be a valid
+ *     leg to one endpoint and an invalid one to the other. For an option,
+ *     `price` is the PER-CONTRACT premium (1.25, not 125).
  */
 
-export interface ParsedHeldPosition {
-  symbol: string;
-  /** Signed. Negative is short and offsets book exposure. */
-  shares: number;
-  price: number;
-}
+export type ParsedHeldPosition =
+  | {
+      kind: "equity";
+      symbol: string;
+      /** Signed. Negative is short and offsets book exposure. */
+      shares: number;
+      price: number;
+    }
+  | {
+      kind: "option";
+      symbol: string;
+      /** Signed contract count. */
+      contracts: number;
+      /** PER-CONTRACT premium (1.25, not 125), same convention as /api/portfolio. */
+      premium: number;
+      leg: OptionLegEcho;
+      /** Caller's mark for the underlying, so delta and spot share a snapshot. */
+      underlyingPrice: number | null;
+    };
 
 export type HeldPositionsParse =
   | { ok: true; positions: ParsedHeldPosition[] }
   | { ok: false; error: string };
 
-export function parseHeldPositions(raw: unknown): HeldPositionsParse {
+export function parseHeldPositions(raw: unknown, nowMs: number): HeldPositionsParse {
   if (raw === undefined || raw === null) return { ok: true, positions: [] };
   if (!Array.isArray(raw)) {
     return { ok: false, error: "existing_positions must be an array of {symbol, shares, price}." };
@@ -69,7 +89,42 @@ export function parseHeldPositions(raw: unknown): HeldPositionsParse {
       };
     }
 
-    positions.push({ symbol, shares, price });
+    const declaresOption =
+      o.strike !== undefined ||
+      o.expiry !== undefined ||
+      o.right !== undefined ||
+      o.delta !== undefined ||
+      o.multiplier !== undefined ||
+      o.underlying_price !== undefined;
+
+    if (declaresOption) {
+      const parsed = parseOptionLeg(
+        symbol,
+        {
+          strike: o.strike === undefined || o.strike === null ? undefined : Number(o.strike),
+          expiry: typeof o.expiry === "string" ? o.expiry : undefined,
+          right: typeof o.right === "string" ? o.right : undefined,
+          delta: o.delta === undefined || o.delta === null ? undefined : Number(o.delta),
+          multiplier: o.multiplier === undefined || o.multiplier === null ? undefined : Number(o.multiplier),
+        },
+        nowMs
+      );
+      if (!parsed.ok) {
+        return { ok: false, error: `${at}: ${parsed.reason}` };
+      }
+      const underlying = Number(o.underlying_price);
+      positions.push({
+        kind: "option",
+        symbol,
+        contracts: shares,
+        premium: price,
+        leg: parsed.leg,
+        underlyingPrice: Number.isFinite(underlying) && underlying > 0 ? underlying : null,
+      });
+      continue;
+    }
+
+    positions.push({ kind: "equity", symbol, shares, price });
   }
   return { ok: true, positions };
 }

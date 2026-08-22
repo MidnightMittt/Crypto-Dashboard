@@ -23,6 +23,7 @@ const clean = (over: Partial<PretradeInputs> = {}): PretradeInputs => ({
   priceAgeSessions: 0,
   today: "2026-08-21",
   livePrice: null,
+  buyingPowerUsd: null,
   nowMs: Date.UTC(2026, 7, 21, 19, 0, 0),
   ...over,
 });
@@ -99,14 +100,40 @@ describe("runPretradeChecks", () => {
     const r = runPretradeChecks(
       clean({
         existingPositions: [
-          { symbol: "CIFR", shares: 5, price: 17, beta: 4.5 },
-          { symbol: "MYSTERY", shares: 5, price: 20, beta: null },
+          // CIFR 5sh x $17 at beta 4.5 -> 382.50 market-equivalent.
+          { symbol: "CIFR", instrument: "equity", capitalUsd: 85, marketEquivalentUsd: 382.5 },
+          { symbol: "MYSTERY", instrument: "equity", capitalUsd: 100, marketEquivalentUsd: null },
         ],
       })
     );
     const c = check(r, "beta_exposure");
     expect(c.data!.positions_without_beta).toBe(1);
     expect(c.detail).toContain("the true figure is HIGHER");
+  });
+
+  /*
+   * The real held book: an option leg's EXPOSURE is its delta-equivalent x
+   * beta, while its CAPITAL is only the premium. The two checks must read
+   * different numbers from the same leg — counting premium in beta_exposure
+   * was the 140x understatement /api/portfolio already fixed.
+   */
+  it("counts an option leg's delta-equivalent in exposure and its premium in deployment", () => {
+    const r = runPretradeChecks(
+      clean({
+        accountValue: 437,
+        existingPositions: [
+          // 1 BTDR call: $125 premium capital, ~$823 delta-equiv x beta 2.6 = 2,140.
+          { symbol: "BTDR", instrument: "option", capitalUsd: 125, marketEquivalentUsd: 2140 },
+        ],
+      })
+    );
+    const beta = check(r, "beta_exposure");
+    // 2,140 held + (10 x 20 x 1.2 = 240) added = 2,380 on a 437 account: breach.
+    expect(beta.status).toBe("fail");
+    expect(beta.data!.book_market_equivalent).toBeCloseTo(2380, 0);
+    const cap = check(r, "deployment_cap");
+    // Deployment counts the premium, not the delta notional: 125 + 200 = 325.
+    expect(cap.data!.deployed).toBeCloseTo(325, 0);
   });
 
   it("refuses to assume a beta of 1 for an unmeasured candidate", () => {
@@ -252,5 +279,42 @@ describe("runPretradeChecks — caller-supplied live price", () => {
     expect(c.detail).toContain("1 session behind");
     // And the failure now tells the caller the cure.
     expect(c.detail).toContain("live_price");
+  });
+});
+
+
+/**
+ * The size-awareness check — Part 0's constraint made executable. $137 of
+ * buying power makes most correct advice untakeable, and an auditor that
+ * PASSes an order the account cannot place is advising a different account.
+ */
+describe("runPretradeChecks — reachability at the caller's size", () => {
+  it("does not appear when buying power is not declared", () => {
+    const r = runPretradeChecks(clean());
+    expect(r.checks.find((c) => c.name === "reachability")).toBeUndefined();
+  });
+
+  it("fails an order that costs more than the buying power, naming the reachable size", () => {
+    // 10 shares x $20 = $200 against $137.14 — the real account's number.
+    const r = runPretradeChecks(clean({ buyingPowerUsd: 137.14 }));
+    const c = check(r, "reachability");
+    expect(c.status).toBe("fail");
+    expect(c.detail).toContain("cannot be placed at this size");
+    expect(c.data!.max_affordable_shares).toBe(6);
+    expect(r.verdict).toBe("block");
+  });
+
+  it("passes a reachable order and says what remains", () => {
+    const r = runPretradeChecks(clean({ shares: 5, buyingPowerUsd: 137.14 }));
+    const c = check(r, "reachability");
+    expect(c.status).toBe("pass");
+    expect(c.data!.order_cost).toBe(100);
+  });
+
+  it("says plainly when not even one share is reachable", () => {
+    const r = runPretradeChecks(clean({ entry: 186, stop: 150, buyingPowerUsd: 137.14 }));
+    const c = check(r, "reachability");
+    expect(c.status).toBe("fail");
+    expect(c.detail).toContain("advice for a different account");
   });
 });
