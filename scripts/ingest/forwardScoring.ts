@@ -14,6 +14,7 @@ import {
 import {
   CURRENT_VERDICT_ENGINE,
   EMPTY_FORWARD_VERDICT,
+  expireUnresolvable,
   ForwardVerdictRecord,
   VerdictPrediction,
   pruneVerdicts,
@@ -330,7 +331,10 @@ function main() {
     const c = Date.parse(`${dateIso}T23:59:59Z`);
     return inst.bars.filter((b) => b.t > c).map((b) => ({ t: b.t, close: b.close }));
   };
-  const resolvedVerdicts = resolveVerdicts(registerVerdicts(verdictRecord.predictions, freshVerdicts), closesAfter);
+  const resolvedVerdicts = expireUnresolvable(
+    resolveVerdicts(registerVerdicts(verdictRecord.predictions, freshVerdicts), closesAfter),
+    new Date().toISOString().slice(0, 10)
+  );
   /*
    * Cells NEVER mix engines. The headline summary describes the current
    * engine — the one whose calls the pages actually publish — and the
@@ -340,6 +344,31 @@ function main() {
    */
   const vSummary = summariseVerdicts(resolvedVerdicts, CURRENT_VERDICT_ENGINE);
   const legacySummary = summariseVerdicts(resolvedVerdicts, 1);
+
+  /*
+   * The EXTERNAL baseline: mean SPY return over the same windows as each
+   * engine's resolved rows. The cohort baseline answers "did this call beat
+   * the register"; this answers "did the register's windows beat the
+   * index" — and a reader needs both, because a cohort of mostly-bullish
+   * calls in a rising tape can beat its own mean while every call merely
+   * rode the market.
+   */
+  const vHorizon = verdictRecord.horizonSessions || 10;
+  const spyReturnOver = (dateIso: string): number | null => {
+    const spy = all.get("SPY");
+    if (!spy) return null;
+    const c = Date.parse(`${dateIso}T23:59:59Z`);
+    const entry = spy.bars.filter((b) => b.t <= c).at(-1)?.close;
+    const end = spy.bars.filter((b) => b.t > c)[vHorizon - 1]?.close;
+    return entry && end ? ((end - entry) / entry) * 100 : null;
+  };
+  const marketBaselineFor = (engine: number): number | null => {
+    const rets = resolvedVerdicts
+      .filter((p) => (p.engine ?? 1) === engine && p.forwardReturnPct !== null)
+      .map((p) => spyReturnOver(p.date))
+      .filter((v): v is number => v !== null);
+    return rets.length > 0 ? rets.reduce((a, b) => a + b, 0) / rets.length : null;
+  };
   const verdictOut: ForwardVerdictRecord = {
     version: 1,
     horizonSessions: verdictRecord.horizonSessions || 10,
@@ -347,6 +376,7 @@ function main() {
     predictions: pruneVerdicts(resolvedVerdicts),
     cells: vSummary.cells,
     baselineReturnPct: vSummary.baselineReturnPct,
+    marketBaselineReturnPct: marketBaselineFor(CURRENT_VERDICT_ENGINE),
     totals: vSummary.totals,
     engine: CURRENT_VERDICT_ENGINE,
     ...(legacySummary.totals.resolved + legacySummary.totals.open > 0
@@ -359,6 +389,7 @@ function main() {
               "similar engine, not the current one's record.",
             cells: legacySummary.cells,
             baselineReturnPct: legacySummary.baselineReturnPct,
+            marketBaselineReturnPct: marketBaselineFor(1),
             totals: legacySummary.totals,
           },
         }

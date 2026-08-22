@@ -61,6 +61,50 @@ export interface VerdictPrediction {
   resolvedDate: string | null;
   /** Which engine version made this call. Absent means engine 1. */
   engine?: number;
+  /**
+   * True when the call can no longer resolve — its horizon plus a grace
+   * period elapsed with no scoring bars, which in practice means the symbol
+   * left the data set between registration and resolution. Expired rows are
+   * neither open nor resolved: counting them open would inflate the
+   * "waiting out their window" figure forever, and scoring them would
+   * require bars that do not exist.
+   */
+  expired?: boolean;
+}
+
+/**
+ * Sessions of slack past the horizon before an unresolved call is declared
+ * unresolvable. Generous, because the cure for a transient ingest gap is
+ * patience and the cure for expiry is nothing — a symbol whose data returns
+ * on day 12 should still score.
+ */
+export const EXPIRY_GRACE_SESSIONS = 10;
+
+/**
+ * Expire calls that can never resolve.
+ *
+ * Time-based, NOT presence-based: 17 calls were registered on 2026-08-21
+ * for symbols the scoring job's data set does not carry, and a
+ * presence-based rule would also have censored any symbol whose file was
+ * missing for one night. A call expires only when horizon + grace sessions
+ * (converted at 7/5 calendar days per session) have passed since
+ * registration with no resolution — at that point either the symbol is
+ * gone or the pipeline has been dark for two weeks, and both are facts the
+ * totals should carry rather than hide inside a forever-open count.
+ */
+export function expireUnresolvable(
+  predictions: VerdictPrediction[],
+  todayIso: string,
+  horizon = VERDICT_HORIZON_SESSIONS,
+  graceSessions = EXPIRY_GRACE_SESSIONS
+): VerdictPrediction[] {
+  const budgetDays = Math.ceil(((horizon + graceSessions) * 7) / 5);
+  const cutoff = Date.parse(`${todayIso}T00:00:00Z`) - budgetDays * 86_400_000;
+  return predictions.map((p) => {
+    if (p.forwardReturnPct !== null || p.expired) return p;
+    if (Date.parse(`${p.date}T00:00:00Z`) < cutoff) return { ...p, expired: true };
+    return p;
+  });
 }
 
 export interface VerdictCell {
@@ -85,8 +129,23 @@ export interface ForwardVerdictRecord {
   predictions: VerdictPrediction[];
   /** Cells, baseline and totals describe the CURRENT engine's rows only. */
   cells: VerdictCell[];
-  /** Mean forward return over every resolved CURRENT-engine prediction — the honest null. */
+  /**
+   * Mean forward return over every resolved CURRENT-engine prediction — the
+   * COHORT baseline. This is what edgeVsBaselinePct is measured against:
+   * the record's own other calls over the same windows, not an index. On a
+   * mixed cohort (the register runs ~42% bullish / 31% bearish / 26%
+   * neutral) that nets the tide fairly; the label matters because "beat the
+   * market" and "beat the rest of this register" are different claims.
+   */
   baselineReturnPct: number | null;
+  /**
+   * Mean SPY return over the SAME windows as the resolved rows — the
+   * external market baseline, carried beside the cohort one so a reader can
+   * see both "did this call beat the register" and "did the register's
+   * windows beat the index". Null until rows resolve or when SPY bars are
+   * unavailable.
+   */
+  marketBaselineReturnPct?: number | null;
   totals: { resolved: number; open: number };
   /** Which engine the headline summary describes. Absent on records written before engines existed. */
   engine?: number;
@@ -101,6 +160,7 @@ export interface ForwardVerdictRecord {
     note: string;
     cells: VerdictCell[];
     baselineReturnPct: number | null;
+    marketBaselineReturnPct?: number | null;
     totals: { resolved: number; open: number };
   };
 }
@@ -149,7 +209,7 @@ export function resolveVerdicts(
   horizon = VERDICT_HORIZON_SESSIONS
 ): VerdictPrediction[] {
   return predictions.map((p) => {
-    if (p.forwardReturnPct !== null) return p;
+    if (p.forwardReturnPct !== null || p.expired) return p;
     const bars = barsAfter(p.symbol, p.date);
     if (bars.length < horizon || p.closePrice <= 0) return p;
     const end = bars[horizon - 1];
@@ -187,7 +247,8 @@ export function summariseVerdicts(
   const mine =
     engine === undefined ? predictions : predictions.filter((p) => (p.engine ?? 1) === engine);
   const resolved = mine.filter((p) => p.forwardReturnPct !== null);
-  const open = mine.length - resolved.length;
+  // Expired rows are neither open nor resolved — see expireUnresolvable.
+  const open = mine.filter((p) => p.forwardReturnPct === null && !p.expired).length;
   if (resolved.length === 0) {
     return { cells: [], baselineReturnPct: null, totals: { resolved: 0, open } };
   }

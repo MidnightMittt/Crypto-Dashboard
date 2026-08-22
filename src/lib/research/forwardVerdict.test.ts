@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   CloseBar,
   VerdictPrediction,
+  expireUnresolvable,
   pruneVerdicts,
   registerVerdicts,
   resolveVerdicts,
@@ -134,5 +135,51 @@ describe("pruneVerdicts", () => {
     expect(out).toHaveLength(8);
     expect(out.filter((p) => p.forwardReturnPct === null)).toHaveLength(4);
     expect(out.some((p) => p.symbol === "C0")).toBe(false);
+  });
+});
+
+/**
+ * The zombie case the 08-27 dry run surfaced: 17 calls registered
+ * 2026-08-21 for symbols the scoring job's data set does not carry. They
+ * can never resolve, and counted as "open" they would inflate the page's
+ * waiting-out-their-window figure forever.
+ */
+describe("expireUnresolvable", () => {
+  it("expires a call whose horizon plus grace elapsed with no resolution", () => {
+    // 10-session horizon + 10 grace = 28 calendar days. Registered 07-01,
+    // judged 08-22: 52 days — long dead.
+    const out = expireUnresolvable([pred({ date: "2026-07-01" })], "2026-08-22");
+    expect(out[0].expired).toBe(true);
+  });
+
+  it("leaves a call inside its window alone — a transient data gap must not censor", () => {
+    const out = expireUnresolvable([pred({ date: "2026-08-21" })], "2026-08-22");
+    expect(out[0].expired).toBeUndefined();
+  });
+
+  it("never touches a resolved call", () => {
+    const out = expireUnresolvable([pred({ date: "2026-07-01", forwardReturnPct: 2 })], "2026-08-22");
+    expect(out[0].expired).toBeUndefined();
+    expect(out[0].forwardReturnPct).toBe(2);
+  });
+
+  it("counts expired rows as neither open nor resolved in the summary", () => {
+    const rows = [
+      pred({ date: "2026-07-01", expired: true }),
+      pred({ symbol: "B", date: "2026-08-21" }),
+      pred({ symbol: "C", date: "2026-08-01", forwardReturnPct: 1.5 }),
+    ];
+    const s = summariseVerdicts(rows);
+    expect(s.totals.open).toBe(1);
+    expect(s.totals.resolved).toBe(1);
+  });
+
+  it("is final: resolveVerdicts skips an expired row even if bars later appear", () => {
+    const rows = expireUnresolvable([pred({ date: "2026-07-01" })], "2026-08-22");
+    const resolved = resolveVerdicts(rows, () =>
+      Array.from({ length: 12 }, (_, i) => ({ t: i, close: 100 + i }))
+    );
+    expect(resolved[0].forwardReturnPct).toBeNull();
+    expect(resolved[0].expired).toBe(true);
   });
 });

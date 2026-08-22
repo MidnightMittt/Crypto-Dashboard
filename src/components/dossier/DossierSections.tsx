@@ -266,7 +266,8 @@ export function VerdictPanel({ d }: { d: TickerDossier }) {
                       <>
                         {" "}against{" "}
                         {v.forward.baselineReturnPct >= 0 ? "+" : ""}
-                        {v.forward.baselineReturnPct.toFixed(2)}% for every call in the same windows — an edge of{" "}
+                        {v.forward.baselineReturnPct.toFixed(2)}% for every call in this register over the same
+                        windows (the register&apos;s own cohort, not an index) — an edge of{" "}
                         <span
                           className={`font-semibold ${
                             v.forward.mine.edgeVsBaselinePct > 0 ? "text-success" : "text-danger"
@@ -288,9 +289,11 @@ export function VerdictPanel({ d }: { d: TickerDossier }) {
                 ) : (
                   <>
                     This verdict has no scored record yet. {v.forward.open.toLocaleString()} calls are registered and
-                    waiting out their {v.forward.horizonSessions}-session window; each is scored against what every
-                    other call did over the same period, so a bullish read only counts as right if it beat the
-                    market rather than merely rose with it. Until then the word above is a hypothesis.
+                    waiting out their {v.forward.horizonSessions}-session window. Each is scored against what every
+                    other call in this register did over the same windows — the register&apos;s own mixed cohort of
+                    bullish, bearish and neutral calls, not an index — so a bullish read only counts as right if it
+                    beat the rest of the register rather than merely rose with it. Until then the word above is a
+                    hypothesis.
                   </>
                 )}
               </p>
