@@ -29,6 +29,24 @@
 
 export const VERDICT_HORIZON_SESSIONS = 10;
 
+/**
+ * WHICH ENGINE MADE THE CALL — because the record's one job is to score
+ * what the site actually published, and for its first weeks it did not.
+ *
+ * Engine 1 (rows with no tag): the registration job passed `marketWide: []`
+ * and `benchmarkCloses: null`, so it scored a chart-only read with no
+ * relative strength — while the pages published a backdrop-voting composite
+ * that read bullish on 131 of 131 equities. Two engines, one record, and
+ * the drift was invisible because both wrote the same three verdict words.
+ *
+ * Engine 2: the backdrop no longer votes anywhere (see liveAnalysis.ts),
+ * and registration passes the same benchmark closes the page uses — the
+ * registered verdict IS the published verdict. Cells must never mix
+ * engines: a hit rate pooled across two different claim-makers describes
+ * neither.
+ */
+export const CURRENT_VERDICT_ENGINE = 2;
+
 export type ForwardVerdict = "bullish" | "bearish" | "neutral";
 
 export interface VerdictPrediction {
@@ -41,6 +59,8 @@ export interface VerdictPrediction {
   /** Null until the horizon has fully elapsed. */
   forwardReturnPct: number | null;
   resolvedDate: string | null;
+  /** Which engine version made this call. Absent means engine 1. */
+  engine?: number;
 }
 
 export interface VerdictCell {
@@ -63,10 +83,26 @@ export interface ForwardVerdictRecord {
   horizonSessions: number;
   generatedAt: number;
   predictions: VerdictPrediction[];
+  /** Cells, baseline and totals describe the CURRENT engine's rows only. */
   cells: VerdictCell[];
-  /** Mean forward return over EVERY resolved prediction — the honest null. */
+  /** Mean forward return over every resolved CURRENT-engine prediction — the honest null. */
   baselineReturnPct: number | null;
   totals: { resolved: number; open: number };
+  /** Which engine the headline summary describes. Absent on records written before engines existed. */
+  engine?: number;
+  /**
+   * The retired engine's own summary, preserved and labelled — its ~658
+   * open calls were registered before the published verdict and the
+   * registered verdict were the same computation, and they still resolve
+   * into evidence about the chart-only engine rather than into noise.
+   */
+  legacy?: {
+    engine: number;
+    note: string;
+    cells: VerdictCell[];
+    baselineReturnPct: number | null;
+    totals: { resolved: number; open: number };
+  };
 }
 
 export const EMPTY_FORWARD_VERDICT: ForwardVerdictRecord = {
@@ -135,13 +171,23 @@ function median(xs: number[]): number {
   return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
 }
 
-export function summariseVerdicts(predictions: VerdictPrediction[]): {
+export function summariseVerdicts(
+  predictions: VerdictPrediction[],
+  /**
+   * Summarise ONE engine's rows. Omitted means all rows — kept only for
+   * tests that construct single-engine samples; production always names the
+   * engine, because a cell pooled across engines describes neither.
+   */
+  engine?: number
+): {
   cells: VerdictCell[];
   baselineReturnPct: number | null;
   totals: { resolved: number; open: number };
 } {
-  const resolved = predictions.filter((p) => p.forwardReturnPct !== null);
-  const open = predictions.length - resolved.length;
+  const mine =
+    engine === undefined ? predictions : predictions.filter((p) => (p.engine ?? 1) === engine);
+  const resolved = mine.filter((p) => p.forwardReturnPct !== null);
+  const open = mine.length - resolved.length;
   if (resolved.length === 0) {
     return { cells: [], baselineReturnPct: null, totals: { resolved: 0, open } };
   }

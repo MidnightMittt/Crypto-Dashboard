@@ -417,22 +417,36 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
     verdictForward: isCrypto
       ? null
       : (() => {
-          const r = forwardVerdictJson as unknown as {
-            horizonSessions: number;
+          interface Cells {
             baselineReturnPct: number | null;
             totals: { resolved: number; open: number };
             cells: Array<{
               verdict: string; n: number; hitRatePct: number | null;
               meanReturnPct: number; edgeVsBaselinePct: number | null;
             }>;
+          }
+          const r = forwardVerdictJson as unknown as Cells & {
+            horizonSessions: number;
+            legacy?: Cells & { note: string };
           };
           const want = result.analysis.bias.verdict;
+          /*
+           * The current engine's record leads. Until its cells mature, the
+           * retired engine's record is shown INSTEAD — labelled, because a
+           * similar engine's history is adjacent evidence, not this one's —
+           * rather than pooled with it, which would describe neither.
+           */
+          const mine = r.cells.find((c) => c.verdict === want) ?? null;
+          const legacyMine = r.legacy?.cells.find((c) => c.verdict === want) ?? null;
+          const useLegacy = mine === null && legacyMine !== null && r.legacy !== undefined;
+          const src = useLegacy ? (r.legacy as Cells) : r;
           return {
-            resolved: r.totals.resolved,
-            open: r.totals.open,
-            baselineReturnPct: r.baselineReturnPct,
-            mine: r.cells.find((c) => c.verdict === want) ?? null,
+            resolved: src.totals.resolved,
+            open: src.totals.open,
+            baselineReturnPct: src.baselineReturnPct,
+            mine: useLegacy ? legacyMine : mine,
             horizonSessions: r.horizonSessions,
+            engineNote: useLegacy ? (r.legacy as { note: string }).note : null,
           };
         })(),
     reachOf: isCrypto

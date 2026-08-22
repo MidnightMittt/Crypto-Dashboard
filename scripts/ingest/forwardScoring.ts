@@ -12,6 +12,7 @@ import {
   summarise,
 } from "../../src/lib/research/forwardReach";
 import {
+  CURRENT_VERDICT_ENGINE,
   EMPTY_FORWARD_VERDICT,
   ForwardVerdictRecord,
   VerdictPrediction,
@@ -90,6 +91,19 @@ function load(): Map<string, Loaded> {
  * from the past, resolves it, prints the comparison, and exits WITHOUT
  * touching the record. Proof of plumbing, never evidence.
  */
+/**
+ * The benchmark's closes up to the as-of instant, point-in-time. The page
+ * computes relative strength from the committed market context; this job
+ * must register the SAME claim the page publishes, and for its first weeks
+ * it did not — it passed `benchmarkCloses: null`, so the record scored a
+ * verdict with no relative-strength vote while the page showed one with it.
+ */
+function benchmarkClosesUpTo(all: Map<string, Loaded>, asOf: number): Array<{ t: number; close: number }> | null {
+  const spy = all.get("SPY");
+  if (!spy) return null;
+  return spy.bars.filter((b) => b.t <= asOf).map((b) => ({ t: b.t, close: b.close }));
+}
+
 function verify(all: Map<string, Loaded>, snapshot: EquityExecutionSnapshot, asOfIso: string): void {
   const cutoff = Date.parse(`${asOfIso}T23:59:59Z`);
   const fresh: ReachPrediction[] = [];
@@ -106,7 +120,7 @@ function verify(all: Map<string, Loaded>, snapshot: EquityExecutionSnapshot, asO
 
     const res = buildLiveAnalysis({
       symbol: inst.symbol, name: inst.symbol, assetClass: "equity", bars,
-      benchmarkCloses: null, benchmarkSymbol: "SPY", marketWide: [],
+      benchmarkCloses: benchmarkClosesUpTo(all, asOf), benchmarkSymbol: "SPY", marketWide: [],
       earningsCalendar: null, hasDerivatives: false, now: asOf,
     });
     if (!res.ok) continue;
@@ -122,6 +136,7 @@ function verify(all: Map<string, Loaded>, snapshot: EquityExecutionSnapshot, asO
       closePrice: price,
       forwardReturnPct: null,
       resolvedDate: null,
+      engine: CURRENT_VERDICT_ENGINE,
     });
 
     const near = nearestWatchLevels(res.analysis.zones, price);
@@ -155,7 +170,7 @@ function verify(all: Map<string, Loaded>, snapshot: EquityExecutionSnapshot, asO
     return inst.bars.filter((b) => b.t > c).map((b) => ({ t: b.t, close: b.close }));
   };
   const rv = resolveVerdicts(freshVerdicts, closesAfter);
-  const vs = summariseVerdicts(rv);
+  const vs = summariseVerdicts(rv, CURRENT_VERDICT_ENGINE);
   console.log(`[verify] VERDICT: ${vs.totals.resolved} resolved, sample baseline ${vs.baselineReturnPct?.toFixed(2)}%`);
   for (const c of vs.cells) {
     console.log(
@@ -225,7 +240,7 @@ function main() {
       name: inst.symbol,
       assetClass: "equity",
       bars,
-      benchmarkCloses: null,
+      benchmarkCloses: benchmarkClosesUpTo(all, asOf),
       benchmarkSymbol: "SPY",
       marketWide: [],
       earningsCalendar: null,
@@ -255,6 +270,7 @@ function main() {
       closePrice: price,
       forwardReturnPct: null,
       resolvedDate: null,
+      engine: CURRENT_VERDICT_ENGINE,
     });
 
     const near = nearestWatchLevels(res.analysis.zones, price);
@@ -315,7 +331,15 @@ function main() {
     return inst.bars.filter((b) => b.t > c).map((b) => ({ t: b.t, close: b.close }));
   };
   const resolvedVerdicts = resolveVerdicts(registerVerdicts(verdictRecord.predictions, freshVerdicts), closesAfter);
-  const vSummary = summariseVerdicts(resolvedVerdicts);
+  /*
+   * Cells NEVER mix engines. The headline summary describes the current
+   * engine — the one whose calls the pages actually publish — and the
+   * engine-1 rows (registered while the record and the page ran different
+   * computations) keep their own labelled summary rather than polluting it
+   * or being thrown away.
+   */
+  const vSummary = summariseVerdicts(resolvedVerdicts, CURRENT_VERDICT_ENGINE);
+  const legacySummary = summariseVerdicts(resolvedVerdicts, 1);
   const verdictOut: ForwardVerdictRecord = {
     version: 1,
     horizonSessions: verdictRecord.horizonSessions || 10,
@@ -324,6 +348,21 @@ function main() {
     cells: vSummary.cells,
     baselineReturnPct: vSummary.baselineReturnPct,
     totals: vSummary.totals,
+    engine: CURRENT_VERDICT_ENGINE,
+    ...(legacySummary.totals.resolved + legacySummary.totals.open > 0
+      ? {
+          legacy: {
+            engine: 1,
+            note:
+              "Scored on the retired chart-only engine: registered with no relative-strength vote " +
+              "while the pages published a backdrop-voting composite. Adjacent evidence about a " +
+              "similar engine, not the current one's record.",
+            cells: legacySummary.cells,
+            baselineReturnPct: legacySummary.baselineReturnPct,
+            totals: legacySummary.totals,
+          },
+        }
+      : {}),
   };
   fs.writeFileSync(OUT_VERDICT, JSON.stringify(verdictOut, null, 0));
 
