@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { CandidateInput, compareCostToExpress } from "@/lib/execution/costToExpress";
 import { measuredRoundTripBp } from "@/lib/execution/measuredSpread";
+import { spreadDistribution } from "@/lib/execution/cryptoSpreadHistory";
 
 /**
  * POST /api/cost/express — the same view, priced in every instrument that
@@ -119,13 +120,22 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
        * caller quote, which would let an unverified spread wear a measured
        * one's provenance.
        */
+      /*
+       * The RECORDED distribution first — a live book is one draw, and this
+       * pair's draws differ by 2.5x inside a minute. The live fetch is only
+       * a fallback, and the response says which was used.
+       */
+      const dist = pair ? spreadDistribution(pair) : null;
       const quote =
-        venue === "kraken" && pair ? await krakenTopOfBook(pair) : quoteFrom(o);
+        dist ? null : venue === "kraken" && pair ? await krakenTopOfBook(pair) : quoteFrom(o);
       candidates.push({
         kind: "spot",
         label: pair ? `${pair} spot` : label,
         venue: venue === "kraken" && pair ? "kraken (public book)" : venue,
         quote,
+        distribution: dist
+          ? { medianBp: dist.medianBp, p90Bp: dist.p90Bp, n: dist.n, medianEffectiveBp: dist.medianEffectiveBp }
+          : null,
       });
       continue;
     }

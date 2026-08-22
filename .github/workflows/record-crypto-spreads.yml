@@ -1,0 +1,98 @@
+# THE CRYPTO BOOK RECORDER — one cron, three payoffs.
+#
+# /api/cost/express shipped leading with a single live book, and the defect
+# appeared within minutes of deploying: STX/USD printed 9.1bp on one pull and
+# 22.7bp twenty seconds later. That moved the endpoint's headline ratio from
+# 54x to 18x on nothing but which second the request landed in. A cost figure
+# that unstable cannot carry a sizing decision.
+#
+# Each run samples the book several times and writes one row per declared
+# pair. The same row answers three questions that were previously three
+# separate ideas:
+#
+#   1. the spread DISTRIBUTION that hardens /api/cost/express
+#   2. venue agreement, logged rather than spot-checked
+#   3. the 20:00-04:00 ET and weekend tape nothing else here can see
+#
+# Only (3) has to accrue before it answers anything. (1) and (2) pay on the
+# first write.
+#
+# ── Why seven crons, and why they run at weekends ────────────────────
+#
+# Crypto never closes, and the WHOLE POINT of (3) is the window the equity
+# feed cannot see. A weekday-only schedule would miss exactly the tape this
+# recorder exists for. Seven starts spaced through the UTC day put samples in
+# every US session bucket — including the 00:00-08:00 UTC overnight, which is
+# where the equity watchdog is blind by construction.
+#
+# GitHub's scheduler drifts badly in this repository — 41, 80, 112 and 123
+# minutes measured — so these are deliberately spread rather than aimed. A
+# recorder is the one job where drift costs almost nothing: a sample taken
+# forty minutes late is still a sample, and the session tag is computed from
+# the wall clock at capture rather than from the slot that started the run.
+name: record-crypto-spreads
+
+on:
+  schedule:
+    - cron: "7 1 * * *"
+    - cron: "7 4 * * *"
+    - cron: "7 8 * * *"
+    - cron: "7 12 * * *"
+    - cron: "7 16 * * *"
+    - cron: "7 19 * * *"
+    - cron: "7 22 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  # Two runs appending to the same store would race the commit. Queue instead
+  # of cancelling: a dropped run is a lost sample, and samples are the product.
+  group: record-crypto-spreads
+  cancel-in-progress: false
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      - name: Sample the book
+        # Four captures, five minutes apart: enough spacing that consecutive
+        # rows are not the same book twice, short enough to finish well
+        # inside the timeout.
+        run: npx tsx scripts/ingest/recordCryptoSpreads.ts --samples 4 --spacing-sec 300
+
+      - name: Commit the samples
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # ONLY the store. A blanket stage here would sweep up whatever else
+          # happened to be in the tree under a message describing samples.
+          git add src/data/cryptoSpreadHistory.json
+
+          if git diff --cached --quiet; then
+            echo "::warning::No new samples to commit — every capture failed or the venue returned no book."
+            exit 0
+          fi
+
+          rows=$(node -e 'const d=require("./src/data/cryptoSpreadHistory.json");console.log(d.observations.length)')
+          git commit -m "data: crypto book samples — ${rows} rows"
+
+          # The store is append-only and several starts can overlap after
+          # drift, so rebase onto whatever landed first rather than failing.
+          for attempt in 1 2 3; do
+            git pull --rebase --autostash origin main && break
+            echo "rebase attempt ${attempt} failed, retrying"
+            sleep 5
+          done
+          git push origin HEAD:main

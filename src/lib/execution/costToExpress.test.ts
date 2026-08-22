@@ -19,6 +19,7 @@ const spot: CandidateInput = {
   label: "STX/USD spot",
   venue: "kraken",
   quote: { bid: 0.2212, ask: 0.2214 },
+  distribution: null,
 };
 
 describe("compareCostToExpress — one axis across instruments", () => {
@@ -93,7 +94,7 @@ describe("compareCostToExpress — one axis across instruments", () => {
   });
 
   it("refuses a one-sided book instead of halving a missing side", () => {
-    const c = compareCostToExpress([{ kind: "spot", label: "X", venue: "kraken", quote: null }]);
+    const c = compareCostToExpress([{ kind: "spot", label: "X", venue: "kraken", quote: null, distribution: null }]);
     expect(c.candidates[0].refused).toContain("not a spread");
   });
 

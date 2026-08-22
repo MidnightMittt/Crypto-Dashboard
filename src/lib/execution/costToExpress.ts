@@ -71,6 +71,13 @@ export type CandidateInput =
       label: string;
       quote: Quote | null;
       venue: string;
+      /**
+       * The RECORDED shape of this book, preferred over `quote` whenever it
+       * exists. A single snapshot is one draw: STX/USD printed 9.1bp and
+       * 22.7bp twenty seconds apart, which moved this endpoint's headline
+       * ratio from 54x to 18x on nothing but timing.
+       */
+      distribution: { medianBp: number; p90Bp: number; n: number; medianEffectiveBp: number | null } | null;
     }
   | {
       kind: "option";
@@ -95,6 +102,14 @@ export interface PricedCandidate {
   downside_capped: boolean;
   /** Where the cost figure came from — measured history, a live book, or a caller quote. */
   source: string;
+  /**
+   * The same axis at the DISTRIBUTION'S TAIL (p90), when one was recorded.
+   * The median is what a typical fill costs; this is what a bad one does,
+   * and an edge that does not clear it does not clear.
+   */
+  tail_breakeven_underlying_move_pct: number | null;
+  /** Samples behind the figures, when they come from a recorded distribution. */
+  samples: number | null;
   /** Present instead of numbers when the candidate cannot be priced. */
   refused: string | null;
 }
@@ -128,6 +143,8 @@ function priceOne(c: CandidateInput): PricedCandidate {
         breakeven_underlying_move_pct: r(c.measuredRoundTripBp / 100, 4),
         exposure_per_dollar: 1,
         downside_capped: false,
+        tail_breakeven_underlying_move_pct: null,
+        samples: null,
         source: "measured spread history, entry and exit windows",
         refused: null,
       };
@@ -141,6 +158,8 @@ function priceOne(c: CandidateInput): PricedCandidate {
         breakeven_underlying_move_pct: r(movePct, 4),
         exposure_per_dollar: 1,
         downside_capped: false,
+        tail_breakeven_underlying_move_pct: null,
+        samples: null,
         source: "caller-supplied quote — one snapshot, not a measured distribution",
         refused: null,
       };
@@ -151,6 +170,8 @@ function priceOne(c: CandidateInput): PricedCandidate {
       breakeven_underlying_move_pct: null,
       exposure_per_dollar: null,
       downside_capped: false,
+      tail_breakeven_underlying_move_pct: null,
+      samples: null,
       source: "none",
       refused:
         "No measured spread history for this symbol and no usable quote supplied. A modelled cost is not a substitute — Corwin-Schultz returned 114-177bp on these names where the observed book was one tick.",
@@ -158,6 +179,25 @@ function priceOne(c: CandidateInput): PricedCandidate {
   }
 
   if (c.kind === "spot") {
+    /*
+     * A recorded distribution beats a live book for the same reason
+     * measured equity history beats a snapshot: one draw is not a
+     * distribution, and here the draws differ by 2.5x within a minute.
+     */
+    if (c.distribution && c.distribution.n > 0) {
+      const d = c.distribution;
+      return {
+        ...base,
+        spread_bp_of_own_price: r(d.medianBp, 2),
+        breakeven_underlying_move_pct: r(d.medianBp / 100, 4),
+        tail_breakeven_underlying_move_pct: r(d.p90Bp / 100, 4),
+        samples: d.n,
+        exposure_per_dollar: 1,
+        downside_capped: false,
+        source: `${c.venue} recorded book, ${d.n} samples — median with p90 tail, never a mean`,
+        refused: null,
+      };
+    }
     if (!c.quote || !(c.quote.ask > c.quote.bid) || !(c.quote.bid > 0)) {
       return {
         ...base,
@@ -165,6 +205,8 @@ function priceOne(c: CandidateInput): PricedCandidate {
         breakeven_underlying_move_pct: null,
         exposure_per_dollar: null,
         downside_capped: false,
+        tail_breakeven_underlying_move_pct: null,
+        samples: null,
         source: c.venue,
         refused: `No two-sided book returned from ${c.venue}. A one-sided quote is not a spread.`,
       };
@@ -177,7 +219,9 @@ function priceOne(c: CandidateInput): PricedCandidate {
       breakeven_underlying_move_pct: r(movePct, 4),
       exposure_per_dollar: 1,
       downside_capped: false,
-      source: `${c.venue} order book, live`,
+      tail_breakeven_underlying_move_pct: null,
+    samples: null,
+    source: `${c.venue} order book, live`,
       refused: null,
     };
   }
@@ -190,7 +234,9 @@ function priceOne(c: CandidateInput): PricedCandidate {
       breakeven_underlying_move_pct: null,
       exposure_per_dollar: null,
       downside_capped: true,
-      source: "none",
+      tail_breakeven_underlying_move_pct: null,
+    samples: null,
+    source: "none",
       refused: "No two-sided option quote supplied; a mid without a spread cannot price execution.",
     };
   }
@@ -201,7 +247,9 @@ function priceOne(c: CandidateInput): PricedCandidate {
       breakeven_underlying_move_pct: null,
       exposure_per_dollar: null,
       downside_capped: true,
-      source: "none",
+      tail_breakeven_underlying_move_pct: null,
+    samples: null,
+    source: "none",
       refused:
         "An option needs delta, multiplier and an underlying price to convert its premium spread into an underlying move. Without them the cost is not comparable to anything.",
     };
@@ -222,6 +270,8 @@ function priceOne(c: CandidateInput): PricedCandidate {
     breakeven_underlying_move_pct: r(movePct, 4),
     exposure_per_dollar: r(exposure / (mid * c.multiplier), 3),
     downside_capped: true,
+    tail_breakeven_underlying_move_pct: null,
+    samples: null,
     source: "caller-supplied chain quote; delta is the caller's claim and is not verifiable here",
     refused: null,
   };
@@ -249,8 +299,17 @@ export function compareCostToExpress(candidates: readonly CandidateInput[]): Cos
   );
   const lo = sorted[0];
   const hi = sorted[sorted.length - 1];
+  /*
+   * A ratio against a near-free book is arithmetically true and unreadable:
+   * XBT/USD's median spread is under a basis point, which turns a genuine
+   * comparison into "48,592x". Below the floor the ratio is refused and the
+   * interpretation says the cheapest leg is effectively costless instead —
+   * the fact a reader actually needs, without a number they cannot trust.
+   */
+  const RATIO_FLOOR_PCT = 0.01;
+  const cheapestIsFree = lo.breakeven_underlying_move_pct < RATIO_FLOOR_PCT;
   const ratio =
-    sorted.length > 1 && lo.breakeven_underlying_move_pct > 0
+    sorted.length > 1 && !cheapestIsFree && lo.breakeven_underlying_move_pct > 0
       ? r(hi.breakeven_underlying_move_pct / lo.breakeven_underlying_move_pct, 1)
       : null;
 
@@ -271,7 +330,11 @@ export function compareCostToExpress(candidates: readonly CandidateInput[]): Cos
     interpretation:
       `Priced on one axis — the move the UNDERLYING must make to cover a round trip — ` +
       `${lo.label} is cheapest at ${lo.breakeven_underlying_move_pct}%` +
-      (ratio !== null ? `, and ${hi.label} is ${ratio}x dearer at ${hi.breakeven_underlying_move_pct}%` : "") +
+      (ratio !== null
+        ? `, and ${hi.label} is ${ratio}x dearer at ${hi.breakeven_underlying_move_pct}%`
+        : cheapestIsFree && sorted.length > 1
+          ? ` — under a basis point, effectively costless, so no ratio against it would be readable; ${hi.label} is the dearest at ${hi.breakeven_underlying_move_pct}%`
+          : "") +
       `. CHEAPEST IS NOT BEST: this ranks cost alone, and cost is only half the trade.${leverNote} ` +
       `Rule 63 applies per candidate: an edge smaller than the figure beside it is not an edge in that instrument.`,
   };
