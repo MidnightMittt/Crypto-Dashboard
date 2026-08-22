@@ -10,6 +10,7 @@ import { Bar } from "@/lib/research/types";
 import { survivalAt } from "@/lib/research/stopViability";
 import { latestCompletedSession, sessionsBetween } from "@/lib/asset/priceStaleness";
 import { HeldPosition, LivePrice, PretradeInputs, runPretradeChecks } from "@/lib/pretrade/check";
+import { parseHeldPositions } from "@/lib/pretrade/parseHeldPositions";
 
 /**
  * POST /api/pretrade/check — every reason not to place this trade, at once.
@@ -160,19 +161,25 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const existingPositions: HeldPosition[] = Array.isArray(body.existing_positions)
-    ? (body.existing_positions as Record<string, unknown>[]).map((p) => {
-        const sym = String(p.symbol ?? "").toUpperCase();
-        return {
-          symbol: sym,
-          shares: Number(p.shares) || 0,
-          price: Number(p.price) || 0,
-          // Beta is MEASURED here rather than trusted from the caller, so the
-          // book's exposure is computed the same way for every position.
-          beta: betaOf(sym),
-        };
-      })
-    : [];
+  /*
+   * Parsed all-or-nothing. This used to read `Number(p.shares) || 0`, and
+   * /api/portfolio's convention for the same concept is `quantity` — so a
+   * caller reusing that key had every held position silently zeroed, and
+   * the concurrent-exposure check compared the trade against an empty book
+   * while appearing to have been given one. Two independent audit reports
+   * called the check "missing" before the coercion was found. A book this
+   * route cannot fully parse is now a 400 naming the row, never a shrink.
+   */
+  const parsedHeld = parseHeldPositions(body.existing_positions);
+  if (!parsedHeld.ok) {
+    return NextResponse.json({ error: parsedHeld.error }, { status: 400 });
+  }
+  const existingPositions: HeldPosition[] = parsedHeld.positions.map((p) => ({
+    ...p,
+    // Beta is MEASURED here rather than trusted from the caller, so the
+    // book's exposure is computed the same way for every position.
+    beta: betaOf(p.symbol),
+  }));
 
   // Stop survival at exactly this width and horizon, not a nearby grid cell.
   const widthPct = entry > 0 ? ((entry - stop) / entry) * 100 : 0;
@@ -225,6 +232,17 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       live_price: livePrice
         ? { value: livePrice.value, as_of: new Date(livePrice.asOfMs).toISOString(), source: livePrice.source }
         : null,
+      /*
+       * The book AS PARSED, one row per held position, beta included. The
+       * caller can diff this against what it sent; a position it holds
+       * that does not appear here is a bug report, not a shrug.
+       */
+      existing_positions_used: existingPositions.map((p) => ({
+        symbol: p.symbol,
+        shares: p.shares,
+        price: p.price,
+        beta: p.beta,
+      })),
     },
   });
 }
