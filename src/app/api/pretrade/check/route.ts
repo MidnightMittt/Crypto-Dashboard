@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import barsPanelJson from "@/data/barsPanel.json";
 import earningsJson from "@/data/earningsCalendar.json";
-import spreadHistoryJson from "@/data/spreadHistory.json";
 import { EarningsCalendar } from "@/lib/markets/earningsVeto";
 import { BarsPanel, SymbolPanel } from "@/lib/research/barsPanel";
 import { BENCHMARK_SYMBOL } from "@/lib/research/benchmark";
@@ -11,6 +10,8 @@ import { survivalAt } from "@/lib/research/stopViability";
 import { latestCompletedSession, sessionsBetween } from "@/lib/asset/priceStaleness";
 import { HeldPosition, LivePrice, PretradeInputs, runPretradeChecks } from "@/lib/pretrade/check";
 import { parseHeldPositions } from "@/lib/pretrade/parseHeldPositions";
+// One implementation of "what does this cost to trade" — see measuredSpread.ts.
+import { measuredRoundTripBp } from "@/lib/execution/measuredSpread";
 import { BreakevenReach, runOptionOrderChecks } from "@/lib/pretrade/optionOrder";
 import { parseOptionLeg } from "@/lib/portfolio/buildPortfolio";
 import { reachAt } from "@/lib/research/exitDesign";
@@ -33,14 +34,6 @@ export const dynamic = "force-dynamic";
 
 const panel = barsPanelJson as unknown as BarsPanel;
 const calendar = earningsJson as EarningsCalendar;
-const spreads = (spreadHistoryJson as { observations: SpreadObservation[] }).observations;
-
-interface SpreadObservation {
-  session: string;
-  symbol: string;
-  window: string;
-  spreadBp: number;
-}
 
 /** Panel rows to Bars, fills excluded — the same rule the asset facts use. */
 function realBars(sessions: readonly string[], sp: SymbolPanel): Bar[] {
@@ -83,24 +76,6 @@ function betaOf(symbol: string): number | null {
   return r && Number.isFinite(r.beta) ? Number(r.beta.toFixed(3)) : null;
 }
 
-/**
- * Measured round-trip cost: the entry window's spread plus the exit window's.
- *
- * Both legs, because cost lives at the EXIT as much as the entry and a
- * one-sided figure understates it by roughly half. Null unless BOTH windows
- * have observations for this symbol — a round trip priced from one leg is a
- * modelled number wearing a measured one's clothes.
- */
-function measuredRoundTripBp(symbol: string): number | null {
-  const forWindow = (w: string) => {
-    const xs = spreads.filter((o) => o.symbol === symbol && o.window === w).map((o) => o.spreadBp);
-    return xs.length > 0 ? xs.reduce((s, v) => s + v, 0) / xs.length : null;
-  };
-  const entry = forWindow("entry");
-  const exit = forWindow("exit");
-  if (entry === null || exit === null) return null;
-  return Number((entry + exit).toFixed(2));
-}
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   let body: Record<string, unknown>;
