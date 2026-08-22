@@ -243,10 +243,18 @@ export interface TldrSection {
   /** What argues against it, and what that implies for entry. Null when nothing does. */
   tension: string | null;
   /**
-   * What the options market is positioned for. Null when there is no chain,
-   * no lean, or no directional call to compare it against.
+   * What the options market is PRICING, in its own numbers — the move it
+   * expects, whether that is dear or cheap against realised, and notable
+   * skew — plus whether its positioning agrees. Null when there is no chain
+   * and no lean to report.
    */
   options: string | null;
+  /**
+   * That coverage has CLUSTERED, when it measurably has. Null on ordinary
+   * news flow, which is true of every listed company every day and is not
+   * information.
+   */
+  attention: string | null;
   /** The level that ends the idea. Null when there is no plan to invalidate. */
   invalidation: string | null;
   /** All present clauses joined — the ten-second read. */

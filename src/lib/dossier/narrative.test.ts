@@ -151,7 +151,7 @@ describe("composeTldr", () => {
       plan,
       symbol: "AAPL",
       name: "AAPL",
-      optionsLean: "bearish",
+      options: { lean: "bearish", expectedMovePct: null, daysToHorizon: null, ivMinusRvPct: null, skewPct: null, putCallOiRatio: null },
     });
     expect(t.options).toContain("OTHER way");
     expect(t.options).toContain("size smaller");
@@ -164,7 +164,7 @@ describe("composeTldr", () => {
       plan,
       symbol: "AAPL",
       name: "AAPL",
-      optionsLean: "bullish",
+      options: { lean: "bullish", expectedMovePct: null, daysToHorizon: null, ivMinusRvPct: null, skewPct: null, putCallOiRatio: null },
     });
     expect(t.options).toContain("independently sourced");
   });
@@ -175,8 +175,117 @@ describe("composeTldr", () => {
     expect(composeTldr({ ...base, bias: bias({ metrics: [metric("marketStructure", "bullish")] }) }).options).toBeNull();
     // A lean, but the engine has no direction to compare it against.
     expect(
-      composeTldr({ ...base, bias: bias({ verdict: "neutral" }), optionsLean: "bullish" }).options
+      composeTldr({ ...base, bias: bias({ verdict: "neutral" }), options: { lean: "bullish", expectedMovePct: null, daysToHorizon: null, ivMinusRvPct: null, skewPct: null, putCallOiRatio: null } }).options
     ).toBeNull();
+  });
+
+  /*
+   * MEASURED ON THE PANEL: the options clause had exactly ONE skeleton
+   * across 131 tickers — two fixed sentences chosen by a three-value enum,
+   * with every number the chain provided discarded. It was the least
+   * individual sentence the composer could emit.
+   */
+  it("says what the options market is PRICING, in its own numbers", () => {
+    const t = composeTldr({
+      bias: bias({ verdict: "bullish", metrics: [metric("marketStructure", "bullish")] }),
+      plan,
+      symbol: "AAPL",
+      name: "AAPL",
+      options: {
+        lean: "bullish",
+        expectedMovePct: 8.4,
+        daysToHorizon: 27,
+        ivMinusRvPct: 12,
+        skewPct: 9,
+        putCallOiRatio: 1.2,
+      },
+    });
+    expect(t.options).toContain("±8.4%");
+    expect(t.options).toContain("27 days");
+    expect(t.options).toContain("expensive to buy");
+    expect(t.options).toContain("downside protection costs");
+    // The agreement read still rides along rather than being the whole content.
+    expect(t.options).toContain("independently sourced");
+  });
+
+  it("calls implied vol CHEAP when it sits below realised", () => {
+    const t = composeTldr({
+      bias: bias({ verdict: "bullish", metrics: [metric("marketStructure", "bullish")] }),
+      plan,
+      symbol: "AAPL",
+      name: "AAPL",
+      options: { lean: null, expectedMovePct: 6, daysToHorizon: 21, ivMinusRvPct: -14, skewPct: null, putCallOiRatio: null },
+    });
+    expect(t.options).toContain("cheap to buy");
+  });
+
+  it("omits notable-only facts when they are inside the noise band", () => {
+    const t = composeTldr({
+      bias: bias({ verdict: "bullish", metrics: [metric("marketStructure", "bullish")] }),
+      plan,
+      symbol: "AAPL",
+      name: "AAPL",
+      // Both inside their thresholds: a quiet chain gets a short sentence.
+      options: { lean: null, expectedMovePct: 5, daysToHorizon: 21, ivMinusRvPct: 1, skewPct: 2, putCallOiRatio: null },
+    });
+    expect(t.options).not.toContain("expensive");
+    expect(t.options).not.toContain("skew");
+    expect(t.options).toContain("±5.0%");
+  });
+
+  /*
+   * The ten-second read had NO news input at all, so two tickers with
+   * identical charts read identically even when one was the subject of nine
+   * headlines in two days.
+   */
+  it("reports clustered coverage, quoting the lead item as attribution", () => {
+    const t = composeTldr({
+      bias: bias({ metrics: [metric("marketStructure", "bullish")] }),
+      plan,
+      symbol: "AAPL",
+      name: "AAPL",
+      // 6 items in 48h against 10 items over 20 days = 3.0x the baseline rate.
+      news: { recentCount: 6, totalCount: 10, spanDays: 20, newestAgeHours: 3, leadPublisher: "Reuters", leadHeadline: "Apple unveils new silicon" },
+      });
+    expect(t.attention).toContain("6 stories in the last 48 hours");
+    expect(t.attention).toContain("6.0x");
+    expect(t.attention).toContain("Apple unveils new silicon");
+    expect(t.full).toContain("Coverage has accelerated");
+  });
+
+  /*
+   * THE TEST THAT CAUGHT MY OWN TEMPLATE. The first version reported recent
+   * items as a share of the feed and printed "10 of the last 10 (100%)" on
+   * six of eight tickers sampled — the denominator is an artefact of a feed
+   * that returns ten items and cannot reach further back. A feed that
+   * cannot see last month may not testify that this month is unusual.
+   */
+  it("claims NO acceleration when every item is recent — that is a short feed, not a cluster", () => {
+    const t = composeTldr({
+      bias: bias({ metrics: [metric("marketStructure", "bullish")] }),
+      plan,
+      symbol: "AAPL",
+      name: "AAPL",
+      news: { recentCount: 10, totalCount: 10, spanDays: 1.8, newestAgeHours: 3, leadPublisher: "Reuters", leadHeadline: "A headline" },
+    });
+    // No baseline exists, so no cluster is claimed — but the fresh headline
+    // is still attributable, which is the honest floor.
+    expect(t.attention).not.toContain("accelerated");
+    expect(t.attention).toContain("Most recent coverage");
+    expect(t.attention).toContain("not read as a signal");
+  });
+
+  it("stays silent on ordinary flow with nothing fresh — 'there is some news' is not information", () => {
+    const t = composeTldr({
+      bias: bias({ metrics: [metric("marketStructure", "bullish")] }),
+      plan,
+      symbol: "AAPL",
+      name: "AAPL",
+      // Ordinary cadence AND the newest item is two days old.
+      news: { recentCount: 1, totalCount: 10, spanDays: 20, newestAgeHours: 48, leadPublisher: "Reuters", leadHeadline: "A headline" },
+    });
+    expect(t.attention).toBeNull();
+    expect(t.full).not.toContain("Coverage has accelerated");
   });
 
   it("ties the counter-evidence to the entry, which is what makes it a decision", () => {

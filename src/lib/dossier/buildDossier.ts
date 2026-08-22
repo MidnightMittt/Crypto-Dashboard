@@ -244,6 +244,15 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
     );
 
   /*
+   * Hoisted for the same reason as the street section: the ten-second read
+   * now reports coverage clustering, and it must read the SAME section the
+   * news panel renders. Two computations of "how much has been written"
+   * could disagree on one page.
+   */
+  const newsSection =
+    inputs.newsSection ?? unavailable("no-provider", "The news feed was not queried for this asset.");
+
+  /*
    * The options read, when one exists. Taken from the section the caller
    * already built rather than re-derived, so the checklist and the options
    * panel can never disagree about what the chain said.
@@ -329,8 +338,52 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
       plan,
       symbol: analysis.symbol,
       name: analysis.name,
-      // "neutral" is not a lean, so it is passed through as no opinion.
-      optionsLean: intel && intel.optionsLean !== "neutral" ? intel.optionsLean : null,
+      /*
+       * The whole measured chain, not just its three-value lean. The lean
+       * alone produced one of two fixed sentences on every ticker that had
+       * a chain at all, discarding the move being priced, how that compares
+       * to realised, and the skew — every number that makes one name's
+       * options read different from another's.
+       */
+      options: intel
+        ? {
+            // "neutral" is not a lean, so it is passed through as no opinion.
+            lean: intel.optionsLean !== "neutral" ? intel.optionsLean : null,
+            expectedMovePct: intel.expectedMovePct,
+            daysToHorizon: intel.daysToHorizon,
+            ivMinusRvPct: intel.ivMinusRvPct,
+            skewPct: intel.skewPct,
+            putCallOiRatio: intel.putCallOiRatio,
+          }
+        : null,
+      /*
+       * Coverage clustering. Read from the section the page already renders
+       * so the summary and the news panel cannot disagree about how much
+       * has been written.
+       */
+      news:
+        newsSection.status === "available"
+          ? {
+              recentCount: newsSection.data.recentCount,
+              totalCount: newsSection.data.items.length,
+              /*
+               * The window the feed ACTUALLY covers, so the clause can ask
+               * whether coverage accelerated rather than reporting a share
+               * of a denominator the provider chose.
+               */
+              spanDays: (() => {
+                const ts = newsSection.data.items.map((i) => i.publishedAt).filter((t) => t > 0);
+                if (ts.length < 2) return 0;
+                return (Math.max(...ts) - Math.min(...ts)) / 86_400_000;
+              })(),
+              leadHeadline: newsSection.data.items[0]?.title ?? null,
+              newestAgeHours: (() => {
+                const ts = newsSection.data.items.map((i) => i.publishedAt).filter((t) => t > 0);
+                return ts.length > 0 ? (Date.now() - Math.max(...ts)) / 3_600_000 : null;
+              })(),
+              leadPublisher: newsSection.data.items[0]?.publisher ?? null,
+            }
+          : null,
     }),
 
     plan: {
@@ -569,9 +622,7 @@ export function buildDossier(inputs: DossierInputs): TickerDossier {
       ),
     liveness: buildLiveness(),
 
-    news:
-      inputs.newsSection ??
-      unavailable("no-provider", "The news feed was not queried for this asset."),
+    news: newsSection,
     socialSentiment:
       inputs.social ??
       unavailable(

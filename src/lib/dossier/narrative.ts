@@ -151,13 +151,15 @@ export function composeTldr(inputs: {
   symbol: string;
   name: string;
   /**
-   * Which way the options market is positioned, when it is leaning at all.
-   * Null covers both "no chain" and "no lean" — neither of which is an
-   * opinion, and neither may be printed as one.
+   * What the options market is pricing, in its own measured numbers. Null
+   * covers "no chain"; individual fields are null where the chain could not
+   * support them, and each is printed only when notable.
    */
-  optionsLean?: "bullish" | "bearish" | null;
+  options?: OptionsFacts | null;
+  /** Coverage clustering, for the attention clause. Null when not queried. */
+  news?: NewsFacts | null;
 }): TldrSection {
-  const { bias, plan, symbol, name, optionsLean = null } = inputs;
+  const { bias, plan, symbol, name, options: optionsFacts = null, news = null } = inputs;
   const display = name && name !== symbol ? name : symbol;
 
   const { text: state, conflicts } = stateClause(bias, display);
@@ -168,11 +170,20 @@ export function composeTldr(inputs: {
    * clause has already carried it, so this one is dropped.
    */
   const tension = conflicts ? null : tensionClause(bias, plan);
-  const options = optionsClause(bias, optionsLean);
+  const options = optionsClause(bias, optionsFacts);
+  const attention = newsClause(news);
   const invalidation = invalidationClause(plan, bias.verdict);
 
-  const full = [state, support, tension, options, invalidation].filter(Boolean).join(" ");
-  return { state, support, tension, options, invalidation, full };
+  /*
+   * Attention sits before the levels because it explains WHY the chart is
+   * doing what the first clause described, and after the options read
+   * because that is the one independently sourced view here. Every clause
+   * is still conditional on its own evidence, so a quiet name emits fewer
+   * sentences rather than padded ones — which is the honest way for two
+   * tickers to end up reading differently.
+   */
+  const full = [state, support, tension, options, attention, invalidation].filter(Boolean).join(" ");
+  return { state, support, tension, options, attention, invalidation, full };
 }
 
 /**
@@ -190,11 +201,175 @@ export function composeTldr(inputs: {
  * case there is no comparison to report, and manufacturing one would be the
  * kind of reassuring filler the composer exists to prevent.
  */
-function optionsClause(bias: MarketBias, lean: "bullish" | "bearish" | null): string | null {
-  if (lean === null || bias.verdict === "neutral") return null;
-  return lean === bias.verdict
-    ? "The options market is positioned the same way, which is a second and independently sourced read agreeing with this one."
-    : `The options market is positioned the OTHER way — ${lean} against this ${bias.verdict} read. Independent sources disagreeing is a reason to size smaller, not a reason to pick the one you prefer.`;
+export interface OptionsFacts {
+  lean: "bullish" | "bearish" | null;
+  /** One-sigma move the chain prices over its horizon, percent. */
+  expectedMovePct: number | null;
+  daysToHorizon: number | null;
+  /** Implied minus realised, against whichever realised figure is honest. */
+  ivMinusRvPct: number | null;
+  /** Put IV minus call IV at comparable distance OTM. */
+  skewPct: number | null;
+  putCallOiRatio: number | null;
+}
+
+/** Skew beyond this many points is worth a reader's attention; inside it is noise. */
+const NOTABLE_SKEW_PCT = 5;
+/** Implied-minus-realised beyond this is a statement about price, not rounding. */
+const NOTABLE_IV_RV_PCT = 5;
+
+function optionsClause(bias: MarketBias, o: OptionsFacts | null): string | null {
+  if (!o) return null;
+
+  /*
+   * This clause used to be two fixed sentences chosen by a three-value
+   * enum: every agreeing ticker on the platform got the same words, and
+   * every measured number the chain provided — the move it prices, how
+   * that compares to realised, the skew, the put/call balance — was
+   * discarded before it reached the reader. Measured across the panel, it
+   * was the least individual sentence the composer could emit.
+   *
+   * Now it says WHAT the options market is pricing, in its own numbers,
+   * and the agreement framing rides along rather than being the whole
+   * content. Each fact is emitted only when it is notable, so a quiet
+   * chain produces a short sentence instead of a padded one.
+   */
+  const facts: string[] = [];
+
+  if (o.expectedMovePct !== null && o.expectedMovePct > 0) {
+    const horizon =
+      o.daysToHorizon !== null && o.daysToHorizon > 0 ? ` over the next ${o.daysToHorizon} days` : "";
+    facts.push(`prices a move of about ±${o.expectedMovePct.toFixed(1)}%${horizon}`);
+  }
+
+  if (o.ivMinusRvPct !== null && Math.abs(o.ivMinusRvPct) >= NOTABLE_IV_RV_PCT) {
+    facts.push(
+      o.ivMinusRvPct > 0
+        ? `implied volatility sits ${o.ivMinusRvPct.toFixed(0)} points ABOVE what this name has actually been doing, so that move is expensive to buy`
+        : `implied volatility sits ${Math.abs(o.ivMinusRvPct).toFixed(0)} points BELOW recent realised, so that move is cheap to buy relative to how it has moved`
+    );
+  }
+
+  if (o.skewPct !== null && Math.abs(o.skewPct) >= NOTABLE_SKEW_PCT) {
+    facts.push(
+      o.skewPct > 0
+        ? `downside protection costs ${o.skewPct.toFixed(0)} points more than equivalent upside`
+        : `upside costs ${Math.abs(o.skewPct).toFixed(0)} points more than equivalent downside, which is unusual`
+    );
+  }
+
+  if (facts.length === 0 && o.lean === null) return null;
+
+  const priced = facts.length > 0 ? `The options market ${joinList(facts)}.` : null;
+
+  // The agreement read still matters, and still only when both sides have a view.
+  const agreement =
+    o.lean === null || bias.verdict === "neutral"
+      ? null
+      : o.lean === bias.verdict
+        ? `Its positioning leans the same way as this read — a second and independently sourced view agreeing.`
+        : `Its positioning leans the OTHER way — ${o.lean} against this ${bias.verdict} read. Independent sources disagreeing is a reason to size smaller, not a reason to pick the one you prefer.`;
+
+  return [priced, agreement].filter(Boolean).join(" ") || null;
+}
+
+/** "a, b and c" — Oxford-free, matching the rest of the composer's voice. */
+function joinList(xs: string[]): string {
+  if (xs.length === 1) return xs[0];
+  return `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`;
+}
+
+/**
+ * Clause — WHAT THE TAPE IS BEING TOLD, when coverage has actually clustered.
+ *
+ * The ten-second read had no news input at all, so two tickers with
+ * identical charts read identically even when one of them was the subject
+ * of nine headlines in two days. What is MEASURED here is the clustering —
+ * how much of the window's coverage landed in the last 48 hours — and that
+ * is what the clause reports. The leading headline is quoted as
+ * ATTRIBUTION, never interpreted: this composer does not get to decide what
+ * a story means, only to say that attention arrived and point at it.
+ *
+ * Null unless coverage is genuinely clustered, because "there is some news"
+ * is true of every listed company every day and is not information.
+ */
+export interface NewsFacts {
+  recentCount: number;
+  totalCount: number;
+  /** Days between the oldest and newest item — the window the feed actually covers. */
+  spanDays: number;
+  leadHeadline: string | null;
+  /** Hours since the newest item. Null when nothing is dated. */
+  newestAgeHours: number | null;
+  leadPublisher: string | null;
+}
+
+/** Newer than this, the top headline is what the tape is currently reacting to. */
+const FRESH_HEADLINE_HOURS = 24;
+
+/** Below this many items inside 48h there is no cluster to describe. */
+const NOTABLE_RECENT_ITEMS = 3;
+/** Recent coverage must run at least this multiple of the name's own baseline rate. */
+const NOTABLE_CLUSTER_RATIO = 2;
+const RECENT_WINDOW_DAYS = 2;
+
+/**
+ * What the tape is currently reacting to, ATTRIBUTED rather than
+ * interpreted. Measured across the panel, the acceleration test above
+ * correctly fires on almost nothing — most feeds cannot see far enough back
+ * to establish a baseline — which left the ten-second read with no news
+ * content at all on the ordinary day. This is the honest floor: a dated
+ * headline from a named publisher, quoted, with no claim about what it
+ * means for price. The composer does not get to decide that; it only gets
+ * to say attention arrived and point at the source.
+ */
+function freshHeadlineClause(n: NewsFacts): string | null {
+  if (
+    n.leadHeadline === null ||
+    n.newestAgeHours === null ||
+    n.newestAgeHours > FRESH_HEADLINE_HOURS
+  ) {
+    return null;
+  }
+  const when =
+    n.newestAgeHours < 1
+      ? "in the last hour"
+      : `${Math.round(n.newestAgeHours)} hour${Math.round(n.newestAgeHours) === 1 ? "" : "s"} ago`;
+  const who = n.leadPublisher ? ` (${n.leadPublisher})` : "";
+  return `Most recent coverage${who}, ${when}: “${n.leadHeadline}” — quoted as the source, not read as a signal.`;
+}
+
+function newsClause(n: NewsFacts | null): string | null {
+  if (!n) return null;
+  if (n.recentCount < NOTABLE_RECENT_ITEMS || n.totalCount === 0) return freshHeadlineClause(n);
+
+  /*
+   * MEASURED AGAINST THE NAME'S OWN BASELINE, because the obvious version
+   * did not discriminate. Reporting "recent items as a share of the feed"
+   * printed "10 of the last 10 (100%)" on six of eight tickers sampled —
+   * the denominator is an artefact of a feed that returns ten items and
+   * does not reach further back, not a fact about coverage. A clause that
+   * fires everywhere is the template this whole exercise is removing.
+   *
+   * The honest question is whether coverage ACCELERATED: the rate inside
+   * the last 48 hours against the rate across the window the items
+   * actually span. When every item is recent the span collapses, the two
+   * rates converge, and this correctly says nothing — a feed that cannot
+   * see last month cannot testify that this month is unusual.
+   */
+  if (!(n.spanDays > RECENT_WINDOW_DAYS)) return freshHeadlineClause(n);
+  const baselinePerDay = n.totalCount / n.spanDays;
+  const recentPerDay = n.recentCount / RECENT_WINDOW_DAYS;
+  if (!(baselinePerDay > 0)) return freshHeadlineClause(n);
+  const ratio = recentPerDay / baselinePerDay;
+  if (ratio < NOTABLE_CLUSTER_RATIO) return freshHeadlineClause(n);
+
+  const lead = n.leadHeadline ? ` Leading item: “${n.leadHeadline}”.` : "";
+  return (
+    `Coverage has accelerated — ${n.recentCount} stories in the last 48 hours, about ` +
+    `${ratio.toFixed(1)}x this name's own rate over the prior ${Math.round(n.spanDays)} days, ` +
+    `so price here is reacting to something specific rather than drifting.${lead}`
+  );
 }
 
 /**
