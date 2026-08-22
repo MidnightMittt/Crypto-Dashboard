@@ -4,6 +4,7 @@ import { BarsPanel, SymbolPanel } from "@/lib/research/barsPanel";
 import { Bar } from "@/lib/research/types";
 import { survivalAt } from "@/lib/research/stopViability";
 import { excursionStats, reachAt } from "@/lib/research/exitDesign";
+import { conversionReport } from "@/lib/research/touchCalibration";
 
 /**
  * GET /api/screen/reach — the universe ranked by how far each name actually
@@ -112,12 +113,54 @@ export function GET(req: NextRequest) {
     move_pct: movePct,
     bars_session: panel.sessions[panel.sessions.length - 1] ?? null,
     sort: "by the larger of up_reach and down_touch — a movement ranking, not a recommendation",
+
+    /*
+     * THE BRIDGE TO AN OPTION PRICE, AND ITS MEASURED BIAS.
+     *
+     * Comparing these rates to an option's implied move needs a conversion
+     * (implied vol is a terminal distance; this is a path-touch
+     * probability). That conversion was measured over 32 years on a 4x4
+     * (horizon, barrier) grid — see touchCalibration.ts — so a caller can
+     * tell a real mispricing from an artefact of the bridge, and can see
+     * how large the DRIFT term is at this cell before ranking anything by
+     * an undecomposed difference.
+     */
+    gbm_conversion: conversionReport(horizon, movePct),
+
+    /*
+     * C2: the correct reach-vs-implied join is PER CONTRACT — a real
+     * premium, one name, no cross-symbol drift term — and it is already
+     * deployed. Named here because the screen is where a caller decides
+     * which name to price, and the two were not connected.
+     */
+    per_contract_audit: {
+      endpoint: "POST /api/pretrade/check",
+      why:
+        "A cross-sectional 'measured minus implied' ranking is 86% drift by variance — it ranks " +
+        "which name trended hardest, not which option is mispriced. Auditing one contract against " +
+        "its own premium has no cross-symbol drift term and returns a verdict with named checks.",
+      example: {
+        symbol: "{one of rows[].symbol}",
+        account_value: 437.04,
+        buying_power: 137.14,
+        hard_floor_usd: 100,
+        concurrent_positions: 4,
+        option_order: {
+          right: "call",
+          strike: "{strike}",
+          expiry: "{YYYY-MM-DD}",
+          premium: "{PER-CONTRACT, e.g. 0.86 not 86}",
+          delta: "{from the chain}",
+        },
+      },
+    },
     notes: [
       "Measured on the UNDERLYING's own daily bars; no options chain is involved, and premium/IV are not modelled here — this screens which names move enough that a defined-risk structure could pay, not which contract to buy.",
       "up_reach uses highs (a call's question); down_touch uses lows (a put's question). They are different bets and are never combined into one score.",
       "Windows overlap: independent_n is the honest sample size, printed on every row. Where it reads ~14, that is the difference between a measurement and a decoration — treat orderings within a few points as unsupported.",
       "No verdict is offered. The audit for a specific contract is POST /api/pretrade/check with an option_order block.",
       "These rates pool all market states, and that is measured rather than assumed: conditioning reach on the platform's one validated signal (momentum-12-1, top vs bottom tercile) was tested over 390 non-overlapping date blocks across 32 years and refused at ~2pp resolution in both directions (scripts/research/reachConditioning.ts). Do not adjust a row for the name being hot or cold — the adjustment is not there.",
+      "DO NOT rank these rows against implied moves to find mispriced options. That difference decomposes 86% drift / 14% volatility, so the ranking is a momentum leaderboard in an options costume — and momentum is refused above. See gbm_conversion for the bridge's own measured bias, and per_contract_audit for the join that works.",
     ],
     rows,
     unmeasurable,

@@ -1,0 +1,346 @@
+{
+ "generatedAt": 1787435325125,
+ "method": {
+  "panel": "declared EQUITY_PANEL",
+  "names": 95,
+  "horizons": [
+   5,
+   10,
+   21,
+   42
+  ],
+  "barriers": [
+   5,
+   10,
+   20,
+   30
+  ],
+  "effectSoughtPp": 5,
+  "trailingVolSessions": 60,
+  "statistic": "per-date mean of (outcome - GBM predicted), t over non-overlapping date blocks",
+  "barrierConvention": "b_up = ln(1+m); b_down = -ln(1-m); drift sign flips on the down side",
+  "note": "PATH-SHAPE half of the reach-vs-implied symmetric component. The VOL-PREMIUM half needs live chains and is measured separately."
+ },
+ "cells": [
+  {
+   "horizon_sessions": 5,
+   "barrier_pct": 5,
+   "blocks": 1677,
+   "names_per_block": 81,
+   "trailing": {
+    "symmetric_pp": -2.797,
+    "se_pp": 0.207,
+    "t": -13.49,
+    "mde_pp": 0.415
+   },
+   "in_window": {
+    "symmetric_pp": 1.704,
+    "se_pp": 0.128,
+    "t": 13.28,
+    "mde_pp": 0.257
+   },
+   "antisymmetric_trailing_pp": 1.097,
+   "resolves": true
+  },
+  {
+   "horizon_sessions": 5,
+   "barrier_pct": 10,
+   "blocks": 1677,
+   "names_per_block": 81,
+   "trailing": {
+    "symmetric_pp": -0.748,
+    "se_pp": 0.141,
+    "t": -5.31,
+    "mde_pp": 0.282
+   },
+   "in_window": {
+    "symmetric_pp": -0.116,
+    "se_pp": 0.081,
+    "t": -1.43,
+    "mde_pp": 0.162
+   },
+   "antisymmetric_trailing_pp": 0.154,
+   "resolves": true
+  },
+  {
+   "horizon_sessions": 5,
+   "barrier_pct": 20,
+   "blocks": 1677,
+   "names_per_block": 81,
+   "trailing": {
+    "symmetric_pp": -0.017,
+    "se_pp": 0.052,
+    "t": -0.33,
+    "mde_pp": 0.105
+   },
+   "in_window": {
+    "symmetric_pp": -0.238,
+    "se_pp": 0.038,
+    "t": -6.22,
+    "mde_pp": 0.076
+   },
+   "antisymmetric_trailing_pp": 0.031,
+   "resolves": true
+  },
+  {
+   "horizon_sessions": 5,
+   "barrier_pct": 30,
+   "blocks": 1677,
+   "names_per_block": 81,
+   "trailing": {
+    "symmetric_pp": 0.049,
+    "se_pp": 0.021,
+    "t": 2.32,
+    "mde_pp": 0.043
+   },
+   "in_window": {
+    "symmetric_pp": -0.094,
+    "se_pp": 0.018,
+    "t": -5.17,
+    "mde_pp": 0.037
+   },
+   "antisymmetric_trailing_pp": 0.02,
+   "resolves": true
+  },
+  {
+   "horizon_sessions": 10,
+   "barrier_pct": 5,
+   "blocks": 838,
+   "names_per_block": 81,
+   "trailing": {
+    "symmetric_pp": -2.557,
+    "se_pp": 0.291,
+    "t": -8.8,
+    "mde_pp": 0.581
+   },
+   "in_window": {
+    "symmetric_pp": 1.345,
+    "se_pp": 0.173,
+    "t": 7.78,
+    "mde_pp": 0.346
+   },
+   "antisymmetric_trailing_pp": 3.112,
+   "resolves": true
+  },
+  {
+   "horizon_sessions": 10,
+   "barrier_pct": 10,
+   "blocks": 838,
+   "names_per_block": 81,
+   "trailing": {
+    "symmetric_pp": -1.397,
+    "se_pp": 0.256,
+    "t": -5.45,
+    "mde_pp": 0.513
+   },
+   "in_window": {
+    "symmetric_pp": 0.012,
+    "se_pp": 0.145,
+    "t": 0.08,
+    "mde_pp": 0.29
+   },
+   "antisymmetric_trailing_pp": 0.789,
+   "resolves": true
+  },
+  {
+   "horizon_sessions": 10,
+   "barrier_pct": 20,
+   "blocks": 838,
+   "names_per_block": 81,
+   "trailing": {
+    "symmetric_pp": -0.366,
+    "se_pp": 0.13,
+    "t": -2.81,
+    "mde_pp": 0.26
+   },
+   "in_window": {
+    "symmetric_pp": -0.404,
+    "se_pp": 0.07,
+    "t": -5.78,
+    "mde_pp": 0.14
+   },
+   "antisymmetric_trailing_pp": 0,
+   "resolves": true
+  },
+  {
+   "horizon_sessions": 10,
+   "barrier_pct": 30,
+   "blocks": 838,
+   "names_per_block": 81,
+   "trailing": {
+    "symmetric_pp": -0.104,
+    "se_pp": 0.059,
+    "t": -1.78,
+    "mde_pp": 0.117
+   },
+   "in_window": {
+    "symmetric_pp": -0.238,
+    "se_pp": 0.041,
+    "t": -5.78,
+    "mde_pp": 0.082
+   },
+   "antisymmetric_trailing_pp": -0.051,
+   "resolves": true
+  },
+  {
+   "horizon_sessions": 21,
+   "barrier_pct": 5,
+   "blocks": 399,
+   "names_per_block": 81,
+   "trailing": {
+    "symmetric_pp": -1.696,
+    "se_pp": 0.387,
+    "t": -4.39,
+    "mde_pp": 0.773
+   },
+   "in_window": {
+    "symmetric_pp": 0.377,
+    "se_pp": 0.272,
+    "t": 1.39,
+    "mde_pp": 0.545
+   },
+   "antisymmetric_trailing_pp": 5.839,
+   "resolves": true
+  },
+  {
+   "horizon_sessions": 21,
+   "barrier_pct": 10,
+   "blocks": 399,
+   "names_per_block": 81,
+   "trailing": {
+    "symmetric_pp": -1.541,
+    "se_pp": 0.426,
+    "t": -3.62,
+    "mde_pp": 0.852
+   },
+   "in_window": {
+    "symmetric_pp": -0.113,
+    "se_pp": 0.246,
+    "t": -0.46,
+    "mde_pp": 0.493
+   },
+   "antisymmetric_trailing_pp": 3.318,
+   "resolves": true
+  },
+  {
+   "horizon_sessions": 21,
+   "barrier_pct": 20,
+   "blocks": 399,
+   "names_per_block": 81,
+   "trailing": {
+    "symmetric_pp": -0.709,
+    "se_pp": 0.293,
+    "t": -2.42,
+    "mde_pp": 0.587
+   },
+   "in_window": {
+    "symmetric_pp": -0.442,
+    "se_pp": 0.142,
+    "t": -3.11,
+    "mde_pp": 0.284
+   },
+   "antisymmetric_trailing_pp": 0.569,
+   "resolves": true
+  },
+  {
+   "horizon_sessions": 21,
+   "barrier_pct": 30,
+   "blocks": 399,
+   "names_per_block": 81,
+   "trailing": {
+    "symmetric_pp": -0.408,
+    "se_pp": 0.185,
+    "t": -2.2,
+    "mde_pp": 0.37
+   },
+   "in_window": {
+    "symmetric_pp": -0.418,
+    "se_pp": 0.086,
+    "t": -4.84,
+    "mde_pp": 0.173
+   },
+   "antisymmetric_trailing_pp": 0.017,
+   "resolves": true
+  },
+  {
+   "horizon_sessions": 42,
+   "barrier_pct": 5,
+   "blocks": 199,
+   "names_per_block": 81,
+   "trailing": {
+    "symmetric_pp": -1.057,
+    "se_pp": 0.486,
+    "t": -2.17,
+    "mde_pp": 0.973
+   },
+   "in_window": {
+    "symmetric_pp": -0.604,
+    "se_pp": 0.357,
+    "t": -1.69,
+    "mde_pp": 0.714
+   },
+   "antisymmetric_trailing_pp": 8.175,
+   "resolves": true
+  },
+  {
+   "horizon_sessions": 42,
+   "barrier_pct": 10,
+   "blocks": 199,
+   "names_per_block": 81,
+   "trailing": {
+    "symmetric_pp": -0.746,
+    "se_pp": 0.596,
+    "t": -1.25,
+    "mde_pp": 1.192
+   },
+   "in_window": {
+    "symmetric_pp": -0.288,
+    "se_pp": 0.343,
+    "t": -0.84,
+    "mde_pp": 0.686
+   },
+   "antisymmetric_trailing_pp": 7.17,
+   "resolves": true
+  },
+  {
+   "horizon_sessions": 42,
+   "barrier_pct": 20,
+   "blocks": 199,
+   "names_per_block": 81,
+   "trailing": {
+    "symmetric_pp": -0.88,
+    "se_pp": 0.55,
+    "t": -1.6,
+    "mde_pp": 1.1
+   },
+   "in_window": {
+    "symmetric_pp": -0.749,
+    "se_pp": 0.304,
+    "t": -2.47,
+    "mde_pp": 0.607
+   },
+   "antisymmetric_trailing_pp": 2.534,
+   "resolves": true
+  },
+  {
+   "horizon_sessions": 42,
+   "barrier_pct": 30,
+   "blocks": 199,
+   "names_per_block": 81,
+   "trailing": {
+    "symmetric_pp": -0.418,
+    "se_pp": 0.399,
+    "t": -1.05,
+    "mde_pp": 0.798
+   },
+   "in_window": {
+    "symmetric_pp": -0.425,
+    "se_pp": 0.217,
+    "t": -1.95,
+    "mde_pp": 0.434
+   },
+   "antisymmetric_trailing_pp": 0.893,
+   "resolves": true
+  }
+ ]
+}
