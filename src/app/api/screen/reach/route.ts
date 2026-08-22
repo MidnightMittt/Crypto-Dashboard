@@ -117,6 +117,7 @@ export function GET(req: NextRequest) {
       "up_reach uses highs (a call's question); down_touch uses lows (a put's question). They are different bets and are never combined into one score.",
       "Windows overlap: independent_n is the honest sample size, printed on every row. Where it reads ~14, that is the difference between a measurement and a decoration — treat orderings within a few points as unsupported.",
       "No verdict is offered. The audit for a specific contract is POST /api/pretrade/check with an option_order block.",
+      "These rates pool all market states, and that is measured rather than assumed: conditioning reach on the platform's one validated signal (momentum-12-1, top vs bottom tercile) was tested over 390 non-overlapping date blocks across 32 years and refused at ~2pp resolution in both directions (scripts/research/reachConditioning.ts). Do not adjust a row for the name being hot or cold — the adjustment is not there.",
     ],
     rows,
     unmeasurable,

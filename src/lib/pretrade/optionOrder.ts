@@ -205,12 +205,23 @@ function breakevenReachCheck(i: OptionOrderInputs): PretradeCheck {
     };
   }
   const r = be.reach;
+  /*
+   * The figure is UNCONDITIONAL by measurement, not by neglect: whether the
+   * platform's one validated signal (momentum-12-1) conditions touch
+   * probability was tested across 390 non-overlapping date blocks on the
+   * declared panel, both directions, and refused at ~2pp resolution
+   * (scripts/research/reachConditioning.ts — top-vs-bottom tercile
+   * -0.60pp t=-0.54 up, -0.51pp t=-0.47 down). Do not mentally bump this
+   * number for a hot name; the adjustment was measured and it is not there.
+   */
   const measured =
     `Breakeven needs a ${pct1(be.movePct)} ${dir} within ~${r.horizonSessions} sessions; ` +
     `${i.symbol}'s own history ${dir === "rise" ? "reached" : "fell"} that far in ` +
     `${pct1(r.reachPct)} of comparable windows (n=${r.n.toLocaleString()}, ` +
     `independent_n=${r.independentN}). Everything short of breakeven at expiry is a total loss ` +
-    `of premium; everything beyond it is not measured here.`;
+    `of premium; everything beyond it is not measured here. The rate pools all market states — ` +
+    `conditioning it on momentum was measured across 390 independent periods and adds nothing ` +
+    `detectable in either direction.`;
   const data = {
     breakeven_move_pct: Number(be.movePct.toFixed(2)),
     reach_pct: Number(r.reachPct.toFixed(1)),
