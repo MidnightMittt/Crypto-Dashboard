@@ -112,6 +112,21 @@ export function isLeveragedVehicle(symbol: string): boolean {
 }
 
 /**
+ * UNLEVERED SPOT-ASSET ETFs — the reference the levered stack is judged by.
+ *
+ * IBIT holds bitcoin, 1x, no daily reset, so a multi-session return on it IS
+ * the underlying's move — none of the path-dependence that makes
+ * LEVERAGED_VEHICLES hazardous to rank. It is declared apart from both other
+ * ETF groups because its ROLE is different: it is the unlevered benchmark a
+ * trader checks FIRST, before reading any levered miner or 2x fund, because
+ * every other crypto expression here moves some multiple of this one and
+ * misleads read on its own. The site modelled twelve leveraged expressions
+ * of bitcoin while being unable to see bitcoin's own ETF — the reference
+ * was the one instrument missing.
+ */
+export const SPOT_ASSET_ETFS = ["IBIT"] as const;
+
+/**
  * Everything the scanner and the recorders cover. Benchmarks last so a
  * truncated log or a partial failure loses the control group before it loses
  * a tradeable name.
@@ -120,6 +135,7 @@ export const SCANNER_UNIVERSE: readonly string[] = [
   ...SCANNED,
   ...TREASURY_COHORT,
   ...LEVERAGED_VEHICLES,
+  ...SPOT_ASSET_ETFS,
   ...BENCHMARKS,
 ];
 
