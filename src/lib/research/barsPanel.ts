@@ -168,3 +168,29 @@ export function alignPanel(
 export function coverage(panel: SymbolPanel): number {
   return panel.bars.filter((b) => b !== null).length;
 }
+
+/**
+ * Closes on the panel calendar, ALIGNED — index i is always session i.
+ *
+ * The distinction from every other reader in this codebase is that nothing is
+ * compacted away. `realBars` drops missing and interpolated rows, which is
+ * right for a per-symbol path measurement and wrong for anything comparing
+ * two symbols: dropping a row shifts every later value up by one and silently
+ * correlates one name's Tuesday against another's Wednesday. That does not
+ * fail loudly. It just returns a lower number and reports the panel as more
+ * diverse than it is.
+ *
+ * Interpolated fills are nulled for the same reason they are excluded
+ * elsewhere — a carried-forward close manufactures a zero return, and zeros
+ * against real returns drag any correlation toward zero.
+ *
+ * Lives here rather than in the routes that need it because two of them now
+ * do, and a correlation input duplicated per caller is a correlation input
+ * that will eventually disagree with itself.
+ */
+export function alignedCloses(panel: BarsPanel, symbol: string): (number | null)[] {
+  const sp = panel.symbols[symbol];
+  if (!sp) return panel.sessions.map(() => null);
+  const filled = new Set(sp.interpolated);
+  return panel.sessions.map((_, i) => (filled.has(i) ? null : (sp.bars[i]?.[3] ?? null)));
+}

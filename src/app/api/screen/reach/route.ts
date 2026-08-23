@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import barsPanelJson from "@/data/barsPanel.json";
-import { BarsPanel, SymbolPanel } from "@/lib/research/barsPanel";
+import { BarsPanel, SymbolPanel, alignedCloses } from "@/lib/research/barsPanel";
 import { Bar } from "@/lib/research/types";
 import { survivalAt } from "@/lib/research/stopViability";
 import { excursionStats, reachAt } from "@/lib/research/exitDesign";
 import { conversionReport } from "@/lib/research/touchCalibration";
+import { ReturnSeries, effectiveBreadth, logReturns } from "@/lib/research/effectiveBreadth";
 
 /**
  * GET /api/screen/reach — the universe ranked by how far each name actually
@@ -31,6 +32,16 @@ import { conversionReport } from "@/lib/research/touchCalibration";
  * larger of the two measured probabilities and the reader decides; the
  * honest limit — most rows rest on ~14 independent windows — is printed on
  * the row, not disclosed in a footnote.
+ *
+ * ── Two different sample sizes, and the row only carried one ──────────
+ *
+ * `independent_n` on a row corrects for windows overlapping inside ONE
+ * symbol's own history. It says nothing whatever about whether two SYMBOLS
+ * are distinguishable, and on this panel most of them are not: the names
+ * move together, so a table sorted 87.3 / 85.1 / 84.4 presents three pieces
+ * of evidence where there is closer to one. `breadth` is the second number,
+ * computed on exactly the rows returned, and it is what stops the sort
+ * reading as a leaderboard.
  */
 
 export const dynamic = "force-dynamic";
@@ -41,6 +52,15 @@ const MIN_HORIZON = 5;
 const MAX_HORIZON = 60;
 const MIN_MOVE_PCT = 1;
 const MAX_MOVE_PCT = 100;
+
+/**
+ * Rows treated as "the top of the sort" for the breadth measurement.
+ *
+ * A shortlist, not a threshold — the point is to describe the slice a reader
+ * plausibly acts on, and this account can hold four positions on $137 of
+ * buying power. Ten is generous to the table rather than to the caution.
+ */
+const TOP_OF_SORT = 10;
 
 /** Panel rows to Bars, interpolated fills excluded — the rule everywhere else uses. */
 function realBars(sessions: readonly string[], sp: SymbolPanel): Bar[] {
@@ -107,12 +127,66 @@ export function GET(req: NextRequest) {
     return best(b) - best(a);
   });
 
+  /*
+   * Breadth of the rows ACTUALLY RETURNED, not of the panel as committed.
+   * The two differ whenever a horizon knocks short-history names out, and
+   * quoting a fixed panel figure beside a filtered table would describe a
+   * cross-section the reader is not looking at.
+   *
+   * And it is measured TWICE, because the whole-table figure is not the one
+   * a reader is exposed to. Nobody reads a ranking sideways; they read the
+   * top. On this panel that distinction is most of the story — the 122
+   * returned rows are worth 5.6 independent bets, but the top three are
+   * worth 1.13, because the sort concentrates whatever moves most and the
+   * things that move most move together. Printing only the panel figure
+   * would understate the problem for every reader who behaves normally.
+   */
+  const seriesFor = (syms: readonly string[]) => {
+    const m = new Map<string, ReturnSeries>();
+    for (const s of syms) m.set(s, logReturns(alignedCloses(panel, s)));
+    return m;
+  };
+  const returnSessions = Math.max(panel.sessions.length - 1, 0);
+  const symbols = rows.map((r) => r.symbol);
+  const breadth = {
+    top_of_sort: effectiveBreadth(seriesFor(symbols.slice(0, TOP_OF_SORT)), returnSessions),
+    all_rows: effectiveBreadth(seriesFor(symbols), returnSessions),
+    read_first:
+      `top_of_sort — it describes the ${TOP_OF_SORT} rows a reader actually acts on. ` +
+      "all_rows is the panel-wide figure and is the more flattering of the two here, " +
+      "because a sort concentrates whatever moves most and the things that move most move together.",
+  };
+
   return NextResponse.json({
     generated_at: new Date().toISOString(),
     horizon_sessions: horizon,
     move_pct: movePct,
     bars_session: panel.sessions[panel.sessions.length - 1] ?? null,
     sort: "by the larger of up_reach and down_touch — a movement ranking, not a recommendation",
+
+    /*
+     * HOW MUCH OF THE ORDERING IS REAL.
+     *
+     * `independent_n` per row handles window overlap within one symbol.
+     * This handles the other axis: how many of these names are telling the
+     * reader different things. Both are needed, and the row-level figure was
+     * the only one printed until now — so a table of highly correlated names
+     * each carrying an honest independent_n still read as a menu of
+     * independent choices.
+     *
+     * Two figures inside each, because they answer different questions:
+     * effective_bets is what a top-down read is worth, participation_ratio
+     * is how many distinct directions the set spans at all. Measured over
+     * the committed panel's full return history, stated in `sessions`
+     * because correlation is regime-dependent and a calm tape does not
+     * describe a stressed one.
+     *
+     * near_duplicates names the pairs that are not merely similar. It is
+     * free — the pairwise pass visits them anyway — and it is the part that
+     * changes behaviour, because "breadth is 1.13" is abstract where
+     * "MSTU and MSTX are the same position at rho 0.999" is not.
+     */
+    breadth,
 
     /*
      * THE BRIDGE TO AN OPTION PRICE, AND ITS MEASURED BIAS.
@@ -158,6 +232,7 @@ export function GET(req: NextRequest) {
       "Measured on the UNDERLYING's own daily bars; no options chain is involved, and premium/IV are not modelled here — this screens which names move enough that a defined-risk structure could pay, not which contract to buy.",
       "up_reach uses highs (a call's question); down_touch uses lows (a put's question). They are different bets and are never combined into one score.",
       "Windows overlap: independent_n is the honest sample size, printed on every row. Where it reads ~14, that is the difference between a measurement and a decoration — treat orderings within a few points as unsupported.",
+      "independent_n corrects for overlap WITHIN one symbol. It does not correct for symbols resembling each other, and on this panel they heavily do — see `breadth`, which carries the second sample size and the caution that goes with it. A count of rows is not a count of observations.",
       "No verdict is offered. The audit for a specific contract is POST /api/pretrade/check with an option_order block.",
       "These rates pool all market states, and that is measured rather than assumed: conditioning reach on the platform's one validated signal (momentum-12-1, top vs bottom tercile) was tested over 390 non-overlapping date blocks across 32 years and refused at ~2pp resolution in both directions (scripts/research/reachConditioning.ts). Do not adjust a row for the name being hot or cold — the adjustment is not there.",
       "DO NOT rank these rows against implied moves to find mispriced options. That difference decomposes 86% drift / 14% volatility, so the ranking is a momentum leaderboard in an options costume — and momentum is refused above. See gbm_conversion for the bridge's own measured bias, and per_contract_audit for the join that works.",
