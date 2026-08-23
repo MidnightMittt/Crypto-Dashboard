@@ -62,6 +62,8 @@ export interface SetupSummary {
  */
 export interface ScannableMarket {
   asset: string;
+  /** Last close, carried through to the reachability annotation. Equity rows only. */
+  lastClose?: number | null;
   score: number;
   verdict: string;
   confidence: number;
@@ -83,6 +85,12 @@ export interface ScannableMarket {
 
 export interface RankedOpportunity {
   asset: string;
+  /**
+   * Last close, for the reachability annotation. Equity rows only — crypto
+   * composites carry no price field, and those rows correctly show no badge
+   * rather than an invented one.
+   */
+  lastClose?: number | null;
   name?: string;
   assetClass?: AssetClass;
   agreement?: number;
@@ -128,6 +136,7 @@ export function rankOpportunities(composites: ScannableMarket[]): RankedOpportun
       return {
         asset: c.asset,
         name: c.name,
+        lastClose: c.lastClose ?? null,
         assetClass: c.assetClass,
         agreement: c.agreement,
         riskLevel: c.riskLevel,

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/Card";
+import { Reachability, parseBuyingPower } from "@/components/scanner/Reachability";
 import { TickerSearch } from "@/components/search/TickerSearch";
 import { ScannerTable } from "@/components/scanner/ScannerTable";
 import {
@@ -90,7 +91,13 @@ function reasonsOf(bias: MarketBias, side: "for" | "against"): string[] {
   return (side === "for" ? agreeing : opposing).slice(0, 3).map((m) => m.explanation);
 }
 
-export default async function ScannerPage() {
+export default async function ScannerPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ bp?: string }>;
+}) {
+  // Buying power is READ-TIME, never stored — the site holds no account.
+  const buyingPower = parseBuyingPower((await searchParams).bp);
   const crypto = await getAssetComposites({}).catch(() => null);
 
   const cryptoRows: ScannableMarket[] = [
@@ -103,6 +110,7 @@ export default async function ScannerPage() {
     asset: d.symbol,
     name: d.name,
     assetClass: "equity" as const,
+    lastClose: d.lastClose,
     score: d.bias.score,
     verdict: d.bias.verdict,
     confidence: d.bias.confidence,
@@ -184,6 +192,7 @@ export default async function ScannerPage() {
             runnerUp={ranked[1] ?? null}
             comparison={ranked[1] ? explainRanking(ranked[0], ranked[1]) : null}
             totalMarkets={ranked.length}
+            buyingPower={buyingPower}
           />
         )}
 
@@ -203,7 +212,7 @@ export default async function ScannerPage() {
 
         <Card>
           <CardContent className="py-5">
-            <ScannerTable rows={ranked} />
+            <ScannerTable rows={ranked} buyingPower={buyingPower} />
           </CardContent>
         </Card>
 

@@ -1,4 +1,5 @@
 "use client";
+import { Reachability } from "./Reachability";
 
 import * as React from "react";
 import Link from "next/link";
@@ -42,7 +43,7 @@ const FILTERS: ScanFilter[] = [
   "equity",
 ];
 
-export function ScannerTable({ rows }: { rows: RankedOpportunity[] }) {
+export function ScannerTable({ rows, buyingPower = null }: { rows: RankedOpportunity[]; buyingPower?: number | null }) {
   const [sort, setSort] = React.useState<ScanSort>("opportunity");
   const [filters, setFilters] = React.useState<ScanFilter[]>([]);
   /*
@@ -136,6 +137,7 @@ export function ScannerTable({ rows }: { rows: RankedOpportunity[] }) {
                   key={`${r.assetClass}-${r.asset}`}
                   row={r}
                   rank={visible.indexOf(r) + 1}
+                  buyingPower={buyingPower}
                   isOpen={expanded === `${r.assetClass}-${r.asset}`}
                   onToggle={() =>
                     setExpanded((cur) =>
@@ -157,11 +159,13 @@ function Row({
   rank,
   isOpen,
   onToggle,
+  buyingPower = null,
 }: {
   row: RankedOpportunity;
   rank: number;
   isOpen: boolean;
   onToggle: () => void;
+  buyingPower?: number | null;
 }) {
   const tone = verdictTone(row.verdict);
 
@@ -182,6 +186,7 @@ function Row({
           >
             {row.asset}
           </Link>
+          <Reachability price={row.lastClose} buyingPower={buyingPower ?? null} compact />
           {row.name && <div className="mt-0.5 text-[10px] text-ink-faint">{row.name}</div>}
         </Td>
         <Td>

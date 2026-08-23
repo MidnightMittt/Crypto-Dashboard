@@ -1,3 +1,4 @@
+import { Reachability } from "./Reachability";
 import Link from "next/link";
 import {
   RankedOpportunity,
@@ -25,11 +26,13 @@ export function TopOpportunity({
   runnerUp,
   comparison,
   totalMarkets,
+  buyingPower = null,
 }: {
   lead: RankedOpportunity;
   runnerUp: RankedOpportunity | null;
   comparison: RankingComparison | null;
   totalMarkets: number;
+  buyingPower?: number | null;
 }) {
   const actionable = lead.opportunity >= ACTIONABLE_OPPORTUNITY;
 
@@ -73,6 +76,9 @@ export function TopOpportunity({
                 {intensityLabel(lead.score)}
               </span>
               {lead.name && <span className="text-[11px] text-ink-faint">{lead.name}</span>}
+              {/* Top slot named IWM at $299.96 against $137.14 of buying power.
+                  Ranking is untouched; the row now says whether it is takeable. */}
+              <Reachability price={lead.lastClose} buyingPower={buyingPower} />
             </div>
           </div>
 
