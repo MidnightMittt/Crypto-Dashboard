@@ -36,6 +36,55 @@
  * is denominated in the same unit as an edge, which is what makes it the
  * one a decision can be made on.
  *
+ * ── The cost that dominates, and nearly went unpriced ────────────────
+ *
+ * Execution is what you pay to GET IN. For a dated instrument it is not the
+ * cost that decides the trade. Measured on the real decision:
+ *
+ *   MARA equity              execution 27.83 bp   carry  none
+ *   MARA 2026-09-18 12C      execution 355 bp     carry  0.0207/day x 26d
+ *
+ * That carry is 0.54 of a 0.845 premium — 64% — against an execution cost
+ * of 3% of premium. Decay is roughly TWENTY TIMES execution, and a page
+ * that printed the 3% beside a silent 64% invited the reader to conclude
+ * the option was cheap to hold, which is the reverse of true.
+ *
+ * Carry converts onto the same axis through the same denominator:
+ *
+ *   execution move = (ask − bid)      / (delta × underlying)   0.58%
+ *   carry move     = (theta × days)   / (delta × underlying)  10.48%
+ *
+ * ── Why these ARE summed, against the obvious objection ──────────────
+ *
+ * One is paid on entry and one is paid for holding, so a single figure
+ * hides which — and that is an argument about DISPLAY, which is answered
+ * by printing all three lines, not by refusing the total. On this axis they
+ * are additive: a buyer who holds to expiry and exits pays both. The total
+ * is also the only one of the three that changes the decision. Ranked on
+ * execution alone the call is 2.1x dearer than the shares; ranked all-in it
+ * is 40x dearer. The reader carries away the headline number, so the
+ * headline number has to be the one that is load-bearing.
+ *
+ * ── What the carry figure is NOT ─────────────────────────────────────
+ *
+ * It is not a loss. Theta is the PRICE OF THE CONVEXITY — the Black-Scholes
+ * relation θ + ½σ²S²Γ ≈ rV says the decay is what buys the gamma. Reported
+ * as "you lose 64% of premium" it would be false unless the underlying sits
+ * still. Reported on the move axis it says the true thing: the underlying
+ * must travel ~11% in 26 days for the call to beat flat, and that is what
+ * the premium purchased. The endpoint prints the move, never the loss.
+ *
+ * Three approximations, all of which are stated on the response:
+ *
+ *   instantaneous theta, extrapolated linearly. Real decay ACCELERATES into
+ *     expiry, so held near the end this figure understates. It is capped at
+ *     the premium, because value cannot decay below zero.
+ *   delta held constant. Over a move as large as 10% delta will not be, and
+ *     for a long call it RISES with the underlying — so the true required
+ *     move is smaller than the linear one. The figure is an upper bound.
+ *   long positions only, consistent with the rest of this endpoint and with
+ *     an account that cannot short.
+ *
  * ── What this deliberately does NOT do ───────────────────────────────
  *
  * It does not say which instrument is BETTER. Cheaper is not better: the
@@ -87,15 +136,68 @@ export type CandidateInput =
       delta: number;
       multiplier: number;
       underlyingPrice: number;
+      /**
+       * Premium lost per CALENDAR day, as the chain quotes it. Sign is
+       * ignored — a long option decays whichever way the vendor signs it.
+       * Null means the caller did not supply one, and carry is then refused
+       * by name rather than assumed to be zero.
+       */
+      thetaPerDay: number | null;
+      /**
+       * Calendar days the carry figure covers — days to expiry unless the
+       * caller declared a shorter hold. Null when neither was supplied.
+       */
+      carryDays: number | null;
     };
+
+/**
+ * Decay for a dated instrument, on the SAME axis as execution.
+ *
+ * Reported as a move, never as a loss: theta is what buys the gamma, and a
+ * percentage-of-premium figure reads as a loss the holder has already taken
+ * when it is really the hurdle the underlying has to clear.
+ */
+export interface CarryLine {
+  /** Calendar days covered. Theta is quoted per calendar day, not per session. */
+  days: number;
+  /** Premium lost per day, sign-normalised to a cost. */
+  per_day_premium: number;
+  /** Premium lost over `days`, capped at the premium — value cannot decay past zero. */
+  total_premium: number;
+  /** Share of the premium that decay accounts for over the period. */
+  pct_of_premium: number;
+  /** THE COMMON AXIS: percent the underlying must move to offset that decay. */
+  move_pct: number;
+  basis: string;
+}
 
 export interface PricedCandidate {
   label: string;
   kind: "equity" | "spot" | "option";
   /** Spread as bp of the instrument's OWN mid. Honest, but not comparable across kinds. */
   spread_bp_of_own_price: number | null;
-  /** THE COMMON AXIS: percent the UNDERLYING must move to cover a round trip. */
+  /**
+   * EXECUTION ONLY: percent the UNDERLYING must move to cover a round trip.
+   * Paid once, on entry. This field's meaning has never changed and does not
+   * change now — carry is reported beside it, not folded into it.
+   */
   breakeven_underlying_move_pct: number | null;
+  /** Decay over the holding period. Null for undated instruments and when refused. */
+  carry: CarryLine | null;
+  /**
+   * A STATED exclusion, present only when the instrument HAS carry that could
+   * not be priced. A silent omission is worth less than a named one, and this
+   * is the difference between "no decay" and "decay not measured".
+   */
+  carry_excluded: string | null;
+  /**
+   * Execution + carry — the move that actually has to happen for the trade to
+   * beat flat, and the axis the comparison ranks on. Equal to the execution
+   * figure for undated instruments. Null when carry exists and was refused,
+   * which is what keeps an unpriced option out of the ranking instead of
+   * letting it in at a flattering execution-only number.
+   */
+  breakeven_move_pct_all_in: number | null;
   /** Dollars of underlying exposure obtained per dollar committed. 1.0 for unlevered. */
   exposure_per_dollar: number | null;
   /** True when the most that can be lost is the amount committed. */
@@ -116,16 +218,22 @@ export interface PricedCandidate {
 
 export interface CostComparison {
   candidates: PricedCandidate[];
-  /** Cheapest priced candidate by breakeven move, or null when none could be priced. */
+  /** Cheapest candidate by ALL-IN breakeven move, or null when none could be priced. */
   cheapest: string | null;
-  /** Ratio of dearest to cheapest on the common axis. Null unless two were priced. */
+  /** Ratio of dearest to cheapest on the ALL-IN axis. Null unless two were priced. */
   spread_of_spreads: number | null;
   interpretation: string;
 }
 
 const r = (v: number, dp = 4) => Number(v.toFixed(dp));
 
-function priceOne(c: CandidateInput): PricedCandidate {
+/** Everything except carry, which is layered on afterwards so one rule covers every kind. */
+type CoreCandidate = Omit<
+  PricedCandidate,
+  "carry" | "carry_excluded" | "breakeven_move_pct_all_in"
+>;
+
+function priceCore(c: CandidateInput): CoreCandidate {
   const base = { label: c.label, kind: c.kind } as const;
 
   if (c.kind === "equity") {
@@ -277,12 +385,112 @@ function priceOne(c: CandidateInput): PricedCandidate {
   };
 }
 
+/**
+ * Layer carry onto a priced candidate.
+ *
+ * Undated instruments get carry `null` with NO exclusion note — they have no
+ * decay, and saying "not priced" about a cost that does not exist would be
+ * the same false alarm in the other direction. Only an instrument that has
+ * carry and could not have it measured gets a stated exclusion.
+ *
+ * Margin interest is not priced for equity or spot. That is a real carry for
+ * a levered cash position, and it is out of scope on an account trading cash
+ * with $137 of buying power; if this ever prices a margined hold, this is the
+ * comment that has to change.
+ */
+function priceOne(c: CandidateInput): PricedCandidate {
+  const core = priceCore(c);
+
+  if (c.kind !== "option") {
+    return {
+      ...core,
+      carry: null,
+      carry_excluded: null,
+      breakeven_move_pct_all_in: core.breakeven_underlying_move_pct,
+    };
+  }
+
+  // A refused option is already unpriceable; carry adds nothing to say.
+  const exec = core.breakeven_underlying_move_pct;
+  if (core.refused !== null || exec === null || !c.quote) {
+    return { ...core, carry: null, carry_excluded: null, breakeven_move_pct_all_in: null };
+  }
+
+  const days = c.carryDays;
+  const theta = c.thetaPerDay === null ? null : Math.abs(c.thetaPerDay);
+  const exclude = (reason: string): PricedCandidate => ({
+    ...core,
+    carry: null,
+    carry_excluded: reason,
+    breakeven_move_pct_all_in: null,
+  });
+
+  if (days === null && theta === null) {
+    return exclude(
+      "Execution cost only. This instrument is dated and therefore also carries decay, which is not priced here because neither an expiry nor a theta was supplied. Send `expiry` and `theta` from the chain to price it."
+    );
+  }
+  if (theta === null) {
+    return exclude(
+      `Execution cost only. This contract carries ${days} days of decay, not priced here — no theta was supplied. On a comparable contract that decay ran roughly twenty times the execution cost, so the figure above is not the cost that decides the trade.`
+    );
+  }
+  if (days === null) {
+    return exclude(
+      "Execution cost only. A theta was supplied but no expiry or `hold_days`, and decay without a horizon is not a quantity. Send either."
+    );
+  }
+  if (!(days > 0)) {
+    return exclude(
+      `Execution cost only. The expiry supplied resolves to ${days} days, which is not in the future; decay over a non-positive horizon is not priced.`
+    );
+  }
+
+  const mid = (c.quote.ask + c.quote.bid) / 2;
+  /*
+   * Capped at the premium because value cannot decay below zero. The cap
+   * binds exactly when linear theta over-extrapolates a near-expiry
+   * contract, and the basis string says so rather than letting a silently
+   * clipped number look like a measurement.
+   */
+  const uncapped = theta * days;
+  const capped = Math.min(uncapped, mid);
+  const carryMovePct = (capped / (Math.abs(c.delta) * c.underlyingPrice)) * 100;
+
+  return {
+    ...core,
+    carry: {
+      days,
+      per_day_premium: r(theta, 4),
+      total_premium: r(capped, 4),
+      pct_of_premium: r((capped / mid) * 100, 1),
+      move_pct: r(carryMovePct, 4),
+      basis:
+        `Instantaneous theta held constant over ${days} calendar days` +
+        (capped < uncapped
+          ? `, capped at the ${r(mid, 2)} premium — linear decay would have exceeded the contract's whole value, which is the signature of extrapolating theta into expiry.`
+          : `. Real decay ACCELERATES into expiry, so a contract held to the end loses more than this. Not a loss figure: theta is the price of the convexity, and this is the move that offsets it.`),
+    },
+    carry_excluded: null,
+    breakeven_move_pct_all_in: r(exec + carryMovePct, 4),
+  };
+}
+
 export function compareCostToExpress(candidates: readonly CandidateInput[]): CostComparison {
   const priced = candidates.map(priceOne);
+  /*
+   * The comparison ranks ALL-IN, not on execution. An option priced on
+   * execution alone reads 2.1x dearer than the shares where all-in it is
+   * 40x, and the headline number is the one the reader carries away.
+   * A candidate whose carry was refused is deliberately NOT ranked — letting
+   * it in at its execution-only figure is precisely how the flattering
+   * number would get published.
+   */
   const usable = priced.filter(
-    (p): p is PricedCandidate & { breakeven_underlying_move_pct: number } =>
-      p.breakeven_underlying_move_pct !== null
+    (p): p is PricedCandidate & { breakeven_move_pct_all_in: number } =>
+      p.breakeven_move_pct_all_in !== null
   );
+  const unranked = priced.filter((p) => p.carry_excluded !== null);
 
   if (usable.length === 0) {
     return {
@@ -295,10 +503,15 @@ export function compareCostToExpress(candidates: readonly CandidateInput[]): Cos
   }
 
   const sorted = [...usable].sort(
-    (a, b) => a.breakeven_underlying_move_pct - b.breakeven_underlying_move_pct
+    (a, b) => a.breakeven_move_pct_all_in - b.breakeven_move_pct_all_in
   );
   const lo = sorted[0];
   const hi = sorted[sorted.length - 1];
+  /** "0.58% execution + 10.48% decay over 26 days" — the split, kept visible beside the total. */
+  const split = (p: PricedCandidate): string =>
+    p.carry
+      ? ` (${p.breakeven_underlying_move_pct}% execution paid once, plus ${p.carry.move_pct}% of decay over ${p.carry.days} days of holding)`
+      : "";
   /*
    * A ratio against a near-free book is arithmetically true and unreadable:
    * XBT/USD's median spread is under a basis point, which turns a genuine
@@ -307,10 +520,10 @@ export function compareCostToExpress(candidates: readonly CandidateInput[]): Cos
    * the fact a reader actually needs, without a number they cannot trust.
    */
   const RATIO_FLOOR_PCT = 0.01;
-  const cheapestIsFree = lo.breakeven_underlying_move_pct < RATIO_FLOOR_PCT;
+  const cheapestIsFree = lo.breakeven_move_pct_all_in < RATIO_FLOOR_PCT;
   const ratio =
-    sorted.length > 1 && !cheapestIsFree && lo.breakeven_underlying_move_pct > 0
-      ? r(hi.breakeven_underlying_move_pct / lo.breakeven_underlying_move_pct, 1)
+    sorted.length > 1 && !cheapestIsFree && lo.breakeven_move_pct_all_in > 0
+      ? r(hi.breakeven_move_pct_all_in / lo.breakeven_move_pct_all_in, 1)
       : null;
 
   const levered = usable.filter((p) => (p.exposure_per_dollar ?? 1) > 1.5);
@@ -323,19 +536,35 @@ export function compareCostToExpress(candidates: readonly CandidateInput[]): Cos
         .join("; ")}.`
     : "";
 
+  /*
+   * A candidate held out of the ranking has to say so IN the interpretation.
+   * Listing it only in the candidate array would leave the headline sentence
+   * describing a comparison the reader thinks was complete.
+   */
+  const excludedNote = unranked.length
+    ? ` NOT RANKED: ${unranked
+        .map((p) => p.label)
+        .join(", ")} — carry could not be priced, and ranking on execution alone would flatter a dated instrument by exactly the cost that decides it.`
+    : "";
+
+  const decayNote = usable.some((p) => p.carry)
+    ? ` Decay is NOT a loss already taken: theta is the price of the convexity, so the carry figure is the distance the underlying must travel to offset it, not money gone.`
+    : "";
+
   return {
     candidates: priced,
     cheapest: lo.label,
     spread_of_spreads: ratio,
     interpretation:
-      `Priced on one axis — the move the UNDERLYING must make to cover a round trip — ` +
-      `${lo.label} is cheapest at ${lo.breakeven_underlying_move_pct}%` +
+      `Priced on one axis — the move the UNDERLYING must make for the trade to beat flat, ` +
+      `entry cost and holding cost together — ` +
+      `${lo.label} is cheapest at ${lo.breakeven_move_pct_all_in}%${split(lo)}` +
       (ratio !== null
-        ? `, and ${hi.label} is ${ratio}x dearer at ${hi.breakeven_underlying_move_pct}%`
+        ? `, and ${hi.label} is ${ratio}x dearer at ${hi.breakeven_move_pct_all_in}%${split(hi)}`
         : cheapestIsFree && sorted.length > 1
-          ? ` — under a basis point, effectively costless, so no ratio against it would be readable; ${hi.label} is the dearest at ${hi.breakeven_underlying_move_pct}%`
+          ? ` — under a basis point, effectively costless, so no ratio against it would be readable; ${hi.label} is the dearest at ${hi.breakeven_move_pct_all_in}%${split(hi)}`
           : "") +
-      `. CHEAPEST IS NOT BEST: this ranks cost alone, and cost is only half the trade.${leverNote} ` +
+      `. CHEAPEST IS NOT BEST: this ranks cost alone, and cost is only half the trade.${leverNote}${decayNote}${excludedNote} ` +
       `Rule 63 applies per candidate: an edge smaller than the figure beside it is not an edge in that instrument.`,
   };
 }

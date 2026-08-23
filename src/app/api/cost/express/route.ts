@@ -141,6 +141,26 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     if (kind === "option") {
+      /*
+       * The holding horizon, in CALENDAR days, because that is the unit
+       * every chain quotes theta in. `hold_days` wins when the caller
+       * declares a shorter hold than the contract's life — decay is paid
+       * for the time held, not the time available — and days-to-expiry is
+       * the default because it is the horizon the contract itself implies.
+       */
+      const held = num(o.hold_days);
+      /*
+       * Anchored at the CLOSE of the expiry date, not its midnight. A
+       * contract decays through its final session, so measuring to
+       * 00:00Z drops up to a whole day of theta — and always in the
+       * direction that flatters the option. Verified on the Sep-18 MARA
+       * call: the midnight anchor returned 25 days where the contract has
+       * 26. 20:00Z is the 4pm ET settlement close.
+       */
+      const expiryMs = typeof o.expiry === "string" ? Date.parse(`${o.expiry}T20:00:00Z`) : NaN;
+      const toExpiry = Number.isFinite(expiryMs)
+        ? Math.round((expiryMs - Date.now()) / 86_400_000)
+        : null;
       candidates.push({
         kind: "option",
         label,
@@ -148,6 +168,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         delta: num(o.delta) ?? 0,
         multiplier: num(o.multiplier) ?? 100,
         underlyingPrice: num(o.underlying_price) ?? 0,
+        thetaPerDay: num(o.theta),
+        carryDays: held !== null && toExpiry !== null ? Math.min(held, toExpiry) : (held ?? toExpiry),
       });
       continue;
     }
@@ -162,10 +184,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   return NextResponse.json({
     generated_at: new Date().toISOString(),
-    axis: "breakeven_underlying_move_pct — the move the UNDERLYING must make to cover a round trip",
+    axis:
+      "breakeven_move_pct_all_in — the move the UNDERLYING must make for the trade to beat flat, " +
+      "entry cost plus holding cost. Decomposed on every candidate into breakeven_underlying_move_pct " +
+      "(execution, paid once) and carry.move_pct (decay, paid for holding).",
     ...comparison,
     notes: [
       "Comparing raw spreads overstates the gap: an option's spread is charged on the premium, which controls several times its own value in delta-equivalent exposure. On the real book that is the difference between 354x and 54x, and only the latter is denominated in the same unit as an edge.",
+      "For a dated instrument, execution is NOT the cost that decides the trade. On MARA's Sep-18 12C, execution ran 3% of premium against 26 days of decay worth 64% — twenty times larger. Ranking on execution alone made the call look 2.1x dearer than the shares when all-in it is roughly 40x.",
+      "Carry is reported as a MOVE, never as a loss. Theta is the price of the convexity, so the figure is the distance the underlying must travel to offset decay, not money already gone. It assumes a long position, extrapolates instantaneous theta linearly (real decay accelerates into expiry, so a contract held to the end loses more), holds delta constant (for a long call delta rises with the underlying, so the true required move is smaller), and caps total decay at the premium.",
+      "An option sent without `theta` is priced on execution only, says so in `carry_excluded`, and is held OUT of the ranking rather than admitted at a flattering number.",
       "Cheapest is not best. This ranks COST alone; leverage per dollar and whether the downside is capped are reported beside it and are not scored.",
       "No reach, hit-rate or expectancy figure appears here for crypto. Those are drift-contaminated on a sample that fell 84.5% over its history — down-touch would read as a property of the asset when it is a property of the period — and the symmetric/antisymmetric decomposition that made the equity version honest has not been run on crypto.",
       "Spot books are live and one-shot; equity costs prefer the measured spread history because a single snapshot is one draw from a distribution, and modelled costs have run 1.9-12.8x wrong against observed ones here.",
@@ -192,12 +220,15 @@ export function GET() {
             delta: 0.724,
             multiplier: 100,
             underlying_price: 11.37,
+            theta: -0.0207,
+            expiry: "2026-08-28",
           },
         ],
       },
       notes: [
         "equity uses the measured spread history when the symbol has one; supply bid/ask only as a fallback and the response will say it was used.",
         "option requires bid, ask, delta, multiplier and underlying_price — without them a premium spread cannot be converted into an underlying move.",
+        "option also takes `theta` and `expiry` (or `hold_days`) to price DECAY, which on a dated instrument routinely runs an order of magnitude above execution. Omit them and the candidate is priced on execution only, told so by name, and left out of the ranking.",
         "spot fetches a live public order book. No API key is involved, and none should be given to this site.",
       ],
     },
