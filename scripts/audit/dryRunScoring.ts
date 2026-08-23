@@ -33,7 +33,12 @@ const closesAfter = (symbol: string, dateIso: string) => {
   return b.filter((x) => x.t > c);
 };
 
-const resolved = resolveVerdicts(record.predictions, closesAfter);
+const entryCloseOf = (symbol: string, dateIso: string): number | null => {
+  const b = bars.get(symbol);
+  const bar = b?.find((x) => new Date(x.t).toISOString().slice(0, 10) === dateIso);
+  return bar && bar.close > 0 ? bar.close : null;
+};
+const resolved = resolveVerdicts(record.predictions, closesAfter, entryCloseOf);
 
 // The symbols-left-the-panel case: predictions that can NEVER resolve.
 const orphans = resolved.filter((p) => p.forwardReturnPct === null && !bars.has(p.symbol));

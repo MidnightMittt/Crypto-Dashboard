@@ -62,6 +62,13 @@ export interface VerdictPrediction {
   /** Which engine version made this call. Absent means engine 1. */
   engine?: number;
   /**
+   * The entry close actually used to score this row, read at resolution
+   * time on the same adjustment basis as the exit. Differs from
+   * `closePrice` exactly when the series was re-adjusted in between — which
+   * is what makes the difference auditable rather than invisible.
+   */
+  resolvedEntryClose?: number;
+  /**
    * True when the call can no longer resolve — its horizon plus a grace
    * period elapsed with no scoring bars, which in practice means the symbol
    * left the data set between registration and resolution. Expired rows are
@@ -206,17 +213,43 @@ export interface CloseBar {
 export function resolveVerdicts(
   predictions: VerdictPrediction[],
   barsAfter: (symbol: string, dateIso: string) => CloseBar[],
+  /**
+   * The ENTRY bar's close, read at RESOLUTION time from the same series as
+   * the exit bar. Required, and the reason is a bug this audit found while
+   * the record was still empty.
+   *
+   * `closePrice` is frozen when a prediction is registered, on that day's
+   * split/dividend adjustment basis. Bars are re-adjusted RETROACTIVELY
+   * every time a dividend goes ex, so a return computed as
+   * `(exit_today − entry_frozen) / entry_frozen` straddles two different
+   * bases and understates dividend payers by roughly the yield. Measured on
+   * the real record: 63 symbols affected, up to 1.59% on one, and — the
+   * part that makes it fatal rather than untidy — UNEVEN across cells. On
+   * the cohort maturing 2026-08-27 the mean distortion was bearish −0.082%
+   * against bullish −0.039% and neutral 0.000%, which inflates the bearish
+   * cell's apparent edge for no reason but the dividend calendar.
+   *
+   * Reading both ends at resolution time puts them on one basis and makes
+   * the figure a true total return. Null means the entry bar is no longer
+   * in the series, and the prediction is left UNRESOLVED rather than scored
+   * on a basis mismatch — an unscoreable row is an honest absence, a
+   * silently mis-based one is a published error.
+   */
+  entryCloseOf: (symbol: string, dateIso: string) => number | null,
   horizon = VERDICT_HORIZON_SESSIONS
 ): VerdictPrediction[] {
   return predictions.map((p) => {
     if (p.forwardReturnPct !== null || p.expired) return p;
     const bars = barsAfter(p.symbol, p.date);
-    if (bars.length < horizon || p.closePrice <= 0) return p;
+    if (bars.length < horizon) return p;
+    const entry = entryCloseOf(p.symbol, p.date);
+    if (entry === null || !(entry > 0)) return p;
     const end = bars[horizon - 1];
     return {
       ...p,
-      forwardReturnPct: ((end.close - p.closePrice) / p.closePrice) * 100,
+      forwardReturnPct: ((end.close - entry) / entry) * 100,
       resolvedDate: new Date(end.t).toISOString().slice(0, 10),
+      resolvedEntryClose: entry,
     };
   });
 }

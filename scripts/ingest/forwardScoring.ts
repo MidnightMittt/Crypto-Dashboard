@@ -170,7 +170,19 @@ function verify(all: Map<string, Loaded>, snapshot: EquityExecutionSnapshot, asO
     const c = Date.parse(`${dateIso}T23:59:59Z`);
     return inst.bars.filter((b) => b.t > c).map((b) => ({ t: b.t, close: b.close }));
   };
-  const rv = resolveVerdicts(freshVerdicts, closesAfter);
+  /*
+   * The ENTRY bar's close read at RESOLUTION time, so both ends of the
+   * return sit on one adjustment basis. See resolveVerdicts: the frozen
+   * closePrice drifts every time a dividend goes ex, unevenly across cells.
+   */
+  const entryCloseOf = (symbol: string, dateIso: string): number | null => {
+    const inst = all.get(symbol);
+    if (!inst) return null;
+    const bar = inst.bars.find((b) => new Date(b.t).toISOString().slice(0, 10) === dateIso);
+    return bar && bar.close > 0 ? bar.close : null;
+  };
+
+  const rv = resolveVerdicts(freshVerdicts, closesAfter, entryCloseOf);
   const vs = summariseVerdicts(rv, CURRENT_VERDICT_ENGINE);
   console.log(`[verify] VERDICT: ${vs.totals.resolved} resolved, sample baseline ${vs.baselineReturnPct?.toFixed(2)}%`);
   for (const c of vs.cells) {
@@ -325,6 +337,18 @@ function main() {
   fs.writeFileSync(OUT, JSON.stringify(out, null, 0));
 
   // ── The verdict record, same horizon, same discipline ──
+  /*
+   * Both ends of the return on ONE adjustment basis. The frozen closePrice
+   * drifts every time a dividend goes ex — measured at up to 1.59%, and
+   * unevenly across the three cells — so the entry is re-read here from the
+   * same series the exit comes from.
+   */
+  const entryCloseOf = (symbol: string, dateIso: string): number | null => {
+    const inst = all.get(symbol);
+    if (!inst) return null;
+    const bar = inst.bars.find((b) => new Date(b.t).toISOString().slice(0, 10) === dateIso);
+    return bar && bar.close > 0 ? bar.close : null;
+  };
   const closesAfter = (symbol: string, dateIso: string) => {
     const inst = all.get(symbol);
     if (!inst) return [];
@@ -332,7 +356,7 @@ function main() {
     return inst.bars.filter((b) => b.t > c).map((b) => ({ t: b.t, close: b.close }));
   };
   const resolvedVerdicts = expireUnresolvable(
-    resolveVerdicts(registerVerdicts(verdictRecord.predictions, freshVerdicts), closesAfter),
+    resolveVerdicts(registerVerdicts(verdictRecord.predictions, freshVerdicts), closesAfter, entryCloseOf),
     new Date().toISOString().slice(0, 10)
   );
   /*
