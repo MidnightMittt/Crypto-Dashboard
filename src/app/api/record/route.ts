@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import forwardVerdictJson from "@/data/forwardVerdictRecord.json";
 import forwardReachJson from "@/data/forwardReachRecord.json";
-import { ForwardVerdictRecord, MIN_VERDICT_N, VerdictCell } from "@/lib/research/forwardVerdict";
+import { ForwardVerdictRecord, MIN_INDEPENDENT_BLOCKS, MIN_VERDICT_N, VerdictCell } from "@/lib/research/forwardVerdict";
 
 /**
  * GET /api/record — the forward track record, as data.
@@ -35,8 +35,18 @@ import { ForwardVerdictRecord, MIN_VERDICT_N, VerdictCell } from "@/lib/research
 
 export const dynamic = "force-dynamic";
 
+/*
+ * Ranked by edge — expectancy, never hit rate. And a cell that cannot
+ * support a claim sorts BELOW every one that can, regardless of how
+ * flattering its point estimate is: the top row of a ranked list is read as
+ * a recommendation, and a recommendation from one independent period is
+ * noise with a rank attached.
+ */
 const rankByEdge = (cells: VerdictCell[]): VerdictCell[] =>
-  [...cells].sort((a, b) => (b.edgeVsBaselinePct ?? -Infinity) - (a.edgeVsBaselinePct ?? -Infinity));
+  [...cells].sort((a, b) => {
+    if (a.publishable !== b.publishable) return a.publishable ? -1 : 1;
+    return (b.edgeVsBaselinePct ?? -Infinity) - (a.edgeVsBaselinePct ?? -Infinity);
+  });
 
 export function GET() {
   const v = forwardVerdictJson as unknown as ForwardVerdictRecord;
@@ -60,6 +70,8 @@ export function GET() {
       min_cell_n: MIN_VERDICT_N,
       totals: { ...v.totals, expired },
       predictions_by_engine: Object.fromEntries(byEngine),
+      finding: v.finding ?? "This record predates the finding field; re-run the daily job to populate it.",
+      cannot_yet_answer: v.cannotYetAnswer ?? [],
       baseline_cohort_pct: v.baselineReturnPct,
       baseline_market_pct: v.marketBaselineReturnPct ?? null,
       baseline_note:
@@ -78,6 +90,12 @@ export function GET() {
             cells: rankByEdge(v.legacy.cells),
           }
         : null,
+      independent_n_note:
+        "independentN is the honest sample size and is usually far below n. Calls made on the same " +
+        "day are cross-correlated (rho near 0.8 on this panel) and windows within the horizon " +
+        "overlap, so a cell with n=48 across one date is ONE observation. A cell is publishable " +
+        "only once it has " + MIN_INDEPENDENT_BLOCKS + " independent periods; below that its " +
+        "numbers are shown with the claim refused.",
       ranking_note:
         "Cells ranked by edge vs cohort baseline (expectancy), never hit rate — on this " +
         "account's own ledger a 91% hit rate returned +2.03% while a 55% hit rate returned +9.99%.",

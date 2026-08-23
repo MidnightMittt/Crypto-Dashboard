@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   CloseBar,
+  ForwardVerdict,
   VerdictPrediction,
   expireUnresolvable,
   pruneVerdicts,
@@ -237,5 +238,73 @@ describe("resolveVerdicts — one adjustment basis for both ends", () => {
     const out = resolveVerdicts([dividendPayer()], tenBars, () => null);
     expect(out[0].forwardReturnPct).toBeNull();
     expect(out[0].resolvedDate).toBeNull();
+  });
+});
+
+/**
+ * PART B: what the record must say when it lands.
+ *
+ * The failure this pins is specific and dated. On 2026-08-27 the first two
+ * cohorts resolve — 125 predictions from 08-12 and 08-13, one session
+ * apart — and MIN_VERDICT_N=30 would happily publish a bullish cell of 48.
+ * But 48 calls on one day are cross-correlated, and two dates a session
+ * apart share 9 of their 10 forward sessions, so the whole thing is ONE
+ * independent observation.
+ */
+describe("summariseVerdicts — independent periods, not headcount", () => {
+  const resolvedOn = (date: string, symbol: string, verdict: ForwardVerdict, ret: number): VerdictPrediction => ({
+    date,
+    symbol,
+    verdict,
+    confidence: 60,
+    closePrice: 100,
+    forwardReturnPct: ret,
+    resolvedDate: "2026-08-27",
+  });
+
+  it("counts overlapping dates as ONE period, however many calls they hold", () => {
+    // The real Thursday shape: two dates one session apart.
+    const rows = [
+      ...Array.from({ length: 48 }, (_, i) => resolvedOn("2026-08-13", `A${i}`, "bullish", 1 + i * 0.01)),
+      ...Array.from({ length: 42 }, (_, i) => resolvedOn("2026-08-12", `B${i}`, "bearish", -1 + i * 0.01)),
+    ];
+    const s = summariseVerdicts(rows);
+    const bull = s.cells.find((c) => c.verdict === "bullish")!;
+    expect(bull.n).toBe(48);
+    expect(bull.independentN).toBe(1); // <- the number that matters
+    expect(bull.publishable).toBe(false);
+    expect(bull.claim).toContain("NO CLAIM");
+    expect(bull.claim).toContain("one observation");
+  });
+
+  it("says the null in those words when nothing can be judged", () => {
+    const rows = Array.from({ length: 40 }, (_, i) => resolvedOn("2026-08-13", `A${i}`, "bullish", 2));
+    const s = summariseVerdicts(rows);
+    expect(s.finding).toContain("NOTHING HERE HAS A MEASURABLE EDGE");
+    expect(s.finding).toContain("statement about the evidence, not about the engine");
+  });
+
+  it("reports what it cannot answer beside what it can", () => {
+    const rows = Array.from({ length: 40 }, (_, i) => resolvedOn("2026-08-13", `A${i}`, "bullish", 2));
+    const s = summariseVerdicts(rows);
+    expect(s.cannotYetAnswer.some((x) => x.includes("independent periods"))).toBe(true);
+    expect(s.cannotYetAnswer.some((x) => x.toLowerCase().includes("costs"))).toBe(true);
+  });
+
+  it("publishes a claim once the periods are genuinely independent", () => {
+    // Ten dates, each 15 sessions apart — no window overlaps another.
+    const dates = Array.from({ length: 10 }, (_, i) => {
+      const d = new Date(Date.UTC(2026, 0, 5) + i * 21 * 86_400_000);
+      return d.toISOString().slice(0, 10);
+    });
+    const rows = dates.flatMap((d, i) =>
+      Array.from({ length: 4 }, (_, j) => resolvedOn(d, `S${i}${j}`, "bullish", 2))
+    );
+    const s = summariseVerdicts(rows);
+    const bull = s.cells.find((c) => c.verdict === "bullish")!;
+    expect(bull.independentN).toBe(10);
+    expect(bull.publishable).toBe(true);
+    expect(bull.claim).toContain("independent periods");
+    expect(bull.claim).not.toContain("NO CLAIM");
   });
 });

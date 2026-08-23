@@ -422,6 +422,10 @@ export interface VerdictForwardRecord {
   mine: {
     verdict: string;
     n: number;
+    /** Non-overlapping periods — the honest sample size, usually far below n. */
+    independentN?: number;
+    /** False when the cell cannot support a claim; the page must then refuse one. */
+    publishable?: boolean;
     hitRatePct: number | null;
     meanReturnPct: number;
     edgeVsBaselinePct: number | null;

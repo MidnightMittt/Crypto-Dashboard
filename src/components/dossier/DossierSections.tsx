@@ -250,7 +250,23 @@ export function VerdictPanel({ d }: { d: TickerDossier }) {
             {v.forward && (
               <p className="text-[11px] leading-relaxed text-ink-muted">
                 <span className="font-semibold uppercase tracking-[0.12em] text-cyan">Track record</span> ·{" "}
-                {v.forward.mine ? (
+                {v.forward.mine && v.forward.mine.publishable === false ? (
+                  <>
+                    {/* A cell that cannot support a claim must not make one on
+                        the page either. n is large and independent_n is not:
+                        calls made the same day are cross-correlated and windows
+                        inside the horizon overlap. */}
+                    {v.forward.mine.n.toLocaleString()} past {v.forward.mine.verdict} calls have
+                    resolved, but across only{" "}
+                    <span className="font-semibold text-amber">
+                      {v.forward.mine.independentN ?? 1} independent{" "}
+                      {(v.forward.mine.independentN ?? 1) === 1 ? "period" : "periods"}
+                    </span>
+                    {" "}— same-day calls move together and their windows overlap, so this is not yet
+                    a measurement. No edge is claimed from it, and the word above remains a
+                    hypothesis.
+                  </>
+                ) : v.forward.mine ? (
                   <>
                     Across {v.forward.mine.n.toLocaleString()} past {v.forward.mine.verdict} calls scored{" "}
                     {v.forward.horizonSessions} sessions later, price moved the called way{" "}

@@ -116,7 +116,30 @@ export function expireUnresolvable(
 
 export interface VerdictCell {
   verdict: ForwardVerdict;
+  /**
+   * Resolved predictions in the cell. NOT the evidence count — see
+   * `independentN`, which is usually very much smaller.
+   */
   n: number;
+  /**
+   * NON-OVERLAPPING DATE BLOCKS behind this cell, and the only honest
+   * sample size here.
+   *
+   * Two corrections are folded into one number. Within a registration date
+   * the calls are cross-sectionally correlated — this panel runs rho near
+   * 0.8, so 48 bullish calls on one day are approximately ONE observation,
+   * not 48. And across dates, a 10-session forward window overlaps every
+   * date inside 10 sessions of it, so consecutive days are not independent
+   * either.
+   *
+   * The consequence is blunt and worth stating before the record lands: on
+   * 2026-08-27 the first two cohorts resolve (125 predictions, dated 08-12
+   * and 08-13, one session apart) and `independentN` is 1. A cell printing
+   * n=48 with a hit rate would be one observation wearing a large sample's
+   * clothes — the same error the momentum study and the touch-calibration
+   * grid were both built to avoid.
+   */
+  independentN: number;
   /** Share that moved the way the verdict implied. Neutral has no direction, so null. */
   hitRatePct: number | null;
   meanReturnPct: number;
@@ -127,6 +150,14 @@ export interface VerdictCell {
    * market still scores negative here, which is correct: it lost money.
    */
   edgeVsBaselinePct: number | null;
+  /**
+   * What may honestly be said about this cell — either the edge claim, or a
+   * REFUSAL naming what is missing. Never a bare number, because a number
+   * with no claim attached gets read as a claim.
+   */
+  claim: string;
+  /** False when `independentN` cannot support any inference; the numbers are still shown. */
+  publishable: boolean;
 }
 
 export interface ForwardVerdictRecord {
@@ -154,6 +185,10 @@ export interface ForwardVerdictRecord {
    */
   marketBaselineReturnPct?: number | null;
   totals: { resolved: number; open: number };
+  /** The headline in plain words, including the null. See summariseVerdicts. */
+  finding?: string;
+  /** What the record cannot answer yet, beside what it can. */
+  cannotYetAnswer?: string[];
   /** Which engine the headline summary describes. Absent on records written before engines existed. */
   engine?: number;
   /**
@@ -257,6 +292,42 @@ export function resolveVerdicts(
 /** Below this a cell is not published; the totals still count it. */
 export const MIN_VERDICT_N = 30;
 
+/**
+ * Independent blocks required before a cell may claim an edge.
+ *
+ * Two is the floor at which a spread even exists — one block has no
+ * variance and therefore no standard error, so any "edge" computed from it
+ * is a point with no error bar. Eight is where the estimate starts being
+ * worth reading; between the two the numbers are shown and the claim is
+ * refused, which is the same contract as `no_width_survives`.
+ */
+export const MIN_INDEPENDENT_BLOCKS = 8;
+
+/**
+ * Non-overlapping blocks among a set of registration dates.
+ *
+ * Greedy from the earliest: a date opens a new block only when it sits at
+ * least `horizon` sessions after the block currently open, because
+ * anything nearer shares most of its forward window. Sessions are
+ * approximated from calendar days at 5/7, the same convention
+ * `expireUnresolvable` uses.
+ */
+export function independentBlocks(dates: string[], horizon = VERDICT_HORIZON_SESSIONS): number {
+  const unique = [...new Set(dates)].sort();
+  if (unique.length === 0) return 0;
+  const sessionsBetween = (a: string, b: string) =>
+    ((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000) * (5 / 7);
+  let blocks = 1;
+  let anchor = unique[0];
+  for (const d of unique.slice(1)) {
+    if (sessionsBetween(anchor, d) >= horizon) {
+      blocks++;
+      anchor = d;
+    }
+  }
+  return blocks;
+}
+
 function median(xs: number[]): number {
   if (xs.length === 0) return 0;
   const s = [...xs].sort((a, b) => a - b);
@@ -276,6 +347,14 @@ export function summariseVerdicts(
   cells: VerdictCell[];
   baselineReturnPct: number | null;
   totals: { resolved: number; open: number };
+  /**
+   * The headline in plain words, INCLUDING the null. "Nothing here has a
+   * measurable edge" is a real finding and by far the likeliest one; a
+   * record that can only phrase positives will phrase a positive.
+   */
+  finding: string;
+  /** What the record cannot answer yet, stated beside what it can. */
+  cannotYetAnswer: string[];
 } {
   const mine =
     engine === undefined ? predictions : predictions.filter((p) => (p.engine ?? 1) === engine);
@@ -283,7 +362,16 @@ export function summariseVerdicts(
   // Expired rows are neither open nor resolved — see expireUnresolvable.
   const open = mine.filter((p) => p.forwardReturnPct === null && !p.expired).length;
   if (resolved.length === 0) {
-    return { cells: [], baselineReturnPct: null, totals: { resolved: 0, open } };
+    return {
+      cells: [],
+      baselineReturnPct: null,
+      totals: { resolved: 0, open },
+      finding: "Nothing has resolved yet. The record is empty, which is not the same as neutral.",
+      cannotYetAnswer: [
+        `${open} calls are still inside their ${VERDICT_HORIZON_SESSIONS}-session window.`,
+        "Every question this record exists to answer. An empty record is honest and says nothing.",
+      ],
+    };
   }
 
   const baseline = resolved.reduce((s, p) => s + (p.forwardReturnPct ?? 0), 0) / resolved.length;
@@ -295,9 +383,30 @@ export function summariseVerdicts(
     const rets = group.map((p) => p.forwardReturnPct ?? 0);
     const mean = rets.reduce((a, b) => a + b, 0) / rets.length;
 
+    const blocks = independentBlocks(group.map((p) => p.date));
+    const publishable = blocks >= MIN_INDEPENDENT_BLOCKS;
+    const edge =
+      verdict === "neutral" ? null : verdict === "bullish" ? mean - baseline : baseline - mean;
+
     cells.push({
       verdict,
       n: group.length,
+      independentN: blocks,
+      publishable,
+      claim: !publishable
+        ? `NO CLAIM. ${group.length} resolved calls, but only ${blocks} independent ` +
+          `${blocks === 1 ? "period" : "periods"} — calls made on the same day are ` +
+          `cross-correlated and windows within ${VERDICT_HORIZON_SESSIONS} sessions overlap, so ` +
+          `this is ${blocks === 1 ? "one observation" : `${blocks} observations`} wearing a large ` +
+          `sample's clothes. ${MIN_INDEPENDENT_BLOCKS} independent periods are needed before an ` +
+          `edge here means anything. The numbers are shown so they can be watched, not acted on.`
+        : verdict === "neutral"
+          ? `Neutral calls have no direction, so no hit rate or edge is claimed. Their returns are ` +
+            `reported because they belong in the baseline, not because they are a call.`
+          : `Over ${blocks} independent periods, ${verdict} calls returned ` +
+            `${mean >= 0 ? "+" : ""}${mean.toFixed(2)}% against a ${baseline >= 0 ? "+" : ""}` +
+            `${baseline.toFixed(2)}% cohort baseline — an edge of ${(edge ?? 0) >= 0 ? "+" : ""}` +
+            `${(edge ?? 0).toFixed(2)}pp.`,
       hitRatePct:
         verdict === "neutral"
           ? null
@@ -310,7 +419,50 @@ export function summariseVerdicts(
     });
   }
 
-  return { cells, baselineReturnPct: baseline, totals: { resolved: resolved.length, open } };
+  /*
+   * THE NULL, SAID IN THOSE WORDS. A record that can only phrase a positive
+   * will eventually phrase one, so the sentence for "nothing here" is
+   * written first and is the default.
+   */
+  const publishableCells = cells.filter((c) => c.publishable);
+  const withEdge = publishableCells.filter((c) => (c.edgeVsBaselinePct ?? 0) > 0);
+  const finding =
+    resolved.length === 0
+      ? "Nothing has resolved yet. The record is empty, which is not the same as neutral."
+      : publishableCells.length === 0
+        ? `NOTHING HERE HAS A MEASURABLE EDGE YET. ${resolved.length} calls have resolved, but no ` +
+          `cell has the ${MIN_INDEPENDENT_BLOCKS} independent periods an edge claim needs — the ` +
+          `most any cell has is ${Math.max(0, ...cells.map((c) => c.independentN))}. This is a ` +
+          `statement about the evidence, not about the engine: the calls may be good or bad and ` +
+          `this record cannot yet tell you which.`
+        : withEdge.length === 0
+          ? `NOTHING HERE HAS A MEASURABLE EDGE. Every cell with enough independent periods to ` +
+            `judge came in at or below its cohort baseline. That is a real result and the record ` +
+            `states it rather than reaching for a positive.`
+          : `${withEdge.map((c) => c.verdict).join(" and ")} clear the cohort baseline over ` +
+            `${withEdge.map((c) => c.independentN).join("/")} independent periods.`;
+
+  const cannotYetAnswer: string[] = [];
+  if (open > 0) cannotYetAnswer.push(`${open} calls are still inside their window and contribute nothing yet.`);
+  if (cells.some((c) => !c.publishable))
+    cannotYetAnswer.push(
+      `Whether any verdict has an edge — no cell yet has ${MIN_INDEPENDENT_BLOCKS} independent periods.`
+    );
+  cannotYetAnswer.push(
+    "Whether an edge, once measurable, survives costs. These are gross forward returns; the round-trip cost of expressing them is priced separately by /api/cost/express."
+  );
+  cannotYetAnswer.push(
+    "Anything about a symbol not in the registered universe, and anything at a horizon other than " +
+      `${VERDICT_HORIZON_SESSIONS} sessions.`
+  );
+
+  return {
+    cells,
+    baselineReturnPct: baseline,
+    totals: { resolved: resolved.length, open },
+    finding,
+    cannotYetAnswer,
+  };
 }
 
 export const MAX_VERDICT_PREDICTIONS = 60_000;

@@ -401,6 +401,8 @@ function main() {
     cells: vSummary.cells,
     baselineReturnPct: vSummary.baselineReturnPct,
     marketBaselineReturnPct: marketBaselineFor(CURRENT_VERDICT_ENGINE),
+    finding: vSummary.finding,
+    cannotYetAnswer: vSummary.cannotYetAnswer,
     totals: vSummary.totals,
     engine: CURRENT_VERDICT_ENGINE,
     ...(legacySummary.totals.resolved + legacySummary.totals.open > 0

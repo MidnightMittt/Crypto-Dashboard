@@ -421,7 +421,8 @@ export async function analyseTicker(raw: string): Promise<TickerAnalysisResult> 
             baselineReturnPct: number | null;
             totals: { resolved: number; open: number };
             cells: Array<{
-              verdict: string; n: number; hitRatePct: number | null;
+              verdict: string; n: number; independentN?: number; publishable?: boolean;
+              hitRatePct: number | null;
               meanReturnPct: number; edgeVsBaselinePct: number | null;
             }>;
           }
