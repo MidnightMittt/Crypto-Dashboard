@@ -1,5 +1,5 @@
 {
- "generatedAt": 1787435325125,
+ "generatedAt": 1787526121940,
  "method": {
   "panel": "declared EQUITY_PANEL",
   "names": 95,
@@ -17,7 +17,7 @@
   ],
   "effectSoughtPp": 5,
   "trailingVolSessions": 60,
-  "statistic": "per-date mean of (outcome - GBM predicted), t over non-overlapping date blocks",
+  "statistic": "per-date mean of (outcome - GBM predicted), t over non-overlapping date blocks. Cross-sectional correlation between names is absorbed by construction — the date is the unit, so no rho needs estimating. Serial correlation BETWEEN blocks is not absorbed, so it is measured per cell (ar1) and charged to the SE by sqrt((1+r)/(1-r)); mde_pp_adjusted is the figure that governs, and `resolves` is judged on it.",
   "barrierConvention": "b_up = ln(1+m); b_down = -ln(1-m); drift sign flips on the down side",
   "note": "PATH-SHAPE half of the reach-vs-implied symmetric component. The VOL-PREMIUM half needs live chains and is measured separately."
  },
@@ -31,13 +31,23 @@
     "symmetric_pp": -2.797,
     "se_pp": 0.207,
     "t": -13.49,
-    "mde_pp": 0.415
+    "mde_pp": 0.415,
+    "ar1": 0.473,
+    "ar1_inflation": 1.672,
+    "mde_pp_adjusted": 0.693,
+    "t_adjusted": -8.07,
+    "effective_blocks": 599.6
    },
    "in_window": {
     "symmetric_pp": 1.704,
     "se_pp": 0.128,
     "t": 13.28,
-    "mde_pp": 0.257
+    "mde_pp": 0.257,
+    "ar1": -0.033,
+    "ar1_inflation": 1,
+    "mde_pp_adjusted": 0.257,
+    "t_adjusted": 13.28,
+    "effective_blocks": 1677
    },
    "antisymmetric_trailing_pp": 1.097,
    "resolves": true
@@ -51,13 +61,23 @@
     "symmetric_pp": -0.748,
     "se_pp": 0.141,
     "t": -5.31,
-    "mde_pp": 0.282
+    "mde_pp": 0.282,
+    "ar1": 0.533,
+    "ar1_inflation": 1.812,
+    "mde_pp_adjusted": 0.51,
+    "t_adjusted": -2.93,
+    "effective_blocks": 511
    },
    "in_window": {
     "symmetric_pp": -0.116,
     "se_pp": 0.081,
     "t": -1.43,
-    "mde_pp": 0.162
+    "mde_pp": 0.162,
+    "ar1": -0.073,
+    "ar1_inflation": 1,
+    "mde_pp_adjusted": 0.162,
+    "t_adjusted": -1.43,
+    "effective_blocks": 1677
    },
    "antisymmetric_trailing_pp": 0.154,
    "resolves": true
@@ -71,13 +91,23 @@
     "symmetric_pp": -0.017,
     "se_pp": 0.052,
     "t": -0.33,
-    "mde_pp": 0.105
+    "mde_pp": 0.105,
+    "ar1": 0.487,
+    "ar1_inflation": 1.703,
+    "mde_pp_adjusted": 0.179,
+    "t_adjusted": -0.19,
+    "effective_blocks": 578.4
    },
    "in_window": {
     "symmetric_pp": -0.238,
     "se_pp": 0.038,
     "t": -6.22,
-    "mde_pp": 0.076
+    "mde_pp": 0.076,
+    "ar1": -0.122,
+    "ar1_inflation": 1,
+    "mde_pp_adjusted": 0.076,
+    "t_adjusted": -6.22,
+    "effective_blocks": 1677
    },
    "antisymmetric_trailing_pp": 0.031,
    "resolves": true
@@ -91,13 +121,23 @@
     "symmetric_pp": 0.049,
     "se_pp": 0.021,
     "t": 2.32,
-    "mde_pp": 0.043
+    "mde_pp": 0.043,
+    "ar1": 0.338,
+    "ar1_inflation": 1.422,
+    "mde_pp_adjusted": 0.061,
+    "t_adjusted": 1.63,
+    "effective_blocks": 828.9
    },
    "in_window": {
     "symmetric_pp": -0.094,
     "se_pp": 0.018,
     "t": -5.17,
-    "mde_pp": 0.037
+    "mde_pp": 0.037,
+    "ar1": -0.068,
+    "ar1_inflation": 1,
+    "mde_pp_adjusted": 0.037,
+    "t_adjusted": -5.17,
+    "effective_blocks": 1677
    },
    "antisymmetric_trailing_pp": 0.02,
    "resolves": true
@@ -111,13 +151,23 @@
     "symmetric_pp": -2.557,
     "se_pp": 0.291,
     "t": -8.8,
-    "mde_pp": 0.581
+    "mde_pp": 0.581,
+    "ar1": 0.394,
+    "ar1_inflation": 1.516,
+    "mde_pp_adjusted": 0.881,
+    "t_adjusted": -5.81,
+    "effective_blocks": 364.6
    },
    "in_window": {
     "symmetric_pp": 1.345,
     "se_pp": 0.173,
     "t": 7.78,
-    "mde_pp": 0.346
+    "mde_pp": 0.346,
+    "ar1": -0.039,
+    "ar1_inflation": 1,
+    "mde_pp_adjusted": 0.346,
+    "t_adjusted": 7.78,
+    "effective_blocks": 838
    },
    "antisymmetric_trailing_pp": 3.112,
    "resolves": true
@@ -131,13 +181,23 @@
     "symmetric_pp": -1.397,
     "se_pp": 0.256,
     "t": -5.45,
-    "mde_pp": 0.513
+    "mde_pp": 0.513,
+    "ar1": 0.429,
+    "ar1_inflation": 1.582,
+    "mde_pp_adjusted": 0.811,
+    "t_adjusted": -3.44,
+    "effective_blocks": 334.7
    },
    "in_window": {
     "symmetric_pp": 0.012,
     "se_pp": 0.145,
     "t": 0.08,
-    "mde_pp": 0.29
+    "mde_pp": 0.29,
+    "ar1": -0.024,
+    "ar1_inflation": 1,
+    "mde_pp_adjusted": 0.29,
+    "t_adjusted": 0.08,
+    "effective_blocks": 838
    },
    "antisymmetric_trailing_pp": 0.789,
    "resolves": true
@@ -151,13 +211,23 @@
     "symmetric_pp": -0.366,
     "se_pp": 0.13,
     "t": -2.81,
-    "mde_pp": 0.26
+    "mde_pp": 0.26,
+    "ar1": 0.459,
+    "ar1_inflation": 1.643,
+    "mde_pp_adjusted": 0.427,
+    "t_adjusted": -1.71,
+    "effective_blocks": 310.4
    },
    "in_window": {
     "symmetric_pp": -0.404,
     "se_pp": 0.07,
     "t": -5.78,
-    "mde_pp": 0.14
+    "mde_pp": 0.14,
+    "ar1": 0.027,
+    "ar1_inflation": 1.027,
+    "mde_pp_adjusted": 0.144,
+    "t_adjusted": -5.62,
+    "effective_blocks": 793.9
    },
    "antisymmetric_trailing_pp": 0,
    "resolves": true
@@ -171,13 +241,23 @@
     "symmetric_pp": -0.104,
     "se_pp": 0.059,
     "t": -1.78,
-    "mde_pp": 0.117
+    "mde_pp": 0.117,
+    "ar1": 0.368,
+    "ar1_inflation": 1.47,
+    "mde_pp_adjusted": 0.173,
+    "t_adjusted": -1.21,
+    "effective_blocks": 387.5
    },
    "in_window": {
     "symmetric_pp": -0.238,
     "se_pp": 0.041,
     "t": -5.78,
-    "mde_pp": 0.082
+    "mde_pp": 0.082,
+    "ar1": 0.145,
+    "ar1_inflation": 1.158,
+    "mde_pp_adjusted": 0.095,
+    "t_adjusted": -4.99,
+    "effective_blocks": 625.2
    },
    "antisymmetric_trailing_pp": -0.051,
    "resolves": true
@@ -191,13 +271,23 @@
     "symmetric_pp": -1.696,
     "se_pp": 0.387,
     "t": -4.39,
-    "mde_pp": 0.773
+    "mde_pp": 0.773,
+    "ar1": 0.172,
+    "ar1_inflation": 1.189,
+    "mde_pp_adjusted": 0.92,
+    "t_adjusted": -3.69,
+    "effective_blocks": 282.1
    },
    "in_window": {
     "symmetric_pp": 0.377,
     "se_pp": 0.272,
     "t": 1.39,
-    "mde_pp": 0.545
+    "mde_pp": 0.545,
+    "ar1": -0.022,
+    "ar1_inflation": 1,
+    "mde_pp_adjusted": 0.545,
+    "t_adjusted": 1.39,
+    "effective_blocks": 399
    },
    "antisymmetric_trailing_pp": 5.839,
    "resolves": true
@@ -211,13 +301,23 @@
     "symmetric_pp": -1.541,
     "se_pp": 0.426,
     "t": -3.62,
-    "mde_pp": 0.852
+    "mde_pp": 0.852,
+    "ar1": 0.212,
+    "ar1_inflation": 1.241,
+    "mde_pp_adjusted": 1.057,
+    "t_adjusted": -2.92,
+    "effective_blocks": 259.2
    },
    "in_window": {
     "symmetric_pp": -0.113,
     "se_pp": 0.246,
     "t": -0.46,
-    "mde_pp": 0.493
+    "mde_pp": 0.493,
+    "ar1": -0.112,
+    "ar1_inflation": 1,
+    "mde_pp_adjusted": 0.493,
+    "t_adjusted": -0.46,
+    "effective_blocks": 399
    },
    "antisymmetric_trailing_pp": 3.318,
    "resolves": true
@@ -231,13 +331,23 @@
     "symmetric_pp": -0.709,
     "se_pp": 0.293,
     "t": -2.42,
-    "mde_pp": 0.587
+    "mde_pp": 0.587,
+    "ar1": 0.31,
+    "ar1_inflation": 1.377,
+    "mde_pp_adjusted": 0.808,
+    "t_adjusted": -1.76,
+    "effective_blocks": 210.3
    },
    "in_window": {
     "symmetric_pp": -0.442,
     "se_pp": 0.142,
     "t": -3.11,
-    "mde_pp": 0.284
+    "mde_pp": 0.284,
+    "ar1": -0.042,
+    "ar1_inflation": 1,
+    "mde_pp_adjusted": 0.284,
+    "t_adjusted": -3.11,
+    "effective_blocks": 399
    },
    "antisymmetric_trailing_pp": 0.569,
    "resolves": true
@@ -251,13 +361,23 @@
     "symmetric_pp": -0.408,
     "se_pp": 0.185,
     "t": -2.2,
-    "mde_pp": 0.37
+    "mde_pp": 0.37,
+    "ar1": 0.279,
+    "ar1_inflation": 1.333,
+    "mde_pp_adjusted": 0.493,
+    "t_adjusted": -1.65,
+    "effective_blocks": 224.7
    },
    "in_window": {
     "symmetric_pp": -0.418,
     "se_pp": 0.086,
     "t": -4.84,
-    "mde_pp": 0.173
+    "mde_pp": 0.173,
+    "ar1": 0.01,
+    "ar1_inflation": 1.01,
+    "mde_pp_adjusted": 0.174,
+    "t_adjusted": -4.79,
+    "effective_blocks": 391.1
    },
    "antisymmetric_trailing_pp": 0.017,
    "resolves": true
@@ -271,13 +391,23 @@
     "symmetric_pp": -1.057,
     "se_pp": 0.486,
     "t": -2.17,
-    "mde_pp": 0.973
+    "mde_pp": 0.973,
+    "ar1": -0.006,
+    "ar1_inflation": 1,
+    "mde_pp_adjusted": 0.973,
+    "t_adjusted": -2.17,
+    "effective_blocks": 199
    },
    "in_window": {
     "symmetric_pp": -0.604,
     "se_pp": 0.357,
     "t": -1.69,
-    "mde_pp": 0.714
+    "mde_pp": 0.714,
+    "ar1": -0.001,
+    "ar1_inflation": 1,
+    "mde_pp_adjusted": 0.714,
+    "t_adjusted": -1.69,
+    "effective_blocks": 199
    },
    "antisymmetric_trailing_pp": 8.175,
    "resolves": true
@@ -291,13 +421,23 @@
     "symmetric_pp": -0.746,
     "se_pp": 0.596,
     "t": -1.25,
-    "mde_pp": 1.192
+    "mde_pp": 1.192,
+    "ar1": 0.046,
+    "ar1_inflation": 1.047,
+    "mde_pp_adjusted": 1.248,
+    "t_adjusted": -1.2,
+    "effective_blocks": 181.7
    },
    "in_window": {
     "symmetric_pp": -0.288,
     "se_pp": 0.343,
     "t": -0.84,
-    "mde_pp": 0.686
+    "mde_pp": 0.686,
+    "ar1": -0.127,
+    "ar1_inflation": 1,
+    "mde_pp_adjusted": 0.686,
+    "t_adjusted": -0.84,
+    "effective_blocks": 199
    },
    "antisymmetric_trailing_pp": 7.17,
    "resolves": true
@@ -311,13 +451,23 @@
     "symmetric_pp": -0.88,
     "se_pp": 0.55,
     "t": -1.6,
-    "mde_pp": 1.1
+    "mde_pp": 1.1,
+    "ar1": 0.032,
+    "ar1_inflation": 1.033,
+    "mde_pp_adjusted": 1.136,
+    "t_adjusted": -1.55,
+    "effective_blocks": 186.5
    },
    "in_window": {
     "symmetric_pp": -0.749,
     "se_pp": 0.304,
     "t": -2.47,
-    "mde_pp": 0.607
+    "mde_pp": 0.607,
+    "ar1": -0.078,
+    "ar1_inflation": 1,
+    "mde_pp_adjusted": 0.607,
+    "t_adjusted": -2.47,
+    "effective_blocks": 199
    },
    "antisymmetric_trailing_pp": 2.534,
    "resolves": true
@@ -331,13 +481,23 @@
     "symmetric_pp": -0.418,
     "se_pp": 0.399,
     "t": -1.05,
-    "mde_pp": 0.798
+    "mde_pp": 0.798,
+    "ar1": -0.036,
+    "ar1_inflation": 1,
+    "mde_pp_adjusted": 0.798,
+    "t_adjusted": -1.05,
+    "effective_blocks": 199
    },
    "in_window": {
     "symmetric_pp": -0.425,
     "se_pp": 0.217,
     "t": -1.95,
-    "mde_pp": 0.434
+    "mde_pp": 0.434,
+    "ar1": 0.002,
+    "ar1_inflation": 1.002,
+    "mde_pp_adjusted": 0.435,
+    "t_adjusted": -1.95,
+    "effective_blocks": 198.2
    },
    "antisymmetric_trailing_pp": 0.893,
    "resolves": true

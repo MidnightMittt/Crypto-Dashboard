@@ -37,8 +37,29 @@ import calibrationJson from "@/data/touchCalibration.json";
 export interface CalibrationStat {
   symmetric_pp: number;
   se_pp: number;
+  /** Uncharged. Kept so the size of the serial-correlation charge is visible. */
   t: number;
+  /** Uncharged. Do not quote this one. */
   mde_pp: number;
+  /**
+   * Lag-1 autocorrelation of the block series, and the SE inflation it buys.
+   *
+   * The date-block design absorbs correlation BETWEEN NAMES within a date by
+   * construction — that is why the panel's rho of ~0.8 never enters these
+   * figures. It does not absorb correlation between one block and the next,
+   * and on this grid that is not negligible: ar1 averages 0.28 and reaches
+   * 0.53 at the 5-day horizon, which is real persistence in the GBM model's
+   * calibration error rather than a windowing artefact (the blocks stride by
+   * the horizon and never overlap).
+   */
+  ar1: number;
+  ar1_inflation: number;
+  /** MDE after the charge. Quote this one. */
+  mde_pp_adjusted: number;
+  /** t after the charge. Decide on this one. */
+  t_adjusted: number;
+  /** Blocks divided by the variance inflation — what the series is actually worth. */
+  effective_blocks: number;
 }
 
 export interface CalibrationCell {
@@ -100,12 +121,16 @@ export function nearestCell(
 
 export interface ConversionReport {
   measured_at: { horizon_sessions: number; barrier_pct: number; exact_match: boolean };
+  /** Null unless the cell resolves the effect sought AND the estimate clears its own floor. */
   bias_pp: number | null;
+  /** The ADJUSTED floor — after the block series' serial correlation is charged. */
   noise_floor_pp: number;
   resolves_effect_of_pp: number;
   verdict: string;
   drift_component_pp: number;
   blocks: number;
+  /** What `blocks` is worth once the series' own persistence is charged. */
+  effective_blocks: number;
   method: string;
 }
 
@@ -114,17 +139,45 @@ export interface ConversionReport {
  * probability from a measured one at this cell.
  *
  * `bias_pp` is null — deliberately, per the same discipline that returns
- * `no_width_survives` instead of a number — when the cell cannot resolve
- * the effect worth finding. A figure that cannot be distinguished from
- * zero at the sample available is a refusal, not a measurement.
+ * `no_width_survives` instead of a number — in EITHER of two cases: the
+ * cell cannot resolve the effect worth finding, or the bias it measured
+ * does not clear its own noise floor. A figure that cannot be
+ * distinguished from zero at the sample available is a refusal, not a
+ * measurement, and that holds for the field as well as the sentence.
  */
 export function conversionReport(horizonSessions: number, barrierPct: number): ConversionReport | null {
   const found = nearestCell(horizonSessions, barrierPct);
   if (!found) return null;
   const { cell, exact } = found;
   const t = cell.trailing;
-  const detectable = Math.abs(t.t) >= 2;
+  /*
+   * Both tests run on the CHARGED figures. Deciding detectability on the raw
+   * t while reporting `resolves` from the charged MDE would take whichever
+   * correction flatters the cell, which is worse than never measuring the
+   * autocorrelation at all. Four of this grid's sixteen cells cleared |t|>=2
+   * before the charge and do not after it.
+   */
+  const detectable = Math.abs(t.t_adjusted) >= 2;
   const material = Math.abs(t.symmetric_pp) >= EFFECT_SOUGHT_PP;
+  /*
+   * ONE CONDITION GOVERNS BOTH THE FIELD AND THE PROSE.
+   *
+   * `bias_pp` used to be gated on `resolves` alone, which asks whether the
+   * cell could see a 5pp effect — a different question from whether the
+   * figure it actually measured is distinguishable from zero. At 10d/20%
+   * that gap was live: the verdict read "no detectable bias ... the honest
+   * answer here is a null" while the field beside it returned -0.366pp, a
+   * value below its own 0.427pp floor. A caller parsing JSON rather than
+   * prose would have subtracted noise as a correction.
+   *
+   * Since mde_pp_adjusted is 2*se*inflation and t_adjusted is
+   * mean/(se*inflation), `detectable` is exactly "the estimate clears its
+   * own floor" — so this is the same refusal the module already claimed to
+   * make, now applied to the number as well as the sentence.
+   */
+  const offerBias = cell.resolves && detectable;
+  /** "N blocks" overstated the sample; this is what N is worth. */
+  const sample = `${cell.blocks} non-overlapping blocks worth ${t.effective_blocks} after their own serial correlation (ar1 ${t.ar1})`;
 
   return {
     measured_at: {
@@ -132,21 +185,28 @@ export function conversionReport(horizonSessions: number, barrierPct: number): C
       barrier_pct: cell.barrier_pct,
       exact_match: exact,
     },
-    bias_pp: cell.resolves ? t.symmetric_pp : null,
-    noise_floor_pp: t.mde_pp,
+    bias_pp: offerBias ? t.symmetric_pp : null,
+    noise_floor_pp: t.mde_pp_adjusted,
     resolves_effect_of_pp: EFFECT_SOUGHT_PP,
     drift_component_pp: cell.antisymmetric_trailing_pp,
     blocks: cell.blocks,
+    effective_blocks: t.effective_blocks,
     verdict: !cell.resolves
-      ? `This cell cannot resolve a ${EFFECT_SOUGHT_PP}pp effect (its own floor is ${t.mde_pp}pp), so no bias figure is offered.`
+      ? `This cell cannot resolve a ${EFFECT_SOUGHT_PP}pp effect (its own floor is ${t.mde_pp_adjusted}pp), so no bias figure is offered.`
       : material
         ? `The vol-to-touch conversion is biased by ${t.symmetric_pp > 0 ? "+" : ""}${t.symmetric_pp}pp here — large enough to matter; correct for it before comparing a premium to a measured rate.`
         : detectable
-          ? `The vol-to-touch conversion carries a measured bias of ${t.symmetric_pp > 0 ? "+" : ""}${t.symmetric_pp}pp (detectable at ${cell.blocks} independent periods, floor ${t.mde_pp}pp) — real but far below the ${EFFECT_SOUGHT_PP}pp that would be tradeable. Compare premiums to measured reach without a correction; do not read a few points of difference as an edge.`
-          : `No detectable bias in the vol-to-touch conversion here (${t.symmetric_pp > 0 ? "+" : ""}${t.symmetric_pp}pp against a ${t.mde_pp}pp floor over ${cell.blocks} independent periods). A well-powered null: the bridge between implied and measured is sound at this cell.`,
+          ? `The vol-to-touch conversion carries a measured bias of ${t.symmetric_pp > 0 ? "+" : ""}${t.symmetric_pp}pp (t=${t.t_adjusted} over ${sample}, floor ${t.mde_pp_adjusted}pp) — real but far below the ${EFFECT_SOUGHT_PP}pp that would be tradeable. Compare premiums to measured reach without a correction; do not read a few points of difference as an edge.`
+          : `No detectable bias in the vol-to-touch conversion here (${t.symmetric_pp > 0 ? "+" : ""}${t.symmetric_pp}pp, t=${t.t_adjusted} against a ${t.mde_pp_adjusted}pp floor over ${sample}). ${
+              Math.abs(t.t) >= 2
+                ? `It DID clear on the uncharged t (${t.t}); the blocks are not independent enough to support that reading, and the honest answer here is a null rather than a small measured bias.`
+                : `A well-powered null: the bridge between implied and measured is sound at this cell.`
+            }`,
     method:
       `Symmetric (volatility) component of measured-minus-implied touch probability, ` +
-      `${file.method.panel}, ${cell.blocks} non-overlapping date blocks. ` +
+      `${file.method.panel}, ${sample}. Correlation BETWEEN NAMES is absorbed by the design — the ` +
+      `date is the unit, so the panel's ~0.8 cross-sectional rho never enters. Correlation between ` +
+      `BLOCKS is not, so it is measured and charged to the standard error. ` +
       `The ANTISYMMETRIC component here is ${cell.antisymmetric_trailing_pp > 0 ? "+" : ""}${cell.antisymmetric_trailing_pp}pp — that is DRIFT, ` +
       `it grows with horizon, and ranking symbols by undecomposed "measured minus implied" ranks it rather than any mispricing.`,
   };

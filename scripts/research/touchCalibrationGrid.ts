@@ -140,18 +140,72 @@ interface CellResult {
   antisymmetric_trailing_pp: number;
   resolves: boolean;
 }
-interface Stat { symmetric_pp: number; se_pp: number; t: number; mde_pp: number }
+interface Stat {
+  symmetric_pp: number;
+  se_pp: number;
+  t: number;
+  mde_pp: number;
+  /** Lag-1 autocorrelation of the block series. See below. */
+  ar1: number;
+  /** SE inflation applied for that autocorrelation; 1.00 when none was found. */
+  ar1_inflation: number;
+  /** MDE after the inflation. This is the figure to quote. */
+  mde_pp_adjusted: number;
+  /** t after the inflation. This is the figure that decides. */
+  t_adjusted: number;
+  /** Blocks divided by the variance inflation — how many the series is worth. */
+  effective_blocks: number;
+}
+
+/**
+ * BLOCK-TO-BLOCK SERIAL CORRELATION — the one thing the date-block design
+ * does not absorb, measured rather than assumed.
+ *
+ * Taking the cross-sectional mean per date and a t over dates absorbs
+ * arbitrary correlation BETWEEN NAMES within a date, however large, without
+ * having to estimate it. That is why the panel's rho of ~0.8 does not touch
+ * these MDEs. What it does not absorb is correlation between one block and
+ * the next: if the model's calibration error persists across regimes, the
+ * blocks are not independent draws either, and the SE is too small for the
+ * same reason a naive cross-sectional SE would have been.
+ *
+ * The blocks are already non-overlapping by construction (the loop strides
+ * by the horizon), so any autocorrelation here is genuine persistence rather
+ * than a windowing artefact.
+ *
+ * For an AR(1) series the variance of the mean inflates by (1+r)/(1-r), so
+ * the SE inflates by its square root. Negative autocorrelation would SHRINK
+ * the SE, which is the flattering direction, so it is clamped at 1 — a
+ * measurement is not licence to claim more precision than the naive estimate.
+ */
+function lag1(diffs: number[], mean: number): number {
+  let num = 0;
+  let den = 0;
+  for (let i = 0; i < diffs.length; i++) {
+    const d = diffs[i] - mean;
+    den += d * d;
+    if (i > 0) num += d * (diffs[i - 1] - mean);
+  }
+  return den > 0 ? num / den : 0;
+}
 
 function summarise(diffs: number[]): Stat {
   const n = diffs.length;
   const mean = diffs.reduce((a, b) => a + b, 0) / n;
   const sd = Math.sqrt(diffs.reduce((a, b) => a + (b - mean) ** 2, 0) / (n - 1));
   const se = sd / Math.sqrt(n);
+  const r = lag1(diffs, mean);
+  const inflation = r > 0 && r < 1 ? Math.sqrt((1 + r) / (1 - r)) : 1;
   return {
     symmetric_pp: Number((mean * 100).toFixed(3)),
     se_pp: Number((se * 100).toFixed(3)),
     t: Number((mean / se).toFixed(2)),
     mde_pp: Number((2 * se * 100).toFixed(3)),
+    ar1: Number(r.toFixed(3)),
+    ar1_inflation: Number(inflation.toFixed(3)),
+    mde_pp_adjusted: Number((2 * se * inflation * 100).toFixed(3)),
+    t_adjusted: Number((mean / (se * inflation)).toFixed(2)),
+    effective_blocks: Number((n / (inflation * inflation)).toFixed(1)),
   };
 }
 
@@ -226,7 +280,11 @@ for (const H of HORIZONS) {
       trailing,
       in_window: inWindow,
       antisymmetric_trailing_pp: Number((anti * 100).toFixed(3)),
-      resolves: trailing.mde_pp <= EFFECT_SOUGHT_PP,
+      /*
+       * Judged on the ADJUSTED MDE. A cell that only resolves the effect
+       * before the serial-correlation charge does not resolve it.
+       */
+      resolves: trailing.mde_pp_adjusted <= EFFECT_SOUGHT_PP,
     });
   }
 }
@@ -236,30 +294,71 @@ console.log(`panel: ${loaded.length} of ${EQUITY_PANEL.length} declared names lo
 console.log(`grid: ${HORIZONS.length} horizons x ${BARRIERS.length} barriers = ${cells.length} cells measured`);
 console.log(`effect sought: ${EFFECT_SOUGHT_PP}pp symmetric (a smaller vol edge is not tradeable after costs)`);
 console.log("");
-console.log("  H  bar   blocks  names |  TRAILING-VOL sigma        |  IN-WINDOW sigma          | drift");
-console.log("                          |   sym    se     t    MDE  |   sym    se     t    MDE  |  anti");
+console.log("  H  bar   blocks  names |  TRAILING-VOL sigma                    |  IN-WINDOW sigma          | drift");
+console.log("                          |   sym    se     t    MDE   ar1   MDE* |   sym    se     t    MDE  |  anti");
 for (const c of cells) {
   const f = (s: Stat) =>
     `${s.symmetric_pp.toFixed(2).padStart(6)} ${s.se_pp.toFixed(2).padStart(5)} ${s.t.toFixed(2).padStart(6)} ${s.mde_pp.toFixed(2).padStart(5)}`;
   console.log(
-    `${String(c.horizon_sessions).padStart(3)} ${String(c.barrier_pct).padStart(3)}%  ${String(c.blocks).padStart(6)} ${String(c.names_per_block).padStart(6)} | ${f(c.trailing)} | ${f(c.in_window)} | ${c.antisymmetric_trailing_pp.toFixed(2).padStart(6)}`
+    `${String(c.horizon_sessions).padStart(3)} ${String(c.barrier_pct).padStart(3)}%  ${String(c.blocks).padStart(6)} ${String(c.names_per_block).padStart(6)} | ${f(c.trailing)} ${c.trailing.ar1.toFixed(2).padStart(5)} ${c.trailing.mde_pp_adjusted.toFixed(2).padStart(5)} | ${f(c.in_window)} | ${c.antisymmetric_trailing_pp.toFixed(2).padStart(6)}`
   );
 }
 
-const resolving = cells.filter((c) => c.resolves);
-const clearing = cells.filter((c) => Math.abs(c.trailing.t) >= 2);
-const clearingBoth = cells.filter((c) => Math.abs(c.trailing.t) >= 2 && Math.abs(c.in_window.t) >= 2);
+/*
+ * MDE* is the number that governs. The unadjusted MDE beside it is kept so
+ * the size of the charge is visible rather than described.
+ */
+const ar1s = cells.map((c) => c.trailing.ar1);
+const worst = cells.reduce((a, b) => (b.trailing.ar1 > a.trailing.ar1 ? b : a));
 console.log("");
-console.log(`cells whose MDE resolves a ${EFFECT_SOUGHT_PP}pp effect: ${resolving.length} of ${cells.length}`);
-console.log(`cells where |t| >= 2 on TRAILING vol:  ${clearing.length} of ${cells.length}`);
+console.log(
+  `block-to-block ar1 on trailing vol: min ${Math.min(...ar1s).toFixed(3)}, ` +
+  `max ${Math.max(...ar1s).toFixed(3)} (${worst.horizon_sessions}d ${worst.barrier_pct}%), ` +
+  `mean ${(ars(ar1s)).toFixed(3)}`
+);
+console.log(
+  `worst SE inflation: ${Math.max(...cells.map((c) => c.trailing.ar1_inflation)).toFixed(2)}x — ` +
+  `MDE range ${Math.min(...cells.map((c) => c.trailing.mde_pp)).toFixed(2)}-${Math.max(...cells.map((c) => c.trailing.mde_pp)).toFixed(2)}pp ` +
+  `becomes ${Math.min(...cells.map((c) => c.trailing.mde_pp_adjusted)).toFixed(2)}-${Math.max(...cells.map((c) => c.trailing.mde_pp_adjusted)).toFixed(2)}pp`
+);
+function ars(v: number[]) { return v.reduce((a, b) => a + b, 0) / v.length; }
+
+/*
+ * Every count below is on the ADJUSTED t. Reporting `resolves` on the
+ * charged MDE while counting significance on the uncharged t would apply the
+ * correction to whichever number it flatters least, which is worse than not
+ * measuring it at all.
+ */
+const resolving = cells.filter((c) => c.resolves);
+const clearing = cells.filter((c) => Math.abs(c.trailing.t_adjusted) >= 2);
+const wouldHaveCleared = cells.filter(
+  (c) => Math.abs(c.trailing.t) >= 2 && Math.abs(c.trailing.t_adjusted) < 2
+);
+const clearingBoth = cells.filter(
+  (c) => Math.abs(c.trailing.t_adjusted) >= 2 && Math.abs(c.in_window.t_adjusted) >= 2
+);
+console.log("");
+console.log(`cells whose adjusted MDE resolves a ${EFFECT_SOUGHT_PP}pp effect: ${resolving.length} of ${cells.length}`);
+console.log(`cells where |t| >= 2 on TRAILING vol, after the serial-correlation charge:  ${clearing.length} of ${cells.length}`);
 console.log(`cells where |t| >= 2 on BOTH vol inputs: ${clearingBoth.length} of ${cells.length}`);
+if (wouldHaveCleared.length > 0) {
+  console.log("");
+  console.log(`${wouldHaveCleared.length} cells cleared on the UNCHARGED t and do not survive the charge:`);
+  for (const c of wouldHaveCleared) {
+    console.log(
+      `  ${c.horizon_sessions}d ${c.barrier_pct}%: t ${c.trailing.t} -> ${c.trailing.t_adjusted} ` +
+      `(ar1 ${c.trailing.ar1}, ${c.blocks} blocks worth ${c.trailing.effective_blocks})`
+    );
+  }
+}
 if (clearing.length > 0) {
   console.log("");
   console.log("cells clearing on trailing vol:");
   for (const c of clearing) {
     console.log(
       `  ${c.horizon_sessions}d ${c.barrier_pct}%: symmetric ${c.trailing.symmetric_pp > 0 ? "+" : ""}${c.trailing.symmetric_pp}pp ` +
-      `t=${c.trailing.t} (MDE ${c.trailing.mde_pp}pp, ${c.blocks} blocks) | in-window ${c.in_window.symmetric_pp > 0 ? "+" : ""}${c.in_window.symmetric_pp}pp t=${c.in_window.t}`
+      `t=${c.trailing.t_adjusted} (MDE ${c.trailing.mde_pp_adjusted}pp, ${c.blocks} blocks worth ${c.trailing.effective_blocks}) | ` +
+      `in-window ${c.in_window.symmetric_pp > 0 ? "+" : ""}${c.in_window.symmetric_pp}pp t=${c.in_window.t_adjusted}`
     );
   }
 }
@@ -276,7 +375,12 @@ fs.writeFileSync(
         barriers: BARRIERS,
         effectSoughtPp: EFFECT_SOUGHT_PP,
         trailingVolSessions: TRAILING_VOL_SESSIONS,
-        statistic: "per-date mean of (outcome - GBM predicted), t over non-overlapping date blocks",
+        statistic:
+          "per-date mean of (outcome - GBM predicted), t over non-overlapping date blocks. " +
+          "Cross-sectional correlation between names is absorbed by construction — the date is " +
+          "the unit, so no rho needs estimating. Serial correlation BETWEEN blocks is not " +
+          "absorbed, so it is measured per cell (ar1) and charged to the SE by sqrt((1+r)/(1-r)); " +
+          "mde_pp_adjusted is the figure that governs, and `resolves` is judged on it.",
         barrierConvention: "b_up = ln(1+m); b_down = -ln(1-m); drift sign flips on the down side",
         note:
           "PATH-SHAPE half of the reach-vs-implied symmetric component. The VOL-PREMIUM half needs live chains and is measured separately.",
