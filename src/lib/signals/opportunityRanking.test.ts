@@ -223,3 +223,51 @@ describe("filterMarkets", () => {
     expect(out.map((r) => r.asset)).not.toContain("FLATEQ");
   });
 });
+
+/**
+ * THE PLUMBING BUG, pinned.
+ *
+ * `rankOpportunities` rebuilds each row from an EXPLICIT field list rather
+ * than spreading, so a field added upstream reaches the UI only if someone
+ * remembers to add it here too. `lastClose` was added, forgotten, and the
+ * reachability badge rendered nowhere — while tsc passed (the field is
+ * optional), lint passed, and 2,312 tests passed.
+ *
+ * This asserts the contract directly: every field the UI consumes survives
+ * the rebuild. It is deliberately a list rather than a deep-equal, because
+ * the rebuild is intentional — the point is that additions must be
+ * conscious, and a forgotten one must fail here rather than on the page.
+ */
+describe("rankOpportunities — fields the UI consumes survive the rebuild", () => {
+  const row = (over: Partial<ScannableMarket> = {}): ScannableMarket => ({
+    asset: "IWM",
+    name: "Russell 2000",
+    assetClass: "equity",
+    score: 62,
+    verdict: "bullish",
+    confidence: 30,
+    agreement: 100,
+    riskLevel: "low",
+    priceChange24hPct: 0.4,
+    headline: "h",
+    lastClose: 299.96,
+    ...over,
+  });
+
+  it("carries lastClose through — the reachability badge depends on it", () => {
+    const [out] = rankOpportunities([row()]);
+    expect(out.lastClose).toBe(299.96);
+  });
+
+  it("keeps every consumed field, so a forgotten one fails here not on the page", () => {
+    const [out] = rankOpportunities([row()]);
+    for (const field of ["asset", "name", "assetClass", "verdict", "riskLevel", "lastClose"] as const) {
+      expect(out[field], `${field} was dropped by the rebuild`).toBeDefined();
+    }
+  });
+
+  it("passes a missing price through as null rather than inventing one", () => {
+    const [out] = rankOpportunities([row({ lastClose: undefined })]);
+    expect(out.lastClose ?? null).toBeNull();
+  });
+});
