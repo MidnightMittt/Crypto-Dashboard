@@ -1,4 +1,5 @@
 import { LedgerDiff } from "@/lib/markets/historyLedger";
+import { BreadthResult } from "@/lib/research/effectiveBreadth";
 
 /**
  * THE BRIEF — Roadmap Phase 2, item 3. The front door.
@@ -97,6 +98,21 @@ export interface BriefInputs {
   /** Upcoming reports for names the brief might mention. */
   earnings: Array<{ symbol: string; date: string }>;
   now: number;
+  /**
+   * Effective breadth of a set of symbols, injected rather than computed here.
+   *
+   * A CALLBACK and not a precomputed figure, because the decile is formed
+   * inside `momentumItem` and the caller must not re-derive it. Duplicating
+   * `members.slice(0, decileSize)` in the page would create a second source of
+   * truth for what the basket IS, and the two would drift the first time the
+   * decile rule changed — the failure mode this codebase treats as a defect
+   * rather than a style choice.
+   *
+   * Returns null when the set cannot be measured, and the caller is expected
+   * to return null rather than a partial reading: breadth computed over 7 of 8
+   * names describes a basket nobody holds.
+   */
+  breadthOf?: (symbols: readonly string[]) => BreadthResult | null;
 }
 
 /** Beyond this the panel's breakpoints no longer describe today's market. */
@@ -136,7 +152,7 @@ export function buildBrief(inputs: BriefInputs): Brief {
  * meaningless.
  */
 function momentumItem(inputs: BriefInputs): { item: BriefItem | null; reason: string } {
-  const { crossSection: cs, momentumRecord: rec, now } = inputs;
+  const { crossSection: cs, momentumRecord: rec, now, breadthOf } = inputs;
 
   if (!cs || !rec) {
     return {
@@ -212,6 +228,35 @@ function momentumItem(inputs: BriefInputs): { item: BriefItem | null; reason: st
       : "";
 
   const lb = rec.lowerBound === null ? null : (rec.lowerBound * 100).toFixed(1);
+
+  /*
+   * HOW MANY BETS THE BASKET ACTUALLY IS.
+   *
+   * A decile of momentum leaders is selected on a common property, so it
+   * concentrates rather than diversifies — today's eight names are worth
+   * about 1.6 independent bets at a mean pairwise correlation of 0.55, and
+   * four of them are semiconductors. Left unstated, "8 names, equally
+   * weighted" reads as eight-way diversification, which is the single most
+   * expensive wrong inference available on this card.
+   *
+   * It is an EXECUTION term, not a caveat on the record. The 412-period
+   * result measured this basket as it actually trades, correlation included,
+   * and nothing here weakens it — the figure governs position SIZE, which the
+   * record was never a statement about.
+   */
+  const breadth = breadthOf ? breadthOf(decile.map((m) => m.symbol)) : null;
+  const bets = breadth?.effective_bets ?? null;
+  const breadthTerm =
+    bets === null || breadth?.mean_pairwise_rho === null
+      ? `Effective breadth could not be measured for this basket, so treat ${decile.length} names as an upper ` +
+        `bound on its diversification rather than a description of it.`
+      : `These ${decile.length} names are worth about ${bets.toFixed(2)} INDEPENDENT bets — they move together at a ` +
+        `mean pairwise correlation of ${breadth!.mean_pairwise_rho!.toFixed(2)}. That does not weaken the record ` +
+        `above, which measured this basket as it actually trades; it governs SIZE. A decile is selected on a shared ` +
+        `property, so it concentrates rather than diversifies: ${decile.length} tickers is not ` +
+        `${decile.length}-way risk, and a position sized as though it were is carrying several times the exposure ` +
+        `the count suggests.`;
+
   return {
     item: {
       headline: `Momentum basket — the top ${decile.length} of the ranking, held as one position`,
@@ -237,9 +282,19 @@ function momentumItem(inputs: BriefInputs): { item: BriefItem | null; reason: st
           `strongest name is a different trade with no record.`,
         `Hold ${rec.holdSessions} sessions — the horizon the periods were measured over. Shorter or longer is untested.`,
         `Re-rank when the panel refreshes. Names leaving the decile leave the position.`,
+        /*
+         * `worstSpread` is min(basket - panel), a RELATIVE shortfall, not the
+         * basket's worst drawdown. Printing it as "the worst single period
+         * was -17.2%, size for that" invited a reader to size for a 17.2%
+         * loss — and in a period where the panel also fell, the loss was
+         * larger than the spread. The number was right and the noun was
+         * wrong, which is the direction that understates risk.
+         */
         `NO STOP was modelled. The measured periods ran to their horizon whatever happened in between, and the worst ` +
-          `single period in the sample was ${(rec.worstSpread * 100).toFixed(1)}%. Size for that, because a stop would ` +
-          `make this a strategy nobody has measured.`,
+          `single period UNDERPERFORMED the panel by ${Math.abs(rec.worstSpread * 100).toFixed(1)}%. That is a ` +
+          `relative shortfall, not a drawdown — the loss in a period where the panel also fell was larger. Size for ` +
+          `at least that, because a stop would make this a strategy nobody has measured.`,
+        breadthTerm,
       ],
       invalidation:
         `This stops being offered the day panel breadth falls to 50% or below. That is not a discretionary call — it ` +

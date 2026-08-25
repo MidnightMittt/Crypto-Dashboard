@@ -895,8 +895,13 @@ export function ValidatedSignalPanel({ d }: { d: TickerDossier }) {
             tone={m.record.meanExcessPct >= 0 ? "text-success" : "text-danger"}
           />
           {/* Never omitted. A hit rate says how often you win; this says what
-              the worst period looked like, and they size differently. */}
-          <PlanStat label="Worst period" value={`${m.record.worstPct.toFixed(1)}%`} tone="text-danger" />
+              the worst period looked like, and they size differently.
+
+              Labelled "vs panel" because worstPct is min(basket - panel), a
+              RELATIVE shortfall. "Worst period" in a danger tone read as a
+              drawdown, and a period where the panel also fell lost more than
+              this figure — the wrong noun understated the risk. */}
+          <PlanStat label="Worst vs panel" value={`${m.record.worstPct.toFixed(1)}%`} tone="text-danger" />
         </div>
       )}
 

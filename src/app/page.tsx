@@ -4,6 +4,9 @@ import { WatchlistStrip } from "@/components/watchlist/WatchlistStrip";
 import { WhatChanged } from "@/components/intelligence/WhatChanged";
 import { FreshnessBanner } from "@/components/intelligence/FreshnessBanner";
 import { buildBrief } from "@/lib/brief/buildBrief";
+import { BarsPanel, alignedCloses } from "@/lib/research/barsPanel";
+import { ReturnSeries, effectiveBreadth, logReturns } from "@/lib/research/effectiveBreadth";
+import barsPanelJson from "@/data/barsPanel.json";
 import { Ledger, latestDiff } from "@/lib/markets/historyLedger";
 import { RegimeRead } from "@/lib/markets/riskRegime";
 import snapshot from "@/data/marketIntelligence.json";
@@ -63,6 +66,26 @@ const validation = validationJson as {
 };
 const earnings = earningsJson as { entries?: Array<{ symbol: string; date: string }> };
 const macro = macroJson as { volTermStructure: VolTermRead | null };
+const bars = barsPanelJson as unknown as BarsPanel;
+
+/**
+ * Effective breadth of a named set, or null if ANY member is unmeasurable.
+ *
+ * All-or-nothing on purpose. `effectiveBreadth` will happily describe the
+ * seven names it can see, but the brief would then print a bets-per-name
+ * figure for a basket the reader is not holding — and it would err toward
+ * looking MORE diverse, because the dropped name is the one whose history is
+ * shortest and whose correlation to the rest is least likely to be high. A
+ * refusal is the honest output; the copy has a branch for it.
+ */
+function breadthOf(symbols: readonly string[]) {
+  const series = new Map<string, ReturnSeries>();
+  for (const s of symbols) {
+    if (!bars.symbols[s]) return null;
+    series.set(s, logReturns(alignedCloses(bars, s)));
+  }
+  return effectiveBreadth(series, Math.max(bars.sessions.length - 1, 0));
+}
 
 export const metadata = { title: "The Brief — Leverage Terminal" };
 
@@ -81,6 +104,7 @@ export default function BriefPage() {
     momentumRecord: validation.results.find((r) => r.id === "momentum-12-1-long-only-broad-up") ?? null,
     earnings: earnings.entries ?? [],
     now: Date.now(),
+    breadthOf,
   });
 
   return (

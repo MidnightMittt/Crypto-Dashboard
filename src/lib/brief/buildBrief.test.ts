@@ -219,13 +219,111 @@ describe("buildBrief — how the thing is actually held", () => {
     const [item] = buildBrief(inputs()).items;
     const text = item.execution.join(" ");
     expect(text).toMatch(/NO STOP was modelled/);
-    expect(text).toMatch(/-17\.2%/);
+    expect(text).toMatch(/17\.2%/);
     expect(text).toMatch(/a strategy nobody has measured/);
+  });
+
+  /*
+   * worstSpread is min(basket - panel). Calling it "the worst single period"
+   * read as a drawdown and invited sizing for a 17.2% loss, when a period
+   * where the panel also fell lost more than that. The number was right and
+   * the noun was wrong, in the direction that understates risk.
+   */
+  it("calls the worst period a relative shortfall, not a drawdown", () => {
+    const [item] = buildBrief(inputs()).items;
+    const text = item.execution.join(" ");
+    expect(text).toMatch(/UNDERPERFORMED the panel by 17\.2%/);
+    expect(text).toMatch(/relative shortfall, not a drawdown/);
+    expect(text).not.toMatch(/worst single period in the sample was/);
   });
 
   it("names the declared gate as the invalidation, not a discretionary call", () => {
     const [item] = buildBrief(inputs()).items;
     expect(item.invalidation).toMatch(/breadth falls to 50% or below/);
     expect(item.invalidation).toMatch(/not a discretionary call/);
+  });
+});
+
+/**
+ * HOW MANY BETS THE BASKET IS.
+ *
+ * A decile is selected on a shared property, so it concentrates rather than
+ * diversifies. "8 names, equally weighted" reads as eight-way diversification
+ * unless something says otherwise, and on the live panel those eight are
+ * worth 1.64 independent bets.
+ */
+describe("buildBrief — effective breadth of the basket", () => {
+  /** Only the two fields the copy reads are load-bearing; the rest is shape. */
+  function breadth(bets: number, rho: number) {
+    return {
+      n: 3,
+      sessions: 299,
+      mean_pairwise_rho: rho,
+      pairs_measured: 3,
+      effective_bets: bets,
+      participation_ratio: bets + 0.5,
+      breadth_pct: (bets / 3) * 100,
+      near_duplicates: [],
+      near_duplicates_total: 0,
+      sentence: "",
+      ranking_caution: "",
+    };
+  }
+
+  it("prints the effective-bets figure and the correlation behind it", () => {
+    const [item] = buildBrief(inputs({ breadthOf: () => breadth(1.64, 0.554) })).items;
+    const text = item.execution.join(" ");
+    expect(text).toMatch(/worth about 1\.64 INDEPENDENT bets/);
+    expect(text).toMatch(/mean pairwise correlation of 0\.55/);
+  });
+
+  /*
+   * The figure is an EXECUTION term, not a caveat on the record. The 412
+   * periods measured this basket as it actually trades, correlation included
+   * — a reader who reads breadth as "the record is weaker than stated" has
+   * been misled in the opposite direction from the one this fixes.
+   */
+  it("does not let breadth read as a discount on the record", () => {
+    const [item] = buildBrief(inputs({ breadthOf: () => breadth(1.64, 0.554) })).items;
+    const text = item.execution.join(" ");
+    expect(text).toMatch(/does not weaken the record/);
+    expect(text).toMatch(/it governs SIZE/);
+    expect(item.record).toMatch(/60\.2% of 412/);
+  });
+
+  /*
+   * THE ARCHITECTURAL TEST. The decile is formed inside buildBrief, so the
+   * caller must never re-derive it — a second `slice(0, decileSize)` in the
+   * page would drift the first time the decile rule changed. AAPL is in the
+   * fixture's members and outside its decile; asking for it would prove the
+   * wrong set was measured.
+   */
+  it("asks for breadth of exactly the decile, not the whole ranking", () => {
+    const asked: string[][] = [];
+    buildBrief(
+      inputs({
+        breadthOf: (syms) => {
+          asked.push([...syms]);
+          return breadth(1.64, 0.554);
+        },
+      })
+    );
+    expect(asked).toHaveLength(1);
+    expect(asked[0]).toEqual(["MU", "INTC", "HUT"]);
+    expect(asked[0]).not.toContain("AAPL");
+  });
+
+  it("refuses rather than implying the name count is the diversification", () => {
+    const [item] = buildBrief(inputs({ breadthOf: () => null })).items;
+    const text = item.execution.join(" ");
+    expect(text).toMatch(/could not be measured/);
+    expect(text).toMatch(/upper bound on its diversification/);
+    expect(text).not.toMatch(/INDEPENDENT bets/);
+  });
+
+  it("still refuses when the pairs existed but no correlation could be formed", () => {
+    const unmeasured = { ...breadth(0, 0), effective_bets: null, mean_pairwise_rho: null };
+    const [item] = buildBrief(inputs({ breadthOf: () => unmeasured })).items;
+    expect(item.execution.join(" ")).toMatch(/could not be measured/);
   });
 });
