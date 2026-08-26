@@ -2,9 +2,8 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { Bar } from "../../src/lib/research/types";
-import { InstrumentConfig, instrumentsByProvider, usListing } from "../../src/lib/research/universe";
-import { industryUniverse, INDUSTRIES } from "../../src/lib/markets/industries";
-import { resolveUniverse } from "../../src/lib/markets/scannerUniverse";
+import { InstrumentConfig } from "../../src/lib/research/universe";
+import { barFileName, refreshUniverse } from "../../src/lib/markets/ingestUniverse";
 import { validateBars, summarizeReport } from "../../src/lib/research/validation";
 import {
   adjustForCorporateActions,
@@ -205,56 +204,6 @@ function quarantineBadLiveRow(bars: Bar[], id: string): Bar[] {
 
 async function main() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
-  /*
-   * Two sources, one adapter. The research universe is an evidence decision
-   * documented in universe.ts; the industry layer is a membership list in
-   * industries.ts. They are kept separate because they answer different
-   * questions — but both go through the identical fetch, validate and refuse
-   * path below, so an industry constituent is held to the same standard as a
-   * backtested instrument.
-   */
-  const research = instrumentsByProvider("yahoo");
-  const industry = industryUniverse()
-    .filter((sym) => !research.some((c) => c.meta.displaySymbol === sym))
-    .map((sym) => usListing(sym, sym));
-
-  /*
-   * --only-us: the DAILY pipeline's scope, which is exactly WHAT THE SNAPSHOTS
-   * READ — not literally the .US suffix. Those two were the same thing until
-   * the industry layer declared external drivers (industries.ts): gold's
-   * driver is GLD.US and already in scope, but bitcoin's is BTC-USD.SPOT, and
-   * a suffix test would have left it to go stale while every other input
-   * refreshed daily. Stale-by-omission is the worst failure shape here,
-   * because a driver correlation computed against a frozen series still
-   * renders a confident-looking number.
-   *
-   * Excluded, deliberately: the FX pairs, research-universe members with
-   * long-standing validation findings that are a research problem rather than
-   * a daily-freshness one. Without that exclusion a known-bad series would
-   * fail the cron every day, and a pipeline that is always red alerts nobody.
-   * The full run (no flag) remains the default for research work, refusals
-   * and all.
-   */
-  const snapshotDriverIds = new Set(
-    INDUSTRIES.map((i) => i.driver?.seriesId).filter((id): id is string => id !== undefined)
-  );
-  const onlyUs = process.argv.includes("--only-us");
-
-  /*
-   * THE SCANNED NAMES, which belong here for a different reason than the rest.
-   *
-   * Research and industry instruments are ingested because they are members
-   * of a declared research panel or a classified industry. These are here
-   * simply because the scanner covers them, and that distinction is worth
-   * keeping: IONQ is quantum computing and OKLO is nuclear fission, so filing
-   * either under "datacenter-mining" to get it fetched would be a taxonomy
-   * lie told for a plumbing reason. Panel composition is a claim, and this is
-   * the honest claim — traded, therefore measured.
-   */
-  const known = new Set([...research, ...industry].map((c) => c.meta.displaySymbol ?? c.meta.id));
-  const scanner = resolveUniverse()
-    .filter((s) => !known.has(s))
-    .map((s) => usListing(s, s));
 
   const symbolsArg = process.argv.indexOf("--symbols");
   const wanted =
@@ -262,15 +211,19 @@ async function main() {
       ? new Set(process.argv[symbolsArg + 1].split(",").map((s) => s.trim().toUpperCase()))
       : null;
 
-  const all = [...research, ...industry, ...scanner];
-  let configs = onlyUs
-    ? all.filter((c) => c.meta.id.endsWith(".US") || snapshotDriverIds.has(c.meta.id))
-    : all;
-  // Targeted re-fetch, for adding a name without re-pulling 120 series.
-  if (wanted) configs = configs.filter((c) => wanted.has(c.meta.displaySymbol ?? c.meta.id));
+  /*
+   * The composition lives in src/lib/markets/ingestUniverse.ts, not here, so
+   * the suite can assert on it. See that file's header: it was unreachable
+   * from a test while it lived inside this function, and the classification
+   * gap that followed cost three sessions of the nightly job.
+   */
+  const { configs, researchCount, industryCount, scannerCount } = refreshUniverse({
+    onlyUs: process.argv.includes("--only-us"),
+    wanted,
+  });
 
   console.log(
-    `[ingest] ${research.length} research + ${industry.length} industry + ${scanner.length} scanner-only ` +
+    `[ingest] ${researchCount} research + ${industryCount} industry + ${scannerCount} scanner-only ` +
       `instruments from yahoo${wanted ? ` — filtered to ${configs.length}` : ""}\n`
   );
 
@@ -323,7 +276,7 @@ async function main() {
       const first = new Date(bars[0].t).toISOString().slice(0, 10);
       const last = new Date(bars[bars.length - 1].t).toISOString().slice(0, 10);
       fs.writeFileSync(
-        path.join(DATA_DIR, `${config.meta.id}.json`),
+        path.join(DATA_DIR, barFileName(config.meta.id)),
         JSON.stringify({ meta: config.meta, timeframe: "1D", bars }, null, 0)
       );
       console.log(`   written: ${first} to ${last}\n`);

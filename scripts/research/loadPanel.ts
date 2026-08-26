@@ -3,6 +3,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { LabSeries } from "../../src/lib/research/signalLab";
 import { EQUITY_PANEL, isPanelMember, unclassified } from "../../src/lib/markets/equityPanel";
+import { panelSymbolOfFile } from "../../src/lib/markets/ingestUniverse";
 
 /**
  * Loads the DECLARED equity panel from the daily ingest.
@@ -35,7 +36,9 @@ export interface PanelLoad {
 
 export function loadEquityPanel(): PanelLoad {
   const files = fs.readdirSync(DATA_DIR).filter((x) => x.endsWith(".json"));
-  const symbolOf = (f: string) => f.split(".")[0];
+  // Shared with the WRITE side, so the two cannot drift on what `NVDA.US.json`
+  // or `BTC-USD.SPOT.json` classifies as. See ingestUniverse.ts.
+  const symbolOf = panelSymbolOfFile;
 
   /*
    * FAIL LOUDLY ON THE UNKNOWN. A newly ingested instrument is a decision

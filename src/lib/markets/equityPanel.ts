@@ -102,11 +102,36 @@ export const EXCLUDED_FUNDS: readonly string[] = [
    */
   "BITX", "BITU", "ETHU", "ETHT", "SOLT", "SOLZ",
   "MSTX", "MSTU", "CONL", "XXRP", "PUR",
+  /*
+   * The UNLEVERED spot-bitcoin fund, ingested 2026-08-21 as the benchmark the
+   * leveraged vehicles above are measured against. It is excluded here for the
+   * ordinary reason — a fund is a basket, not an operating company — and NOT
+   * for the path-dependence reason that governs the 1x-plus names: IBIT holds
+   * coin and does not reset exposure daily, which is exactly why it is the
+   * benchmark.
+   *
+   * It was added to the refresh without being classified, and that omission
+   * failed the nightly job for three consecutive sessions (2026-08-24, 08-25,
+   * 08-26) at `loadEquityPanel`. The throw was correct; nothing checked it
+   * until the cron did. See ingestUniverse.test.ts, which now runs the same
+   * check over the declared refresh universe in the suite.
+   */
+  "IBIT",
 ] as const;
 
 /** Different asset class, different calendar. */
 export const EXCLUDED_NON_EQUITY: readonly string[] = [
   "BTC-USD", "SOL-USD", "BNB-USD", "XRP-USD",
+  /*
+   * The FX pairs, which the DAILY job never fetches (`--only-us` holds them
+   * out; they carry long-standing validation findings and would make the cron
+   * permanently red) but a full research run does. Unclassified, they made
+   * `loadEquityPanel` throw for anyone who ran the ingest without the flag —
+   * the same defect IBIT caused in the cron, arriving through the door nobody
+   * schedules. Currency pairs are non-equities by this file's own rule, so
+   * they belong here whether or not the daily job sees them.
+   */
+  "EURUSD", "USDJPY", "GBPUSD", "AUDUSD", "USDCAD", "USDCHF",
 ] as const;
 
 /**
