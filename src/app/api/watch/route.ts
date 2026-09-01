@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { SWEEP_COVERAGE, WatchLevel, isArmed, rejectionReason } from "@/lib/watch/levels";
+import { MAX_NOTE_LENGTH, SWEEP_COVERAGE, WatchLevel, isArmed, rejectionReason } from "@/lib/watch/levels";
 import { MAX_LEVELS, WatchStoreUnavailable, loadLevels, newId, saveLevels } from "@/lib/watch/store";
 
 /**
@@ -83,7 +83,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       symbol: String(body.symbol).trim().toUpperCase(),
       level: Number(body.level),
       direction: body.direction as "below" | "above",
-      note: typeof body.note === "string" ? body.note.slice(0, 400) : "",
+      /*
+       * Stored WHOLE. `rejectionReason` has already refused anything longer
+       * than MAX_NOTE_LENGTH, so there is nothing left to trim here — and the
+       * absence of a `.slice` is the point. The old one silently amputated a
+       * disaster-stop's ACT instruction and returned 201.
+       */
+      note: typeof body.note === "string" ? body.note : "",
       armedAt: now.toISOString(),
       firedAt: null,
       firedPrice: null,

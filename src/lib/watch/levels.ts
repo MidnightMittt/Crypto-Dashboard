@@ -36,7 +36,10 @@ export interface WatchLevel {
   level: number;
   /** `below` for stops and disaster-stops; `above` for targets and breakouts. */
   direction: WatchDirection;
-  /** Free text carried into the alert. This is where "why" lives. */
+  /**
+   * Free text carried into the alert. This is where "why" lives — and, in
+   * practice, where the ACT instruction lives. See MAX_NOTE_LENGTH.
+   */
   note: string;
   armedAt: string;
   /** Set once, when it fires. Non-null means spent, not deleted. */
@@ -213,10 +216,38 @@ export function markFired(level: WatchLevel, quote: WatchQuote, now: Date, deliv
  * an agent that believes it armed a disaster-stop, and did not, is worse off
  * than one that knows it has no protection.
  */
+/**
+ * THE NOTE LENGTH LIMIT, and why exceeding it is a REFUSAL rather than a trim.
+ *
+ * The route used to `slice(0, 400)` and return 201. On 2026-08-25 that cut a
+ * live disaster-stop's note mid-word:
+ *
+ *     "...ACT: sell 11 at bid, and cancel the 11 resting sell rungs f"
+ *                                                                    ^ 400
+ *
+ * What survived is a coherent, actionable, WRONG instruction. The half that
+ * was destroyed was "cancel the resting rungs", and a stop that fires against
+ * uncancelled resting sell orders is a materially worse outcome than the one
+ * the surviving text describes. The caller got a 201 and had no way to know.
+ *
+ * That is the specific failure shape this module's header already names: an
+ * agent that believes it armed a protection, and did not arm the one it
+ * believes. Truncation is worse than rejection here for the same reason a
+ * silent data repair is worse than a refusal — it produces something that
+ * looks right.
+ *
+ * A `truncated: true` flag was considered and is weaker: a caller that ignores
+ * it still holds a corrupted stop, and the corruption is already written.
+ * Raising the cap only moves the cliff. So the note is stored whole or the
+ * arm fails, and the error says how long it actually was.
+ */
+export const MAX_NOTE_LENGTH = 400;
+
 export function rejectionReason(input: {
   symbol?: unknown;
   level?: unknown;
   direction?: unknown;
+  note?: unknown;
 }): string | null {
   if (typeof input.symbol !== "string" || input.symbol.trim() === "") {
     return "symbol is required";
@@ -226,6 +257,19 @@ export function rejectionReason(input: {
   }
   if (input.direction !== "below" && input.direction !== "above") {
     return 'direction must be "below" (stop) or "above" (target)';
+  }
+  /*
+   * Non-string notes are not rejected here — the route coerces a missing or
+   * non-string note to "", which is the long-standing contract. Only an
+   * over-long STRING is a refusal, because only that case silently discarded
+   * text the caller wrote.
+   */
+  if (typeof input.note === "string" && input.note.length > MAX_NOTE_LENGTH) {
+    return (
+      `note is ${input.note.length} characters and the limit is ${MAX_NOTE_LENGTH}. ` +
+      `Nothing was armed. Shorten the note and send it again — it is not truncated ` +
+      `for you, because half an ACT instruction is worse than none.`
+    );
   }
   return null;
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   Breach,
+  MAX_NOTE_LENGTH,
   MAX_QUOTE_AGE_SECONDS,
   WatchLevel,
   WatchQuote,
@@ -162,6 +163,71 @@ describe("rejectionReason", () => {
     expect(rejectionReason({ symbol: "CIFR", level: 0, direction: "below" })).toContain("positive number");
     expect(rejectionReason({ symbol: "CIFR", level: NaN, direction: "below" })).toContain("positive number");
     expect(rejectionReason({ symbol: "CIFR", level: 16, direction: "sideways" })).toContain('"below"');
+  });
+
+  /*
+   * THE TRUNCATION THAT REACHED PRODUCTION.
+   *
+   * The route sliced `note` at 400 and returned 201. The note it cut was the
+   * ACT instruction on a live disaster stop, and what survived was a coherent
+   * instruction to do half the job — sell the shares, leave eleven resting
+   * sell orders in the book. The caller had no way to know.
+   *
+   * The boundary is asserted from both sides, because an off-by-one here
+   * reintroduces exactly the silent-loss failure, one character at a time.
+   */
+  it("refuses an over-long note instead of amputating it", () => {
+    const ok = { symbol: "CIFR", level: 16, direction: "below" as const };
+    expect(rejectionReason({ ...ok, note: "x".repeat(MAX_NOTE_LENGTH) })).toBeNull();
+    expect(rejectionReason({ ...ok, note: "x".repeat(MAX_NOTE_LENGTH - 1) })).toBeNull();
+
+    const reason = rejectionReason({ ...ok, note: "x".repeat(MAX_NOTE_LENGTH + 1) });
+    expect(reason).not.toBeNull();
+    // The caller is told the ACTUAL length, not merely that it was too long —
+    // otherwise "shorten it" is guesswork against an unknown target.
+    expect(reason).toContain(String(MAX_NOTE_LENGTH + 1));
+    expect(reason).toContain(String(MAX_NOTE_LENGTH));
+    // And told nothing was stored, so it cannot assume a partial arm.
+    expect(reason).toMatch(/nothing was armed/i);
+  });
+
+  /* A missing or non-string note is not an error; the route coerces it to "". */
+  it("leaves the absent-note contract alone", () => {
+    const ok = { symbol: "CIFR", level: 16, direction: "below" as const };
+    expect(rejectionReason(ok)).toBeNull();
+    expect(rejectionReason({ ...ok, note: undefined })).toBeNull();
+    expect(rejectionReason({ ...ok, note: null })).toBeNull();
+    expect(rejectionReason({ ...ok, note: 12345 })).toBeNull();
+  });
+
+  /*
+   * The 2026-08-25 incident, reconstructed at the length that broke it. Pinned
+   * as a case rather than as prose: a change that reinstates truncation has to
+   * delete a named incident to pass.
+   */
+  it("would have refused the disaster-stop note that was silently cut", () => {
+    const act =
+      "CIFR disaster stop, re-armed against tonight's book. Thesis is dead below " +
+      "this level: the datacenter re-rate was the entire trade and the comps have " +
+      "given it all back, so this is not a drawdown to sit through, it is the " +
+      "invalidation condition firing. Do not average down and do not wait for the " +
+      "open to confirm. ACT: sell 11 at bid, and cancel the 11 resting sell rungs " +
+      "from the ladder first, because a market sell into uncancelled rungs fills " +
+      "against my own book.";
+    expect(act.length).toBeGreaterThan(MAX_NOTE_LENGTH);
+
+    expect(rejectionReason({ symbol: "CIFR", level: 16, direction: "below", note: act })).not.toBeNull();
+
+    /*
+     * The shape of the original loss, and the reason a flag would not have been
+     * enough: what SURVIVES the cut is a complete, confident, actionable
+     * instruction to do half the job — sell the shares and leave the resting
+     * rungs in the book. It does not read as damaged.
+     */
+    const survived = act.slice(0, MAX_NOTE_LENGTH);
+    expect(survived).toContain("sell 11 at bid");
+    expect(survived).not.toContain("uncancelled rungs");
+    expect(act).toContain("uncancelled rungs");
   });
 });
 
