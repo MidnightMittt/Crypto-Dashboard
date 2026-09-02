@@ -1,14 +1,6 @@
 {
-  "generatedAt": 1788225663055,
+  "generatedAt": 1788308165605,
   "entries": [
-    {
-      "symbol": "PANW",
-      "date": "2026-09-01"
-    },
-    {
-      "symbol": "MDT",
-      "date": "2026-09-01"
-    },
     {
       "symbol": "AVGO",
       "date": "2026-09-02"
@@ -43,7 +35,7 @@
     }
   ],
   "sweep": {
-    "throughDate": "2026-09-28",
+    "throughDate": "2026-09-29",
     "universe": [
       "ABT",
       "ADBE",
