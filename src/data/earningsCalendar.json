@@ -1,18 +1,6 @@
 {
-  "generatedAt": 1788308165605,
+  "generatedAt": 1788394639035,
   "entries": [
-    {
-      "symbol": "AVGO",
-      "date": "2026-09-02"
-    },
-    {
-      "symbol": "SNOW",
-      "date": "2026-09-02"
-    },
-    {
-      "symbol": "GOLD",
-      "date": "2026-09-02"
-    },
     {
       "symbol": "LULU",
       "date": "2026-09-03"
@@ -32,10 +20,14 @@
     {
       "symbol": "COST",
       "date": "2026-09-24"
+    },
+    {
+      "symbol": "MU",
+      "date": "2026-09-30"
     }
   ],
   "sweep": {
-    "throughDate": "2026-09-29",
+    "throughDate": "2026-09-30",
     "universe": [
       "ABT",
       "ADBE",
