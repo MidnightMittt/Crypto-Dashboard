@@ -1,10 +1,6 @@
 {
-  "generatedAt": 1788394639035,
+  "generatedAt": 1788480717299,
   "entries": [
-    {
-      "symbol": "LULU",
-      "date": "2026-09-03"
-    },
     {
       "symbol": "ORCL",
       "date": "2026-09-08"
@@ -27,7 +23,7 @@
     }
   ],
   "sweep": {
-    "throughDate": "2026-09-30",
+    "throughDate": "2026-10-01",
     "universe": [
       "ABT",
       "ADBE",
