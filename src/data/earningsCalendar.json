@@ -1,9 +1,9 @@
 {
-  "generatedAt": 1788480717299,
+  "generatedAt": 1788566847003,
   "entries": [
     {
       "symbol": "ORCL",
-      "date": "2026-09-08"
+      "date": "2026-09-10"
     },
     {
       "symbol": "ADBE",
@@ -11,7 +11,7 @@
     },
     {
       "symbol": "LEN",
-      "date": "2026-09-17"
+      "date": "2026-09-16"
     },
     {
       "symbol": "COST",
@@ -23,7 +23,7 @@
     }
   ],
   "sweep": {
-    "throughDate": "2026-10-01",
+    "throughDate": "2026-10-02",
     "universe": [
       "ABT",
       "ADBE",
