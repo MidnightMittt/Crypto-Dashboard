@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1788566849649,
+  "generatedAt": 1788827285424,
   "source": "FRED fredgraph.csv (keyless)",
   "series": {
     "vix": "VIXCLS",
