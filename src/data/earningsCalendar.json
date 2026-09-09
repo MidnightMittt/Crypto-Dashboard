@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1788827280843,
+  "generatedAt": 1788913008583,
   "entries": [
     {
       "symbol": "ORCL",
@@ -23,7 +23,7 @@
     }
   ],
   "sweep": {
-    "throughDate": "2026-10-05",
+    "throughDate": "2026-10-06",
     "universe": [
       "ABT",
       "ADBE",
