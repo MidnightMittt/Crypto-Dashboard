@@ -189,6 +189,28 @@ export function appendObservations(
   return [...byKey.values()].sort((a, b) => a.t.localeCompare(b.t) || a.symbol.localeCompare(b.symbol));
 }
 
+/**
+ * How much of one session-window is already in the store.
+ *
+ * This is what lets the capture job run REDUNDANT crons. The idempotency
+ * above has always made a second capture harmless, but the job could not
+ * exploit it: a run whose window had passed threw, because "captured nothing"
+ * was the only available proxy for "the session is lost". With several crons
+ * per window that proxy is wrong — on a healthy day most runs capture nothing,
+ * because a sibling already did.
+ *
+ * So the alarm moves from "did I capture" to "did ANYONE capture", which is
+ * the question the alarm was always trying to ask. A red run still means a
+ * permanently lost session; it just no longer means "I personally was late".
+ */
+export function sessionCaptureCount(
+  observations: readonly SpreadObservation[],
+  session: string,
+  window: ExecutionWindow
+): number {
+  return observations.filter((o) => o.session === session && o.window === window).length;
+}
+
 export interface WindowSummary {
   window: ExecutionWindow;
   /** Distinct trading sessions observed — the honest sample size. */

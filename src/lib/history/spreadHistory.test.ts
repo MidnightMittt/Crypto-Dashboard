@@ -7,6 +7,7 @@ import {
   observe,
   pruneObservations,
   roundTripCostBp,
+  sessionCaptureCount,
   spreadBp,
   summariseWindow,
 } from "./spreadHistory";
@@ -147,6 +148,50 @@ describe("appendObservations", () => {
     const entry = obs("2026-08-14", 31.19, 31.2);
     const exit = obs("2026-08-14", 31.1, 31.2, { window: "exit", targetMinute: "09:35" });
     expect(appendObservations([], [entry, exit])).toHaveLength(2);
+  });
+});
+
+/**
+ * WHAT LETS THE CAPTURE JOB RUN REDUNDANT CRONS.
+ *
+ * The capture job used to throw whenever it personally captured nothing,
+ * which was the only available proxy for "this session is lost". Under four
+ * crons per window that proxy inverts: on a healthy day most runs capture
+ * nothing, because a sibling was inside the window first.
+ *
+ * The alarm therefore asks this instead. It must be exact about the
+ * session-window pair, because a wrong answer in either direction is bad in a
+ * different way: too permissive silently accepts a genuinely lost morning,
+ * and too strict turns every healthy day red until the alarm is ignored.
+ */
+describe("sessionCaptureCount — the redundant-cron alarm", () => {
+  const store = [
+    obs("2026-09-10", 31.19, 31.2, { targetMinute: "15:50" }),
+    obs("2026-09-10", 31.19, 31.21, { targetMinute: "15:54" }),
+    obs("2026-09-10", 31.1, 31.2, { window: "exit", targetMinute: "09:35" }),
+    obs("2026-09-09", 31.19, 31.2, { targetMinute: "15:50" }),
+  ];
+
+  it("counts only the asked-for session and window", () => {
+    expect(sessionCaptureCount(store, "2026-09-10", "entry")).toBe(2);
+    expect(sessionCaptureCount(store, "2026-09-10", "exit")).toBe(1);
+    expect(sessionCaptureCount(store, "2026-09-09", "entry")).toBe(1);
+  });
+
+  /*
+   * The case that must stay red. This is the exact shape of the 15-session
+   * outage: the entry window kept capturing daily while the exit window
+   * recorded nothing at all. A count that looked at the session rather than
+   * the session-WINDOW would have reported the morning as covered every day,
+   * on the strength of the afternoon's rows.
+   */
+  it("does not let a captured entry window vouch for a missing exit window", () => {
+    expect(sessionCaptureCount(store, "2026-09-09", "exit")).toBe(0);
+  });
+
+  it("returns zero for a session nobody captured", () => {
+    expect(sessionCaptureCount(store, "2026-09-08", "entry")).toBe(0);
+    expect(sessionCaptureCount([], "2026-09-10", "entry")).toBe(0);
   });
 });
 

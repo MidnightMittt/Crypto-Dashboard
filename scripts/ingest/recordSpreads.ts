@@ -10,6 +10,7 @@ import {
   appendObservations,
   observe,
   pruneObservations,
+  sessionCaptureCount,
 } from "../../src/lib/history/spreadHistory";
 import { resolveUniverse } from "../../src/lib/markets/scannerUniverse";
 
@@ -55,41 +56,56 @@ const MAX_LATENESS_MS = 90_000;
 /**
  * Longest the job will sit waiting for its first target.
  *
- * ── Why this is hours, and why there is now ONE cron per window ────────
+ * ── This is now a RESOURCE CAP, not a correctness guard ───────────────
  *
- * The previous design ran two crons an hour apart, relying on a 45-minute
- * head start to reject whichever one belonged to the other half of the DST
- * year. That coupling capped the drift tolerance at 45 minutes, because a
- * longer head start would have let BOTH crons capture.
+ * It used to be the mechanism that kept two crons from both capturing, which
+ * is why it had to be tuned so precisely against the DST offset and why the
+ * design collapsed to one cron per window. That tuning was never necessary.
+ * `appendObservations` is keyed on symbol|session|window|targetMinute and has
+ * always replaced rather than appended — a second capture of the same minute
+ * was already a no-op. The guard was defending a property the store
+ * guarantees.
  *
- * It cost a full day of data on 2026-08-17. GitHub delivered the entry cron
- * 41 minutes late and the exit cron 113 minutes late; both jobs arrived after
- * their last target and correctly skipped, and all four runs reported success.
+ * Freed of that job, the number only has to answer "how long may a runner
+ * doze", and redundancy handles drift instead. See the workflow: four crons
+ * per window, spaced 100 minutes, each covering a band of delivery delay this
+ * wide, overlapping at least two deep everywhere it matters.
  *
- * So the pair is gone. A single cron per window is placed at the UTC time
- * that is early in BOTH halves of the year, and the job simply waits longer
- * in winter. Nothing here encodes which half we are in; the wait is computed
- * from the Eastern wall clock every time.
+ * ── Why 280 and not 200 ───────────────────────────────────────────────
  *
- * ── Sized from MEASURED drift, not from a guess ───────────────────────
+ * Because the ceiling interacts with DST. Every head start is 60 minutes
+ * LONGER under EST, so a ceiling tight enough to be tidy in summer rejects the
+ * two earliest crons in winter and drops the redundancy to one at low drift —
+ * a single point of failure for five months of the year. The schedule test
+ * caught exactly that at 200 and names the season in its failure message.
  *
- * The first version allowed 90 minutes under EDT, chosen as roughly double
- * the typical delay. Four observed deliveries then said otherwise:
+ * 280 leaves both of the low-drift crons in band in both halves of the year,
+ * and still fits GitHub's six-hour job ceiling with the window span and margin
+ * on top. An idle runner on a public repository is free; a lost session is not
+ * recoverable at any price, and that asymmetry decides every trade-off here.
+ *
+ * ── Why redundancy and not a bigger head start ────────────────────────
+ *
+ * A single cron must satisfy `head start > worst drift`, and the worst drift
+ * kept moving. Measured on this repository:
  *
  *   2026-08-17  entry  +41 min      2026-08-17  exit  +112 min
  *   2026-08-18  entry  +80 min      2026-08-18  exit  +123 min
+ *   2026-08-21  exit   +73 min      2026-08-26  exit  +83 min
+ *   2026-08-28 onward  exit  +235 to +251 min, EVERY weekday
  *
- * The morning cron misses by two hours on consecutive days, and the afternoon
- * one cleared its 90-minute allowance by ten. So the head start is now 180
- * minutes under EDT and 240 under EST — 46% margin over the worst delivery
- * seen — and the alarm added alongside it is what will say whether even that
- * is enough, instead of the silence that hid the problem for three days.
+ * The exit slot's delay tripled between 08-26 and 08-28 and never came back.
+ * Its 180-minute head start was sized against a 123-minute worst case and was
+ * beaten by 60 minutes a day for fifteen consecutive sessions — every one of
+ * them a permanently lost morning book. The entry slot survived only because
+ * its delay happened to sit at 148–167 minutes; it was clearing its own head
+ * start by as little as 13 minutes and was one bad week from the same fate.
  *
- * The ceiling is the winter head start plus margin. Waiting is nearly free
- * (an idle runner on a public repository); a lost session is not recoverable
- * at any price. That asymmetry is the whole argument for a long sleep.
+ * Chasing that with a larger head start does not converge, and under EST it
+ * runs into GitHub's 6-hour job ceiling. Overlapping bands do converge, and
+ * they degrade gracefully: losing one cron costs margin, not the session.
  */
-const MAX_HEAD_START_MS = 260 * 60_000;
+const MAX_HEAD_START_MS = 280 * 60_000;
 
 function tradierBase(): string {
   return process.env.TRADIER_ENV === "production"
@@ -325,8 +341,26 @@ async function main(): Promise<void> {
      * actually went wrong: cron drift beyond the head start, or a provider
      * that would not answer.
      */
+    const already = sessionCaptureCount(record.observations, sessionEt, window);
+    if (already > 0) {
+      /*
+       * A SIBLING CRON ALREADY HAS IT. This is the normal outcome on a
+       * healthy day now that the window is covered by several crons: whichever
+       * one lands inside the pre-target band captures, and the ones that drift
+       * past it arrive here. Nothing is lost, so nothing is red.
+       *
+       * The store is keyed on symbol|session|window|targetMinute, so the
+       * sibling's rows are the same rows this run would have written.
+       */
+      console.log(
+        `[spreads] ${missed} target(s) already passed, but ${sessionEt} ${window} already holds ` +
+          `${already} observation(s) from a sibling run. Nothing lost — exiting clean.`
+      );
+      return;
+    }
     throw new Error(
-      `nothing captured on ${sessionEt} — ${missed} target(s) missed. The window is gone.`
+      `nothing captured on ${sessionEt} — ${missed} target(s) missed and NO run of the ` +
+        `${window} window has recorded this session. The window is gone.`
     );
   }
 

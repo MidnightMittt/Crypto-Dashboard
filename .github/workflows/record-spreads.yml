@@ -18,40 +18,75 @@
 # itself, then SKIPS any target that has already passed rather than
 # back-stamping it. Drift only has to be smaller than the head start.
 #
-# ── One cron per window, and why the pair had to go ───────────────────
+# ── THREE crons per window, and why chasing the drift failed ──────────
 #
-# This used to run two crons an hour apart to bracket both halves of the DST
-# year, with a 45-minute head start rejecting whichever one belonged to the
-# other half. That worked, but it CAPPED the drift tolerance at 45 minutes:
-# any longer head start and both crons would have captured.
+# One cron per window only works while `head start > worst delivery delay`,
+# and that inequality kept breaking because the right-hand side moves.
 #
-# On 2026-08-17 GitHub delivered the entry cron 41 minutes late and the exit
-# cron 113 minutes late. Both jobs arrived after their last target, both
-# correctly refused to back-stamp, and all four runs of the day reported
-# success while writing nothing. A full session was lost silently.
+# Measured here: the exit slot ran +73 to +123 min through 2026-08-26, then
+# jumped to +235..+251 min on 08-28 and stayed there. Its 180-minute head
+# start — itself sized against an earlier 123-minute worst case — was beaten
+# by roughly an hour EVERY WEEKDAY for fifteen sessions. Each one is a
+# permanently lost morning book. The entry slot survived the same period only
+# because its delay sat at +148..+167, clearing its allowance by as little as
+# 13 minutes.
 #
-# So there is now ONE cron per window, placed at the UTC time that is early in
-# BOTH halves of the year: 90 minutes ahead under EDT, 150 under EST. The job
-# waits longer in winter. No DST rule is encoded anywhere — the wait is
-# computed from the Eastern wall clock on every run.
+# The previous note here concluded that a pair of crons was unsafe because
+# both might capture. That was wrong, and the store already said so:
+# `appendObservations` is keyed on symbol|session|window|targetMinute and
+# REPLACES, so a duplicate capture of one minute has always been a no-op. The
+# 45-minute head start was defending an invariant that was never at risk, and
+# the single-cron design it forced is what made drift fatal.
 #
-# ── A lost window now FAILS ───────────────────────────────────────────
+# So: four crons per window, 100 minutes apart. The script dozes at most 280
+# minutes (MAX_HEAD_START_MS), so each cron covers a 280-minute band of
+# delivery delay, and the bands overlap:
 #
-# Because there is no second cron whose job is to no-op, "captured nothing"
-# is no longer ambiguous, and the script exits non-zero on it. Market holidays
-# are excluded first via Tradier's calendar, so this alarm fires only when
-# something is genuinely wrong. A red run is the point: the previous design
-# could lose every session indefinitely without a single failed check.
+#   head start (EDT)   covers delay      head start (EST)   covers delay
+#   400 min            120-400           460 min            180-460
+#   300 min             20-300           360 min             80-360
+#   200 min              0-200           260 min              0-260
+#   100 min              0-100           160 min              0-160
+#   ----------------------------------------------------------------
+#   union                0-400           union                0-460
+#
+# COVERAGE IS NOT THE SAME AS REDUNDANCY, and two drafts of this got it wrong
+# in two different ways. Three crons 120 minutes apart covered 0-380 with no
+# gap — but the seam fell at 140-180 minutes of delay, precisely where the
+# entry slot has been running (+148..+167). The one window that still worked
+# would have shipped on a single point of failure.
+#
+# The second draft fixed that and still left winter single-covered at low
+# drift, because every head start is 60 minutes LONGER under EST and the two
+# earliest crons fell outside a 200-minute ceiling. Hence 280. The schedule
+# test checks redundancy per season across every delay ever measured here,
+# which is how both mistakes were found rather than shipped.
+#
+# Nothing encodes which half of the DST year it is; the wait is computed from
+# the Eastern wall clock every run, which is why the EST column is simply the
+# EDT column plus 60. Losing one cron costs margin, not the session.
+#
+# ── A lost window still FAILS, but the question changed ───────────────
+#
+# "Captured nothing" is no longer evidence of a problem — on a healthy day two
+# of the three runs capture nothing, because a sibling got there first. So the
+# script now asks whether ANY run has recorded this session-window, and only
+# throws when none has. That is the question the alarm was always trying to
+# ask. Market holidays are excluded first via Tradier's calendar.
 name: record-spreads
 
 on:
   schedule:
-    # Exit window, targets 09:35-09:50 ET.
-    # 10:35 UTC is 06:35 EDT (180 min early) / 05:35 EST (240 min early).
-    - cron: "35 10 * * 1-5"
-    # Entry window, targets 15:50-15:58 ET.
-    # 16:50 UTC is 12:50 EDT (180 min early) / 11:50 EST (240 min early).
-    - cron: "50 16 * * 1-5"
+    # Exit window, targets 09:35-09:50 ET (13:35 UTC EDT / 14:35 UTC EST).
+    - cron: "55 6 * * 1-5" # 400 min ahead under EDT
+    - cron: "35 8 * * 1-5" # 300 min
+    - cron: "15 10 * * 1-5" # 200 min
+    - cron: "55 11 * * 1-5" # 100 min
+    # Entry window, targets 15:50-15:58 ET (19:50 UTC EDT / 20:50 UTC EST).
+    - cron: "10 13 * * 1-5" # 400 min ahead under EDT
+    - cron: "50 14 * * 1-5" # 300 min
+    - cron: "30 16 * * 1-5" # 200 min
+    - cron: "10 18 * * 1-5" # 100 min
   workflow_dispatch:
     inputs:
       window:
@@ -70,6 +105,11 @@ permissions:
   contents: write
 
 # Never cancel a run in flight: it may be seconds from its capture minute.
+#
+# Grouped per SCHEDULE, not per window, which matters now that three crons
+# share a window. Grouping by window would serialise the siblings, and a
+# late-arriving one queued behind a dozing one is a cron that cannot cover its
+# band — the redundancy would be nominal.
 concurrency:
   group: record-spreads-${{ github.event.schedule || github.event.inputs.window }}
   cancel-in-progress: false
@@ -77,10 +117,13 @@ concurrency:
 jobs:
   capture:
     runs-on: ubuntu-latest
-    # The job spends nearly all of its life asleep. Must clear the WINTER head
-    # start (240 min) plus the wait across the window itself, or the runner
-    # would be killed mid-doze every day from November to March.
-    timeout-minutes: 300
+    # The job spends nearly all of its life asleep, but never longer than
+    # MAX_HEAD_START_MS (280 min) plus the 15-minute span of the window
+    # itself. Anything earlier than the ceiling exits without capturing, so
+    # this bound holds in both halves of the year — and it stays clear of
+    # GitHub's 360-minute ceiling on a hosted job, which is the constraint
+    # that made "just fire the one cron earlier" a dead end.
+    timeout-minutes: 320
     steps:
       - uses: actions/checkout@v4
         with:
@@ -93,8 +136,8 @@ jobs:
 
       - run: npm ci
 
-      # The morning cron takes the exit window, the afternoon one the entry
-      # window. A manual dispatch says which it wants.
+      # The four morning crons take the exit window, the four afternoon ones
+      # the entry window. A manual dispatch says which it wants.
       - name: Capture quotes
         env:
           TRADIER_API_KEY: ${{ secrets.TRADIER_API_KEY }}
@@ -104,9 +147,18 @@ jobs:
           SCHED="${{ github.event.schedule }}"
           WINDOW="${{ github.event.inputs.window }}"
           if [ -z "$WINDOW" ]; then
+            # Matched EXPLICITLY, never by a default arm. A wildcard fallback
+            # is what would silently relabel a mistyped cron as the entry
+            # window and file morning quotes under an afternoon minute — a
+            # corruption no downstream check could see, because the rows would
+            # look perfectly well-formed.
             case "$SCHED" in
-              "35 10 * * 1-5") WINDOW=exit ;;
-              *) WINDOW=entry ;;
+              "55 6 * * 1-5"|"35 8 * * 1-5"|"15 10 * * 1-5"|"55 11 * * 1-5") WINDOW=exit ;;
+              "10 13 * * 1-5"|"50 14 * * 1-5"|"30 16 * * 1-5"|"10 18 * * 1-5") WINDOW=entry ;;
+              *)
+                echo "::error::unrecognised schedule '$SCHED' — add it to this map before it can capture"
+                exit 1
+                ;;
             esac
           fi
           # A smoke dispatch reads quotes and persists nothing, so the
@@ -134,9 +186,10 @@ jobs:
           # `git add <missing path>` exits 128 and, under `set -e`, fails the
           # step. That is not hypothetical: it failed the first dispatch.
           #
-          # This is now only reachable on a market holiday, where the capture
-          # step exits 0 without writing. Every other empty outcome fails in
-          # the step above and never gets here.
+          # Reachable on a market holiday, and — since the window went to three
+          # crons — on any run whose siblings captured first. Both exit 0 from
+          # the step above without writing. A genuinely lost session still
+          # fails there and never reaches here.
           if [ ! -f src/data/spreadHistory.json ]; then
             echo "No spread history written this run (market holiday) — nothing to commit."
             exit 0
@@ -150,7 +203,7 @@ jobs:
 
           stage_onto_tip
           if git diff --cached --quiet; then
-            echo "No captures this run (window missed, holiday, or provider down)."
+            echo "Nothing new to commit — a sibling cron captured this window, or it is a holiday."
             exit 0
           fi
           git commit -m "data: execution-window spreads $(date -u +%FT%TZ)"
