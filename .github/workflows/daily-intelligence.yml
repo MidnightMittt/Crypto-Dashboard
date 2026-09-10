@@ -124,6 +124,13 @@ jobs:
           # The projection /api/pretrade reads. Regenerated every run so the
           # small artefact can never disagree with the store it projects.
           npx tsx scripts/ingest/buildPositioningLatest.ts || echo "::warning::positioning projection failed"
+          # Implied against realized, joined from the two stores just written.
+          # A projection, not a store: it holds nothing that is not derivable
+          # from positioningHistory and barsPanel, so a failure here costs a
+          # stale artefact for a day and never a lost observation. Warning
+          # rather than red for exactly that reason — unlike the CBOE capture
+          # above, this one is reconstructable.
+          npx tsx scripts/ingest/buildIvRvHistory.ts || echo "::warning::iv/rv projection failed"
 
       # WHY THIS DOES NOT REBASE, and it is not a style preference.
       #
@@ -154,7 +161,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          DATA_PATHS="src/data/marketIntelligence.json src/data/equityMarkets.json src/data/signalLedger.json src/data/earningsCalendar.json src/data/forwardReachRecord.json src/data/forwardVerdictRecord.json src/data/equityCrossSection.json src/data/macroSeries.json src/data/positioningHistory.json src/data/positioningLatest.json src/data/overnightPremium.json src/data/universeHistory.json src/data/captureLog.json src/data/barsPanel.json"
+          DATA_PATHS="src/data/marketIntelligence.json src/data/equityMarkets.json src/data/signalLedger.json src/data/earningsCalendar.json src/data/forwardReachRecord.json src/data/forwardVerdictRecord.json src/data/equityCrossSection.json src/data/macroSeries.json src/data/positioningHistory.json src/data/positioningLatest.json src/data/ivRvHistory.json src/data/overnightPremium.json src/data/universeHistory.json src/data/captureLog.json src/data/barsPanel.json"
 
           stage_onto_tip() {
             # Explicit refspec: `git fetch origin main` only updates the
