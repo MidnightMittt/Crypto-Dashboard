@@ -34,6 +34,10 @@ const periods = (top: (k: number) => number, universe: (k: number) => number): P
     exitTime: T0 + (k * 5 + 5) * DAY,
     top: top(k),
     universe: universe(k),
+    // Unused by the benchmark decomposition, which reads only the two legs;
+    // carried because `PeriodLeg` now also serves the paper line's turnover.
+    topSymbols: ["AAA"],
+    topEntryCostBp: 0,
   }));
 
 describe("benchmarkDecomposition", () => {

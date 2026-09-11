@@ -97,6 +97,26 @@ jobs:
       - name: Rebuild matched bars panel
         run: npx tsx scripts/ingest/buildBarsPanel.ts
 
+      # THE PAPER LINES — each declared strategy's result computed whether or
+      # not anybody traded it. This exists because the overnight premium's
+      # LIVE series is stuck at n=2: not because the edge died, but because a
+      # scheduler did, and every missed window was an observation that could
+      # never be recovered. A line the site computes nightly cannot be
+      # interrupted, so the live fills only have to prove EXECUTION COST
+      # against it rather than carry the whole burden of proving expectancy.
+      #
+      # It must run here for the same reason as the cross-section: the
+      # momentum leg re-runs the declared hypothesis over the raw bar files,
+      # which are 146MB and gitignored and invisible to anything off-runner.
+      #
+      # Warning, not red. Every input — barsPanel, spreadHistory, the bar
+      # files — is already committed or already on this runner, so the output
+      # holds no state: delete it and the next run rebuilds it identically. A
+      # failure here costs a stale artefact for a day and never an
+      # observation, which is the opposite of the CBOE capture above.
+      - name: Rebuild paper lines
+        run: npx tsx scripts/ingest/buildPaperLines.ts || echo "::warning::paper lines projection failed"
+
       - name: Append signal history ledger
         run: npx tsx scripts/ingest/appendHistory.ts
 
@@ -175,7 +195,7 @@ jobs:
           # commit somebody's half-finished study under a message about the
           # daily refresh. That is the blanket-staging failure the repository
           # rule exists to prevent, arriving through a hand-written list.
-          DATA_PATHS="src/data/marketIntelligence.json src/data/equityMarkets.json src/data/marketContext.json src/data/signalLedger.json src/data/earningsCalendar.json src/data/forwardReachRecord.json src/data/forwardVerdictRecord.json src/data/equityCrossSection.json src/data/macroSeries.json src/data/positioningHistory.json src/data/positioningLatest.json src/data/ivRvHistory.json src/data/universeHistory.json src/data/captureLog.json src/data/barsPanel.json"
+          DATA_PATHS="src/data/marketIntelligence.json src/data/equityMarkets.json src/data/marketContext.json src/data/signalLedger.json src/data/earningsCalendar.json src/data/forwardReachRecord.json src/data/forwardVerdictRecord.json src/data/equityCrossSection.json src/data/macroSeries.json src/data/positioningHistory.json src/data/positioningLatest.json src/data/ivRvHistory.json src/data/universeHistory.json src/data/captureLog.json src/data/barsPanel.json src/data/paperLines.json"
 
           stage_onto_tip() {
             # Explicit refspec: `git fetch origin main` only updates the

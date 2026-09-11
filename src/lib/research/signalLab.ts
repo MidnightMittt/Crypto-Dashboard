@@ -29,6 +29,7 @@
  */
 
 import { assessEdge, EdgeAssessment } from "./edgeGate";
+import { tickCostBp } from "./overnightDecomposition";
 
 /** One instrument's point-in-time history. Volume is optional. */
 export interface LabSeries {
@@ -148,6 +149,27 @@ export interface PeriodLeg {
   top: number;
   /** Equal-weight mean over every ranked name — the universe leg. */
   universe: number;
+  /**
+   * The names in the top decile this period — the position actually held.
+   *
+   * Emitted so TURNOVER is measurable. `costPp` charges a fixed win-rate
+   * haircut that models no turnover at all, which makes a strategy replacing
+   * its whole book every period and one replacing a third of it cost the
+   * same. They do not. Overlap against the previous period is the only honest
+   * way to know how much was traded, and it cannot be reconstructed from a
+   * result that only reports the mean.
+   */
+  topSymbols: string[];
+  /**
+   * Mean modelled one-tick round trip across the held names, at THEIR OWN
+   * entry prices, in basis points.
+   *
+   * Per-name and per-period rather than a flat charge, because the US tick is
+   * one cent regardless of price: an identical crossing is 50bp on a $2 name
+   * and 3.3bp on a $30 one. A flat assumption does not merely add noise to a
+   * cross-sectional ranking, it reorders it.
+   */
+  topEntryCostBp: number;
 }
 
 export interface HypothesisResult {
@@ -255,7 +277,7 @@ export function runHypothesis(series: LabSeries[], h: Hypothesis): HypothesisRes
     }
     const entryTime = calendar[c + offset];
     const exitTime = calendar[c + h.hold + offset];
-    const scored: Array<{ score: number; fwd: number }> = [];
+    const scored: Array<{ symbol: string; score: number; fwd: number; entry: number }> = [];
 
     for (const s of series) {
       const i = indexAsOf(s.t, decisionTime);
@@ -276,13 +298,14 @@ export function runHypothesis(series: LabSeries[], h: Hypothesis): HypothesisRes
       const entry = s.close[entryIdx];
       if (!(entry > 0) || !(s.close[exit] > 0)) continue;
 
-      scored.push({ score, fwd: s.close[exit] / entry - 1 });
+      scored.push({ symbol: s.symbol, score, fwd: s.close[exit] / entry - 1, entry });
     }
 
     if (scored.length < MIN_PANEL) continue;
     scored.sort((a, b) => b.score - a.score);
     const k = Math.max(1, Math.floor(scored.length * DECILE));
-    const top = mean(scored.slice(0, k).map((x) => x.fwd));
+    const held = scored.slice(0, k);
+    const top = mean(held.map((x) => x.fwd));
     const universe = mean(scored.map((x) => x.fwd));
     // See `leg`. The short leg is the bottom decile, or the panel itself when
     // the hypothesis is about a long position rather than a spread.
@@ -295,7 +318,20 @@ export function runHypothesis(series: LabSeries[], h: Hypothesis): HypothesisRes
      * sample. A benchmark compared against a different set of dates would
      * answer a question nobody asked.
      */
-    periods.push({ entryTime, exitTime, top, universe });
+    periods.push({
+      entryTime,
+      exitTime,
+      top,
+      universe,
+      topSymbols: held.map((x) => x.symbol),
+      /*
+       * One tick against each held name's OWN entry price. `tickCostBp` is
+       * imported rather than respelled: it is the same round-trip charge the
+       * overnight study declares, and two spellings of a cost model is how
+       * two studies end up quoting incompatible net figures under one label.
+       */
+      topEntryCostBp: mean(held.map((x) => tickCostBp(x.entry) ?? 0)),
+    });
   }
 
   const n = spreads.length;
