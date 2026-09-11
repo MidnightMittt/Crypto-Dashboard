@@ -1,20 +1,20 @@
 {
-  "generatedAt": 1788999445649,
+  "generatedAt": 1789085589285,
   "source": "FRED fredgraph.csv (keyless)",
   "series": {
     "vix": "VIXCLS",
     "vix3m": "VXVCLS"
   },
   "volTermStructure": {
-    "ratio": 1.1698473282442747,
-    "percentile": 70.8562950402713,
+    "ratio": 1.146415552855407,
+    "percentile": 60.88154269972452,
     "state": "contango",
-    "historyLength": 4718,
-    "asOf": "2026-09-08",
-    "sentence": "Volatility is in CONTANGO — three-month is priced above spot (1.17× three-month over spot, 71th percentile of 4718 sessions), the normal state."
+    "historyLength": 4719,
+    "asOf": "2026-09-09",
+    "sentence": "Volatility is in CONTANGO — three-month is priced above spot (1.15× three-month over spot, 61th percentile of 4719 sessions), the normal state."
   },
   "legs": {
-    "vix": 9269,
-    "vix3m": 4719
+    "vix": 9270,
+    "vix3m": 4720
   }
 }
