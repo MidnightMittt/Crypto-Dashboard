@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1789085586343,
+  "generatedAt": 1789172447701,
   "entries": [
     {
       "symbol": "LEN",
@@ -19,7 +19,7 @@
     }
   ],
   "sweep": {
-    "throughDate": "2026-10-08",
+    "throughDate": "2026-10-09",
     "universe": [
       "ABT",
       "ADBE",
