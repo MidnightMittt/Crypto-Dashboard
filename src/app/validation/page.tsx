@@ -7,7 +7,11 @@ import {
 import labJson from "@/data/signalValidation.json";
 import metricStats from "@/data/backtestMetricStats.json";
 import ivRvJson from "@/data/ivRvHistory.json";
+import paperJson from "@/data/paperLines.json";
 import { ResolutionSchedule } from "@/components/validation/ResolutionSchedule";
+import { EvidenceLadder } from "@/components/validation/EvidenceLadder";
+import { LiveFills, PaperBook } from "@/components/validation/PaperBook";
+import { PaperLinesArtifact, buildPaperBook } from "@/lib/validation/paperBook";
 import type { ResolutionSchedule as Schedule } from "@/lib/research/ivRvSchedule";
 
 /**
@@ -21,6 +25,27 @@ import type { ResolutionSchedule as Schedule } from "@/lib/research/ivRvSchedule
  * indicators that worked; the only durable thing here is the record that
  * includes the ones that did not — and a survival rate this low is what makes
  * the survivors worth anything.
+ *
+ * ── The page is ordered by TIER, weakest-looking evidence last ────────
+ *
+ * It used to open with "8 of 24 measured signals clear their own bar" — a
+ * true sentence about the one tier whose numbers were computed on the data
+ * that chose the signals. Leading with it invited a reader to average three
+ * incomparable kinds of evidence into one impression, and the tier with the
+ * biggest n and the greenest figures would have dominated that average.
+ *
+ * So: ladder, then paper book, then the collector still on its clock, then
+ * the empty live tier, and the lab last with its own headline attached to it
+ * rather than to the page.
+ *
+ * ── One unit, and where it deliberately stops ─────────────────────────
+ *
+ * Basis points for everything in RETURN space, so a paper line and a
+ * decomposition column can be held against each other. Win rate and the
+ * breakeven cost charge are in WIN-RATE space and are not converted: a win
+ * rate has no basis-point value without a payoff distribution, and inventing
+ * one to make the columns match would be a worse error than the mismatch. The
+ * lab section says so where a reader would otherwise assume.
  */
 
 export const metadata = { title: "Validation — Leverage Terminal" };
@@ -46,6 +71,14 @@ const ivRv = ivRvJson as unknown as {
 };
 const ivRvDates = [...new Set(ivRv.points.map((p) => p.date))].sort();
 const ivRvSymbols = new Set(ivRv.points.map((p) => p.symbol)).size;
+
+/*
+ * The register of declared strategies. Reshaped, never recomputed — every
+ * statistic below is the paper engine's, and the display layer's only jobs are
+ * to classify a half of a record as backtest or paper and to pair each figure
+ * with the sample size behind it.
+ */
+const paperBook = buildPaperBook(paperJson as unknown as PaperLinesArtifact);
 
 const GROUPS: Array<{ outcome: Outcome; title: string; blurb: string; tone: string }> = [
   {
@@ -83,12 +116,26 @@ const GROUPS: Array<{ outcome: Outcome; title: string; blurb: string; tone: stri
   },
 ];
 
+/**
+ * A win RATE — the share of periods won. Not a return, and deliberately still
+ * rendered in percent so it cannot be mistaken for one of the bp figures.
+ */
 function pct(v: number | null): string {
   return v === null ? "—" : `${v.toFixed(1)}%`;
 }
 
-function signed(v: number): string {
-  return `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
+/**
+ * A return, in basis points. The one unit shared with the paper book.
+ *
+ * The decomposition stores percent because that is what the research layer
+ * computes in; the conversion happens once, here, at the boundary. Doing it in
+ * the research layer would change every number in `signalValidation.json` for
+ * a presentation reason, and doing it per-call-site is how three of four
+ * documented spreads in this repository ended up 10x low.
+ */
+function signedBp(pctValue: number): string {
+  const v = pctValue * 100;
+  return `${v >= 0 ? "+" : ""}${v.toFixed(1)}bp`;
 }
 
 /**
@@ -114,9 +161,9 @@ function Decomposition({ d }: { d: RowDecomposition }) {
     <details className="rounded-md border border-line/60 bg-surface/40">
       <summary className="cursor-pointer px-3 py-2 text-[11px] text-ink-muted">
         <span className="uppercase tracking-[0.12em] text-ink-faint">vs {d.benchmark}</span>{" "}
-        <span className="font-mono text-ink">{signed(d.versusIndex.meanPct)}</span>{" "}
+        <span className="font-mono text-ink">{signedBp(d.versusIndex.meanPct)}</span>{" "}
         <span className="text-ink-faint">
-          per period, of which {signed(d.poolDrift.meanPct)} is the pool
+          per period (n={d.versusIndex.n}), of which {signedBp(d.poolDrift.meanPct)} is the pool
         </span>
       </summary>
       <div className="flex flex-col gap-2 px-3 pb-3">
@@ -125,7 +172,14 @@ function Decomposition({ d }: { d: RowDecomposition }) {
             {rows.map(({ c, note }) => (
               <tr key={c.label} className="align-top">
                 <td className="py-0.5 pr-3 text-ink-muted">{c.label}</td>
-                <td className="py-0.5 pr-3 text-right text-ink">{signed(c.meanPct)}</td>
+                <td className="py-0.5 pr-3 text-right text-ink">{signedBp(c.meanPct)}</td>
+                {/*
+                  n on every row rather than once in the footer. The three
+                  columns are computed on the same inner join and should agree
+                  — printing each one is what would make it visible the day one
+                  of them stops agreeing.
+                */}
+                <td className="py-0.5 pr-3 text-right text-ink-faint">n={c.n}</td>
                 <td className="py-0.5 pr-3 text-right text-ink-muted">t={c.t.toFixed(2)}</td>
                 {/*
                   The smallest effect this sample could have resolved. Without
@@ -133,7 +187,7 @@ function Decomposition({ d }: { d: RowDecomposition }) {
                   never have seen one.
                 */}
                 <td className="py-0.5 pr-3 text-right text-ink-faint">
-                  needs {c.detectablePctAtT3.toFixed(2)}%
+                  resolves ≥{(c.detectablePctAtT3 * 100).toFixed(1)}bp
                 </td>
                 <td className="py-0.5 font-sans text-ink-faint">{note}</td>
               </tr>
@@ -179,27 +233,16 @@ export default function ValidationPage() {
           </nav>
         </div>
 
-        <section className="rounded-xl border border-hairline bg-panel/60 px-5 py-5 sm:px-6">
-          <p className="text-2xl font-bold leading-tight text-ink">
-            {report.totals.cleared} of {report.totals.measured} measured signals clear their own bar.
-          </p>
-          <p className="mt-2 max-w-3xl text-[13px] leading-relaxed text-ink-muted">
-            That is a {survival.toFixed(0)}% survival rate, and it is the point rather than an apology. Anyone can
-            publish the indicators that worked. The record below includes every one that did not, with the criteria
-            that would have killed it written down before it was run — which is the only reason the survivors are
-            worth anything.
-          </p>
-          <p className="mt-3 text-[11px] leading-relaxed text-ink-faint">
-            Each row shows the cost charge at which it would stop clearing. The verdict answers yes-or-no at the
-            declared {report.costPp}pp; the breakeven answers how wrong that assumption would have to be. Two
-            signals sharing a verdict with breakevens of 2.4pp and 5.4pp are entirely different propositions, and
-            a rebalance running four times as often should be charged four times as much.{" "}
-            The equity study corrected across all {report.equityFamilySize} declared hypotheses at once on{" "}
-            {report.equityInstruments} instruments, charging {report.costPp}pp of costs to every one. Correcting only
-            across survivors would undo the correction. A further {report.totals.unmeasured} modules have never been
-            measured at all and are listed at the bottom rather than quietly omitted.
-          </p>
-        </section>
+        <EvidenceLadder
+          labMeasured={report.totals.measured}
+          labCleared={report.totals.cleared}
+          registered={paperBook.totals.registered}
+          withPaperRecord={paperBook.totals.withPaperRecord}
+          clearingOutOfSample={paperBook.totals.clearing}
+        />
+
+        {/* Rung 2, and the only rung with numbers that were not chosen on their own data. */}
+        <PaperBook book={paperBook} />
 
         {/*
           Placed above the measured signals rather than at the bottom with the
@@ -216,6 +259,58 @@ export default function ValidationPage() {
           lastObservation={ivRvDates[ivRvDates.length - 1] ?? null}
         />
 
+        {/* Rung 3. Empty, and rendered so that its emptiness is a statement. */}
+        <LiveFills />
+
+        {/*
+          Rung 1, last, with its headline attached to IT rather than to the
+          page. "8 of 24 clear their own bar" is a claim about the lab, and the
+          lab's numbers were computed on the history that chose the signals.
+          As the page's opening line it was read as a claim about the site.
+        */}
+        <section className="rounded-xl border border-hairline bg-panel/60 px-5 py-5 sm:px-6">
+          <div className="flex flex-wrap items-baseline gap-x-3">
+            <h2 className="text-[13px] font-semibold uppercase tracking-[0.14em] text-ink">
+              Signal lab — the backtest rung
+            </h2>
+            <span className="font-mono text-[11px] text-ink-faint">n={report.totals.measured}</span>
+          </div>
+          <p className="mt-2 text-2xl font-bold leading-tight text-ink">
+            {report.totals.cleared} of {report.totals.measured} measured signals clear their own bar.
+          </p>
+          <p className="mt-2 max-w-3xl text-[13px] leading-relaxed text-ink-muted">
+            That is a {survival.toFixed(0)}% survival rate, and it is the point rather than an apology. Anyone can
+            publish the indicators that worked. The record below includes every one that did not, with the criteria
+            that would have killed it written down before it was run — which is the only reason the survivors are
+            worth anything.
+          </p>
+          {/*
+            The unit warning, stated where the change of unit happens. Above
+            this line every return is in basis points; below it, win rates and
+            cost charges are in percentage points of WIN RATE, which is a
+            different space and cannot be converted without a payoff
+            distribution nobody has estimated.
+          */}
+          <p className="mt-3 rounded-md border border-line/60 bg-surface/40 px-3 py-2 text-[11px] leading-relaxed text-ink-muted">
+            <span className="uppercase tracking-[0.12em] text-ink-faint">Change of unit</span> · Win
+            rate and the breakeven cost charge below are in percentage points of WIN RATE, not
+            return. They are not comparable with the basis-point figures above and are not
+            converted, because a win rate has no basis-point value without a payoff distribution.
+            The per-period returns inside each row&rsquo;s benchmark decomposition ARE returns, and
+            those are quoted in basis points like everything else.
+          </p>
+          <p className="mt-3 text-[11px] leading-relaxed text-ink-faint">
+            Each row shows the cost charge at which it would stop clearing. The verdict answers yes-or-no at the
+            declared {report.costPp}pp; the breakeven answers how wrong that assumption would have to be. Two
+            signals sharing a verdict with breakevens of 2.4pp and 5.4pp are entirely different propositions, and
+            a rebalance running four times as often should be charged four times as much.{" "}
+            The equity study corrected across all {report.equityFamilySize} declared hypotheses at once on{" "}
+            {report.equityInstruments} instruments, charging {report.costPp}pp of costs to every one. Correcting only
+            across survivors would undo the correction. A further {report.totals.unmeasured} modules have never been
+            measured at all and are listed at the bottom rather than quietly omitted.
+          </p>
+        </section>
+
         {GROUPS.map((group) => {
           const rows = report.rows.filter((r) => r.outcome === group.outcome);
           if (rows.length === 0) return null;
@@ -225,7 +320,9 @@ export default function ValidationPage() {
                 <h2 className={`text-[13px] font-semibold uppercase tracking-[0.14em] ${group.tone}`}>
                   {group.title}
                 </h2>
-                <span className="font-mono text-[11px] text-ink-faint">{rows.length}</span>
+                <span className="font-mono text-[11px] text-ink-faint">
+                  {rows.length} signal{rows.length === 1 ? "" : "s"}
+                </span>
               </div>
               <p className="mt-1.5 max-w-3xl text-[12px] leading-relaxed text-ink-muted">{group.blurb}</p>
 
@@ -247,15 +344,22 @@ export default function ValidationPage() {
                       )}
                     </div>
 
+                    {/*
+                      n rides beside each rate rather than sitting once at the
+                      end of the row. A win rate and its lower bound come from
+                      the same sample, so repeating it looks redundant — right
+                      up until a row appears whose bound was computed on fewer
+                      periods than its rate, which is exactly the kind of thing
+                      a single trailing `n` hides.
+                    */}
                     <div className="flex flex-wrap gap-x-5 gap-y-1 font-mono text-[11px] text-ink-muted">
                       <span>
-                        <span className="text-ink-faint">win</span> {pct(r.winRatePct)}
+                        <span className="text-ink-faint">win</span> {pct(r.winRatePct)}{" "}
+                        <span className="text-ink-faint">n={r.n ?? "—"}</span>
                       </span>
                       <span>
-                        <span className="text-ink-faint">95% floor</span> {pct(r.lowerBoundPct)}
-                      </span>
-                      <span>
-                        <span className="text-ink-faint">n</span> {r.n ?? "—"}
+                        <span className="text-ink-faint">95% floor</span> {pct(r.lowerBoundPct)}{" "}
+                        <span className="text-ink-faint">n={r.n ?? "—"}</span>
                       </span>
                       <span>
                         <span className="text-ink-faint">FDR</span> {r.survivesFdr ? "survives" : "no"}
