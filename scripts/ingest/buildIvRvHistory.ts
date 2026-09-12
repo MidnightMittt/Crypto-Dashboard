@@ -9,6 +9,11 @@ import {
   logReturnsAligned,
   matchedLeg,
 } from "../../src/lib/research/ivRv";
+import {
+  ResolutionSchedule,
+  buildResolutionSchedule,
+  scheduleReading,
+} from "../../src/lib/research/ivRvSchedule";
 
 /**
  * IMPLIED AGAINST REALIZED — regenerated every night, stored by nobody.
@@ -76,6 +81,14 @@ export interface IvRvHistory {
     /** IV rows whose symbol the bars panel does not carry. */
     unjoinableSymbols: string[];
   };
+  /**
+   * When this collector can first say anything. Computed here rather than on
+   * the page because only this script holds the panel calendar every forward
+   * window is counted against.
+   */
+  schedule: ResolutionSchedule;
+  /** One sentence generated FROM `schedule`, so the two cannot disagree. */
+  reading: string;
   points: IvRvPoint[];
 }
 
@@ -110,6 +123,13 @@ function main(): void {
   );
 
   const points: IvRvPoint[] = [];
+  /*
+   * The panel index each observation was taken at, kept alongside the point
+   * because the point does not carry it. The schedule needs it to know how
+   * much of each forward window has elapsed, and recovering it later by
+   * looking the date back up would be the same join done twice.
+   */
+  const scheduleObs: { sessionIndex: number; resolved: boolean }[] = [];
   const unjoinableDates = new Set<string>();
   const unjoinableSymbols = new Set<string>();
 
@@ -131,26 +151,33 @@ function main(): void {
       unjoinableSymbols.add(row.symbol);
       continue;
     }
-    points.push(
-      buildIvRvPoint({
-        date: row.date,
-        symbol: row.symbol,
-        ivPct: row.ivConstantMaturityPct,
-        ivTenorSessions: IV_TENOR_SESSIONS,
-        returns,
-        sessionIndex: idx,
-        sessions: bars.sessions,
-      })
-    );
+    const point = buildIvRvPoint({
+      date: row.date,
+      symbol: row.symbol,
+      ivPct: row.ivConstantMaturityPct,
+      ivTenorSessions: IV_TENOR_SESSIONS,
+      returns,
+      sessionIndex: idx,
+      sessions: bars.sessions,
+    });
+    points.push(point);
+    scheduleObs.push({ sessionIndex: idx, resolved: point.forwardRatio !== null });
   }
 
   points.sort((a, b) => a.date.localeCompare(b.date) || a.symbol.localeCompare(b.symbol));
 
   const resolved = points.filter((p) => p.forwardRatio !== null).length;
+  const schedule = buildResolutionSchedule({
+    observations: scheduleObs,
+    horizonSessions: IV_TENOR_SESSIONS,
+    sessions: bars.sessions,
+  });
   const out: IvRvHistory = {
     version: 1,
     generatedAt: Date.now(),
     horizonSessions: IV_TENOR_SESSIONS,
+    schedule,
+    reading: scheduleReading(schedule),
     coverage: {
       ivRows: withIv.length,
       joined: points.length,
@@ -170,19 +197,25 @@ function main(): void {
   console.log(`  sessions        ${dates.length} (${dates[0] ?? "-"} .. ${dates[dates.length - 1] ?? "-"})`);
   console.log(`  symbols         ${new Set(points.map((p) => p.symbol)).size}`);
   console.log(`  trailing ratio  ${withRatio} of ${points.length} computable at the matched ${IV_TENOR_SESSIONS}-session window`);
-  console.log(`  forward leg     ${resolved} resolved, ${points.length - resolved} still open`);
+  console.log(
+    `  forward leg     ${schedule.resolved} resolved, ${schedule.pending} pending, ` +
+      `${schedule.unresolvable} lost to gaps`
+  );
+  if (schedule.sessionsUntilNextResolution !== null) {
+    console.log(
+      `  next landing    ${schedule.nextResolutionCount} rows in ` +
+        `${schedule.sessionsUntilNextResolution} sessions ` +
+        `(projected ${schedule.projectedNextResolution ?? `— ${schedule.projectionNote}`})`
+    );
+  }
   if (unjoinableDates.size) console.log(`  unjoinable dates   ${[...unjoinableDates].join(", ")}`);
   if (unjoinableSymbols.size) console.log(`  unjoinable symbols ${[...unjoinableSymbols].join(", ")}`);
   /*
-   * The line that says how far away an answer is. Stated every run so the
-   * gap between "collecting" and "can conclude something" is never a
-   * question anybody has to go and work out.
+   * The line that says how far away an answer is. Printed from the same
+   * `reading` the page renders, rather than written twice — a console message
+   * and a UI string that disagree is how the log stops being worth reading.
    */
-  if (resolved === 0) {
-    console.log(
-      `  NO forward leg has resolved yet. Nothing here supports a threshold, a ranking or a screen.`
-    );
-  }
+  console.log(`  ${out.reading}`);
   console.log(`[iv/rv] wrote ${OUT}`);
 }
 
