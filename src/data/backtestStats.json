@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1789296478348,
+  "generatedAt": 1789329046608,
   "coverageStart": "2022-08-14",
   "coverageEnd": "2026-07-31",
   "squeeze": {
@@ -62,18 +62,18 @@
   },
   "thesis": {
     "Leaning Bearish": {
-      "n": 1309,
-      "mean1dPct": 0.039206656583045736,
-      "mean3dPct": 0.08494064341610105,
-      "mean7dPct": 0.3920569952108956,
+      "n": 1307,
+      "mean1dPct": 0.026707360223156833,
+      "mean3dPct": 0.08348919117798524,
+      "mean7dPct": 0.39883239294653683,
       "fadeHitRatePct": null,
       "winRatePct": null
     },
     "Consolidation": {
-      "n": 510,
-      "mean1dPct": 0.06407253459948067,
-      "mean3dPct": 0.1714910445857903,
-      "mean7dPct": 0.43172597495605597,
+      "n": 509,
+      "mean1dPct": 0.06039352876050371,
+      "mean3dPct": 0.16644252704286333,
+      "mean7dPct": 0.4191285355149425,
       "fadeHitRatePct": null,
       "winRatePct": null
     },
@@ -94,10 +94,10 @@
       "winRatePct": null
     },
     "Leaning Bullish": {
-      "n": 118,
-      "mean1dPct": 0.1724299805481735,
-      "mean3dPct": 0.9147820006257295,
-      "mean7dPct": 1.5162997513875813,
+      "n": 113,
+      "mean1dPct": 0.3236783540975309,
+      "mean3dPct": 0.9602627009969354,
+      "mean7dPct": 1.3158607496075871,
       "fadeHitRatePct": null,
       "winRatePct": null
     },
@@ -106,6 +106,14 @@
       "mean1dPct": 0.4021555894300446,
       "mean3dPct": 0.7729575187796144,
       "mean7dPct": 2.9902563947398053,
+      "fadeHitRatePct": null,
+      "winRatePct": null
+    },
+    "Trending Bearish": {
+      "n": 8,
+      "mean1dPct": 0.2653454817303915,
+      "mean3dPct": 0.5303383371459405,
+      "mean7dPct": 3.62399420938596,
       "fadeHitRatePct": null,
       "winRatePct": null
     }

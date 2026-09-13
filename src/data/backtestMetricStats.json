@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1789296478348,
+  "generatedAt": 1789329046608,
   "coverageStart": "2022-08-14",
   "coverageEnd": "2026-07-31",
   "metrics": {
@@ -15,61 +15,61 @@
           "effectiveN": 17,
           "blockLength": 2,
           "winRate": 0.48484848484848486,
-          "baseRate": 0.4987862045873092,
+          "baseRate": 0.5008789552988453,
           "significant": false,
-          "pValue": 1
+          "pValue": 0.99188148084452
         },
         "4h": {
           "n": 33,
           "effectiveN": 17,
           "blockLength": 2,
-          "winRate": 0.3333333333333333,
-          "baseRate": 0.5069060773480661,
+          "winRate": 0.6363636363636364,
+          "baseRate": 0.49384731290808664,
           "significant": false,
-          "pValue": 0.06733801771225134
+          "pValue": 0.14239046648033835
         },
         "24h": {
           "n": 33,
           "effectiveN": 17,
           "blockLength": 2,
-          "winRate": 0.30303030303030304,
-          "baseRate": 0.49976979742173067,
-          "significant": true,
-          "pValue": 0.035300091174070965
+          "winRate": 0.6666666666666666,
+          "baseRate": 0.4999372174786536,
+          "significant": false,
+          "pValue": 0.0800010057040414
         },
         "7d": {
           "n": 33,
           "effectiveN": 2,
           "blockLength": 14,
-          "winRate": 0.5757575757575758,
-          "baseRate": 0.5101638794584852,
+          "winRate": 0.3939393939393939,
+          "baseRate": 0.48987803344649816,
           "significant": false,
-          "pValue": 0.5632541873060127
+          "pValue": 0.35336444401157036
         }
       },
-      "baseRate24h": 0.49976979742173067,
-      "winRate24h": 0.30303030303030304,
-      "winRate7d": 0.5757575757575758,
-      "significant24h": true,
+      "baseRate24h": 0.4999372174786536,
+      "winRate24h": 0.6666666666666666,
+      "winRate7d": 0.3939393939393939,
+      "significant24h": false,
       "bestRegime": {
-        "tag": "bull",
-        "winRate": 0.45
+        "tag": "neutral",
+        "winRate": 0.8333333333333334
       },
       "worstRegime": {
-        "tag": "neutral",
-        "winRate": 0.08333333333333333
+        "tag": "bull",
+        "winRate": 0.55
       },
       "bestHoldingPeriod": {
-        "holdingPeriod": "7d",
-        "winRate": 0.5757575757575758
+        "holdingPeriod": "24h",
+        "winRate": 0.6666666666666666
       },
       "worstHoldingPeriod": {
-        "holdingPeriod": "24h",
-        "winRate": 0.30303030303030304
+        "holdingPeriod": "7d",
+        "winRate": 0.3939393939393939
       },
       "sampleSizeLabel": "Small",
       "confidenceLabel": "Low",
-      "stableAcrossWindows": true
+      "stableAcrossWindows": null
     },
     "openInterest": {
       "metricId": "openInterest",
@@ -137,7 +137,7 @@
       },
       "sampleSizeLabel": "Medium",
       "confidenceLabel": "Low",
-      "stableAcrossWindows": false
+      "stableAcrossWindows": null
     },
     "squeezeRisk": {
       "metricId": "squeezeRisk",
@@ -205,7 +205,7 @@
       },
       "sampleSizeLabel": "Large",
       "confidenceLabel": "Medium",
-      "stableAcrossWindows": true
+      "stableAcrossWindows": null
     },
     "longShort": {
       "metricId": "longShort",
@@ -273,7 +273,7 @@
       },
       "sampleSizeLabel": "Medium",
       "confidenceLabel": "Low",
-      "stableAcrossWindows": true
+      "stableAcrossWindows": null
     },
     "basis": {
       "metricId": "basis",
@@ -341,7 +341,7 @@
       },
       "sampleSizeLabel": "Large",
       "confidenceLabel": "Medium",
-      "stableAcrossWindows": true
+      "stableAcrossWindows": null
     },
     "orderFlow": {
       "metricId": "orderFlow",
@@ -447,7 +447,7 @@
       },
       "sampleSizeLabel": "Large",
       "confidenceLabel": "Medium",
-      "stableAcrossWindows": true
+      "stableAcrossWindows": null
     },
     "etfFlows": {
       "metricId": "etfFlows",
@@ -515,7 +515,7 @@
       },
       "sampleSizeLabel": "Medium",
       "confidenceLabel": "Medium",
-      "stableAcrossWindows": true
+      "stableAcrossWindows": null
     },
     "spotPerpVolume": {
       "metricId": "spotPerpVolume",
@@ -659,7 +659,7 @@
       },
       "sampleSizeLabel": "Large",
       "confidenceLabel": "Medium",
-      "stableAcrossWindows": true
+      "stableAcrossWindows": null
     },
     "fearGreed": {
       "metricId": "fearGreed",
@@ -727,7 +727,7 @@
       },
       "sampleSizeLabel": "Medium",
       "confidenceLabel": "Low",
-      "stableAcrossWindows": true
+      "stableAcrossWindows": null
     },
     "sectorBreadth": {
       "metricId": "sectorBreadth",
@@ -907,12 +907,12 @@
   "moduleGrades": {
     "funding": {
       "metricId": "funding",
-      "verdict": "below-base-rate",
-      "holdingPeriod": "1h",
-      "lowerBound": 0.2730570187689643,
+      "verdict": "not-distinguishable",
+      "holdingPeriod": "24h",
+      "lowerBound": 0.43124000076251395,
       "effectiveN": 17,
       "survivesFdr": false,
-      "sentence": "Wins 48.5% at 1h against a 49.9% base rate — below the null on 17 independent observations. Doing nothing beat it."
+      "sentence": "Wins 66.7% at 24h against a 50.0% base rate, but the 95% lower bound is 43.1% on 17 independent observations — the interval contains the null, so this is a coin flip as measured."
     },
     "openInterest": {
       "metricId": "openInterest",
@@ -1109,9 +1109,9 @@
     },
     {
       "bucketLabel": "25-50%",
-      "n": 627,
-      "winRate": 0.5007974481658692,
-      "meanReturnPct": 0.3333872080336291,
+      "n": 628,
+      "winRate": 0.5,
+      "meanReturnPct": 0.35421677730883944,
       "significant": false
     },
     {
@@ -1123,9 +1123,9 @@
     },
     {
       "bucketLabel": "75-100%",
-      "n": 952,
-      "winRate": 0.5189075630252101,
-      "meanReturnPct": -0.15505488589843877,
+      "n": 951,
+      "winRate": 0.519453207150368,
+      "meanReturnPct": -0.1693234575059721,
       "significant": false
     }
   ],
@@ -1160,16 +1160,16 @@
     },
     "bearish:clear:neutral": {
       "key": "bearish:clear:neutral",
-      "n": 528,
-      "effectiveN": 264,
-      "hitRatePct": 51.515151515151516,
+      "n": 529,
+      "effectiveN": 265,
+      "hitRatePct": 51.417769376181475,
       "interval": {
-        "point": 0.5151515151515151,
-        "lower": 0.4725667317927626,
-        "upper": 0.557517413561794
+        "point": 0.5141776937618148,
+        "lower": 0.47163760438407987,
+        "upper": 0.5565133507965967
       },
-      "nullRatePct": 50.20807920889443,
-      "edgePP": 1.3070723062570844,
+      "nullRatePct": 50.20921986377921,
+      "edgePP": 1.2085495124022683,
       "calibrated": true
     },
     "bearish:clear:bear": {
@@ -1188,16 +1188,16 @@
     },
     "bearish:leaning:neutral": {
       "key": "bearish:leaning:neutral",
-      "n": 438,
+      "n": 437,
       "effectiveN": 219,
-      "hitRatePct": 50.68493150684932,
+      "hitRatePct": 50.800915331807786,
       "interval": {
-        "point": 0.5068493150684932,
-        "lower": 0.46017189892631866,
-        "upper": 0.5534076282164403
+        "point": 0.5080091533180778,
+        "lower": 0.4612702460289051,
+        "upper": 0.554608473220821
       },
-      "nullRatePct": 50.23074361317833,
-      "edgePP": 0.45418789367098755,
+      "nullRatePct": 50.229414684048436,
+      "edgePP": 0.5715006477593487,
       "calibrated": true
     },
     "bearish:leaning:bear": {

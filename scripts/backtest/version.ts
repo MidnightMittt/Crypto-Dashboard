@@ -289,8 +289,108 @@ import { DEFAULT_COST_CONFIG, CostConfig } from "./costs";
  * was doing it exactly backwards. That is a separate investigation into why
  * the engine takes ten times as many shorts as longs and loses money on them;
  * it is not fixable in the veto and is not attempted here.
+ *
+ * 9.0.0: funding's direction convention was non-monotone, and the half of it
+ * that was documented had essentially never run.
+ *
+ * `fundingBandVerdict` faded the outer bands and TRENDED the middle two:
+ * mildly positive funding read bullish, heavily positive read bearish, with the
+ * flip at +0.15%/8h. Its own doc comment described only the fade half —
+ * "crowded longs are BEARISH evidence, not doubly bullish" — so the declared
+ * convention and the shipped behaviour were opposites everywhere the data
+ * actually lives. Band frequencies over the same 2,896 days:
+ *
+ *   Crowded Longs  (> +0.15%/8h)      0 days   <- the documented fade branch
+ *   Longs Paying   (+0.04..+0.15)    30 days   <- 100% of positive-side output
+ *   Neutral        (-0.04..+0.04) 2,863 days
+ *   Shorts Paying  (-0.15..-0.04)     2 days
+ *   Extreme Shorts (< -0.15%/8h)      1 day
+ *
+ * Fade now applies at every magnitude, in ONE place: marketThesis.ts had
+ * hand-copied the same five-way label chain, so the wrong mapping had to be
+ * corrected in two engines — the defect shape 6.0.0 and 7.0.0 were both about.
+ * It now calls `fundingBandVerdict`. FUNDING_BANDS' two middle labels were
+ * "Bullish"/"Bearish" and are now "Longs Paying"/"Shorts Paying": a band
+ * labelled "Bullish" is most of why a bullish verdict on mildly positive
+ * funding never looked wrong.
+ *
+ * Fade won on coherence, not on returns. squeezeRisk, marketThesis's own
+ * framing and FUNDING_BANDS' "Crowded Longs" description all fade, and the two
+ * conventions fighting between 0.005% and 0.15%/8h is exactly why funding and
+ * squeezeRisk disagreed on 30 of the 30 replayed days where both spoke. The
+ * outcome evidence is consistent and NOT significant: in the Longs Paying band
+ * (n=30, ~15 independent dates) price fell 66.7% of the time at 24h and the
+ * shipped trend reading won 33.3%, mean -0.359%. At n_eff ~15 that is p ~ 0.3.
+ * Tiebreak, not case.
+ *
+ * ── The band EDGES are still wrong, and it is NOT a replay artifact ─────
+ *
+ * 7.0.0's entry explains funding's 2,863-day neutrality as FUNDING_BANDS being
+ * "calibrated for the live OI-weighted multi-venue composite" while the replay
+ * has single-venue Binance. Checked against the recorded live series rather
+ * than accepted: 87 live multi-venue readings across 11 assets have median
+ * 0.0055%/8h and max 0.0100%/8h. The replay's Binance series has median
+ * 0.0058%. Same scale. Not one live reading reaches the +/-0.04% band edge.
+ *
+ * So funding sits neutral ~99% of the time in production too, while holding the
+ * largest weight in METRIC_WEIGHTS. The live sample is thin (~1 day of polling,
+ * one calm regime) and cannot prove the edges are never reached; the four-year
+ * replay puts +/-0.04% at ~p99 and +/-0.15% past the maximum, which is the
+ * stronger evidence. Recalibrating the edges — percentile-based, as
+ * computeFundingPercentile and computeSqueezeRisk's own crowding score already
+ * are — would move funding from speaking on 1.1% of days to most of them at
+ * weight 0.17. That is a calibration decision with a far larger blast radius
+ * than this one and it needs its own measurement. Deliberately not bundled.
+ *
+ * ── The measured delta, 8.0.0 vs 9.0.0 over the same 2,896 days ────────
+ *
+ *   funding verdict      32 changed (30 bullish->bearish, 2 bearish->bullish)
+ *   biasScore            26 changed, mean |delta| 0.009, max |delta| 2
+ *   biasVerdict           0 changed
+ *   action                0 changed
+ *   thesisRegime         10 changed
+ *
+ * The bump is for the evaluator verdict and the regime classification, not for
+ * the headline: the composite is category-weighted and funding is one voter
+ * inside Positioning, so 32 flips move the score by at most 2 points and never
+ * across a verdict boundary. Nothing the engine would have DONE changed.
+ *
+ * A measurement note, because the first attempt at this table was wrong: the
+ * 8.0.0 baseline had to be regenerated from a stashed tree. The results.json
+ * sitting on disk had been produced at 7.0.0, and comparing against it credited
+ * this change with 282 action changes and 141 released longs that belong
+ * entirely to 8.0.0's veto fix. A stale baseline manufactures a delta that
+ * reads exactly like a real one.
+ *
+ * ── "Trending Bearish" is reachable again: 0 -> 8 days ─────────────────
+ *
+ * The consequence worth reading twice. 7.0.0 recorded that Trending became
+ * unreachable in the replay (Trending Bearish 641 -> 0) once technicals stopped
+ * contributing to participation, and ended with an instruction: "DO NOT
+ * reconcile the two by lowering REGIME_TREND_CONVICTION against the replay's
+ * distribution; that would restore the label by fiat after removing the thing
+ * that earned it."
+ *
+ * The bar is untouched. What changed is that funding and squeezeRisk no longer
+ * fight: when both speak they now point the same way, so AGREEMENT rises on
+ * those days and conviction clears 7 on its own. Eight days, all bearish, seven
+ * of them from "Leaning Bullish" — which is the tell that they were being held
+ * down by the manufactured split rather than by genuine two-sided evidence.
+ * Restored by fixing the input, not by moving the bar, which is the distinction
+ * 7.0.0 asked for.
+ *
+ * ── squeezeRisk's 0.005%/8h cutoff is NOT changed, and is not the bug ───
+ *
+ * The two thresholds differ 8x (0.005% vs 0.04%) and that is defensible now
+ * that the signs agree: they answer different questions. squeezeRisk's is a
+ * which-side-is-exposed pointer already gated by its own score >= 40, so a
+ * loose bar is harmless there. funding's is its own directional claim and needs
+ * its own extremity bar. Raising squeezeRisk's to 0.04% would also make its
+ * side fall back to longShortRatio on ~98% of days, collapsing it into the
+ * ratio-only read that 5.0.0 retired longShort for being — and destroying the
+ * stated reason squeezeRisk was kept over it.
  */
-export const ENGINE_VERSION = "8.0.0";
+export const ENGINE_VERSION = "9.0.0";
 
 /**
  * Bump when the meaning or shape of the replayed FEATURES changes — a new
