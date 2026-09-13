@@ -2,7 +2,7 @@
 
 Each row removes ONE voter entirely and replays the full history. Edge is win rate minus the drift null, in percentage points; Δedge is (baseline − ablated): POSITIVE means the composite was BETTER with the voter present (it contributes), NEGATIVE means the composite improved when the voter was removed (it detracts). All in-sample, descriptive, uncorrected for the 7-way scan — an input to weight re-derivation, not a verdict on its own.
 
-Engine `6.0.0`, 7 Edge voters: funding, squeezeRisk, openInterest, basis, etfFlows, stablecoins, macroLiquidity. Regenerate after any change that moves the composite, or the deltas below describe an engine that no longer ships.
+Engine `7.0.0`, 7 Edge voters: funding, squeezeRisk, openInterest, basis, etfFlows, stablecoins, macroLiquidity. Regenerate after any change that moves the composite, or the deltas below describe an engine that no longer ships.
 
 Baseline: bullish n=377 win 57.8% vs null 50.3% (edge 7.6pp) · bearish n=1793 win 51.4% vs null 49.9% (edge 1.4pp) · directional days 2170.
 
