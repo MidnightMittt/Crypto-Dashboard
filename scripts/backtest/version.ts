@@ -173,8 +173,124 @@ import { DEFAULT_COST_CONFIG, CostConfig } from "./costs";
  * data where this pass computes 0.343pp, a bootstrap-settings difference,
  * not a data one. Both are ~2.07x the naive sd/sqrt(n), which is the number
  * that matters.
+ *
+ * 8.0.0: the layer-conflict veto in tradeRecommendation.ts now requires the
+ * opposing thesis to clear REGIME_TREND_CONVICTION (7) before it refuses a
+ * trade. Below that bar the conflict is written into the recommendation as a
+ * caveat and the trade proceeds. Measurements: scripts/audit/thesisVeto.ts.
+ *
+ * ── This does NOT make the gate symmetric, and nothing here can ─────────
+ *
+ * 7.0.0's entry ends by promising the asymmetry would be fixed in
+ * tradeRecommendation.ts. That promise was half wrong, and the half that was
+ * wrong is the more important half.
+ *
+ * The veto RULE was always symmetric — `thesis.dominant !== direction`, no
+ * side named. It fired on 69.8% of long setups (263/377) and 1.1% of shorts
+ * (19/1,793) because of the two layers' MARGINAL distributions, not because
+ * of anything in the rule. The bias verdict is bearish on 61.9% of replayed
+ * days and bullish on 13.0%; the thesis leans bearish most of the time for
+ * the reason 7.0.0 gives. Two layers that both lean the same way agree on
+ * shorts and collide on longs, and a symmetric rule applied to lopsided
+ * inputs fires lopsidedly. That is arithmetic.
+ *
+ * So a side-aware correction here — a laxer bar for longs, a stricter one for
+ * shorts — would install a second bias to cancel the first and leave both in
+ * place. That is the same "two wrongs" 7.0.0 refused when it declined to keep
+ * an ungraded input in the thesis as a counterweight. Declined again.
+ *
+ * ── What was actually broken: `dominant` has no deadband ────────────────
+ *
+ * `thesis.dominant` is `bullWeight > bearWeight`, strict inequality. The
+ * thinnest lean refused a trade exactly as hard as a strong one. The veto's
+ * own comment justified itself as the two layers being in "open
+ * disagreement," and the honest reading of that phrase is that the opposing
+ * thesis clears the bar at which the thesis calls ITSELF directional. It
+ * publishes that bar already: REGIME_TREND_CONVICTION, the Trending/Leaning
+ * boundary. It is now exported and both consumers read the one number.
+ *
+ * Conviction on the 282 veto days: 2 -> 122 (43.3%), 4 -> 32 (11.3%),
+ * 6 -> 128 (45.4%), >=7 -> 0. Regime label on those days: "Leaning Bearish"
+ * 146, "Squeeze Setup — Longs Exposed" 72, "Consolidation" 57, "Leaning
+ * Bullish" 7. Fifty-seven refusals came from a thesis whose own label says
+ * there is no setup in either direction.
+ *
+ * The threshold is chosen SEMANTICALLY — it is the existing published
+ * boundary and it matches the veto's stated justification. The sensitivity
+ * scan in thesisVeto.ts is labelled as a check, not a selection procedure,
+ * because picking the bar off the outcome table is how you fit noise.
+ *
+ * ── The veto bought nothing measurable ──────────────────────────────────
+ *
+ * Signed forward return, vetoed vs allowed, paired block bootstrap over the
+ * date axis (10-day blocks, 2,000 draws, BTC and ETH drawn together):
+ *
+ *   long side    t = -0.19 / +1.09 / +1.22   at 1d / 3d / 7d
+ *   short side   t = -0.92 / +0.01 / +0.41
+ *
+ * The sign is not even stable across horizons. A note on why the bootstrap is
+ * paired: vetoed and allowed are complementary subsets of the SAME dates, so
+ * they are not independent and their SEs cannot be combined in quadrature.
+ * The first pass did exactly that and reported bearish-1d at t=-4.09. Forming
+ * the difference inside each replicate gives t=-0.92. That error would have
+ * published a significant defence of a veto that has none.
+ *
+ * ── HONEST DISCLOSURE: the shipped bar fires zero times here ────────────
+ *
+ * At REGIME_TREND_CONVICTION the veto never fires in the replay — all 282
+ * blocks are released. So this change is, in the replay, indistinguishable
+ * from deleting the veto, and the replay cannot tell you whether the retained
+ * gate is worth anything. It is retained on the semantic argument, not on
+ * evidence: live has seven directional sources against the replay's four and
+ * reaches Trending, per 7.0.0's note on not reconciling the two.
+ *
+ * ── Replay diff, 7.0.0 -> 8.0.0, same 2,896 days ────────────────────────
+ *
+ * bias fields changed on 0 days. `action` changed on 282, entry/stop/target
+ * on 143.
+ *
+ *   no-trade -> enter-long   141      no-trade -> wait-long   122
+ *   no-trade -> wait-short    17      no-trade -> enter-short   2
+ *
+ *   enter-long    98 -> 239     enter-short  959 -> 961
+ *   no-trade    1008 -> 726
+ *
+ * ── The record improved and that is NOT the evidence ────────────────────
+ *
+ * n 1,057 -> 1,200, expectancy 0.097% -> 0.324%, profit factor 1.045 ->
+ * 1.155. Overlap-corrected over 6-day blocks (4,000 draws):
+ *
+ *   all     n=1,200  exp  0.324%  blockSE 0.365  (137 blocks)  t = +0.89
+ *   long    n=  239  exp  2.141%  blockSE 0.751  ( 32 blocks)  t = +2.85
+ *   short   n=  961  exp -0.128%  blockSE 0.408  (106 blocks)  t = -0.31
+ *
+ * The aggregate blockSE is 2.21x the naive sd/sqrt(n). t=+0.89 is not
+ * distinguishable from zero, so the tripled expectancy is not evidence.
+ *
+ * The long leg's t=+2.85 is in-sample and the window is a crypto bull market.
+ * Drift control: unconditional 7d return is 0.537% across all days, 2.672% on
+ * long-entry days and 0.434% on short-entry days, mean hold 118h. Entry
+ * selection is doing something, but a long book in this window earns most of
+ * that from the market.
+ *
+ * ── What the veto was actually filtering ────────────────────────────────
+ *
+ * The 141 released long trades returned 1.969% on average, 54.6% win rate.
+ * The 98 longs the veto already allowed returned 2.389%, 68.4%. Difference
+ * 0.419pp, blockSE 0.862, t = 0.49 over 19 blocks. The veto was not screening
+ * out losers; it was screening out slightly-below-average winners, and the
+ * claim that it selected better ones does not survive its own standard error.
+ *
+ * ── The finding worth more than this change ─────────────────────────────
+ *
+ * The short book is 961 trades at -0.128% expectancy, profit factor 0.945. It
+ * is the unprofitable leg, and the veto exempted it almost entirely (1.1%)
+ * while blocking 69.8% of the profitable one. Whatever the gate was doing, it
+ * was doing it exactly backwards. That is a separate investigation into why
+ * the engine takes ten times as many shorts as longs and loses money on them;
+ * it is not fixable in the veto and is not attempted here.
  */
-export const ENGINE_VERSION = "7.0.0";
+export const ENGINE_VERSION = "8.0.0";
 
 /**
  * Bump when the meaning or shape of the replayed FEATURES changes — a new

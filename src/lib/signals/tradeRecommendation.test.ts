@@ -276,6 +276,17 @@ describe("buildTradeRecommendation", () => {
  * directional pair; these pin every cell of that grid.
  */
 describe("opposed bias/thesis pairs — the direction the gate tests is the direction traded", () => {
+  /*
+   * These two pin the ORIGINAL 2026-08-22 bug, and they are the reason the
+   * conviction deadband added on 2026-09-13 could be added safely. The bug
+   * was never the veto — it was the gate testing technicals against
+   * `thesis.dominant` while acting on `bias.verdict`. The one-direction rule
+   * fixed that, and it holds whether or not the veto fires. So these now
+   * assert the invariant that actually matters (no entry on technicals
+   * backing the other way) WITHOUT asserting the mechanism that happens to
+   * deliver it, which is what let the old versions of these tests pass for
+   * the wrong reason.
+   */
   it("never enters long on bearish technicals that 'confirm' only the opposing thesis", () => {
     // The exact firing case: pullback into crowded longs.
     const rec = buildTradeRecommendation(
@@ -284,8 +295,6 @@ describe("opposed bias/thesis pairs — the direction the gate tests is the dire
       baseTechnicals("bearish")
     );
     expect(rec.action).not.toBe("enter-long");
-    expect(rec.action).toBe("no-trade");
-    expect(rec.blockingLayer).toBe("thesis");
     expect(rec.reason).not.toContain("Technicals confirm");
   });
 
@@ -296,42 +305,7 @@ describe("opposed bias/thesis pairs — the direction the gate tests is the dire
       baseTechnicals("bullish")
     );
     expect(rec.action).not.toBe("enter-short");
-    expect(rec.action).toBe("no-trade");
-    expect(rec.blockingLayer).toBe("thesis");
-  });
-
-  it("names the layer conflict even when technicals side with the bias — crowded but still bid", () => {
-    // The live regime the night this was found: bias bullish, thesis
-    // bearish, technicals bullish. The old code returned a wait state whose
-    // reason claimed price action "hasn't confirmed" — false; technicals
-    // backed the long. The honest state is the conflict itself.
-    const rec = buildTradeRecommendation(
-      baseBias({ verdict: "bullish", score: 70 }),
-      baseThesis({ dominant: "bearish", regime: "Leaning Bearish", invalidation: ["Funding turning positive would flip this reading."] }),
-      baseTechnicals("bullish")
-    );
-    expect(rec.action).toBe("no-trade");
-    expect(rec.blockingLayer).toBe("thesis");
-    expect(rec.reason).toContain('"Leaning Bearish"');
-    expect(rec.reason).toContain("opposite");
-    // The trigger cites the thesis's own real invalidation line.
-    expect(rec.nextTrigger).toContain("funding turning positive");
-  });
-
-  it("vetoes on the conflict regardless of what technicals show — including none at all", () => {
-    const withTech = buildTradeRecommendation(
-      baseBias({ verdict: "bullish", score: 70 }),
-      baseThesis({ dominant: "bearish" }),
-      baseTechnicals("neutral")
-    );
-    const withoutTech = buildTradeRecommendation(
-      baseBias({ verdict: "bullish", score: 70 }),
-      baseThesis({ dominant: "bearish" }),
-      null
-    );
-    expect(withTech.action).toBe("no-trade");
-    expect(withoutTech.action).toBe("no-trade");
-    expect(withTech.blockingLayer).toBe("thesis");
+    expect(rec.reason).not.toContain("Technicals confirm");
   });
 
   it("a NEUTRAL thesis is an evaluated non-objection, not a veto — the entry proceeds", () => {
@@ -344,6 +318,98 @@ describe("opposed bias/thesis pairs — the direction the gate tests is the dire
     );
     expect(rec.action).toBe("enter-long");
     expect(rec.blockingLayer).toBeNull();
+    expect(rec.caveats).toEqual([]);
+  });
+});
+
+/**
+ * ── THE CONVICTION DEADBAND ON THE LAYER-CONFLICT VETO (2026-09-13) ───────
+ *
+ * `thesis.dominant` is `bullWeight > bearWeight` with no deadband, so before
+ * this the thinnest possible lean refused the trade outright — measured over
+ * the replay, that vetoed 69.8% of long setups against 1.1% of shorts while
+ * making no measurable difference to how they resolved (max |t| 1.22 on the
+ * paired block-bootstrapped difference, across three horizons and both sides).
+ *
+ * The veto now requires the opposing thesis to clear REGIME_TREND_CONVICTION
+ * — the same bar at which the thesis calls itself "Trending" rather than
+ * "Leaning". Below it the conflict is a caveat, not a refusal.
+ *
+ * The boundary tests below are the discriminating ones: conviction 6 and
+ * conviction 7 are one point apart and must produce different ACTIONS. A
+ * suite that only tested 4-vs-9 would pass against almost any threshold.
+ */
+describe("the layer-conflict veto requires conviction, and caveats below it", () => {
+  const opposing = (conviction: number) =>
+    baseThesis({
+      dominant: "bearish",
+      regime: conviction >= 7 ? "Trending Bearish" : "Leaning Bearish",
+      conviction,
+      invalidation: ["Funding turning positive would flip this reading."],
+    });
+
+  it("BLOCKS when the opposing thesis is standing behind its read (conviction 7)", () => {
+    const rec = buildTradeRecommendation(baseBias({ verdict: "bullish", score: 70 }), opposing(7), baseTechnicals("bullish"));
+    expect(rec.action).toBe("no-trade");
+    expect(rec.blockingLayer).toBe("thesis");
+    expect(rec.reason).toContain('"Trending Bearish"');
+    expect(rec.reason).toContain("opposite");
+    expect(rec.reason).toContain("7/10 conviction");
+    // The trigger still cites the thesis's own real invalidation line.
+    expect(rec.nextTrigger).toContain("funding turning positive");
+    // A block is not a caveat: nothing rides along beside a refusal.
+    expect(rec.caveats).toEqual([]);
+  });
+
+  it("does NOT block one point below the bar (conviction 6) — it caveats and enters", () => {
+    const rec = buildTradeRecommendation(baseBias({ verdict: "bullish", score: 70 }), opposing(6), baseTechnicals("bullish"));
+    expect(rec.action).toBe("enter-long");
+    expect(rec.blockingLayer).toBeNull();
+    expect(rec.caveats).toHaveLength(1);
+    expect(rec.caveats[0].layer).toBe("thesis");
+    expect(rec.caveats[0].text).toContain("6/10 conviction");
+  });
+
+  it("puts the caveat in the reason AND the field — the two cannot drift apart", () => {
+    // The failure this prevents: a caveat that lives only in prose, so a
+    // consumer reading blockingLayer === null hands over an unqualified ENTER
+    // while the sentence beside it carries a warning.
+    const rec = buildTradeRecommendation(baseBias({ verdict: "bullish", score: 70 }), opposing(6), baseTechnicals("bullish"));
+    expect(rec.caveats).toHaveLength(1);
+    expect(rec.reason).toContain(rec.caveats[0].text);
+    expect(rec.reason).toContain('"Leaning Bearish"');
+  });
+
+  it("carries the caveat out through the WAIT path too, not just the ENTER path", () => {
+    // Technicals contradict, so this leaves through the final wait branch —
+    // a different return statement, which is exactly how a caveat gets lost.
+    const rec = buildTradeRecommendation(baseBias({ verdict: "bullish", score: 70 }), opposing(6), baseTechnicals("bearish"));
+    expect(rec.action).toBe("wait-long-confirmation");
+    expect(rec.caveats).toHaveLength(1);
+    expect(rec.caveats[0].layer).toBe("thesis");
+    expect(rec.reason).toContain(rec.caveats[0].text);
+  });
+
+  it("blocks a convicted opposing thesis whatever technicals say — including none at all", () => {
+    const withTech = buildTradeRecommendation(baseBias({ verdict: "bullish", score: 70 }), opposing(8), baseTechnicals("neutral"));
+    const withoutTech = buildTradeRecommendation(baseBias({ verdict: "bullish", score: 70 }), opposing(8), null);
+    expect(withTech.action).toBe("no-trade");
+    expect(withoutTech.action).toBe("no-trade");
+    expect(withTech.blockingLayer).toBe("thesis");
+    expect(withoutTech.blockingLayer).toBe("thesis");
+  });
+
+  it("is symmetric as a RULE — a convicted bullish thesis blocks a bearish bias identically", () => {
+    // The firing RATE is lopsided because the two layers' marginals are
+    // lopsided, not because the rule is. This pins the rule half of that
+    // claim, which is the only half this file controls.
+    const rec = buildTradeRecommendation(
+      baseBias({ verdict: "bearish", score: 30 }),
+      baseThesis({ dominant: "bullish", regime: "Trending Bullish", conviction: 7 }),
+      baseTechnicals("bearish")
+    );
+    expect(rec.action).toBe("no-trade");
+    expect(rec.blockingLayer).toBe("thesis");
   });
 });
 

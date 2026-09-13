@@ -348,8 +348,18 @@ function convictionLabel(conviction: number): string {
 
 /** Squeeze score at/above this, with a clear side, overrides trend-based regime labeling. */
 const REGIME_SQUEEZE_THRESHOLD = 70;
-/** Conviction at/above this counts as a "Trending" (not just "Leaning") regime. */
-const REGIME_TREND_CONVICTION = 7;
+/**
+ * Conviction at/above this counts as a "Trending" (not just "Leaning") regime.
+ *
+ * Exported since 2026-09-13 because `tradeRecommendation.ts` needs the same
+ * bar: its layer-conflict veto is justified in its own comment as the two
+ * layers being in "open disagreement," and the honest reading of "open
+ * disagreement" is that the opposing thesis clears the bar at which the
+ * thesis calls ITSELF directional. That is this constant — the difference
+ * between "Trending Bearish" and "Leaning Bearish" — not a second threshold
+ * invented for the gate. One number, one meaning, two consumers.
+ */
+export const REGIME_TREND_CONVICTION = 7;
 /** Conviction at/below this counts as genuinely mixed rather than a soft lean. */
 const REGIME_MIXED_CONVICTION = 2;
 /** Below this heat AND this price move, the market reads as quiet rather than mixed. */

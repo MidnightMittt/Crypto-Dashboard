@@ -212,6 +212,16 @@ export interface DayRecord {
   squeezeSide: string | null;
   thesisRegime: string | null;
   thesisConviction: number | null;
+  /**
+   * The thesis' raw direction, which the regime LABEL does not determine —
+   * "Squeeze Setup" and "Consolidation" both sit on top of any `dominant`.
+   *
+   * Recorded from 2026-09-13 because the layer-conflict veto audit had to
+   * infer it from `action` + `biasVerdict`, which only works while the replay
+   * passes no `evConstraint` and would silently start lying the day it does.
+   * Research-only: nothing in the replay or the reports consumes it.
+   */
+  thesisDominant: string | null;
   /** The decision engine's overall read — buildMarketBias, not buildMarketThesis. */
   biasScore: number | null;
   biasVerdict: string | null;
@@ -987,6 +997,7 @@ export function replayAsset(
       squeezeSide: squeezeRisk?.side ?? null,
       thesisRegime: thesis?.regime ?? null,
       thesisConviction: thesis?.conviction ?? null,
+      thesisDominant: thesis?.dominant ?? null,
       biasScore: bias?.score ?? null,
       biasVerdict: bias?.verdict ?? null,
       biasConfidence: bias?.confidence ?? null,
