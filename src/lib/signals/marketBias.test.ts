@@ -89,16 +89,20 @@ describe("top reasons", () => {
 
   it("caps each side at five entries", () => {
     // SIX edge voters, so the cap actually binds — plus technicals (state)
-    // and orderFlow (context), which must be excluded for having no weight.
+    // and spotPerpVolume (context), which must be excluded for having no
+    // weight. spotPerpVolume replaces its old slot in this list as a
+    // non-voter — note this assertion would NOT catch its weight coming back
+    // (the cap holds at five either way); the test that does is in
+    // scoring.test.ts. It is here so the fixture stops implying it votes.
     const ids = [
       "funding",
       "squeezeRisk",
       "openInterest",
       "basis",
       "etfFlows",
-      "spotPerpVolume",
+      "stablecoins",
       "technicals",
-      "orderFlow",
+      "spotPerpVolume",
     ];
     const bias = build(ids.map((id) => metric(id, "bullish")))!;
     expect(bias.topBullish).toHaveLength(5);
@@ -146,16 +150,20 @@ describe("topReasons", () => {
 
   it("defaults to five and respects a smaller explicit limit", () => {
     // SIX edge voters, so the cap actually binds — plus technicals (state)
-    // and orderFlow (context), which must be excluded for having no weight.
+    // and spotPerpVolume (context), which must be excluded for having no
+    // weight. spotPerpVolume replaces its old slot in this list as a
+    // non-voter — note this assertion would NOT catch its weight coming back
+    // (the cap holds at five either way); the test that does is in
+    // scoring.test.ts. It is here so the fixture stops implying it votes.
     const ids = [
       "funding",
       "squeezeRisk",
       "openInterest",
       "basis",
       "etfFlows",
-      "spotPerpVolume",
+      "stablecoins",
       "technicals",
-      "orderFlow",
+      "spotPerpVolume",
     ];
     const bias = build(ids.map((id) => metric(id, "bullish")))!;
     expect(topReasons(bias)).toHaveLength(5);

@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1789280297162,
+  "generatedAt": 1789282460533,
   "coverageStart": "2022-08-14",
   "coverageEnd": "2026-07-31",
   "metrics": {
@@ -520,70 +520,21 @@
     "spotPerpVolume": {
       "metricId": "spotPerpVolume",
       "label": "Spot vs Perp Volume",
-      "hasHistoricalSource": true,
-      "n24h": 2065,
-      "effectiveN24h": 1033,
-      "byHoldingPeriod": {
-        "1h": {
-          "n": 2065,
-          "effectiveN": 1033,
-          "blockLength": 2,
-          "winRate": 0.5065375302663438,
-          "baseRate": 0.4998270972402398,
-          "significant": false,
-          "pValue": 0.5566285461550153
-        },
-        "4h": {
-          "n": 2065,
-          "effectiveN": 1033,
-          "blockLength": 2,
-          "winRate": 0.49249394673123487,
-          "baseRate": 0.4997317833397988,
-          "significant": false,
-          "pValue": 0.5248585731928631
-        },
-        "24h": {
-          "n": 2065,
-          "effectiveN": 1033,
-          "blockLength": 2,
-          "winRate": 0.4808716707021792,
-          "baseRate": 0.5002056773641209,
-          "significant": false,
-          "pValue": 0.08266973430381427
-        },
-        "7d": {
-          "n": 2063,
-          "effectiveN": 147,
-          "blockLength": 14,
-          "winRate": 0.49878817256422686,
-          "baseRate": 0.5003891927117363,
-          "significant": false,
-          "pValue": 0.9016951184868415
-        }
-      },
-      "baseRate24h": 0.5002056773641209,
-      "winRate24h": 0.4808716707021792,
-      "winRate7d": 0.49878817256422686,
-      "significant24h": false,
-      "bestRegime": {
-        "tag": "bull",
-        "winRate": 0.5424528301886793
-      },
-      "worstRegime": {
-        "tag": "neutral",
-        "winRate": 0.4170124481327801
-      },
-      "bestHoldingPeriod": {
-        "holdingPeriod": "1h",
-        "winRate": 0.5065375302663438
-      },
-      "worstHoldingPeriod": {
-        "holdingPeriod": "24h",
-        "winRate": 0.4808716707021792
-      },
-      "sampleSizeLabel": "Large",
-      "confidenceLabel": "Medium",
-      "stableAcrossWindows": true
+      "hasHistoricalSource": false,
+      "n24h": null,
+      "effectiveN24h": null,
+      "byHoldingPeriod": {},
+      "baseRate24h": null,
+      "winRate24h": null,
+      "winRate7d": null,
+      "significant24h": null,
+      "bestRegime": null,
+      "worstRegime": null,
+      "bestHoldingPeriod": null,
+      "worstHoldingPeriod": null,
+      "sampleSizeLabel": null,
+      "confidenceLabel": null,
+      "stableAcrossWindows": null
     },
     "exchangeFlow": {
       "metricId": "exchangeFlow",
@@ -1037,12 +988,12 @@
     },
     "spotPerpVolume": {
       "metricId": "spotPerpVolume",
-      "verdict": "not-distinguishable",
-      "holdingPeriod": "1h",
-      "lowerBound": 0.47608114094058634,
-      "effectiveN": 1033,
+      "verdict": "unmeasured",
+      "holdingPeriod": null,
+      "lowerBound": null,
+      "effectiveN": null,
       "survivesFdr": false,
-      "sentence": "Wins 50.7% at 1h against a 50.0% base rate, but the 95% lower bound is 47.6% on 1033 independent observations — the interval contains the null, so this is a coin flip as measured."
+      "sentence": "No measured directional record with an effective sample behind it. This is an absence of evidence, not evidence the module fails."
     },
     "exchangeFlow": {
       "metricId": "exchangeFlow",
@@ -1128,215 +1079,224 @@
   },
   "moduleBreadth": {
     "declared": 19,
-    "measured": 12,
+    "measured": 11,
     "breadth": {
-      "effective_bets": 8.53,
-      "distinct_tests": 2.95,
-      "mean_pairwise_rho": 0.037,
-      "mean_abs_rho": 0.279,
-      "pairs_measured": 54,
+      "effective_bets": 11.44,
+      "distinct_tests": 3.16,
+      "mean_pairwise_rho": -0.004,
+      "mean_abs_rho": 0.248,
+      "pairs_measured": 44,
       "near_duplicates": [
         {
           "a": "squeezeRisk",
           "b": "longShort",
           "rho": -1
-        },
-        {
-          "a": "technicals",
-          "b": "spotPerpVolume",
-          "rho": 1
         }
       ]
     },
-    "bestCaseBets": 9,
+    "bestCaseBets": 11.36,
     "inversePairs": 1,
-    "sentence": "19 declared modules, of which 12 produce enough readings to correlate at all; those 12 are worth between 8.5 and 9.0 independent bets. The remaining 7 are unmeasured rather than independent, so no share of the headcount is quoted here — a percentage would have to treat silence as either evidence or nothing, and it is neither. Those are independent BETS, not distinct IDEAS, and here the two part company: 1 pair is inversely related — squeezeRisk and longShort at -1.000, one signal and its own negation. A basket of the two hedges itself, which is why the bets figure is high. A SEARCH over the two has still only tried one thing. Counted that way — on mean |rho| rather than mean rho — the family is worth 3.0 distinct ideas, not 8.5. For anything about coverage or multiple testing, 3.0 is the figure that applies. The upper end assumes all 12 of 66 pairs too sparse to correlate — pairs that never share enough dates — are perfectly independent. They are not, so the true figure sits nearer the lower end. This does not make a surviving result wrong. Correcting across 12 correlated tests is stricter than correcting across 3, so a survivor cleared a harder bar rather than an easier one. What it costs is the COVERAGE the headcount implies: \"19 ideas were tried\" describes a broad search, and this one was narrow.",
-    "duplicateSentence": "2 pairs correlate at or above 0.999 in absolute value — squeezeRisk/longShort at -1.000, technicals/spotPerpVolume at 1.000. A pair at 1.000 is not two similar tests; it is one series and a subset of itself. A pair at -1.000 is the same statement upside down: one signal and its negation, which is one idea however many names it is given."
+    "sentence": "19 declared modules, of which 11 produce enough readings to correlate at all; those 11 are worth between 11.4 and 11.4 independent bets. The remaining 8 are unmeasured rather than independent, so no share of the headcount is quoted here — a percentage would have to treat silence as either evidence or nothing, and it is neither. Those are independent BETS, not distinct IDEAS, and here the two part company: 1 pair is inversely related — squeezeRisk and longShort at -1.000, one signal and its own negation. A basket of the two hedges itself, which is why the bets figure is high. A SEARCH over the two has still only tried one thing. Counted that way — on mean |rho| rather than mean rho — the family is worth 3.2 distinct ideas, not 11.4. For anything about coverage or multiple testing, 3.2 is the figure that applies. 11 of 55 pairs were too sparse to correlate and are excluded rather than assumed independent; the measurable ones do not average positive, so no collapse is being claimed here. This does not make a surviving result wrong. Correcting across 11 correlated tests is stricter than correcting across 3, so a survivor cleared a harder bar rather than an easier one. What it costs is the COVERAGE the headcount implies: \"19 ideas were tried\" describes a broad search, and this one was narrow.",
+    "duplicateSentence": "1 pair correlate at or above 0.999 in absolute value — squeezeRisk/longShort at -1.000. A pair at 1.000 is not two similar tests; it is one series and a subset of itself. A pair at -1.000 is the same statement upside down: one signal and its negation, which is one idea however many names it is given."
   },
   "agreementBuckets": [
     {
       "bucketLabel": "0-25%",
-      "n": 206,
-      "winRate": 0.5,
-      "meanReturnPct": 0.061043405983906625,
+      "n": 273,
+      "winRate": 0.5604395604395604,
+      "meanReturnPct": 0.025408081856987164,
       "significant": false
     },
     {
       "bucketLabel": "25-50%",
-      "n": 302,
-      "winRate": 0.5298013245033113,
-      "meanReturnPct": 0.2210197588349834,
+      "n": 627,
+      "winRate": 0.5007974481658692,
+      "meanReturnPct": 0.3333872080336291,
       "significant": false
     },
     {
       "bucketLabel": "50-75%",
-      "n": 614,
-      "winRate": 0.5228013029315961,
-      "meanReturnPct": 0.27831258166101885,
-      "significant": false
+      "n": 318,
+      "winRate": 0.559748427672956,
+      "meanReturnPct": 0.3313812470918541,
+      "significant": true
     },
     {
       "bucketLabel": "75-100%",
-      "n": 785,
-      "winRate": 0.5121019108280255,
-      "meanReturnPct": -0.12242936725829405,
+      "n": 952,
+      "winRate": 0.5189075630252101,
+      "meanReturnPct": -0.15505488589843877,
       "significant": false
     }
   ],
   "scoreCalibration": {
-    "bearish:clear:bull": {
-      "key": "bearish:clear:bull",
-      "n": 40,
-      "effectiveN": 20,
-      "hitRatePct": 40,
+    "bearish:leaning:bull": {
+      "key": "bearish:leaning:bull",
+      "n": 212,
+      "effectiveN": 106,
+      "hitRatePct": 44.81132075471698,
       "interval": {
-        "point": 0.4,
-        "lower": 0.2634811061240136,
-        "upper": 0.5540438017260649
+        "point": 0.4481132075471698,
+        "lower": 0.3826854008193554,
+        "upper": 0.5153880011569087
       },
-      "nullRatePct": 42.902661064425786,
-      "edgePP": -2.902661064425782,
+      "nullRatePct": 43.72456529781701,
+      "edgePP": 1.0867554568999738,
       "calibrated": true
     },
-    "bearish:leaning:neutral": {
-      "key": "bearish:leaning:neutral",
-      "n": 434,
-      "effectiveN": 217,
-      "hitRatePct": 52.53456221198156,
+    "bearish:clear:bull": {
+      "key": "bearish:clear:bull",
+      "n": 123,
+      "effectiveN": 62,
+      "hitRatePct": 45.52845528455284,
       "interval": {
-        "point": 0.5253456221198156,
-        "lower": 0.4783482434439112,
-        "upper": 0.571898238388788
+        "point": 0.45528455284552843,
+        "lower": 0.3699616988205246,
+        "upper": 0.5433159640282569
       },
-      "nullRatePct": 50.186910200653635,
-      "edgePP": 2.3476520113279276,
+      "nullRatePct": 43.322857598323736,
+      "edgePP": 2.2055976862291047,
       "calibrated": true
     },
     "bearish:clear:neutral": {
       "key": "bearish:clear:neutral",
-      "n": 430,
-      "effectiveN": 215,
-      "hitRatePct": 47.20930232558139,
+      "n": 528,
+      "effectiveN": 264,
+      "hitRatePct": 51.515151515151516,
       "interval": {
-        "point": 0.4720930232558139,
-        "lower": 0.4253627353545332,
-        "upper": 0.5193175350483051
+        "point": 0.5151515151515151,
+        "lower": 0.4725667317927626,
+        "upper": 0.557517413561794
       },
-      "nullRatePct": 50.24085237155413,
-      "edgePP": -3.031550045972742,
+      "nullRatePct": 50.20807920889443,
+      "edgePP": 1.3070723062570844,
       "calibrated": true
     },
     "bearish:clear:bear": {
       "key": "bearish:clear:bear",
-      "n": 203,
-      "effectiveN": 102,
-      "hitRatePct": 64.5320197044335,
+      "n": 211,
+      "effectiveN": 106,
+      "hitRatePct": 66.35071090047393,
       "interval": {
-        "point": 0.645320197044335,
-        "lower": 0.5773660661909803,
-        "upper": 0.7078763608643122
+        "point": 0.6635071090047393,
+        "lower": 0.5973317451457,
+        "upper": 0.7238351052221988
       },
-      "nullRatePct": 57.513780444349905,
-      "edgePP": 7.0182392600835914,
+      "nullRatePct": 57.51758832126438,
+      "edgePP": 8.833122579209551,
+      "calibrated": true
+    },
+    "bearish:leaning:neutral": {
+      "key": "bearish:leaning:neutral",
+      "n": 438,
+      "effectiveN": 219,
+      "hitRatePct": 50.68493150684932,
+      "interval": {
+        "point": 0.5068493150684932,
+        "lower": 0.46017189892631866,
+        "upper": 0.5534076282164403
+      },
+      "nullRatePct": 50.23074361317833,
+      "edgePP": 0.45418789367098755,
       "calibrated": true
     },
     "bearish:leaning:bear": {
       "key": "bearish:leaning:bear",
-      "n": 313,
-      "effectiveN": 157,
-      "hitRatePct": 49.52076677316294,
+      "n": 281,
+      "effectiveN": 141,
+      "hitRatePct": 48.39857651245551,
       "interval": {
-        "point": 0.4952076677316294,
-        "lower": 0.44021223069695775,
-        "upper": 0.5503193156656411
+        "point": 0.48398576512455516,
+        "lower": 0.4261648058677433,
+        "upper": 0.5422386857570755
       },
-      "nullRatePct": 57.54231681086941,
-      "edgePP": -8.02155003770647,
-      "calibrated": true
-    },
-    "bearish:leaning:bull": {
-      "key": "bearish:leaning:bull",
-      "n": 144,
-      "effectiveN": 72,
-      "hitRatePct": 43.75,
-      "interval": {
-        "point": 0.4375,
-        "lower": 0.3591410554401721,
-        "upper": 0.5191070154681514
-      },
-      "nullRatePct": 43.88422035480843,
-      "edgePP": -0.13422035480842864,
+      "nullRatePct": 57.539605142529595,
+      "edgePP": -9.141028630074077,
       "calibrated": true
     },
     "bullish:leaning:bull": {
       "key": "bullish:leaning:bull",
-      "n": 168,
-      "effectiveN": 84,
-      "hitRatePct": 57.738095238095234,
+      "n": 130,
+      "effectiveN": 65,
+      "hitRatePct": 60,
       "interval": {
-        "point": 0.5773809523809523,
-        "lower": 0.5017727861422681,
-        "upper": 0.6495293432606238
+        "point": 0.6,
+        "lower": 0.5140824117718141,
+        "upper": 0.6801770710795564
       },
-      "nullRatePct": 57.25206749366423,
-      "edgePP": 0.4860277444310057,
+      "nullRatePct": 57.16763628528347,
+      "edgePP": 2.8323637147165237,
       "calibrated": true
-    },
-    "bullish:leaning:bear": {
-      "key": "bullish:leaning:bear",
-      "n": 5,
-      "effectiveN": 3,
-      "hitRatePct": 40,
-      "interval": {
-        "point": 0.4,
-        "lower": 0.11761823115925325,
-        "upper": 0.769280067791163
-      },
-      "nullRatePct": 42.50118972081218,
-      "edgePP": -2.5011897208121745,
-      "calibrated": false
     },
     "bullish:leaning:neutral": {
       "key": "bullish:leaning:neutral",
-      "n": 103,
-      "effectiveN": 52,
-      "hitRatePct": 49.51456310679612,
+      "n": 115,
+      "effectiveN": 58,
+      "hitRatePct": 55.65217391304348,
       "interval": {
-        "point": 0.49514563106796117,
-        "lower": 0.40051410341890453,
-        "upper": 0.5901262464073804
+        "point": 0.5565217391304348,
+        "lower": 0.46535589607313604,
+        "upper": 0.6440334086821012
       },
-      "nullRatePct": 49.375602477852695,
-      "edgePP": 0.13896062894341865,
+      "nullRatePct": 49.53481718007469,
+      "edgePP": 6.117356732968787,
       "calibrated": true
     },
     "bullish:clear:neutral": {
       "key": "bullish:clear:neutral",
-      "n": 25,
-      "effectiveN": 13,
-      "hitRatePct": 48,
+      "n": 42,
+      "effectiveN": 21,
+      "hitRatePct": 57.14285714285714,
       "interval": {
-        "point": 0.48,
-        "lower": 0.30031003928960015,
-        "upper": 0.665017820468527
+        "point": 0.5714285714285714,
+        "lower": 0.4220597791187447,
+        "upper": 0.7088257048085178
       },
-      "nullRatePct": 49.239901227566484,
-      "edgePP": -1.2399012275664867,
+      "nullRatePct": 49.219101779978,
+      "edgePP": 7.923755362879143,
+      "calibrated": true
+    },
+    "bullish:leaning:bear": {
+      "key": "bullish:leaning:bear",
+      "n": 41,
+      "effectiveN": 21,
+      "hitRatePct": 46.34146341463415,
+      "interval": {
+        "point": 0.4634146341463415,
+        "lower": 0.32055999118185885,
+        "upper": 0.6125378465402566
+      },
+      "nullRatePct": 42.446772084313494,
+      "edgePP": 3.8946913303206543,
       "calibrated": true
     },
     "bullish:clear:bull": {
       "key": "bullish:clear:bull",
-      "n": 42,
-      "effectiveN": 21,
-      "hitRatePct": 66.66666666666666,
+      "n": 48,
+      "effectiveN": 24,
+      "hitRatePct": 68.75,
       "interval": {
-        "point": 0.6666666666666666,
-        "lower": 0.5155222701166692,
-        "upper": 0.7898771923802769
+        "point": 0.6875,
+        "lower": 0.5466666274950367,
+        "upper": 0.8005448783226851
       },
-      "nullRatePct": 58.24329731892759,
-      "edgePP": 8.423369347739074,
+      "nullRatePct": 58.146591970121406,
+      "edgePP": 10.603408029878592,
       "calibrated": true
+    },
+    "bullish:clear:bear": {
+      "key": "bullish:clear:bear",
+      "n": 1,
+      "effectiveN": 1,
+      "hitRatePct": 0,
+      "interval": {
+        "point": 0,
+        "lower": 0,
+        "upper": 0.7934567085261071
+      },
+      "nullRatePct": 42.578125,
+      "edgePP": -42.578125,
+      "calibrated": false
     }
   }
 }

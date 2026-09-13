@@ -642,6 +642,39 @@ function evaluateTechnicals(data: AggregateMarketData, ctx: SignalContext): Metr
     );
   }
 
+  /*
+   * THE DURABILITY QUALIFIER, ON THE ROW IT QUALIFIES. Spot-vs-perp turnover
+   * asks whether this move is backed by outright demand or by leverage. That
+   * is a statement about THIS direction — it has no direction of its own —
+   * so it belongs here rather than on a second row that had to borrow a
+   * direction to have something to say. See evaluateSpotPerpVolume's comment
+   * for what that borrowing cost.
+   *
+   * Only the leverage-led case is pushed as a conflict. Spot-led is the
+   * absence of a warning, not evidence for the direction, and phrasing it as
+   * confirmation is how a qualifier turns back into a vote.
+   *
+   * THIS LINE IS EFFECTIVELY LIVE-ONLY, AND THAT IS MEASURED. The 3% cutoff
+   * is calibrated to OKX, where both live legs come from and perps routinely
+   * run 15-25x spot. The replay pairs Binance against Binance, where the same
+   * ratio runs about 4x higher — median 13.5% for BTC and 12.3% for ETH, 1st
+   * percentile 6.9% and 5.0%. Across all 83,418 archive bars the ratio falls
+   * below 3% exactly FOUR times. So the backtest will show this qualifier
+   * almost never firing, and that is a fact about the venue, not evidence
+   * that the condition is rare in the market the site actually reads. Do not
+   * "fix" the silence by loosening the threshold against Binance's
+   * distribution — that would recalibrate a live rule to a venue it does not
+   * run on. If this needs a real baseline, it needs stored OKX ratio history,
+   * which does not exist yet (see the unbaselined note in
+   * evaluateSpotPerpVolume).
+   */
+  const spv = data.spotPerpVolume;
+  if (spv && spv.spotToPerpRatio < 0.03) {
+    conflicts.push(
+      `Spot turnover is only ${(spv.spotToPerpRatio * 100).toFixed(0)}% of perpetual turnover, so this move rests on leverage rather than on outright demand — leveraged positions can be forced to close, which makes the move less durable than the price read alone suggests.`
+    );
+  }
+
   return {
     id: "technicals",
     label: "Price Action",
@@ -940,25 +973,47 @@ function evaluateSpotPerpVolume(data: AggregateMarketData, ctx: SignalContext): 
   if (!v) return null;
 
   /*
-   * This metric has no direction of its own — it qualifies HOW a move is
-   * being made. It confirms an existing price move when spot participates,
-   * and warns when the move rests purely on leverage. So its verdict is the
-   * direction of price action, or neutral when leverage is doing the work.
+   * PERMANENTLY NEUTRAL, BY DESIGN — the same standing as `liquidations`.
+   *
+   * The first line of this comment used to be "this metric has no direction
+   * of its own," and then the next line gave it one: the verdict was
+   * `priceActionVerdict(ctx)` — literally `ctx.technicals.direction` — gated
+   * on whether spot was participating. hypothesis.ts said so out loud
+   * ("borrows price action's direction"), so the duplication was declared,
+   * not hidden. What went unnoticed is what happened around it.
+   *
+   * `technicals` is role "state". It was demoted there because the census
+   * measured it and it lost: 49.1% at 4h against a 49.9% base rate on 1098
+   * independent observations, below the null. The taxonomy's whole point is
+   * that a read like that describes and never votes. But its direction kept
+   * reaching the composite through this wrapper, at weight 0.05, wearing the
+   * label "Spot vs Perp Volume". The subtraction was made and then routed
+   * around.
+   *
+   * And it was not even a faithful copy. `technicals` reports neutral below
+   * trend strength 20; this gate is about turnover mix and does not care, so
+   * on 417 of 2896 replayed days it published a direction that the price
+   * module itself had declined to call. Across the 1648 days where both took
+   * a direction they agreed 1648 times and disagreed zero — rho = +1.000.
+   *
+   * So the borrowing stops here. The RATIO is real information and is kept:
+   * it says whether a move is backed by outright demand or by leverage, which
+   * is a statement about durability, not about direction. That statement now
+   * reaches the read it qualifies — `evaluateTechnicals` folds it into the
+   * price-action row's conflicts — instead of standing beside it as a second
+   * opinion that was never a second opinion.
    *
    * THRESHOLDS ARE VENUE-SPECIFIC AND UNBASELINED. Both legs come from OKX,
    * a derivatives-first venue where perps routinely run 15-25x spot, so the
    * bands below are set against that observed scale rather than against a
    * general spot:perp norm — and there is no stored history for this ratio
-   * yet to rank a reading against. Completeness is held down accordingly so
-   * this can never present as a high-confidence signal on a threshold that
-   * has not been validated.
+   * yet to rank a reading against. That was already reason enough to hold
+   * completeness down; it is now also part of why this makes no directional
+   * claim at all.
    */
   const leverageLed = v.spotToPerpRatio < 0.03;
   const spotLed = v.spotToPerpRatio > 0.1;
-  const pa = priceActionVerdict(ctx);
-
-  let verdict: Verdict = "neutral";
-  if (spotLed && pa && pa !== "neutral") verdict = pa;
+  const verdict: Verdict = "neutral";
 
   const conflicts: string[] = [];
   if (leverageLed) {
@@ -978,10 +1033,10 @@ function evaluateSpotPerpVolume(data: AggregateMarketData, ctx: SignalContext): 
     confidenceBasis: describeConfidence(inputs),
     explanation: `Spot turnover is ${(v.spotToPerpRatio * 100).toFixed(0)}% of perpetual turnover — ${leverageLed ? "this move is being driven by leverage, not by people buying the asset outright" : spotLed ? "real spot demand is keeping pace with leveraged trading, which makes the move more durable" : "a normal mix of spot and leveraged activity"}.`,
     whyItMatters:
-      "Moves carried by leverage alone unwind faster than moves backed by spot buying, because leveraged positions can be forced to close.",
+      "Moves carried by leverage alone unwind faster than moves backed by spot buying, because leveraged positions can be forced to close. That is a read on how durable the current move is, not on which way it goes — this row never calls a direction. Direction is Price Action's, and this reading is folded into that row as the qualifier it is.",
     asOf: data.updatedAt,
     conflicts,
-    nextTrigger: `Spot at ${(v.spotToPerpRatio * 100).toFixed(0)}% of perp turnover — flags leverage-led below 3%, spot-led above 10%.`,
+    nextTrigger: `Spot at ${(v.spotToPerpRatio * 100).toFixed(0)}% of perp turnover — flags leverage-led below 3%, spot-led above 10%. Neither flag turns this row bullish or bearish; they change how durable Price Action's call is treated as being.`,
   };
 }
 

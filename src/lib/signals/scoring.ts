@@ -45,7 +45,6 @@ export const METRIC_ROLES: Record<string, MetricRole> = {
   openInterest: "edge",
   basis: "edge",
   etfFlows: "edge",
-  spotPerpVolume: "edge",
   stablecoins: "edge",
   macroLiquidity: "edge",
 
@@ -89,6 +88,29 @@ export const METRIC_ROLES: Record<string, MetricRole> = {
   sectorBreadth: "context",
   fearGreed: "context",
   liquidations: "context",
+
+  /*
+   * A DEMOTED SIGNAL WAS VOTING THROUGH A WRAPPER. `spotPerpVolume` was an
+   * Edge voter at 0.05 whose verdict was `ctx.technicals.direction`, gated on
+   * spot-led turnover — see evaluateSpotPerpVolume's comment for the full
+   * account. `technicals` sits two blocks up in "state" precisely because the
+   * census measured it below the base rate, and this wrapper carried its
+   * direction into the composite anyway, on 417 of 2896 replayed days even
+   * when `technicals` had declared the trend too weak to call.
+   *
+   * "context" rather than "state", for one specific reason: the verdict is now
+   * PERMANENTLY neutral, and a permanently-neutral read must not vote in ANY
+   * basis. State metrics carry weight 1 under `stateWeight`, so classifying it
+   * there would leave a always-neutral vote waiting to drag a state composite
+   * to 50 the first time some caller emitted it. `liquidations` is the same
+   * shape — backward-looking, permanently neutral — and sits in the same
+   * place.
+   *
+   * The ratio itself is not discarded. It moved to the row it describes:
+   * evaluateTechnicals now raises the leverage-led warning as a conflict on
+   * Price Action, which is the read whose durability it was always about.
+   */
+  spotPerpVolume: "context",
 };
 
 export function metricRole(id: string): MetricRole | null {
@@ -110,7 +132,6 @@ export const METRIC_WEIGHTS: Record<string, number> = {
   openInterest: 0.09,
   basis: 0.08,
   etfFlows: 0.08,
-  spotPerpVolume: 0.05,
   stablecoins: 0.04,
   macroLiquidity: 0.04, // market-wide macro backdrop signal, same weight class as stablecoins — genuinely backtestable (FRED has real history)
 };

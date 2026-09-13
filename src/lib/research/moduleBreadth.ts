@@ -22,6 +22,33 @@
  * observation where both take a position, they take opposite ones. 1181 of
  * 1181, no exceptions.
  *
+ * ── Both pairs were acted on, 2026-09-13. ONE still prints. ───────────
+ *
+ * Keeping the numbers above rather than deleting them: they are the evidence
+ * that produced the fixes, and the re-run below only means something next to
+ * what it looked like when it was dirty.
+ *
+ *  - `spotPerpVolume` is GONE from this measurement. Its verdict WAS
+ *    `technicals`'s verdict, gated on spot participation — that is the whole
+ *    of the +1.000 — so it is now permanently neutral and role `context`,
+ *    emits no direction, and drops out of the correlation entirely. The
+ *    2026-09-13 re-run reads 11 modules with enough calls, down from 12, and
+ *    no +1.000 pair.
+ *
+ *  - `squeezeRisk / longShort` STILL PRINTS AT -1.000, and that is correct,
+ *    not a fix that failed. The two problems are different. longShort was
+ *    demoted from Edge to State, which stops it VOTING — the composite no
+ *    longer nets two opposed weights down to their difference. It does not
+ *    stop it DESCRIBING: it still emits a direction, `gradeModules` still
+ *    grades it, so it still consumes a multiple-testing slot for an idea
+ *    squeezeRisk already tested. That is a smaller defect than the one that
+ *    was fixed, and it is still open. Fixing it means deciding whether a
+ *    non-voting description belongs in the census at all — a question about
+ *    what the census is for, which is why it was not answered in passing.
+ *
+ * If a new pair ever prints at ±1.000, the answer is the same one twice over:
+ * fix the module, do not adjust the breadth formula to accommodate it.
+ *
  * ── Why the standard breadth figure gets this wrong ───────────────────
  *
  * `effective_bets` is n/(1+(n-1)rho) with SIGNED rho, which is exact for the
@@ -50,10 +77,12 @@
  *     checked for rather than assumed away, and it is not there.
  *
  *  2. Modules are graded at whichever horizon suits them best — 1h, 4h or
- *     24h. `technicals` and `spotPerpVolume` emit IDENTICAL direction calls
- *     and are graded at 4h and 1h respectively, so their P&L series correlate
- *     at only 0.4 while the ideas behind them are the same idea. Correlating
- *     P&L would let a horizon choice disguise a duplicate.
+ *     24h. When `technicals` and `spotPerpVolume` still emitted IDENTICAL
+ *     direction calls they were graded at 4h and 1h respectively, so their
+ *     P&L series correlated at only 0.4 while the ideas behind them were the
+ *     same idea. Correlating P&L would have let a horizon choice disguise a
+ *     duplicate — which is the argument for direction calls, and it does not
+ *     expire now that this particular duplicate is gone.
  */
 
 import { FamilySeries } from "./familyBreadth";

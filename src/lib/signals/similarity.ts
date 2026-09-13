@@ -36,7 +36,6 @@ const SIMILARITY_METRIC_WEIGHTS: Record<string, number> = {
   etfFlows: 0.08,
   options: 0.06,
   exchangeFlow: 0.06,
-  spotPerpVolume: 0.05,
   spotCvd: 0.05,
   stablecoins: 0.04,
   coinbasePremium: 0.03,
@@ -44,6 +43,7 @@ const SIMILARITY_METRIC_WEIGHTS: Record<string, number> = {
   sectorBreadth: 0.03,
   macroLiquidity: 0.04,
   liquidations: 0, // permanently neutral by design — a "match" on it carries no information
+  spotPerpVolume: 0, // same: permanently neutral since 2026-09-13, so every day "matches" it
 };
 
 function similarityWeight(id: string): number {

@@ -61,6 +61,16 @@ import { TechnicalRead } from "@/types/market";
  *   crypto sectors or concentrated, and `orderFlow`/`spotCvd`/
  *   `spotPerpVolume`/`coinbasePremium` are the four readings on genuine
  *   spot/taker participation vs. leveraged turnover.
+ *
+ *   THIS CATEGORY NOW SCORES NULL, and that is the honest answer rather than
+ *   a gap. Every member is state or context, so none of them votes, and
+ *   `buildCategoryScore` returns the context-only shape — displayed, never
+ *   scored. It reads as a change because until 2026-09-13 `spotPerpVolume`
+ *   was an Edge voter at 0.05 and was therefore the ONLY thing giving this
+ *   category a score. Its verdict was `technicals`' direction wearing a
+ *   volume label (see evaluateSpotPerpVolume), so the entire market-structure
+ *   leg of the composite was one wrapper of price action. Removing it did not
+ *   empty a category that had content; it revealed one that never did.
  * - Leading Drivers: the macro/liquidity backdrop, upstream of anything
  *   crypto-native — `macroLiquidity` (FRED: Fed/Treasury liquidity flow,
  *   financial conditions, yield curve), `etfFlows` (TradFi capital
@@ -126,10 +136,30 @@ const CATEGORY_MAP: Record<string, Category[]> = {
  * Sum to 1.00; ratios are what matter since an absent category renormalizes.
  * Positioning carries the most weight because it has the most (and most
  * directly directional) contributing metrics, same as the prior taxonomy's
- * leveragedPositioning. Market Structure, Leading Drivers, and Risk split
- * the remainder roughly evenly, each carrying real directional metrics
- * (unlike the prior liquidityMap, which was weighted near-zero because its
- * only scored metric was always-neutral by design).
+ * leveragedPositioning.
+ *
+ * ── marketStructure's 0.25 IS CURRENTLY UNSPENT, 2026-09-13 ────────────
+ *
+ * This block used to end by saying Market Structure, Leading Drivers and Risk
+ * each carry "real directional metrics (unlike the prior liquidityMap, which
+ * was weighted near-zero because its only scored metric was always-neutral by
+ * design)". That sentence had to go, because marketStructure is now IN the
+ * liquidityMap situation it was drawing a contrast with: every member is
+ * state or context, the category scores null, and `combineCategoryScores`
+ * skips it outright.
+ *
+ * Its 0.25 does not sit idle — it renormalizes, so the live crypto split is
+ * positioning 0.467, leadingDrivers 0.267, risk 0.267. That is the single
+ * biggest mechanism behind the 6.0.0 decision delta, and a much larger effect
+ * than deleting one 0.05 metric sounds like: positioning's pull on the
+ * headline score rose by a third.
+ *
+ * DO NOT "fix" this by hand-lowering marketStructure toward zero the way
+ * liquidityMap was. Renormalizing already does exactly that, and a hardcoded
+ * near-zero would need un-hardcoding the moment the category gets a validated
+ * voter — which is the actual fix. The number to change is not this one; it
+ * is the count of metrics here that have earned a vote, and that count is
+ * currently zero.
  */
 export const CATEGORY_WEIGHTS: Record<Category, number> = {
   positioning: 0.35,

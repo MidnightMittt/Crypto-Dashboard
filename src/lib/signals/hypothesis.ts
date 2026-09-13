@@ -47,10 +47,13 @@ export interface SignalHypothesis {
   /**
    * Whether `scripts/backtest/` currently has a historical source that lets
    * this hypothesis actually be measured, not just stated. Metrics without
-   * one (order flow, Coinbase premium, Deribit options, exchange netflow,
-   * liquidations) still get a full hypothesis contract — the point of this
-   * file is that every signal COULD be tested — but their report sections
-   * must say "insufficient data" rather than fabricate a number.
+   * one (order flow, Coinbase premium, Deribit options, exchange netflow)
+   * still get a full hypothesis contract — the point of this file is that
+   * every signal COULD be tested — but their report sections must say
+   * "insufficient data" rather than fabricate a number. Two entries are
+   * false for a different reason: `liquidations` and `spotPerpVolume` have
+   * no direction at all, so there is nothing a replay could measure even
+   * with perfect history. Both say so in their own conditions.
    */
   hasHistoricalSource: boolean;
 }
@@ -174,10 +177,10 @@ export const SIGNAL_HYPOTHESES: SignalHypothesis[] = [
   hypothesis({
     id: "spotPerpVolume",
     label: "Spot vs Perp Volume",
-    bullishCondition: "Spot turnover exceeds 10% of perp turnover (spot-led) AND price action's own direction is bullish — this metric borrows price action's direction, gated by whether spot is participating (mirrors evaluateSpotPerpVolume's 0.1 spot-led cutoff).",
-    bearishCondition: "Spot turnover exceeds 10% of perp turnover (spot-led) AND price action's own direction is bearish.",
-    neutralCondition: "Spot turnover is 10% or less of perp turnover (leverage-led, no confirming spot demand), or spot-led with no clear price direction to borrow.",
-    hasHistoricalSource: true,
+    bullishCondition: "Never fires. Until 2026-09-13 this condition read \"spot-led AND price action's own direction is bullish\" — which is to say the metric had no direction of its own and reported Price Action's, at a 0.05 Edge weight, under a volume label. The mix of spot and perp turnover says how DURABLE a move is, not which way it goes; evaluateSpotPerpVolume now always returns neutral by design (see its doc comment in evaluators.ts), and the durability read is folded into evaluateTechnicals as a conflict on the row it actually qualifies.",
+    bearishCondition: "Never fires, for the same reason.",
+    neutralCondition: "Always — this metric has no directional verdict to test. The underlying ratio is still computed and still shown; it just no longer claims a direction.",
+    hasHistoricalSource: false, // has no direction at all, so there is nothing a replay could measure — same standing as liquidations
   }),
   hypothesis({
     id: "exchangeFlow",

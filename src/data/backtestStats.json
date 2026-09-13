@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1789280297162,
+  "generatedAt": 1789282460533,
   "coverageStart": "2022-08-14",
   "coverageEnd": "2026-07-31",
   "squeeze": {
@@ -151,30 +151,6 @@
       "fadeHitRatePct": null,
       "winRatePct": null
     },
-    "marketStructure:bullish": {
-      "n": 1024,
-      "mean1dPct": 0.06771760740383326,
-      "mean3dPct": 0.2390274753003896,
-      "mean7dPct": 0.463972020778588,
-      "fadeHitRatePct": null,
-      "winRatePct": null
-    },
-    "marketStructure:bearish": {
-      "n": 1041,
-      "mean1dPct": 0.11565685315817688,
-      "mean3dPct": 0.23590257041598334,
-      "mean7dPct": 0.3918016416007083,
-      "fadeHitRatePct": null,
-      "winRatePct": null
-    },
-    "marketStructure:neutral": {
-      "n": 831,
-      "mean1dPct": 0.02760211145373319,
-      "mean3dPct": 0.1789692209854445,
-      "mean7dPct": 0.809418107901061,
-      "fadeHitRatePct": null,
-      "winRatePct": null
-    },
     "positioning:bullish": {
       "n": 164,
       "mean1dPct": 0.4080664157592881,
@@ -202,26 +178,26 @@
   },
   "biasVerdict": {
     "bullish": {
-      "n": 343,
-      "mean1dPct": 0.43835023856553385,
-      "mean3dPct": 1.0207578514568867,
-      "mean7dPct": 1.702190228498084,
+      "n": 377,
+      "mean1dPct": 0.5080752278780968,
+      "mean3dPct": 0.9264017834820333,
+      "mean7dPct": 2.065859015414477,
       "fadeHitRatePct": null,
-      "winRatePct": 55.39358600583091
+      "winRatePct": 57.824933687002655
     },
     "bearish": {
-      "n": 1564,
-      "mean1dPct": 0.0023949161221078416,
-      "mean3dPct": 0.05682307677730287,
-      "mean7dPct": 0.11908292725480588,
+      "n": 1793,
+      "mean1dPct": -0.009931505814893188,
+      "mean3dPct": 0.04027497587432845,
+      "mean7dPct": 0.32552639457540505,
       "fadeHitRatePct": null,
-      "winRatePct": 50.89514066496164
+      "winRatePct": 51.36642498605689
     },
     "neutral": {
-      "n": 989,
-      "mean1dPct": 0.059230726081178034,
-      "mean3dPct": 0.2022961557331933,
-      "mean7dPct": 0.7922184844073537,
+      "n": 726,
+      "mean1dPct": 0.05363883988057947,
+      "mean3dPct": 0.29971849729220984,
+      "mean7dPct": 0.26436518906963424,
       "fadeHitRatePct": null,
       "winRatePct": null
     }

@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { computeWeightedScore, verdictFromScore, intensityLabel, metricWeight } from "./scoring";
+import {
+  computeWeightedScore,
+  verdictFromScore,
+  intensityLabel,
+  metricWeight,
+  weightForBasis,
+  metricRole,
+} from "./scoring";
 import { MetricVerdict, Verdict } from "./types";
 
 const metric = (id: string, verdict: Verdict, confidence = 80): MetricVerdict => ({
@@ -133,5 +140,73 @@ describe("longShort is a description, not a vote", () => {
     expect(opposed.totalWeight).toBeCloseTo(0.14, 10);
     // Unopposed and fully confident, so the read is as bearish as it gets.
     expect(opposed.score).toBe(0);
+  });
+});
+
+/**
+ * A DEMOTED READ MUST NOT RE-ENTER THROUGH A WRAPPER.
+ *
+ * `spotPerpVolume`'s verdict was literally `ctx.technicals.direction`, gated
+ * on spot-led turnover. `technicals` is role "state" — it does not vote,
+ * because the module census graded it at 49.1% directional accuracy at 4h
+ * against a 49.9% base rate on nEff=1098. The wrapper carried that same
+ * direction into the edge composite at 0.05 anyway, wearing the label "Spot
+ * vs Perp Volume", and on 417 of 2896 replayed days it published a direction
+ * that the price module itself had declined to call (strength below 20).
+ *
+ * The two verdicts agreed on 1648 of 1648 observations where both took a
+ * position — rho +1.000, zero opposed cells in the cross-tab. That is not
+ * two correlated signals; it is one signal counted twice under two labels.
+ *
+ * These tests fail if the role or the weight is restored.
+ */
+describe("spotPerpVolume does not vote, in any basis", () => {
+  it("is context, so it carries no weight under either basis", () => {
+    expect(metricRole("spotPerpVolume")).toBe("context");
+    expect(metricWeight("spotPerpVolume")).toBe(0);
+    // "context" not "state" on purpose: the verdict is now permanently
+    // neutral, and a permanently-neutral read parked in "state" would be a
+    // weight-1 vote for 50 waiting for the first state-basis caller to emit
+    // it. Same standing as liquidations.
+    expect(weightForBasis("state")("spotPerpVolume")).toBe(0);
+    expect(weightForBasis("state")("liquidations")).toBe(0);
+    // Control: a real state metric does carry weight under that basis, so
+    // the assertion above is measuring the role and not a broken accessor.
+    expect(weightForBasis("state")("technicals")).toBe(1);
+  });
+
+  it("cannot move the score at any confidence or direction", () => {
+    const base = computeWeightedScore(
+      [metric("funding", "bullish"), metric("etfFlows", "bearish")],
+      metricWeight
+    )!;
+
+    for (const verdict of ["bullish", "bearish", "neutral"] as Verdict[]) {
+      const withWrapper = computeWeightedScore(
+        [
+          metric("funding", "bullish"),
+          metric("etfFlows", "bearish"),
+          metric("spotPerpVolume", verdict, 100),
+        ],
+        metricWeight
+      )!;
+      expect(withWrapper.score).toBe(base.score);
+      expect(withWrapper.confidence).toBe(base.confidence);
+      expect(withWrapper.totalWeight).toBe(base.totalWeight);
+    }
+  });
+
+  /*
+   * The specific defect, stated as arithmetic rather than as a role lookup.
+   * technicals is demoted and contributes nothing; if the wrapper's weight
+   * came back, this pair would score a full-confidence bullish composite off
+   * a read that is not allowed to vote on its own.
+   */
+  it("gives a demoted price-action direction no route into the composite", () => {
+    const both = computeWeightedScore(
+      [metric("technicals", "bullish", 100), metric("spotPerpVolume", "bullish", 100)],
+      metricWeight
+    );
+    expect(both).toBeNull(); // nothing with weight, so there is no score at all
   });
 });
