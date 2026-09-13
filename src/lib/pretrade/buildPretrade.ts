@@ -14,6 +14,7 @@ import {
   RELEVANT_OTHER_FORMS,
 } from "@/lib/dossier/providers/edgarCatalysts";
 import { VenueBook, VenueStatus } from "@/lib/dossier/providers/tradierStatus";
+import { CORPORATE_ACTION_SWEPT_ON } from "@/lib/research/corporateActions";
 
 /**
  * THE AGENT-FACING PRE-TRADE PAYLOAD.
@@ -292,7 +293,13 @@ export interface PretradeSymbol {
   /** Corporate-action interventions applied to this symbol's bars. Never silent. */
   data_quality: {
     corporate_action_adjustments: number;
-    undeclared_steps: number;
+    /**
+     * Steps found and never judged. NULL means this symbol was not in the
+     * last sweep — not that it is clean. See CORPORATE_ACTION_AUDITED_SYMBOLS.
+     */
+    undeclared_steps: number | null;
+    /** ISO date of the sweep behind `undeclared_steps`, null when unswept. */
+    undeclared_steps_swept_on: string | null;
   };
 }
 
@@ -373,7 +380,7 @@ export interface BuildInputs {
    */
   measuredRoundTripBp: Map<string, { bp: number | null; reason: string | null }>;
   /** Corporate-action counts per symbol, from the ingest guard. */
-  dataQuality: Map<string, { adjustments: number; undeclared: number }>;
+  dataQuality: Map<string, { adjustments: number; undeclared: number | null }>;
   /**
    * Beta/alpha rows from the overnight study, keyed by symbol. Absent for
    * anything the study does not cover, which is a stated reason rather than
@@ -469,9 +476,15 @@ export function buildPretrade(input: BuildInputs): PretradeResponse {
      * been silently repaired — an under-report in a field whose entire purpose
      * is that interventions are never silent.
      */
-    const declaredDq = input.dataQuality.get(symbol) ?? { adjustments: 0, undeclared: 0 };
+    const declaredDq = input.dataQuality.get(symbol) ?? { adjustments: 0, undeclared: null };
     const repairs = legs?.find((l) => l.guardRepairs != null)?.guardRepairs ?? 0;
     const dq = { adjustments: Math.max(declaredDq.adjustments, repairs), undeclared: declaredDq.undeclared };
+    /*
+     * The date binds to the number, not to the symbol: quoting a sweep date
+     * beside a null count would read as "swept on this date, found nothing",
+     * which is the claim the null exists to refuse.
+     */
+    const sweptOn = dq.undeclared === null ? null : CORPORATE_ACTION_SWEPT_ON;
     const measured = input.measuredRoundTripBp.get(symbol) ?? { bp: null, reason: "no_spread_history" };
 
     /*
@@ -641,6 +654,7 @@ export function buildPretrade(input: BuildInputs): PretradeResponse {
       data_quality: {
         corporate_action_adjustments: dq.adjustments,
         undeclared_steps: dq.undeclared,
+        undeclared_steps_swept_on: sweptOn,
       },
     });
   }

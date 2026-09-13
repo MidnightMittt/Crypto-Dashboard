@@ -8,6 +8,7 @@ import {
 } from "./buildPretrade";
 import { PositioningPoint } from "@/lib/history/positioningHistory";
 import { QuoteResult, VenueQuote, VenueStatus } from "@/lib/dossier/providers/tradierStatus";
+import { CORPORATE_ACTION_SWEPT_ON } from "@/lib/research/corporateActions";
 import {
   RELEVANT_8K_ITEMS,
   RELEVANT_OTHER_FORMS,
@@ -536,6 +537,24 @@ describe("buildPretrade — no verdicts, and data quality is never silent", () =
     expect(r.symbols[0].data_quality).toEqual({
       corporate_action_adjustments: 2,
       undeclared_steps: 1,
+      undeclared_steps_swept_on: CORPORATE_ACTION_SWEPT_ON,
+    });
+  });
+
+  /*
+   * "Not swept" and "swept, found nothing" are different answers, and the
+   * field used to give the second one unconditionally — a hard-coded 0 that
+   * read as a measurement. A null count must not be dated: a sweep date
+   * beside a null would restore exactly the claim the null is refusing.
+   */
+  it("refuses the count AND the date together for an unswept symbol", () => {
+    const r = buildPretrade(
+      inputs({ dataQuality: new Map([["APLD", { adjustments: 0, undeclared: null }]]) })
+    );
+    expect(r.symbols[0].data_quality).toEqual({
+      corporate_action_adjustments: 0,
+      undeclared_steps: null,
+      undeclared_steps_swept_on: null,
     });
   });
 

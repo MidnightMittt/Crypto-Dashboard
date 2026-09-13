@@ -6,7 +6,7 @@ import { buildPretrade, BuildInputs, OvernightRow } from "@/lib/pretrade/buildPr
 import { EarningsCalendar } from "@/lib/markets/earningsVeto";
 import { PositioningPoint } from "@/lib/history/positioningHistory";
 import { resolveUniverse } from "@/lib/markets/scannerUniverse";
-import { DECLARED_PRICE_EVENTS } from "@/lib/research/corporateActions";
+import { CORPORATE_ACTION_AUDITED_SYMBOLS, DECLARED_PRICE_EVENTS } from "@/lib/research/corporateActions";
 import { CatalystResult, fetchCatalysts } from "@/lib/dossier/providers/edgarCatalysts";
 import { fetchVenueStatus } from "@/lib/dossier/providers/tradierStatus";
 import {
@@ -102,13 +102,27 @@ export async function GET(req: Request) {
    * request time. This reports what has been judged for each symbol, which is
    * the number a consumer actually needs — how much human judgement its price
    * series is resting on.
+   *
+   * `undeclared` used to be a hard-coded 0 with the comment "the ingest
+   * refuses to write an unjudged step silently". The ingest does no such
+   * thing: adjustForCorporateActions deliberately leaves an unjudged step
+   * UNTOUCHED and yahoo.ts logs it and writes the series anyway, which is
+   * the correct doctrine and the exact opposite of a refusal. So the field
+   * was asserting a fact nobody had checked — and for three weeks it
+   * asserted zero while three symbols carried seven unjudged steps.
+   *
+   * What is actually knowable here is whether this symbol was in the last
+   * sweep. Swept symbols report the sweep's result and its date; an unswept
+   * symbol reports null, because "we have not looked" and "we looked and
+   * found nothing" are different answers and only one of them is 0.
    */
-  const dataQuality = new Map<string, { adjustments: number; undeclared: number }>();
+  const swept = new Set(CORPORATE_ACTION_AUDITED_SYMBOLS);
+  const dataQuality = new Map<string, { adjustments: number; undeclared: number | null }>();
   for (const symbol of symbols) {
     const declared = DECLARED_PRICE_EVENTS.filter((e) => e.symbol === symbol);
     dataQuality.set(symbol, {
       adjustments: declared.filter((e) => e.treatment === "adjust").length,
-      undeclared: 0, // the ingest refuses to write an unjudged step silently
+      undeclared: swept.has(symbol) ? 0 : null,
     });
   }
 
