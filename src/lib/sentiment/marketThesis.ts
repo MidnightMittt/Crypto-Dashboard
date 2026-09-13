@@ -27,10 +27,26 @@ import { Lean } from "@/components/ui/LeanGauge";
  * Every evidence entry cites a REAL number already computed elsewhere in
  * this app (funding rate, squeeze score, order flow share, etc.) — nothing
  * here is a new data source or a re-derived estimate. `conviction` is pure
- * arithmetic on the weights below, explicitly NOT a probability: this app
- * has no backtesting infrastructure, so nothing here claims to have been
- * validated against historical outcomes. See MarketThesis's own doc
- * comment in types/market.ts for the full framing.
+ * arithmetic on the weights below and is explicitly NOT a probability. See
+ * MarketThesis's own doc comment in types/market.ts for the full framing.
+ *
+ * ── This paragraph used to end with a false sentence ────────────────────
+ *
+ * It said "this app has no backtesting infrastructure, so nothing here
+ * claims to have been validated against historical outcomes." That was true
+ * when written and has not been true for a long time: there is a 2,896-day
+ * replay, a module census that grades every signal against its own base
+ * rate, and a forward record. The sentence survived because nobody re-read
+ * it, and while it survived it did real work — it was the standing excuse
+ * for any weight in this file, including a 0.14 on a read the census had
+ * already failed. A caveat that exempts a number from evidence is worse
+ * than no caveat, once the evidence exists.
+ *
+ * What IS still true, stated without the alibi: the weights below have
+ * never been fitted, and this engine's own record is not the one published
+ * on /validation — that is buildMarketBias, the category-weighted engine in
+ * lib/signals/. They remain a reading of the board. But every input that
+ * CAN be graded is now expected to survive grading in order to hold one.
  *
  * ── "Fade the extremes" ──────────────────────────────────────────────────
  *
@@ -84,6 +100,44 @@ export interface MarketThesisInputs {
  * the remaining eight already hold their exact previous ratios to each
  * other; inventing new numbers to reach 1.00 would change eight weights to
  * fix one and imply a recalibration that did not happen.
+ *
+ * ── `technicals` left too, 2026-09-13, and it sums to 0.76 now ──────────
+ *
+ * Price action used to hold 0.14 here — the second-largest pillar — with the
+ * justification that it was "the only input that describes PRICE rather than
+ * POSITIONING." That justification was about COVERAGE, not about accuracy,
+ * and it went unexamined until the module census could answer the accuracy
+ * question. The census answered it:
+ *
+ *      horizon   win rate   base rate   edge     p
+ *      1h        48.84%     49.99%      -1.15pp  0.290
+ *      4h        49.11%     49.93%      -0.82pp  0.455
+ *      24h       47.97%     50.04%      -2.07pp  0.056
+ *
+ * n=2,195 at every horizon. Below the base rate at all three, and the
+ * DEEPEST miss is at 24h — the horizon a daily price read is implicitly
+ * making a claim about. The correct reading of that table is NOT "price
+ * action is a contrarian signal": three horizons were tried, none clears
+ * significance, and none of this is corrected for overlap. The defensible
+ * conclusion is the weaker one — no evidence of a directional edge — which
+ * is exactly what role `state` encodes in lib/signals/scoring.ts, where
+ * `technicals` has been non-voting for that reason.
+ *
+ * So the same read was non-voting in one engine and the second-biggest vote
+ * in the other. Two engines, one market, incompatible answers to "may this
+ * signal speak?" — the divergence, not the weight, is the defect. Price
+ * action now enters the way `longShort` and `liquidations` do: weight 0,
+ * direction neutral, still fully displayed.
+ *
+ * What price action does NOT lose is its place on the card. It moves to
+ * `technicalConfirmation`, which asks whether price agrees with the thesis
+ * — and which was quietly PART-CIRCULAR while technicals was 0.14 of the
+ * thesis it was being checked against. Removing the vote is what makes that
+ * comparison mean what it says.
+ *
+ * The thesis is now a pure positioning read. That is a narrower object than
+ * it was, and it is narrower still in the replay, where four of the seven
+ * survivors have no historical source: see the note on `technicalEvidence`.
  */
 const WEIGHTS = {
   funding: 0.17,
@@ -93,18 +147,6 @@ const WEIGHTS = {
   squeezeRisk: 0.16,
   deribitOptions: 0.09,
   exchangeFlow: 0.07,
-  /*
-   * Technicals earn a meaningful share because they're the only input here
-   * that describes PRICE rather than POSITIONING — every other source above
-   * measures how traders are placed, so without this the thesis can say
-   * "longs are crowded" but not whether price action agrees.
-   *
-   * The other eight took a proportional haircut to make room (funding
-   * 0.20 -> 0.17, squeezeRisk 0.18 -> 0.16, and so on) rather than any one
-   * source being singled out, preserving their relative ordering exactly.
-   * Still sums to 1.00; missing sources renormalize as before.
-   */
-  technicals: 0.14,
 };
 
 function leanToDirection(lean: Lean): ThesisDirection {
@@ -238,29 +280,45 @@ function exchangeFlowEvidence(flow: ExchangeFlowSummary): ThesisEvidence {
 }
 
 /**
- * ONE combined entry for all of price action, not one per indicator.
+ * CONTEXT, NOT A PILLAR — direction "neutral" and weight 0, for the reason
+ * on WEIGHTS above: the module census finds no directional edge in this read
+ * at any horizon it was graded on, and lib/signals/scoring.ts has therefore
+ * had it as non-voting role `state` since before this change.
  *
- * Eight separate technical entries would let price action outvote every
- * positioning signal on the card by sheer count — inverting the point of
- * this dashboard, whose subject is derivatives positioning. Most of those
- * indicators are also different views of the same price series, so listing
- * them separately would double-count a single piece of information.
+ * ONE combined entry, which was already true and stays true. Eight separate
+ * technical entries would let price action outvote every positioning signal
+ * on the card by sheer count, and most of those indicators are different
+ * views of the same price series, so listing them separately would
+ * double-count one piece of information. That argument was about crowding
+ * out the card; the census settled the separate question of whether the
+ * combined entry should vote at all.
  *
- * A weak technical read (`strength` under this floor) is reported as
- * neutral rather than as a faint directional lean, so noise in a ranging
- * market doesn't quietly tilt the thesis.
+ * The strength gate that used to live here is gone with the direction it
+ * gated. It still governs `evaluateTechnicals`, which is where the price row
+ * does still call a direction, and it is now exported from there as the one
+ * definition — see TECHNICAL_MEANINGFUL_STRENGTH in lib/signals/evaluators.ts.
+ *
+ * ── What this leaves the thesis with, and where it bites hardest ────────
+ *
+ * Seven directional sources remain, and FOUR of them are in the replay's
+ * `unavailableInputs` list — coinbasePremium, orderFlow, deribitOptions and
+ * exchangeFlow have no historical archive, so the census cannot judge them
+ * either way. Live, that is 0.33 of 0.76 riding on inputs with no graded
+ * record. In the REPLAY those four are null and drop out entirely, which
+ * leaves the historical thesis standing on three: funding 0.17, squeezeRisk
+ * 0.16, basis 0.10.
+ *
+ * That is a thin object and it is stated here rather than discovered later.
+ * It is not an argument for keeping an unvalidated pillar to pad the count —
+ * a thesis that is honest about resting on three inputs beats one that reads
+ * broader because a fourth input is present but wrong.
  */
-const TECHNICAL_MEANINGFUL_STRENGTH = 20;
-
 function technicalEvidence(read: TechnicalRead): ThesisEvidence {
-  const direction: ThesisDirection =
-    read.strength < TECHNICAL_MEANINGFUL_STRENGTH ? "neutral" : read.direction;
-
   return {
     source: "Price Action",
-    direction,
-    detail: read.summary,
-    weight: WEIGHTS.technicals,
+    direction: "neutral",
+    detail: `${read.summary} Shown for context: this read has no measured directional edge (see the census table in this file), so it describes the tape without voting on the thesis — whether it agrees is the confirmation line's call.`,
+    weight: 0,
   };
 }
 
@@ -395,7 +453,9 @@ export function buildMarketThesis(inputs: MarketThesisInputs, now: number): Mark
   if (inputs.squeezeRisk) push(squeezeRiskEvidence(inputs.squeezeRisk));
   if (inputs.deribitOptions) push(deribitOptionsEvidence(inputs.deribitOptions));
   if (inputs.exchangeFlow) push(exchangeFlowEvidence(inputs.exchangeFlow));
-  if (inputs.technicals) push(technicalEvidence(inputs.technicals));
+  // Straight to `neutral` for the same reason as longShort above: it is
+  // context, and routing it by direction is what let it become a pillar.
+  if (inputs.technicals) neutral.push(technicalEvidence(inputs.technicals));
   if (inputs.liquidations) neutral.push(liquidationsEvidence(inputs.liquidations));
 
   if (bullish.length === 0 && bearish.length === 0 && neutral.length === 0) return null;
@@ -449,10 +509,19 @@ export function buildMarketThesis(inputs: MarketThesisInputs, now: number): Mark
     topOpposing,
     invalidation: buildInvalidation(topSupporting, dominant),
     /*
-     * Built here, AFTER `dominant` is known, which is what keeps this
-     * non-circular: the technical read itself was computed independently of
-     * the thesis and fed in as evidence above; only the PHRASING of these
-     * lines depends on the thesis it's being compared against.
+     * NOW genuinely non-circular, which it was not before 2026-09-13.
+     *
+     * The old comment here claimed independence on the grounds that the
+     * technical read "was computed independently of the thesis and fed in as
+     * evidence above." Both halves are true and the conclusion still did not
+     * follow: `technicals` was 0.14 of the weight that SET `dominant`, so on
+     * any day where directional weight was thin, price action could be the
+     * vote that decided the thesis and then be reported as confirming it.
+     * Independent computation does not buy independence from your own vote.
+     *
+     * It is weight 0 now, so `dominant` is a pure positioning read and this
+     * line is a real comparison against it — the check the phrasing always
+     * implied. Ordering still matters for the wording, hence still built last.
      */
     technicalConfirmation: inputs.technicals ? technicalConfirmation(inputs.technicals, dominant) : [],
     updatedAt: now,

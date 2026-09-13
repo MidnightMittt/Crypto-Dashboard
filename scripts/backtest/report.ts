@@ -1024,13 +1024,26 @@ re-fetch. Treat everything below as descriptive statistics over the window actua
 now, not a validated, out-of-sample probability.
 
 **Evidence included:** funding rate, funding percentile, open interest percentile/change,
-long/short ratio, price change, basis vs. spot — all of squeezeRisk's inputs, and 0.62 of
-marketThesis's raw evidence weight (funding 0.20 + long/short 0.12 + squeezeRisk 0.18 + basis
-0.12).
+long/short ratio, price change, basis vs. spot — all of squeezeRisk's inputs, and **0.43 of
+marketThesis's 0.76 total directional weight** (funding 0.17 + squeezeRisk 0.16 + basis 0.10),
+which is 57%.
 
 **Evidence excluded (no historical source available):** order flow/CVD, Deribit options,
-exchange-flow wallet netflow, Coinbase premium — 0.38 of marketThesis's raw weight, dropped and
-renormalized (the same "missing source" behavior buildMarketThesis already has for live data).
+exchange-flow wallet netflow, Coinbase premium — 0.33, the other 43%, dropped and renormalized
+(the same "missing source" behavior buildMarketThesis already has for live data). Note what that
+implies: **the replayed thesis stands on three inputs, and nearly half the live engine's weight
+sits on sources the replay cannot judge at all.**
+
+**Present but non-voting:** long/short ratio and price action both appear on the thesis at weight
+0. Neither is missing data — both are computed and displayed, and both were removed from the vote
+on evidence. long/short because it read the same ratio squeezeRisk reads under the opposite sign
+convention; price action because the module census finds no directional edge in it at 1h, 4h or
+24h on n=2,195. See the WEIGHTS doc in lib/sentiment/marketThesis.ts.
+
+*(The four weights in this block were wrong until 2026-09-13 — it claimed funding 0.20,
+long/short 0.12, squeezeRisk 0.18, basis 0.12 for a 0.62/0.38 split, numbers that had not matched
+WEIGHTS since price action was added and took a haircut off all of them. Prose does not fail a
+build; these have to be re-derived deliberately.)*
 
 **Methodology note:** funding rate is Binance's own rate, used as a single-venue proxy — the
 live dashboard's OI-weighted composite across many venues isn't reconstructable historically.

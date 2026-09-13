@@ -621,13 +621,25 @@ function evaluateCoinbasePremium(data: AggregateMarketData): MetricVerdict | nul
 
 // ── Technicals / price action ──────────────────────────────────────────
 
+/**
+ * Below this combined indicator strength the price read reports neutral
+ * rather than a faint directional lean, so noise in a ranging market does
+ * not tilt anything downstream.
+ *
+ * THE definition, as of 2026-09-13. It used to be declared twice — here as a
+ * bare `20` and again in marketThesis.ts as a named constant — with each
+ * file's comment pointing at the other as the real one. marketThesis.ts no
+ * longer needs it (price action is weight 0 there, so there is no direction
+ * left to gate), and this is the row that still calls a direction, so the
+ * definition lives here and is exported for anything that must cite it.
+ */
+export const TECHNICAL_MEANINGFUL_STRENGTH = 20;
+
 function evaluateTechnicals(data: AggregateMarketData, ctx: SignalContext): MetricVerdict | null {
   const t = ctx.technicals;
   if (!t) return null;
 
-  // A weak read is reported as neutral rather than a faint lean, matching
-  // marketThesis.ts's TECHNICAL_MEANINGFUL_STRENGTH gate.
-  const verdict: Verdict = t.strength < 20 ? "neutral" : t.direction;
+  const verdict: Verdict = t.strength < TECHNICAL_MEANINGFUL_STRENGTH ? "neutral" : t.direction;
 
   const inputs = {
     completeness: t.adx !== null && t.rsi !== null && t.emaAlignment !== null ? 1 : 0.6,

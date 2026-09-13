@@ -684,11 +684,17 @@ export type MarketRegime =
  * Not a probability, not a price target, not a trade signal. `conviction`
  * is a 0-10 measure of how much the gathered evidence AGREES with itself —
  * arithmetic on weights that are already on this dashboard, not a
- * calibrated statistic. This app has no backtesting infrastructure, so
- * nothing here claims to have been validated against historical outcomes.
- * A conviction of 8 means "most of the weighted evidence points the same
- * way right now", not "there's an 80% chance of X". See
- * sentiment/marketThesis.ts for the exact, fully-documented arithmetic.
+ * calibrated statistic. A conviction of 8 means "most of the weighted
+ * evidence points the same way right now", not "there's an 80% chance of X".
+ * See sentiment/marketThesis.ts for the exact, fully-documented arithmetic.
+ *
+ * This used to add "this app has no backtesting infrastructure, so nothing
+ * here claims to have been validated against historical outcomes." Deleted
+ * 2026-09-13 as false: there is a 2,896-day replay, a module census, and a
+ * forward record. The true caveat is narrower and survives above — the
+ * WEIGHTS have never been fitted, and agreement is not probability. Every
+ * input that CAN be graded is now expected to survive grading to hold one,
+ * which is why long/short and price action sit here at weight 0.
  */
 export interface MarketThesis {
   asset: AssetSymbol | "MARKET";

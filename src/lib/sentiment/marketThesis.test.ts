@@ -6,6 +6,7 @@ import {
   DeribitOptionsSummary,
   ExchangeFlowSummary,
   LiquidationSummary,
+  TechnicalRead,
 } from "@/types/market";
 
 const NOW = 1_700_000_000_000;
@@ -270,6 +271,179 @@ describe("buildMarketThesis - conviction arithmetic (hand-verified)", () => {
       NOW
     )!;
     expect(result.conviction).toBe(6);
+  });
+});
+
+/*
+ * PRICE ACTION IS CONTEXT, NOT A PILLAR.
+ *
+ * These exist because nothing here covered it. Every fixture in this file
+ * passed `technicals: null`, so a 0.14 directional weight — the second
+ * largest in WEIGHTS — sat in the thesis engine with zero assertions on it
+ * and the whole suite went green when it was removed. The census that
+ * disqualified the read (no directional edge at 1h, 4h or 24h on n=2,195)
+ * could not have been contradicted by a test that never supplied a read.
+ *
+ * So the point of these is not to lock in today's behaviour. It is that
+ * restoring the vote must FAIL something.
+ */
+function technicalRead(
+  direction: "bullish" | "bearish" | "neutral",
+  strength: number
+): TechnicalRead {
+  return {
+    direction,
+    strength,
+    summary: "Price is holding above the 20 and 50 EMAs.",
+    rsi: 58,
+    macdHistogram: 0.4,
+    emaAlignment: "above-all",
+    adx: 30,
+    atrPct: 1.2,
+    volumeRatio: 1.1,
+    vwapPosition: "above",
+    trendStructure: "higher-highs",
+    bollingerBandwidthPct: null,
+    bollingerPosition: null,
+    stochasticK: null,
+    obvTrend: null,
+    supertrendDirection: null,
+    parabolicSarDirection: null,
+    ichimokuPosition: null,
+    fibonacciNearestLevel: null,
+    rsiDivergence: null,
+    macdDivergence: null,
+  };
+}
+
+describe("buildMarketThesis - price action does not vote", () => {
+  it("files a strong bullish read under neutralEvidence at weight 0", () => {
+    const result = buildMarketThesis(
+      baseInputs({ technicals: technicalRead("bullish", 90) }),
+      NOW
+    )!;
+
+    const entry = result.neutralEvidence.find((e) => e.source === "Price Action");
+    expect(entry).toBeDefined();
+    expect(entry!.direction).toBe("neutral");
+    expect(entry!.weight).toBe(0);
+    expect(result.bullishEvidence.find((e) => e.source === "Price Action")).toBeUndefined();
+    expect(result.bearishEvidence.find((e) => e.source === "Price Action")).toBeUndefined();
+  });
+
+  it("keeps the summary visible — demoted, not hidden", () => {
+    const result = buildMarketThesis(
+      baseInputs({ technicals: technicalRead("bearish", 90) }),
+      NOW
+    )!;
+    const entry = result.neutralEvidence.find((e) => e.source === "Price Action")!;
+    expect(entry.detail).toContain("Price is holding above the 20 and 50 EMAs.");
+  });
+
+  /*
+   * THE discriminating case, and the one the old weight would fail.
+   *
+   * Funding at 0.08 is bullish at 0.17; basis at -0.05 is bearish at 0.10.
+   * Bull leads, so `dominant` is bullish. A bearish price read at the old
+   * 0.14 would have put the bear side at 0.24 and FLIPPED the thesis. At
+   * weight 0 it cannot, and `conviction` must land on exactly the 6 that the
+   * hand-computed funding-vs-basis case above reaches without any technicals
+   * present at all.
+   */
+  it("cannot flip dominant, and does not move conviction", () => {
+    const withoutRead = buildMarketThesis(
+      baseInputs({ weightedFundingRatePct: 0.08, basisPct: -0.05 }),
+      NOW
+    )!;
+    const withRead = buildMarketThesis(
+      baseInputs({
+        weightedFundingRatePct: 0.08,
+        basisPct: -0.05,
+        technicals: technicalRead("bearish", 95),
+      }),
+      NOW
+    )!;
+
+    expect(withoutRead.dominant).toBe("bullish");
+    expect(withRead.dominant).toBe("bullish");
+    expect(withRead.conviction).toBe(withoutRead.conviction);
+    expect(withRead.conviction).toBe(6);
+  });
+
+  it("stays out of topSupporting even when it agrees with the thesis", () => {
+    const result = buildMarketThesis(
+      baseInputs({
+        weightedFundingRatePct: 0.08,
+        technicals: technicalRead("bullish", 95),
+      }),
+      NOW
+    )!;
+    expect(result.dominant).toBe("bullish");
+    expect(result.topSupporting.map((e) => e.source)).not.toContain("Price Action");
+  });
+
+  /*
+   * The confirmation line is the reason removing the vote is not a loss of
+   * information: price action still reaches the reader, as a comparison
+   * AGAINST the positioning thesis rather than as part of it. That comparison
+   * was part-circular while technicals held 0.14 of the weight that set
+   * `dominant`; it is a real check now, so it has to keep working.
+   */
+  /*
+   * WHY "Trending" vanished from the replay, pinned so the mechanism is
+   * checkable rather than asserted in a comment.
+   *
+   * `conviction` is agreement x PARTICIPATION, and participation is the
+   * share of PRESENT weight that is directional. A neutral source keeps its
+   * weight in the denominator; a weight-0 source leaves both sides.
+   *
+   * The replay has funding (0.17) sitting inside its neutral band on 2,863
+   * of 2,896 days, leaving squeezeRisk (0.16) and basis (0.10) to carry the
+   * direction: 0.26/0.43 = 0.605, conviction 6, one short of the 7 that
+   * REGIME_TREND_CONVICTION wants. Price action's 0.14 used to make up the
+   * difference — on all 649 historical Trending days it was directional.
+   *
+   * Both halves are asserted: the label is NOT structurally dead (given
+   * enough directional weight it still fires), it is simply out of reach on
+   * the evidence the replay actually has.
+   */
+  it("cannot reach a Trending regime on directional weight it no longer has", () => {
+    const result = buildMarketThesis(
+      baseInputs({
+        weightedFundingRatePct: 0, // inside the neutral band, as in ~99% of replay days
+        squeezeRisk: { score: 50, side: "long", components: [] }, // bearish, 0.16
+        basisPct: -0.05, // bearish, 0.10
+        technicals: technicalRead("bearish", 95), // agrees, and contributes nothing
+      }),
+      NOW
+    )!;
+    expect(result.dominant).toBe("bearish");
+    expect(result.conviction).toBe(6);
+    expect(result.regime).toBe("Leaning Bearish");
+  });
+
+  it("still reaches Trending when the directional weight is genuinely there", () => {
+    const result = buildMarketThesis(
+      baseInputs({
+        weightedFundingRatePct: 0.2, // "Crowded Longs" -> bearish, 0.17, no longer neutral
+        squeezeRisk: { score: 50, side: "long", components: [] }, // bearish, 0.16
+        basisPct: -0.05, // bearish, 0.10
+      }),
+      NOW
+    )!;
+    expect(result.conviction).toBe(10);
+    expect(result.regime).toBe("Trending Bearish");
+  });
+
+  it("still reports price action through technicalConfirmation", () => {
+    const result = buildMarketThesis(
+      baseInputs({
+        weightedFundingRatePct: 0.08,
+        technicals: technicalRead("bullish", 90),
+      }),
+      NOW
+    )!;
+    expect(result.technicalConfirmation.length).toBeGreaterThan(0);
   });
 });
 

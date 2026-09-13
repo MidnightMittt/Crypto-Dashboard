@@ -92,8 +92,89 @@ import { DEFAULT_COST_CONFIG, CostConfig } from "./costs";
  * is gone. `squeezeRisk / longShort` still prints at -1.000: 5.0.0 stopped
  * longShort VOTING, not describing, so it still occupies a census slot. See
  * moduleBreadth.ts.
+ *
+ * 7.0.0: `technicals` stopped voting in the SECOND engine. 6.0.0 removed a
+ * wrapper that was laundering Price Action's direction into the Edge
+ * composite; this removes Price Action's direction from marketThesis.ts,
+ * where it had been voting openly at 0.14 — the second-largest pillar — the
+ * whole time. Same read, two engines, opposite answers to "may this signal
+ * speak?" The census says no at every horizon it was graded on: 48.84% /
+ * 49.11% / 47.97% at 1h / 4h / 24h against base rates of 49.99% / 49.93% /
+ * 50.04%, n=2,195, nothing significant. See the WEIGHTS doc in
+ * lib/sentiment/marketThesis.ts for why that reads as "no evidence of edge"
+ * rather than "contrarian signal."
+ *
+ * ── This bumps because of the action gate, not the score ───────────────
+ *
+ * Measured 6.0.0 vs 7.0.0 over the same 2,896 days: `biasScore`,
+ * `biasVerdict`, `biasConfidence` and `biasAgreement` are byte-identical on
+ * every single day. Zero. The thesis genuinely is a separate object from the
+ * category-weighted composite and does not feed it.
+ *
+ * It does feed the TRADE GATE. buildTradeRecommendation blocks a trade when
+ * `thesis.dominant` opposes the bias direction (blockingLayer: "thesis"), so
+ * moving 0.14 out of the thesis changed `action` on 263 days and the
+ * entry/stop/target triplet on 73. That is a change to what the engine would
+ * have DONE on a historical day, which is the bump rule, even though what it
+ * would have SAID is untouched.
+ *
+ * ── Every one of those 263 days is on the long side ────────────────────
+ *
+ *   enter-long   171 -> 98   (-73, all to no-trade)
+ *   enter-short  959 -> 959  (zero change)
+ *
+ * This is not a coincidence and it is not caused here. The thesis fades
+ * crowded positioning, and crypto funding is positive most of the time, so
+ * the thesis reads bearish or squeeze-bearish on 75.1% of replayed days and
+ * bullish on 12.6%. Price action was the one input that could push it
+ * bullish; without it the split is 76.2% / 5.0%. A veto that points one way
+ * 76% of the time and the other way 5% is close to an unconditional veto on
+ * longs, and this change sharpened an asymmetry that was already there.
+ *
+ * The fix for that is in tradeRecommendation.ts, not here, and it needs its
+ * own measurement. Keeping an ungraded input in the thesis to counterweight
+ * a lopsided gate would be two wrongs, not one right.
+ *
+ * ── "Trending" is now unreachable in the replay, and that is the finding ─
+ *
+ * Trending Bearish 641 -> 0, Trending Bullish 8 -> 0. Not rare — zero.
+ *
+ * `conviction` is agreement x PARTICIPATION, and participation is the share
+ * of present weight that is directional at all. In the replay four of the
+ * seven remaining sources have no historical archive and drop out, and
+ * `funding` — the largest surviving weight at 0.17 — sits inside the
+ * +/-0.04%/8h neutral band on 2,863 of 2,896 days, because FUNDING_BANDS is
+ * calibrated for the live OI-weighted multi-venue composite and the replay
+ * has single-venue Binance. So the replayed thesis is squeezeRisk 0.16 plus
+ * basis 0.10 directional against funding 0.17 sitting neutral: participation
+ * caps at 0.26/0.43 = 0.605, and conviction caps at 6. REGIME_TREND_
+ * CONVICTION is 7.
+ *
+ * Adding technicals' 0.14 to the numerator was what cleared it. Checked
+ * rather than assumed: of the 649 old Trending days, price action was
+ * directional on 649. 100%. Every "Trending Bearish" this engine ever
+ * printed in the replay was manufactured by the participation contribution
+ * of a signal with no measured edge.
+ *
+ * Live is a different object — seven directional sources, real multi-venue
+ * funding — so Trending remains reachable there. DO NOT reconcile the two by
+ * lowering REGIME_TREND_CONVICTION against the replay's distribution; that
+ * would restore the label by fiat after removing the thing that earned it.
+ *
+ * ── The record ─────────────────────────────────────────────────────────
+ *
+ * 1,130 -> 1,057 resolved trades, net expectancy 0.153% -> 0.097%, profit
+ * factor 1.072 -> 1.045. Block-bootstrapped over 6-day blocks (185 blocks)
+ * the SE on the new expectancy is 0.356pp, so it sits t=+0.27 from zero and
+ * the 0.056pp drop is at most 0.11 SE. Neither number is distinguishable
+ * from zero and neither is evidence about this change.
+ *
+ * One honest note on that SE: 6.0.0's entry recorded 0.31pp for the same
+ * data where this pass computes 0.343pp, a bootstrap-settings difference,
+ * not a data one. Both are ~2.07x the naive sd/sqrt(n), which is the number
+ * that matters.
  */
-export const ENGINE_VERSION = "6.0.0";
+export const ENGINE_VERSION = "7.0.0";
 
 /**
  * Bump when the meaning or shape of the replayed FEATURES changes — a new
