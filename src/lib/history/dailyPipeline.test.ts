@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { describe, expect, it } from "vitest";
+import { invokedScripts, stagedPaths, workflowSource } from "./workflowParse";
 
 /**
  * EVERY ARTEFACT THE NIGHTLY JOB WRITES MUST ALSO BE COMMITTED.
@@ -35,29 +36,12 @@ import { describe, expect, it } from "vitest";
  */
 
 const ROOT = path.join(__dirname, "..", "..", "..");
-const WORKFLOW = path.join(ROOT, ".github", "workflows", "daily-intelligence.yml");
 
 interface DataFile {
   script: string;
   repoPath: string;
   constName: string;
   written: boolean;
-}
-
-function workflowSource(): string {
-  return fs.readFileSync(WORKFLOW, "utf8");
-}
-
-/** The paths the commit step stages, parsed from the workflow's own variable. */
-function stagedPaths(yml: string): Set<string> {
-  const m = yml.match(/DATA_PATHS="([^"]+)"/);
-  if (!m) throw new Error("could not find DATA_PATHS in the daily workflow");
-  return new Set(m[1].split(/\s+/).filter(Boolean));
-}
-
-/** Every script the workflow actually invokes. */
-function invokedScripts(yml: string): string[] {
-  return [...new Set([...yml.matchAll(/npx tsx (scripts\/[\w/.-]+\.ts)/g)].map((m) => m[1]))];
 }
 
 /**
@@ -110,7 +94,7 @@ function dataFilesOf(script: string): DataFile[] {
 }
 
 describe("the daily pipeline commits what it generates", () => {
-  const yml = workflowSource();
+  const yml = workflowSource("daily-intelligence.yml");
   const scripts = invokedScripts(yml);
   const files = scripts.flatMap(dataFilesOf);
 
