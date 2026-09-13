@@ -172,9 +172,37 @@ function regimeAlignmentOf(direction: "bullish" | "bearish", biasVerdict: Verdic
  * re-derives funding/OI/positioning math. A reversal setup is corroborated
  * when the crowd is leaning the OPPOSITE way of the harmonic's implied move
  * (i.e. the squeeze/funding verdict argues FOR the reversal direction).
+ *
+ * `longShort` is deliberately NOT in this list. It is squeezeRisk's exact
+ * negation (RESTATED_READS in scoring.ts), and this function returns
+ * `aligned: true` on ANY agreement — so with a module and its own negation both
+ * present, one of them argued for whichever direction was passed in. On the
+ * 1,181 replayed observations where both reported, "positioning corroborates
+ * this reversal" could not come back false. A confirmation that cannot fail is
+ * not confirmation.
+ *
+ * Demoting longShort to `state` did not fix this: it still emits a directional
+ * verdict, and this list reads verdicts, not weights. Anything that consumes
+ * metric verdicts directly has to exclude restated reads itself.
+ *
+ * Scope, stated honestly: nothing currently READS the `derivatives` field —
+ * `describeEvidence` builds its summary without it, and no surface or report
+ * consumes it. So this fixed a field that was wrong rather than a number a user
+ * saw. It is recorded in the replay, so the value will differ on the next
+ * regeneration; no decision, gate or published statistic depends on it, which is
+ * why this carries no ENGINE_VERSION bump.
+ *
+ * NOT fully fixed, and left as declared debt rather than quietly patched:
+ * funding and squeezeRisk disagreed on all 30 replayed observations where both
+ * reported, so the same any-agreement logic is still vacuous on those. That one
+ * is a THRESHOLD mismatch, not an identity — squeezeRisk starts fading at
+ * 0.005%/8h while funding reads its mild bands WITH the crowd and only fades
+ * above 0.15%/8h, so the two oppose in between and agree at the extreme, and the
+ * replay never reached the extreme. Reconciling funding's convention is a
+ * different concern; 30 of 2,896 observations is its blast radius.
  */
 function derivativesAlignmentOf(direction: "bullish" | "bearish", metricVerdicts: Map<string, Verdict>): DerivativesAlignment {
-  const relevant = ["funding", "squeezeRisk", "longShort"];
+  const relevant = ["funding", "squeezeRisk"];
   const agreeing: string[] = [];
   let anyReported = false;
   for (const id of relevant) {

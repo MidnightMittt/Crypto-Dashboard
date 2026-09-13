@@ -188,6 +188,34 @@ describe("regime and derivatives alignment — labeled, never used to suppress t
     const g = gartley(buildHarmonicEvidence(ctx({ metricVerdicts: new Map(), price: 190 })))!;
     expect(g.derivatives.aligned).toBeNull();
   });
+
+  /**
+   * longShort must stay OUT of this read. It is squeezeRisk's exact negation
+   * (RESTATED_READS), and `aligned` is true on ANY agreement — so while both
+   * were consulted, one of them always argued for whichever direction was
+   * passed in, and "positioning corroborates this reversal" could not come back
+   * false. Demoting it to `state` did not fix that, because this consults
+   * verdicts and longShort still has one.
+   */
+  it("ignores longShort, so a squeezeRisk disagreement cannot be rescued by its own negation", () => {
+    const metricVerdicts = new Map<string, Verdict>([
+      ["squeezeRisk", "bearish"],
+      ["longShort", "bullish"], // the mirror, which used to supply a free "aligned"
+    ]);
+    const g = gartley(buildHarmonicEvidence(ctx({ metricVerdicts, price: 190 })))!;
+    // The bullish Gartley is NOT corroborated: the only read that counts is bearish.
+    expect(g.derivatives.aligned).toBe(false);
+    expect(g.derivatives.detail).not.toContain("longShort");
+  });
+
+  it("reports no read at all when longShort is the only metric that spoke", () => {
+    // Not `false` either — longShort is invisible here, so this is the
+    // nothing-reported case, and saying "positioning does not support this"
+    // would be a claim built on a read that was never counted.
+    const metricVerdicts = new Map<string, Verdict>([["longShort", "bullish"]]);
+    const g = gartley(buildHarmonicEvidence(ctx({ metricVerdicts, price: 190 })))!;
+    expect(g.derivatives.aligned).toBeNull();
+  });
 });
 
 describe("geometry vs confirmation stay structurally separate", () => {
