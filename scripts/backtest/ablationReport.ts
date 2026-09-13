@@ -4,6 +4,8 @@ import { fileURLToPath } from "url";
 import { DayRecord } from "./run";
 import { buildNullLookup, Occurrence, summarizeOccurrences } from "./metrics";
 import { MIN_SAMPLE_N } from "../../src/lib/sentiment/backtestStats";
+import { METRIC_WEIGHTS, metricRole } from "../../src/lib/signals/scoring";
+import { ENGINE_VERSION } from "./version";
 
 /**
  * PER-VOTER ABLATION — each current Edge voter's marginal contribution to
@@ -27,17 +29,21 @@ import { MIN_SAMPLE_N } from "../../src/lib/sentiment/backtestStats";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, "data");
 
-const EDGE_VOTERS = [
-  "funding",
-  "squeezeRisk",
-  "openInterest",
-  "basis",
-  "longShort",
-  "etfFlows",
-  "spotPerpVolume",
-  "stablecoins",
-  "macroLiquidity",
-];
+/**
+ * DERIVED from the engine, never listed here.
+ *
+ * This was a hand-maintained array of nine ids sitting beside the roster it
+ * describes, and it had already gone stale: longShort and spotPerpVolume stopped
+ * being Edge voters in 5.0.0 and 6.0.0, so the next run of this script would
+ * have printed a marginal-contribution row for two modules that contribute
+ * nothing — computed from leftover ablate-longShort.json and
+ * ablate-spotPerpVolume.json replays of an engine two versions old. In the table
+ * whose stated purpose is to inform the weight table.
+ *
+ * A roster copied next to the roster it describes only ever agrees with it by
+ * luck, and stops agreeing exactly when someone changes the thing it tracks.
+ */
+const EDGE_VOTERS = Object.keys(METRIC_WEIGHTS).filter((id) => metricRole(id) === "edge");
 
 interface DirectionalPerf {
   n: number;
@@ -96,8 +102,19 @@ function main() {
     "Each row removes ONE voter entirely and replays the full history. Edge is win rate minus the " +
       "drift null, in percentage points; Δedge is (baseline − ablated): POSITIVE means the composite " +
       "was BETTER with the voter present (it contributes), NEGATIVE means the composite improved when " +
-      "the voter was removed (it detracts). All in-sample, descriptive, uncorrected for the 9-way scan — " +
-      "an input to weight re-derivation, not a verdict on its own."
+      "the voter was removed (it detracts). All in-sample, descriptive, uncorrected for the " +
+      `${EDGE_VOTERS.length}-way scan — an input to weight re-derivation, not a verdict on its own.`
+  );
+  say("");
+  /*
+   * This file carried no version stamp, which is the exact defect version.ts was
+   * written for — it describes an engine, and nothing in the numbers reveals
+   * which one. The roster is printed alongside so a reader sees WHICH voters the
+   * table covers rather than inferring it from whichever rows happen to appear.
+   */
+  say(
+    `Engine \`${ENGINE_VERSION}\`, ${EDGE_VOTERS.length} Edge voters: ${EDGE_VOTERS.join(", ")}. ` +
+      "Regenerate after any change that moves the composite, or the deltas below describe an engine that no longer ships."
   );
   say("");
   say(
