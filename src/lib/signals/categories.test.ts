@@ -8,6 +8,7 @@ import {
   CATEGORY_WEIGHTS,
 } from "./categories";
 import { MetricVerdict, Verdict, CategoryScore } from "./types";
+import { weightForBasis } from "./scoring";
 import { TechnicalRead } from "@/types/market";
 
 const metric = (
@@ -89,10 +90,11 @@ describe("buildAllCategories", () => {
   });
 
   it("keeps a stable, weight-ordered display sequence across all four categories", () => {
-    // One metric per category — unlike the prior taxonomy, every V2 category
-    // carries real weighted metrics (liquidityMap was always null since its
-    // only member was weight-0; positioning absorbs liquidations but has
-    // plenty of other real weight, so it's never structurally empty).
+    // One metric per category. NOTE marketStructure is represented here by
+    // orderFlow, a context read: it appears in the sequence, which is all this
+    // test asserts, but it does not score. This comment used to claim every V2
+    // category "carries real weighted metrics" — no longer true of
+    // marketStructure, see the edge-basis block below.
     const all = [
       metric("openInterest", "bullish", 90), // positioning
       metric("orderFlow", "bullish", 90), // marketStructure
@@ -101,6 +103,78 @@ describe("buildAllCategories", () => {
     ];
     const cats = buildAllCategories(all);
     expect(cats.map((c) => c.category)).toEqual(["positioning", "marketStructure", "leadingDrivers", "risk"]);
+  });
+
+  /**
+   * PINS 6.0.0's LARGEST CONSEQUENCE, which shipped with no test on it.
+   *
+   * Demoting spotPerpVolume removed the only Edge voter from a 0.25-weight
+   * category, and the whole suite stayed green — so nothing would notice if that
+   * 0.25 started being counted as a neutral 50, or if the category quietly
+   * regained a voter. Per CATEGORY_WEIGHTS' own note this renormalization is the
+   * single biggest mechanism behind the 6.0.0 decision delta: positioning's pull
+   * went 0.35 -> 0.467.
+   */
+  describe("marketStructure under the edge basis", () => {
+    const rollup = (
+      category: CategoryScore["category"],
+      score: number,
+      confidence = 80
+    ): CategoryScore => ({
+      category,
+      label: category,
+      score,
+      verdict: score > 50 ? "bullish" : score < 50 ? "bearish" : "neutral",
+      confidence,
+      topReason: "",
+      metrics: [],
+    });
+
+    it("scores nothing, because every module in it is state or context", () => {
+      // The full crypto roster for this category, every one reporting bullish at
+      // full confidence. A unanimous six-module read contributing exactly zero.
+      const all = [
+        metric("technicals", "bullish", 100), // state
+        metric("spotPerpVolume", "bullish", 100), // context — was the lone edge voter
+        metric("orderFlow", "bullish", 100), // context
+        metric("spotCvd", "bullish", 100), // context
+        metric("coinbasePremium", "bullish", 100), // context
+        metric("sectorBreadth", "bullish", 100), // context
+      ];
+      const cat = buildCategoryScore(all, "marketStructure")!;
+      expect(cat).not.toBeNull();
+      expect(cat.score).toBeNull();
+      expect(cat.verdict).toBeNull();
+      expect(cat.metrics).toHaveLength(6);
+    });
+
+    it("is renormalized out of the composite rather than counted as neutral", () => {
+      // The distinction that matters. A category scored 50 would drag a
+      // directional composite toward the middle; skipping it must leave the
+      // surviving categories' read untouched.
+      const withStructure = combineCategoryScores([
+        rollup("positioning", 80),
+        rollup("leadingDrivers", 80),
+        rollup("marketStructure", 50),
+      ])!;
+      const withoutStructure = combineCategoryScores([
+        rollup("positioning", 80),
+        rollup("leadingDrivers", 80),
+      ])!;
+      expect(withoutStructure.score).toBeGreaterThan(withStructure.score);
+      expect(withoutStructure.score).toBe(80);
+    });
+
+    it("still scores under the state basis, where trend belongs", () => {
+      const cat = buildCategoryScore(
+        [metric("technicals", "bullish", 100), metric("orderFlow", "bearish", 100)],
+        "marketStructure",
+        weightForBasis("state")
+      )!;
+      // technicals votes here, orderFlow does not, so the read is bullish.
+      expect(cat.score).not.toBeNull();
+      expect(cat.verdict).toBe("bullish");
+    });
   });
 });
 
