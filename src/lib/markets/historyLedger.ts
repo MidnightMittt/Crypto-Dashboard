@@ -44,6 +44,15 @@ export interface LedgerEntry {
 
 export interface Ledger {
   entries: LedgerEntry[];
+  /**
+   * When the file was last written, not when the newest entry is dated.
+   *
+   * Those differ exactly when the pipeline runs and refuses to append — a
+   * holiday, or a stale ingest guarded by `guardEntry` — and that is the case
+   * worth being able to see. Optional because `appendEntry` is pure over
+   * entries and must not invent one; the writer stamps at write time.
+   */
+  generatedAt?: number;
 }
 
 export function emptyLedger(): Ledger {

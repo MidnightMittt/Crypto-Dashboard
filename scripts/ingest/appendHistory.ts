@@ -86,7 +86,11 @@ function main() {
   if (!guard.ok) throw new Error(`[ledger] ${guard.reason}`);
 
   const next = appendEntry(ledger, entry);
-  fs.writeFileSync(LEDGER_PATH, JSON.stringify(next, null, 0));
+  // Stamped at write time, so the file records when the job last touched it
+  // rather than only when its newest entry is dated. Those two diverge on
+  // exactly the days worth noticing — a refused append, or a run that never
+  // happened — and the freshness machinery reads the stamp, not the rows.
+  fs.writeFileSync(LEDGER_PATH, JSON.stringify({ generatedAt: Date.now(), ...next }, null, 0));
 
   console.log(
     `[ledger] ${guard.kind} ${date} — ${next.entries.length} entr${next.entries.length === 1 ? "y" : "ies"}, ` +

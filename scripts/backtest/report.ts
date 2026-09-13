@@ -1150,11 +1150,24 @@ ${scoreCalibration.markdown}
   console.log(report);
   console.log(`[report] wrote scripts/backtest/report.md`);
 
+  /*
+   * ONE STAMP FOR THE RUN, not one per file.
+   *
+   * These four artefacts are written seconds apart from a single pass over a
+   * single corpus, so they are the same reading and must say so. Three
+   * separate Date.now() calls made the shipped files disagree by 7ms — which
+   * is harmless in itself, but it encodes "four independent generations" into
+   * the only field anything uses to reason about freshness, and the next
+   * person to add a slow step between two of the writes would inherit a real
+   * gap with no way to tell it from the noise.
+   */
+  const generatedAt = Date.now();
+
   // Small, live-bundled snapshot — only what the 3 live components actually
   // read. Keep this file small on purpose; see backtestStats.ts's header
   // comment for why the split exists.
   const statsOut: BacktestStats = {
-    generatedAt: Date.now(),
+    generatedAt,
     coverageStart,
     coverageEnd,
     squeeze: squeeze.stats,
@@ -1168,7 +1181,7 @@ ${scoreCalibration.markdown}
 
   // Large, research-only snapshot — never imported by a live component.
   const researchOut: BacktestResearch = {
-    generatedAt: Date.now(),
+    generatedAt,
     coverageStart,
     coverageEnd,
     hypotheses: hypotheses.stats,
@@ -1187,7 +1200,7 @@ ${scoreCalibration.markdown}
   // backtestStats.ts's MetricPerformanceSummary doc comment for what's
   // trimmed out and why.
   const metricStatsOut: BacktestMetricStats = {
-    generatedAt: Date.now(),
+    generatedAt,
     coverageStart,
     coverageEnd,
     metrics: metricPerformance,
@@ -1219,12 +1232,24 @@ ${scoreCalibration.markdown}
   fs.writeFileSync(METRIC_STATS_OUT_PATH, JSON.stringify(metricStatsOut, null, 2));
   console.log(`[report] wrote src/data/backtestMetricStats.json`);
 
-  // "Similar Historical Setups" source data — every day's fingerprint, no
-  // markdown formatting, minified (not pretty-printed like the files above)
-  // since this one is sized to matter. Delivery shape (bundled vs. a server
-  // route) is decided after checking the real byte size below, not guessed.
+  /*
+   * "Similar Historical Setups" source data — every day's fingerprint, no
+   * markdown formatting, minified (not pretty-printed like the files above)
+   * since this one is sized to matter. Delivery shape (bundled vs. a server
+   * route) is decided after checking the real byte size below, not guessed.
+   *
+   * Wrapped in an object rather than shipped as a bare array, which is what
+   * it was until 2026-09-12. A top-level array has nowhere to put a stamp, so
+   * this file was the one artefact in src/data whose age could not be read
+   * without diffing it — and it is served by /api/similar-setups, which
+   * offers historical analogs as evidence. An undateable piece of evidence is
+   * the wrong kind. The rows are untouched; only the envelope is new.
+   */
   fs.mkdirSync(path.dirname(FINGERPRINTS_OUT_PATH), { recursive: true });
-  fs.writeFileSync(FINGERPRINTS_OUT_PATH, JSON.stringify(fingerprints));
+  fs.writeFileSync(
+    FINGERPRINTS_OUT_PATH,
+    JSON.stringify({ version: 1, generatedAt, coverageStart, coverageEnd, days: fingerprints })
+  );
   const fingerprintsBytes = fs.statSync(FINGERPRINTS_OUT_PATH).size;
   console.log(
     `[report] wrote src/data/historicalFingerprints.json (${fingerprints.length} days, ${(fingerprintsBytes / 1024).toFixed(1)} KB)`

@@ -87,6 +87,17 @@ export interface Segment {
 }
 
 export interface ExecutionStats {
+  /**
+   * Hoisted from `provenance.generatedAt`, not a second clock.
+   *
+   * The stamp was always here — one level down, where nothing that asks "how
+   * old is this file" was looking, which is why this artefact read as
+   * unstamped while carrying a date. Freshness checks key on a top-level
+   * `generatedAt` across every artefact in src/data; a stamp only reachable
+   * by knowing this file's particular shape is not a convention, it is a
+   * coincidence. Same value, so the two can never disagree.
+   */
+  generatedAt: number;
   provenance: BacktestProvenance;
   overall: TradeStats | null;
   byAsset: Segment[];
@@ -273,14 +284,18 @@ function main() {
     .slice(0, 8);
 
   const dates = records.map((r) => r.date).sort();
+  const provenance = buildProvenance({
+    assets,
+    coverageStart: dates[0] ?? null,
+    coverageEnd: dates[dates.length - 1] ?? null,
+    evaluatedDays: records.length,
+    maxHoldHours: MAX_HOLD_HOURS,
+  });
   const stats: ExecutionStats = {
-    provenance: buildProvenance({
-      assets,
-      coverageStart: dates[0] ?? null,
-      coverageEnd: dates[dates.length - 1] ?? null,
-      evaluatedDays: records.length,
-      maxHoldHours: MAX_HOLD_HOURS,
-    }),
+    // Read from the provenance rather than calling Date.now() again, so there
+    // is one generation time in this file and not two that drift apart.
+    generatedAt: provenance.generatedAt,
+    provenance,
     overall,
     byAsset: groupBy(traded, (d) => d.asset),
     bySide: groupBy(traded, (d) => d.trade!.side),

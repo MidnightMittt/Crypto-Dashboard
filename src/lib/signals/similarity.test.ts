@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { fingerprintDistance, findSimilarSetups, metricAgreementCount, DayFingerprint } from "./similarity";
+import {
+  fingerprintDistance,
+  findSimilarSetups,
+  metricAgreementCount,
+  DayFingerprint,
+  SIMILAR_SETUPS_K,
+  SIMILAR_SETUPS_MAX_DISTANCE,
+} from "./similarity";
+// Imported EXACTLY the way /api/similar-setups/route.ts imports it, so the
+// tests at the bottom of this file fail if the file's shape and the route's
+// read of it ever disagree again.
+import historicalFingerprintsFile from "@/data/historicalFingerprints.json";
 
 // "a", "b", "c", "d" and "customX" aren't real metric ids from scoring.ts's
 // METRIC_WEIGHTS, so metricWeight falls back to 0.05 for all of them —
@@ -170,5 +181,62 @@ describe("metricAgreementCount", () => {
 
   it("returns 0/0 with no shared metrics", () => {
     expect(metricAgreementCount({ a: 1 }, { b: 1 })).toEqual({ matched: 0, total: 0 });
+  });
+});
+
+/*
+ * historicalFingerprints.json was a bare top-level array until 2026-09-12,
+ * when it was wrapped in an envelope so it could carry a `generatedAt` — a
+ * bare array has nowhere to put one, which is why this file was invisible to
+ * the freshness machinery. The rows are unchanged; only the container moved,
+ * and the one consumer (/api/similar-setups) now reads `.days`.
+ *
+ * That is a runtime shape change with no compile-time protection worth the
+ * name: `days` is inferred from the JSON, so if the envelope were reverted
+ * the route would read `undefined` and `findSimilarSetups` would throw on a
+ * live request — nowhere near a test. Worse, the route already answers
+ * `{ matches: [] }` for any aggregate without a marketBias, so an empty
+ * result is NOT evidence the library was read at all. That is the exact
+ * failure mode of a check that doesn't discriminate: it looks the same
+ * whether the thing works or was never reached.
+ *
+ * So these assert the envelope, the rows inside it, and a real match coming
+ * back out of it — the last one against history with the seed row removed,
+ * because a seed always matches ITSELF at distance 0 and an assertion that
+ * only proves that would still pass with every other row corrupted.
+ */
+describe("the committed fingerprint library, as /api/similar-setups reads it", () => {
+  const days = historicalFingerprintsFile.days as DayFingerprint[];
+
+  it("is an envelope carrying a parseable generatedAt, not a bare array", () => {
+    expect(Array.isArray(historicalFingerprintsFile)).toBe(false);
+    expect(historicalFingerprintsFile.version).toBe(1);
+    expect(Number.isFinite(historicalFingerprintsFile.generatedAt)).toBe(true);
+    expect(historicalFingerprintsFile.coverageStart <= historicalFingerprintsFile.coverageEnd).toBe(true);
+  });
+
+  it("holds the rows under .days, shaped as DayFingerprints", () => {
+    expect(Array.isArray(days)).toBe(true);
+    expect(days.length).toBeGreaterThan(1000);
+    for (const day of days) {
+      expect(typeof day.asset).toBe("string");
+      expect(day.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(Array.isArray(day.regimeTags)).toBe(true);
+      for (const v of Object.values(day.metricVerdicts)) expect([-1, 0, 1]).toContain(v);
+    }
+  });
+
+  it("returns real analogs for a real fingerprint at the route's own k and cutoff", () => {
+    const seed = days[days.length - 1];
+    // Dated past coverageEnd so nothing is excluded by the 20-day gap, which
+    // would otherwise silently empty the result and prove nothing.
+    const target: DayFingerprint = { ...seed, date: "2026-12-31", forwardReturn1d: null, forwardReturn7d: null };
+    const history = days.filter((d) => !(d.date === seed.date && d.asset === seed.asset));
+
+    const matches = findSimilarSetups(target, history, SIMILAR_SETUPS_K, SIMILAR_SETUPS_MAX_DISTANCE);
+
+    expect(matches.length).toBeGreaterThan(0);
+    expect(matches.every((m) => m.day.asset === seed.asset)).toBe(true);
+    expect(matches.every((m) => m.distance <= SIMILAR_SETUPS_MAX_DISTANCE)).toBe(true);
   });
 });

@@ -15,7 +15,15 @@ import { regimeTagsToStrings } from "@/lib/technicals/regimes";
 // the browser bundle; that's the whole reason this lives behind an API
 // route instead of being read directly by SignalBreakdown.tsx the way the
 // small backtestMetricStats.json is.
-import historicalFingerprints from "@/data/historicalFingerprints.json";
+import historicalFingerprintsFile from "@/data/historicalFingerprints.json";
+
+/*
+ * `.days`, because this file used to be a bare top-level array and a bare
+ * array has nowhere to carry a `generatedAt`. It is now the same rows inside
+ * an envelope that does, so the age of the analogs this route serves is
+ * readable without diffing the file.
+ */
+const historicalFingerprints = historicalFingerprintsFile.days;
 
 export const dynamic = "force-dynamic";
 

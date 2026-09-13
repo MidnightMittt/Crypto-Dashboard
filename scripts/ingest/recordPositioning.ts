@@ -292,7 +292,11 @@ async function main(): Promise<void> {
   const runs = [...priorLog.runs.filter((r) => r.date !== runDate), run].sort((a, b) =>
     a.date.localeCompare(b.date)
   );
-  fs.writeFileSync(LOG, JSON.stringify({ version: 1, runs }, null, 0));
+  // `generatedAt` is when the capture ran; the newest `run.date` is the
+  // session it captured. This log exists to make a silent 6-of-105 legible,
+  // and a run that captured NOTHING is the case where those two come apart —
+  // the stamp advances and the dates do not, which is precisely the signal.
+  fs.writeFileSync(LOG, JSON.stringify({ version: 1, generatedAt: Date.now(), runs }, null, 0));
 
   const points = prunePoints(appendPoints(record.points, fresh));
   fs.writeFileSync(
