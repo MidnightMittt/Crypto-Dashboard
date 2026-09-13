@@ -16,6 +16,7 @@ const t = (n: number) => Date.UTC(2026, 0, 1) + n * DAY;
 const period = (over: Partial<PeriodLeg> & { entryTime: number; exitTime: number }): PeriodLeg => ({
   top: 0.02,
   universe: 0.01,
+  spread: 0.01,
   topSymbols: ["AAA", "BBB", "CCC", "DDD"],
   topEntryCostBp: 10,
   ...over,

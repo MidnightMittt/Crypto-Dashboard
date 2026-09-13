@@ -166,6 +166,41 @@ describe("buildValidationReport — provenance", () => {
     expect(r.costPp).toBe(2);
   });
 
+  /*
+   * The headcount and the breadth travel together or the headcount lies.
+   * Absence must read as "not measured", never as zero effective bets — the
+   * second is a far stronger claim than the artifact makes.
+   */
+  it("reports the family breadth as unmeasured when the artifact predates it", () => {
+    expect(buildValidationReport(inputs()).equityFamilyBreadth).toBeNull();
+  });
+
+  it("carries the breadth read, including the pairs that are one pair", () => {
+    const base = inputs();
+    const r = buildValidationReport({
+      ...base,
+      lab: {
+        ...base.lab,
+        familyBreadth: {
+          breadth: {
+            effective_bets: 2.2,
+            mean_pairwise_rho: 0.405,
+            pairs_measured: 41,
+            near_duplicates: [{ a: "momentum-12-1", b: "momentum-12-1-broad-up", rho: 1 }],
+          },
+          bestCaseBets: 3.19,
+          sentence: "12 declared hypotheses are worth between 2.2 and 3.2 independent ideas.",
+        },
+      },
+    });
+    expect(r.equityFamilyBreadth).not.toBeNull();
+    expect(r.equityFamilyBreadth!.effectiveBets).toBe(2.2);
+    expect(r.equityFamilyBreadth!.otherEndBets).toBe(3.19);
+    expect(r.equityFamilyBreadth!.duplicatePairs).toHaveLength(1);
+    // The headcount survives beside it rather than being overwritten by it.
+    expect(r.equityFamilySize).toBe(12);
+  });
+
   it("preserves the declared kill criteria for lab hypotheses", () => {
     const r = buildValidationReport(inputs());
     expect(r.rows.find((x) => x.id === "winner")!.killCriteria).toMatch(/Retire if/);

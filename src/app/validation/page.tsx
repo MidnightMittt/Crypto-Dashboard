@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  FamilyBreadthSummary,
   Outcome,
   RowDecomposition,
   buildValidationReport,
@@ -217,6 +218,70 @@ function Decomposition({ d }: { d: RowDecomposition }) {
   );
 }
 
+/**
+ * WHAT "12 DECLARED HYPOTHESES" IS WORTH.
+ *
+ * The headcount is the strongest anti-data-mining claim on this page: it says
+ * the survivors cleared a bar raised for every idea tried, not just the ones
+ * that worked. That claim is real, and it is smaller than it sounds — the
+ * regime-gated variants are their parent's own numbers split by date, so they
+ * come back correlated at 1.000 and the twelve are worth two or three.
+ *
+ * Rendered in muted type rather than as a warning, deliberately. This does
+ * not invalidate anything above it: correcting across twelve correlated tests
+ * is STRICTER than correcting across three, so every survivor cleared a
+ * harder bar than it strictly had to. What shrinks is the coverage claim, and
+ * a red box would say the opposite of that.
+ */
+function FamilyBreadthNote({ b }: { b: FamilyBreadthSummary }) {
+  return (
+    <div className="mt-3 rounded-md border border-line/60 bg-surface/40 px-3 py-2">
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span className="text-[10px] uppercase tracking-[0.12em] text-ink-faint">
+          How many ideas that is
+        </span>
+        <span className="font-mono text-[11px] text-ink">
+          {b.effectiveBets === null ? "unmeasured" : `${b.effectiveBets.toFixed(1)} effective`}
+          {b.otherEndBets !== null && b.effectiveBets !== null && b.otherEndBets !== b.effectiveBets
+            ? `–${b.otherEndBets.toFixed(1)}`
+            : ""}
+        </span>
+        <span className="font-mono text-[11px] text-ink-faint">
+          mean pairwise rho {b.meanPairwiseRho ?? "—"} over {b.pairsMeasured} measurable pairs
+        </span>
+      </div>
+      <p className="mt-1.5 text-[11px] leading-relaxed text-ink-muted">{b.sentence}</p>
+      {/*
+        The duplicate pairs by name. An aggregate is abstract; "these two rows
+        are one row" is what actually stops a reader counting them twice.
+
+        `b.sentence` deliberately does NOT name them — `familyBreadth` keeps
+        that clause in its own `duplicateSentence` field, for a JSON reader with
+        no table to render. Here the list IS the table, so the prose above it
+        would print every pair a second time. What the list cannot say on its
+        own is what a 1.000 MEANS, so that one line is stated here, from the
+        rows themselves rather than passed through as text.
+      */}
+      {b.duplicatePairs.length > 0 && (
+        <>
+          <p className="mt-1.5 text-[11px] leading-relaxed text-ink-muted">
+            {b.duplicatePairs.every((d) => d.rho >= 0.999)
+              ? "These are not similar tests. Each pair is one series and a subset of its own dates:"
+              : "These pairs move together closely enough to count as one test, not two:"}
+          </p>
+          <ul className="mt-1 flex flex-col gap-0.5 font-mono text-[10px] text-ink-faint">
+            {b.duplicatePairs.map((d) => (
+              <li key={`${d.a}/${d.b}`}>
+                {d.a} ≡ {d.b} · rho {d.rho.toFixed(3)}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function ValidationPage() {
   const survival = report.totals.measured > 0 ? (report.totals.cleared / report.totals.measured) * 100 : 0;
 
@@ -328,6 +393,15 @@ export default function ValidationPage() {
             across survivors would undo the correction. A further {report.totals.unmeasured} modules have never been
             measured at all and are listed at the bottom rather than quietly omitted.
           </p>
+
+          {/*
+            HOW MANY IDEAS THAT HEADCOUNT IS. Placed directly under the
+            sentence that quotes the headcount, because the two are one claim
+            and separating them is how "12 declared hypotheses" gets read as a
+            broad search. The panel above already learned this lesson about a
+            table of miners; this is the same arithmetic on a table of tests.
+          */}
+          {report.equityFamilyBreadth && <FamilyBreadthNote b={report.equityFamilyBreadth} />}
         </section>
 
         {GROUPS.map((group) => {

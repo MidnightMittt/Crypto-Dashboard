@@ -4,6 +4,7 @@ import { fileURLToPath } from "url";
 import { runHypothesis, HypothesisResult, resolveDependencies, excludeCorruptSeries } from "../../src/lib/research/signalLab";
 import { describeLoad, loadEquityPanel, loadOne } from "./loadPanel";
 import { benjaminiHochberg } from "../../src/lib/research/multipleTesting";
+import { familyBreadth } from "../../src/lib/research/familyBreadth";
 import { BENCHMARK_SYMBOL, benchmarkDecomposition } from "../../src/lib/research/benchmark";
 import { FAMILY } from "./hypotheses";
 
@@ -85,6 +86,32 @@ function main(): void {
     }
   }
 
+  /*
+   * HOW MANY IDEAS IS THIS FAMILY, AS OPPOSED TO HOW MANY ENTRIES.
+   *
+   * Printed immediately before the FDR block because the two are read
+   * together and mean opposite things. FDR asks whether a survivor cleared a
+   * bar raised for multiplicity; breadth asks whether the multiplicity was
+   * real. On this family it is not: the regime-gated variants are their
+   * parent's own numbers partitioned by date, and come back at rho 1.000.
+   */
+  const breadth = familyBreadth(
+    results.map((r) => ({
+      id: r.id,
+      periods: r.periods.map((p) => ({ entryTime: p.entryTime, spread: p.spread })),
+    }))
+  );
+  console.log(`\n${"─".repeat(76)}`);
+  console.log(`FAMILY BREADTH — ${breadth.declared} declared, ${breadth.measured} long enough to correlate`);
+  console.log(
+    `  mean pairwise rho ${breadth.breadth.mean_pairwise_rho ?? "--"} over ` +
+      `${breadth.breadth.pairs_measured} measurable pairs; effective bets ` +
+      `${breadth.breadth.effective_bets ?? "--"}, other end ${breadth.bestCaseBets ?? "--"}`
+  );
+  for (const d of breadth.breadth.near_duplicates) {
+    console.log(`  duplicate  ${d.a} / ${d.b}  rho=${d.rho.toFixed(3)}`);
+  }
+
   const fdr = benjaminiHochberg(results.map((r) => r.pValue), 0.05);
   results.forEach((r, i) => (r.survivesFdr = fdr[i]?.significant ?? false));
   resolveDependencies(results, FAMILY);
@@ -120,6 +147,13 @@ function main(): void {
         generatedAt: Date.now(),
         instruments: series.length,
         familySize: FAMILY.length,
+        /*
+         * What `familySize` is actually worth. Emitted beside it rather than
+         * instead of it: the headcount is a true fact about what was declared
+         * and the breadth is a true fact about what was distinct, and a
+         * consumer that saw only one of them would misread the other.
+         */
+        familyBreadth: breadth,
         costPp: FAMILY[0].costPp,
         results: results.map((r) => {
           const h = FAMILY.find((x) => x.id === r.id)!;

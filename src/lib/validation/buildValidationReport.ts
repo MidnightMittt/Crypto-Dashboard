@@ -126,8 +126,34 @@ export interface ValidationReport {
   totals: { measured: number; cleared: number; unmeasured: number };
   /** Family size the equity study corrected across. */
   equityFamilySize: number;
+  /**
+   * What that family size is worth once the hypotheses are correlated against
+   * each other — three of the twelve are one series partitioned by regime.
+   * Carried BESIDE the headcount rather than replacing it, because a reader
+   * needs both to read either: the count is what was declared, the breadth is
+   * what was distinct. Null when the study predates the measurement.
+   */
+  equityFamilyBreadth: FamilyBreadthSummary | null;
   equityInstruments: number;
   costPp: number;
+}
+
+/** The breadth read, reduced to what the page renders. */
+export interface FamilyBreadthSummary {
+  effectiveBets: number | null;
+  /** The other end of the bracket; see familyBreadth.ts on why it is a range. */
+  otherEndBets: number | null;
+  meanPairwiseRho: number | null;
+  pairsMeasured: number;
+  duplicatePairs: { a: string; b: string; rho: number }[];
+  /**
+   * The bracket in prose, with the duplicate pairs deliberately NOT named in
+   * it — `familyBreadth` holds that clause in a separate `duplicateSentence`
+   * for JSON readers with no table. This report has one consumer, and it
+   * renders `duplicatePairs` as a list, so carrying the prose form too would
+   * print every pair twice.
+   */
+  sentence: string;
 }
 
 /** The artifact's own decomposition block, exactly as runLab writes it. */
@@ -159,9 +185,48 @@ interface ModuleGrade {
   sentence?: string;
 }
 
+/** The artifact's `familyBreadth` block, as `familyBreadth()` emits it. */
+interface LabFamilyBreadth {
+  breadth: {
+    effective_bets: number | null;
+    mean_pairwise_rho: number | null;
+    pairs_measured: number;
+    near_duplicates: { a: string; b: string; rho: number }[];
+  };
+  bestCaseBets: number | null;
+  sentence: string;
+}
+
 export interface ValidationInputs {
-  lab: { familySize: number; instruments: number; costPp: number; results: LabResult[] };
+  lab: {
+    familySize: number;
+    instruments: number;
+    costPp: number;
+    results: LabResult[];
+    /** Absent on artifacts written before the breadth measurement existed. */
+    familyBreadth?: LabFamilyBreadth | null;
+  };
   moduleGrades: Record<string, ModuleGrade>;
+}
+
+/**
+ * Flattens the artifact's breadth block for the page.
+ *
+ * Returns null rather than a zero-filled shape when the study predates the
+ * measurement — the page then says the breadth is unmeasured, which is true,
+ * instead of rendering "0 effective bets", which would be a far stronger and
+ * entirely invented claim.
+ */
+function summariseBreadth(fb: LabFamilyBreadth | null | undefined): FamilyBreadthSummary | null {
+  if (!fb?.breadth) return null;
+  return {
+    effectiveBets: fb.breadth.effective_bets,
+    otherEndBets: fb.bestCaseBets,
+    meanPairwiseRho: fb.breadth.mean_pairwise_rho,
+    pairsMeasured: fb.breadth.pairs_measured,
+    duplicatePairs: fb.breadth.near_duplicates,
+    sentence: fb.sentence,
+  };
 }
 
 function outcomeOf(verdict: string, earnsEdge: boolean): Outcome {
@@ -306,6 +371,7 @@ export function buildValidationReport(inputs: ValidationInputs): ValidationRepor
       unmeasured: rows.length - measured,
     },
     equityFamilySize: inputs.lab.familySize,
+    equityFamilyBreadth: summariseBreadth(inputs.lab.familyBreadth),
     equityInstruments: inputs.lab.instruments,
     costPp: inputs.lab.costPp,
   };

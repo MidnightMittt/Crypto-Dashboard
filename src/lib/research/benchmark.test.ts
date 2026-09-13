@@ -35,7 +35,9 @@ const periods = (top: (k: number) => number, universe: (k: number) => number): P
     top: top(k),
     universe: universe(k),
     // Unused by the benchmark decomposition, which reads only the two legs;
-    // carried because `PeriodLeg` now also serves the paper line's turnover.
+    // carried because `PeriodLeg` now also serves the paper line's turnover
+    // and the family-breadth cross-section.
+    spread: top(k) - universe(k),
     topSymbols: ["AAA"],
     topEntryCostBp: 0,
   }));

@@ -150,6 +150,14 @@ export interface PeriodLeg {
   /** Equal-weight mean over every ranked name — the universe leg. */
   universe: number;
   /**
+   * What this period contributed to the result: top minus the reference leg,
+   * as a fraction. Emitted because it CANNOT be reconstructed from the fields
+   * above — for a `long-short` hypothesis the reference is the bottom decile,
+   * which appears nowhere else — and every statement about how the periods
+   * relate to EACH OTHER needs the series, not the summary.
+   */
+  spread: number;
+  /**
    * The names in the top decile this period — the position actually held.
    *
    * Emitted so TURNOVER is measurable. `costPp` charges a fixed win-rate
@@ -261,6 +269,21 @@ const median = (xs: number[]) => {
  * hypothesis that samples more often than it holds MUST route through
  * effectiveSampleSize instead — this shortcut is only sound because the step
  * equals the hold.
+ *
+ * That was an argument until it was measured, and non-overlap in TIME does
+ * not by itself rule out dependence BETWEEN adjacent periods — a spread
+ * series can trend or mean-revert period to period whatever its step. So the
+ * lag-1 autocorrelation of `spreads` was computed for all twelve declared
+ * hypotheses: it lands between -0.027 and +0.152, and the only member above
+ * +0.05 is `momentum-12-1-broad-down`, whose 97 periods would become 71 and
+ * which already fails as below-base-rate. No verdict in the family moves. The
+ * shortcut is therefore kept, and kept as a finding rather than an assumption
+ * — but it is a finding about THIS family, and a hypothesis whose spread
+ * series carries real serial structure would need the correction that this
+ * one does not.
+ *
+ * The dependence that IS material here is across hypotheses rather than
+ * across periods, and it lives in `familyBreadth.ts`.
  */
 export function runHypothesis(series: LabSeries[], h: Hypothesis): HypothesisResult {
   const calendar = [...new Set(series.flatMap((s) => s.t))].sort((a, b) => a - b);
@@ -311,7 +334,8 @@ export function runHypothesis(series: LabSeries[], h: Hypothesis): HypothesisRes
     // the hypothesis is about a long position rather than a spread.
     const reference =
       h.leg === "long-vs-panel" ? universe : mean(scored.slice(-k).map((x) => x.fwd));
-    spreads.push(top - reference);
+    const spread = top - reference;
+    spreads.push(spread);
     /*
      * Recorded on EVERY period the hypothesis counted, gated ones excluded —
      * `spreads` and `periods` grow together and are therefore the same
@@ -323,6 +347,7 @@ export function runHypothesis(series: LabSeries[], h: Hypothesis): HypothesisRes
       exitTime,
       top,
       universe,
+      spread,
       topSymbols: held.map((x) => x.symbol),
       /*
        * One tick against each held name's OWN entry price. `tickCostBp` is
