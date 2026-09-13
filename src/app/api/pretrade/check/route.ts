@@ -348,12 +348,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
 
     // The caller's risk policy, same top-level names /api/exit/design takes.
+    // Passed through field-by-field rather than collapsed to one nullable
+    // object, so the check can name the field that is actually absent —
+    // see the note on OptionOrderInputs.riskPolicy.
     const hardFloor = Number(body.hard_floor_usd);
     const concurrent = Number(body.concurrent_positions);
-    const budget =
-      Number.isFinite(hardFloor) && Number.isFinite(concurrent)
-        ? { hardFloorUsd: hardFloor, concurrentPositions: concurrent }
-        : null;
+    const riskPolicy = {
+      hardFloorUsd: Number.isFinite(hardFloor) ? hardFloor : null,
+      concurrentPositions: Number.isFinite(concurrent) ? concurrent : null,
+    };
     const minReach = Number(body.min_breakeven_reach_pct);
 
     const verdict = runOptionOrderChecks({
@@ -361,7 +364,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       order: { leg, premium, contracts },
       accountValue,
       buyingPowerUsd,
-      budget,
+      riskPolicy,
       minBreakevenReachPct: Number.isFinite(minReach) ? minReach : null,
       spot,
       breakeven,
@@ -385,7 +388,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         sessions_to_expiry_method: "calendar_days_x_5_over_7_rounded",
         beta_benchmark: BENCHMARK_SYMBOL,
         price_session: covered ? lastSession : null,
-        budget,
+        // Echoed as received, so a caller can see at a glance which half of
+        // the policy the route actually got.
+        budget: {
+          hard_floor_usd: riskPolicy.hardFloorUsd,
+          concurrent_positions: riskPolicy.concurrentPositions,
+        },
         min_breakeven_reach_pct: Number.isFinite(minReach) ? minReach : null,
         live_price: livePrice
           ? { value: livePrice.value, as_of: new Date(livePrice.asOfMs).toISOString(), source: livePrice.source }

@@ -63,9 +63,12 @@ export const REQUEST_SHAPE = {
       "Equity path. Your claimed edge in basis points. UNLOCKS the cost check — " +
       "without it, cost reports unknown because the site will not invent your edge.",
     hard_floor_usd:
-      "Option path, with concurrent_positions. Your risk policy floor. UNLOCKS the " +
-      "max_loss_vs_budget verdict — without it the loss is stated but not judged.",
-    concurrent_positions: "Option path, with hard_floor_usd. Positions the budget is split across.",
+      "Option path. Your risk policy floor. UNLOCKS the max_loss_vs_budget verdict — but " +
+      "ONLY together with concurrent_positions; either alone still reports unknown, and the " +
+      "check will name whichever one is missing.",
+    concurrent_positions:
+      "Option path. Positions the budget is split across. Required alongside hard_floor_usd — " +
+      "a floor without a position count cannot size a per-position budget.",
     min_breakeven_reach_pct:
       "Option path. Your floor for the measured probability of reaching breakeven, 0-100. " +
       "UNLOCKS the breakeven_reach verdict — the site measures the probability, only you " +

@@ -24,7 +24,7 @@ const clean = (over: Partial<OptionOrderInputs> = {}): OptionOrderInputs => ({
   },
   accountValue: 437.04,
   buyingPowerUsd: 137.14,
-  budget: { hardFloorUsd: 100, concurrentPositions: 4 },
+  riskPolicy: { hardFloorUsd: 100, concurrentPositions: 4 },
   minBreakevenReachPct: null,
   spot: { value: 11.5, source: "stored_close" },
   breakeven: {
@@ -67,10 +67,45 @@ describe("runOptionOrderChecks — the defined-risk order audit", () => {
   });
 
   it("returns unknown, not a verdict, when no risk policy is declared", () => {
-    const r = runOptionOrderChecks(clean({ budget: null }));
+    const r = runOptionOrderChecks(
+      clean({ riskPolicy: { hardFloorUsd: null, concurrentPositions: null } })
+    );
     const c = check(r, "max_loss_vs_budget");
     expect(c.status).toBe("unknown");
-    expect(c.detail).toContain("supply hard_floor_usd and concurrent_positions");
+    expect(c.detail).toContain("hard_floor_usd and concurrent_positions are missing");
+    expect(c.data!.missing_fields).toEqual(["hard_floor_usd", "concurrent_positions"]);
+  });
+
+  /**
+   * The 2026-09-13 misreport. A caller sent `hard_floor_usd` without
+   * `concurrent_positions`, was told to "supply hard_floor_usd and
+   * concurrent_positions", and concluded the route was not reading the field
+   * it had in fact read. A refusal that names a field the caller already sent
+   * points the reader at working code.
+   */
+  it("names ONLY the absent field, and says what it did receive", () => {
+    const r = runOptionOrderChecks(
+      clean({ riskPolicy: { hardFloorUsd: 120, concurrentPositions: null } })
+    );
+    const c = check(r, "max_loss_vs_budget");
+    expect(c.status).toBe("unknown");
+    expect(c.detail).toContain("concurrent_positions is missing");
+    expect(c.detail).toContain("account_value and hard_floor_usd received");
+    expect(c.data!.missing_fields).toEqual(["concurrent_positions"]);
+    // The half that DID arrive must not appear in the ask.
+    expect(c.detail).not.toContain("hard_floor_usd is missing");
+    expect(c.detail).not.toContain("hard_floor_usd and concurrent_positions are missing");
+  });
+
+  it("unlocks the gate as soon as the missing half arrives", () => {
+    const r = runOptionOrderChecks(
+      clean({ accountValue: 585, riskPolicy: { hardFloorUsd: 120, concurrentPositions: 3 } })
+    );
+    const c = check(r, "max_loss_vs_budget");
+    // (585 - 120) / 3 = 155, and the $86 premium fits under it.
+    expect(c.status).toBe("pass");
+    expect(c.data!.budget_usd).toBe(155);
+    expect(c.data!.risk_capacity_usd).toBe(465);
   });
 
   it("reports the measured breakeven reach with n and horizon, unjudged without a declared floor", () => {

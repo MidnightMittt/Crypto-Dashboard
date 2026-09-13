@@ -37,8 +37,15 @@ export interface PretradeCheck {
   status: CheckStatus;
   /** One sentence naming the number and the threshold it was judged against. */
   detail: string;
-  /** The figures behind the sentence, so a caller can re-derive the judgement. */
-  data?: Record<string, number | string | null>;
+  /**
+   * The figures behind the sentence, so a caller can re-derive the judgement.
+   *
+   * `string[]` is admitted for one purpose: a check that returns `unknown`
+   * because inputs are missing must name WHICH, in a form a caller can act on
+   * without parsing prose. Deliberately flat otherwise — a nested object here
+   * is a sign the check is reporting a structure instead of a judgement.
+   */
+  data?: Record<string, number | string | string[] | null>;
 }
 
 export type Verdict = "pass" | "block" | "incomplete";

@@ -12,9 +12,14 @@ import {
   compareToHold,
   definedRiskBudget,
   ladderOutcome,
+  listFields,
+  missingRiskPolicyFields,
   peakOfCurve,
   reachCurve,
 } from "@/lib/research/exitDesign";
+
+/** The risk-policy trio, in the order the refusal lists them. */
+const BUDGET_FIELDS = ["account_value", "hard_floor_usd", "concurrent_positions"] as const;
 
 /**
  * POST /api/exit/design — where the rungs and the stop belong, measured.
@@ -108,10 +113,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const accountValue = Number(body.account_value);
   const hardFloor = Number(body.hard_floor_usd);
   const concurrent = Number(body.concurrent_positions);
+  const budgetMissing = missingRiskPolicyFields({
+    accountValue,
+    hardFloorUsd: hardFloor,
+    concurrentPositions: concurrent,
+  });
   const budget =
-    Number.isFinite(accountValue) && Number.isFinite(hardFloor) && Number.isFinite(concurrent)
-      ? definedRiskBudget(accountValue, hardFloor, concurrent)
-      : null;
+    budgetMissing.length === 0 ? definedRiskBudget(accountValue, hardFloor, concurrent) : null;
   const definedRisk =
     stop.verdict !== "no_width_survives"
       ? null
@@ -134,11 +142,22 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
                 },
               }
             : {
+                // Names only what is absent. Listing all three at a caller who
+                // sent two points them at working code — the failure the
+                // pretrade auditor produced on 2026-09-13.
                 reason:
-                  "Supply account_value, hard_floor_usd and concurrent_positions to size the " +
-                  "budget. All three are the caller's risk policy; the site will not default " +
+                  (budgetMissing.length > 0
+                    ? `Supply ${listFields(budgetMissing)} to size the budget` +
+                      (budgetMissing.length < 3
+                        ? ` (${listFields(BUDGET_FIELDS.filter((f) => !budgetMissing.includes(f)))} received).`
+                        : ".")
+                    : `The declared policy cannot produce a budget: an account at or under its ` +
+                      `own floor has no risk capacity to spend, and a position count below 1 ` +
+                      `has nothing to divide it across.`) +
+                  " The trio is the caller's risk policy; the site will not default " +
                   "any of them, because a defaulted floor or position count silently sizes " +
                   "the budget on a policy nobody declared.",
+                missing_fields: budgetMissing,
               },
           reward_side:
             "reach_curve above, unchanged — it measures the underlying's forward reach, which " +

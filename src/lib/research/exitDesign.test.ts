@@ -4,6 +4,8 @@ import {
   MIN_ENTRIES,
   compareToHold,
   definedRiskBudget,
+  listFields,
+  missingRiskPolicyFields,
   excursionStats,
   ladderOutcome,
   peakOfCurve,
@@ -191,6 +193,64 @@ describe("definedRiskBudget", () => {
 
   it("refuses a negative floor rather than inflating capacity", () => {
     expect(definedRiskBudget(436, -50, 4)).toBeNull();
+  });
+});
+
+describe("missingRiskPolicyFields", () => {
+  it("names nothing when all three are declared", () => {
+    expect(
+      missingRiskPolicyFields({ accountValue: 585, hardFloorUsd: 120, concurrentPositions: 3 })
+    ).toEqual([]);
+  });
+
+  it("names only the field that is absent", () => {
+    expect(missingRiskPolicyFields({ accountValue: 585, hardFloorUsd: 120 })).toEqual([
+      "concurrent_positions",
+    ]);
+    expect(missingRiskPolicyFields({ accountValue: 585, concurrentPositions: 3 })).toEqual([
+      "hard_floor_usd",
+    ]);
+  });
+
+  /**
+   * `Number(null)` and `Number("")` are both 0, so a naive
+   * `Number.isFinite(Number(v))` reads an explicitly-absent floor as a
+   * DECLARED floor of zero — the most permissive policy there is, invented by
+   * a type coercion rather than by the caller. Caught by the option-order
+   * suite the first time this helper was written.
+   */
+  it("does not let null or empty-string coerce into a declared zero", () => {
+    expect(
+      missingRiskPolicyFields({ accountValue: 585, hardFloorUsd: null, concurrentPositions: null })
+    ).toEqual(["hard_floor_usd", "concurrent_positions"]);
+    expect(
+      missingRiskPolicyFields({ accountValue: "", hardFloorUsd: 120, concurrentPositions: 3 })
+    ).toEqual(["account_value"]);
+  });
+
+  it("still admits a genuine, explicitly-declared zero floor", () => {
+    expect(
+      missingRiskPolicyFields({ accountValue: 585, hardFloorUsd: 0, concurrentPositions: 3 })
+    ).toEqual([]);
+  });
+
+  it("treats unparseable values as absent, not as a policy", () => {
+    expect(
+      missingRiskPolicyFields({
+        accountValue: 585,
+        hardFloorUsd: "none",
+        concurrentPositions: NaN,
+      })
+    ).toEqual(["hard_floor_usd", "concurrent_positions"]);
+  });
+});
+
+describe("listFields", () => {
+  it("renders one, two and three fields the way the refusals read", () => {
+    expect(listFields([])).toBe("");
+    expect(listFields(["a"])).toBe("a");
+    expect(listFields(["a", "b"])).toBe("a and b");
+    expect(listFields(["a", "b", "c"])).toBe("a, b and c");
   });
 });
 

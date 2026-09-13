@@ -324,6 +324,46 @@ export function definedRiskBudget(
 }
 
 /**
+ * Which of the three risk-policy fields the caller did not supply.
+ *
+ * WHY THIS EXISTS. Both `/api/exit/design` and `/api/pretrade/check` used to
+ * answer a partial policy by listing every field they need, regardless of
+ * which had arrived. The trading session sent
+ * `{account_value: 585, hard_floor_usd: 120}` on 2026-09-13, got back "supply
+ * hard_floor_usd and concurrent_positions", and reasonably concluded the check
+ * was not reading `hard_floor_usd` at all — it reads it fine; the message
+ * simply never looked. A refusal that names a field the caller already sent
+ * points the reader at working code and hides the one thing that was wrong.
+ *
+ * So the refusal is computed from the same values the gate is, and names only
+ * what is absent. It still refuses on any one missing — the site does not
+ * default a floor or a position count, because a defaulted policy silently
+ * sizes a budget nobody declared.
+ */
+export function missingRiskPolicyFields(input: {
+  accountValue?: unknown;
+  hardFloorUsd?: unknown;
+  concurrentPositions?: unknown;
+}): string[] {
+  // NOT `Number.isFinite(Number(v))`. `Number(null)` and `Number("")` are both
+  // 0, so an explicitly-null field would read as a declared floor of zero —
+  // which is the most permissive policy there is, invented by a coercion.
+  const declared = (v: unknown): boolean =>
+    v !== null && v !== undefined && v !== "" && Number.isFinite(Number(v));
+  const missing: string[] = [];
+  if (!declared(input.accountValue)) missing.push("account_value");
+  if (!declared(input.hardFloorUsd)) missing.push("hard_floor_usd");
+  if (!declared(input.concurrentPositions)) missing.push("concurrent_positions");
+  return missing;
+}
+
+/** "hard_floor_usd", "a and b", "a, b and c" — an Oxford-free list for prose. */
+export function listFields(fields: readonly string[]): string {
+  if (fields.length <= 1) return fields[0] ?? "";
+  return `${fields.slice(0, -1).join(", ")} and ${fields[fields.length - 1]}`;
+}
+
+/**
  * One sentence on whether the ladder beat holding, naming both statistics.
  *
  * Deliberately refuses a verdict when mean and median disagree in sign. That

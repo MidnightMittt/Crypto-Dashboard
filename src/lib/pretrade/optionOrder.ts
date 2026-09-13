@@ -1,5 +1,5 @@
 import { OptionLegEcho } from "@/lib/portfolio/buildPortfolio";
-import { definedRiskBudget } from "@/lib/research/exitDesign";
+import { definedRiskBudget, listFields, missingRiskPolicyFields } from "@/lib/research/exitDesign";
 import {
   HeldPosition,
   LivePrice,
@@ -66,8 +66,17 @@ export interface OptionOrderInputs {
   order: OptionOrder;
   accountValue: number;
   buyingPowerUsd: number | null;
-  /** The caller's risk policy, same trio /api/exit/design uses. Null = undeclared. */
-  budget: { hardFloorUsd: number; concurrentPositions: number } | null;
+  /**
+   * The caller's declared risk policy, as it arrived — null per field where it
+   * did not arrive at all, NOT collapsed to a single null.
+   *
+   * The collapsed form is what produced the 2026-09-13 misreport: a caller who
+   * sent `hard_floor_usd` and omitted `concurrent_positions` was told to supply
+   * both, and concluded the route was ignoring the field it had in fact read.
+   * Keeping the fields separate lets the refusal name only what is absent, and
+   * lets the gate and the refusal be derived from the SAME values.
+   */
+  riskPolicy: { hardFloorUsd: number | null; concurrentPositions: number | null };
   /**
    * The caller's own floor for breakeven reach, 0-100. The site measures
    * the probability; only the caller knows the payoff they expect beyond
@@ -98,25 +107,43 @@ const pct1 = (v: number) => `${v.toFixed(1)}%`;
 
 function maxLossCheck(i: OptionOrderInputs): PretradeCheck {
   const maxLoss = i.order.premium * i.order.leg.multiplier * i.order.contracts;
-  if (!i.budget) {
+  const missing = missingRiskPolicyFields({
+    accountValue: i.accountValue,
+    hardFloorUsd: i.riskPolicy.hardFloorUsd,
+    concurrentPositions: i.riskPolicy.concurrentPositions,
+  });
+  if (missing.length > 0) {
+    const supplied = (["account_value", "hard_floor_usd", "concurrent_positions"] as const).filter(
+      (f) => !missing.includes(f)
+    );
     return {
       name: "max_loss_vs_budget",
       status: "unknown",
       detail:
         `Maximum loss is ${usd(maxLoss)} — the premium, by construction; it cannot be gapped ` +
-        `through. No risk budget declared to judge it against: supply hard_floor_usd and ` +
-        `concurrent_positions (the same policy /api/exit/design takes) to make this a gate.`,
-      data: { max_loss_usd: Number(maxLoss.toFixed(2)), budget_usd: null },
+        `through. No risk budget to judge it against: ${listFields(missing)} ` +
+        `${missing.length === 1 ? "is" : "are"} missing` +
+        `${supplied.length > 0 ? ` (${listFields(supplied)} received)` : ""}. Supply the rest — ` +
+        `the same policy /api/exit/design takes — to make this a gate.`,
+      data: {
+        max_loss_usd: Number(maxLoss.toFixed(2)),
+        budget_usd: null,
+        missing_fields: missing,
+      },
     };
   }
-  const b = definedRiskBudget(i.accountValue, i.budget.hardFloorUsd, i.budget.concurrentPositions);
+  // `missing` being empty is exactly the condition that both are finite, so
+  // these are numbers — narrowed here rather than asserted at the call site.
+  const hardFloorUsd = Number(i.riskPolicy.hardFloorUsd);
+  const concurrentPositions = Number(i.riskPolicy.concurrentPositions);
+  const b = definedRiskBudget(i.accountValue, hardFloorUsd, concurrentPositions);
   if (!b) {
     return {
       name: "max_loss_vs_budget",
       status: "fail",
       detail:
         `The declared policy cannot produce a budget: ${usd(i.accountValue)} against a ` +
-        `${usd(i.budget.hardFloorUsd)} floor across ${i.budget.concurrentPositions} positions. ` +
+        `${usd(hardFloorUsd)} floor across ${concurrentPositions} positions. ` +
         `An account at or under its own floor has no risk capacity to spend.`,
       data: { max_loss_usd: Number(maxLoss.toFixed(2)), budget_usd: null },
     };
@@ -127,17 +154,17 @@ function maxLossCheck(i: OptionOrderInputs): PretradeCheck {
     status: ok ? "pass" : "fail",
     detail: ok
       ? `Maximum loss ${usd(maxLoss)} fits the ${usd(b.perPositionUsd)} per-position budget ` +
-        `(${usd(b.riskCapacityUsd)} capacity across ${i.budget.concurrentPositions} positions). ` +
+        `(${usd(b.riskCapacityUsd)} capacity across ${concurrentPositions} positions). ` +
         `The premium is the whole downside; it cannot be gapped through.`
       : `Maximum loss ${usd(maxLoss)} exceeds the ${usd(b.perPositionUsd)} per-position budget by ` +
         `${usd(maxLoss - b.perPositionUsd)} (${usd(b.riskCapacityUsd)} capacity across ` +
-        `${i.budget.concurrentPositions} positions). The overage is small only until the other ` +
+        `${concurrentPositions} positions). The overage is small only until the other ` +
         `positions want their share.`,
     data: {
       max_loss_usd: Number(maxLoss.toFixed(2)),
       budget_usd: b.perPositionUsd,
       risk_capacity_usd: b.riskCapacityUsd,
-      concurrent_positions: i.budget.concurrentPositions,
+      concurrent_positions: concurrentPositions,
     },
   };
 }
