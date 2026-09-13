@@ -2,6 +2,7 @@ import { BiasChange, MarketBias, MetricVerdict, RiskLevel, Verdict } from "./typ
 import { agreementOf } from "./confidence";
 import { computeWeightedScore, metricWeight, rankMetric, clusterOf, ScoreBasis, weightForBasis } from "./scoring";
 import { buildAllCategories, buildTrendStrength, combineCategoryScores } from "./categories";
+import { NEUTRAL_PIVOTS, ScorePivots } from "./scorePivots";
 import { TechnicalRead } from "@/types/market";
 import { RegimeTags } from "@/lib/technicals/regimes";
 
@@ -166,10 +167,27 @@ export interface MarketBiasInputs {
    * none has a measured forward record.
    */
   basis?: ScoreBasis;
+  /**
+   * Where each scope of this asset's engine actually sits when it has
+   * nothing to say (scorePivots.ts). Defaults to NEUTRAL_PIVOTS — a hard 50
+   * everywhere, which is what every uncalibrated asset gets and what the
+   * whole site did before 9.1.0.
+   */
+  pivots?: ScorePivots;
 }
 
 export function buildMarketBias(inputs: MarketBiasInputs): MarketBias | null {
-  const { asset, metrics, technicals, squeezeScore, previous, now, regimeTags = null, basis = "edge" } = inputs;
+  const {
+    asset,
+    metrics,
+    technicals,
+    squeezeScore,
+    previous,
+    now,
+    regimeTags = null,
+    basis = "edge",
+    pivots = NEUTRAL_PIVOTS,
+  } = inputs;
   if (metrics.length === 0) return null;
   const weightFn = weightForBasis(basis);
 
@@ -180,11 +198,11 @@ export function buildMarketBias(inputs: MarketBiasInputs): MarketBias | null {
    * optionally shifted by today's market regime (regimeWeights.ts). See
    * categories.ts for the full taxonomy rationale.
    */
-  const categories = buildAllCategories(metrics, weightFn);
-  const combined = combineCategoryScores(categories, regimeTags);
+  const categories = buildAllCategories(metrics, weightFn, pivots);
+  const combined = combineCategoryScores(categories, regimeTags, pivots.composite);
   if (!combined) return null;
 
-  const { score, verdict, confidence } = combined;
+  const { score, rawScore, verdict, confidence } = combined;
 
   // Ranked by weight x confidence so the best-supported reasons lead, not
   // merely the loudest-sounding ones. Restricted to VOTING metrics: a
@@ -272,6 +290,7 @@ export function buildMarketBias(inputs: MarketBiasInputs): MarketBias | null {
   return {
     asset,
     score,
+    rawScore,
     verdict,
     confidence,
     agreement,

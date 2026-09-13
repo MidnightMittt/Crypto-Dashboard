@@ -111,6 +111,7 @@ import { fetchEtfFlows } from "../providers/etfFlows";
 import { fetchSpotVolumeUsd } from "../providers/spotVolume";
 import { evaluateAll } from "../signals/evaluators";
 import { buildMarketBias, snapshotVerdicts } from "../signals/marketBias";
+import { livePivotsFor } from "../signals/livePivots";
 import { gradeForComposite } from "../signals/evidenceGrade";
 import { weightForBasis } from "../signals/scoring";
 import { moduleGrades as moduleGradesSnapshot } from "@/data/backtestMetricStats.json";
@@ -706,6 +707,13 @@ async function withRecordedHistory(
     if (structure) metricVerdicts.push(structure);
   }
 
+  /*
+   * 9.1.0: the scores are stated against their own history rather than against
+   * an assumed 50 (src/lib/signals/scorePivots.ts). This is the ONLY call site
+   * that gets the calibration, because the crypto edge-basis composite is the
+   * only thing the replay that measured it reproduces — see livePivots.ts for
+   * why the search surface and the equity snapshot stay uncalibrated.
+   */
   const marketBias = buildMarketBias({
     asset,
     metrics: metricVerdicts,
@@ -714,6 +722,7 @@ async function withRecordedHistory(
     previous: priorBias?.verdicts ?? null,
     now: agg.updatedAt,
     regimeTags,
+    pivots: livePivotsFor(asset),
   });
 
   /*

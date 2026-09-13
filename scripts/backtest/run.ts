@@ -12,6 +12,14 @@ import { evaluateAll, SignalContext } from "../../src/lib/signals/evaluators";
 import { classifyRegime, regimeTagsToStrings } from "../../src/lib/technicals/regimes";
 import { buildMarketBias } from "../../src/lib/signals/marketBias";
 import {
+  AssetPivotAccumulator,
+  NEUTRAL_PIVOTS,
+  ScorePivotArtifact,
+  ScorePivots,
+  pivotsForAsset,
+} from "../../src/lib/signals/scorePivots";
+import { ENGINE_VERSION } from "./version";
+import {
   buildVolumeProfile,
   buildSupportResistanceZones,
   mergeTimeframeZones,
@@ -63,7 +71,33 @@ const DATA_DIR = path.join(__dirname, "data");
 /** Research-only flags — see ablation.ts. Absent in every standard pipeline invocation. */
 const ABLATED_METRIC = process.argv.find((a) => a.startsWith("--ablate="))?.slice("--ablate=".length) ?? null;
 const OUT_OVERRIDE = process.argv.find((a) => a.startsWith("--out="))?.slice("--out=".length) ?? null;
+const PIVOT_MODE_OVERRIDE = process.argv.find((a) => a.startsWith("--pivots="))?.slice("--pivots=".length) ?? null;
 const DAY_MS = 86_400_000;
+
+/**
+ * The committed calibration, read exactly the way LIVE reads it.
+ *
+ * Only reachable through `scorePivots: "shipped"`, which is not a
+ * measurement — the artifact was estimated from this same history, so every
+ * day in a "shipped" run is scored against a pivot that partly came from its
+ * own future. It exists to answer one question the honest point-in-time run
+ * cannot: how far apart are the engine I measured and the engine that will
+ * run? Those differ whenever a scope's pivot qualified partway through the
+ * walk and no longer qualifies at the end, which is not hypothetical —
+ * leadingDrivers did exactly that.
+ *
+ * Routed through `pivotsForAsset` rather than reading the JSON directly, so
+ * the version check and the missing-file fallback are the SAME code path the
+ * site uses. A second reader here would be a second contract.
+ */
+let shippedArtifact: ScorePivotArtifact | null | undefined;
+function shippedPivotsFor(asset: string): ScorePivots {
+  if (shippedArtifact === undefined) {
+    const p = path.join(__dirname, "..", "..", "src", "data", "scorePivots.json");
+    shippedArtifact = fs.existsSync(p) ? (JSON.parse(fs.readFileSync(p, "utf8")) as ScorePivotArtifact) : null;
+  }
+  return pivotsForAsset(shippedArtifact, ENGINE_VERSION, asset);
+}
 const OI_BURN_IN_DAYS = 48; // oiPercentileFromHistory's own minimum
 const FORWARD_BUFFER_DAYS = 7; // longest labeled horizon
 
@@ -189,12 +223,28 @@ export interface ReplayConfig {
    * reconstruction of the evidence that could quietly diverge from it.
    */
   swing: SwingThesisConfig;
+  /**
+   * How each score finds its neutral point (src/lib/signals/scorePivots.ts).
+   *
+   *  "point-in-time"  what the engine would have known on the day. The honest
+   *                   measurement, and the default, because it is the only
+   *                   one with no look-ahead.
+   *  "shipped"        the committed src/data/scorePivots.json applied to every
+   *                   day. NOT a measurement — the artifact was estimated from
+   *                   this same history — but it is what LIVE does, and the
+   *                   two answers differ whenever a pivot qualified during the
+   *                   walk and no longer qualifies at the end. Comparing them
+   *                   is how that gap gets a number instead of a shrug.
+   *  "off"            a hard 50 everywhere: the pre-9.1.0 engine, the control.
+   */
+  scorePivots: "point-in-time" | "shipped" | "off";
 }
 
 export const DEFAULT_REPLAY_CONFIG: ReplayConfig = {
   useRegimeWeights: true,
   requireMtfNotWeakening: false,
   swing: DEFAULT_SWING_CONFIG,
+  scorePivots: "point-in-time",
 };
 
 export interface DayRecord {
@@ -224,12 +274,19 @@ export interface DayRecord {
   thesisDominant: string | null;
   /** The decision engine's overall read — buildMarketBias, not buildMarketThesis. */
   biasScore: number | null;
+  /**
+   * The composite BEFORE it was recentred against its own history
+   * (scorePivots.ts). Equal to `biasScore` under `useScorePivots: false` and
+   * on every day before the pivot became credible, so a report can tell "the
+   * pivot did nothing here" from "the pivot was off".
+   */
+  biasRawScore: number | null;
   biasVerdict: string | null;
   biasConfidence: number | null;
   /** How much the metrics concur with each other — a DIFFERENT number from biasConfidence (evidence quality), see marketBias.ts's own doc comment. */
   biasAgreement: number | null;
   /** One entry per category that reported, for the category-level backtest report. */
-  categories: Array<{ category: string; score: number; verdict: string }>;
+  categories: Array<{ category: string; score: number; rawScore: number; verdict: string }>;
   /**
    * One entry per metric that fired that day (evaluateAll's output, id +
    * verdict only) — the raw material report.ts's hypothesis section needs
@@ -576,7 +633,16 @@ export function replayAsset(
   marketWide: MarketWideData,
   windowStart?: number,
   windowEnd?: number,
-  config: ReplayConfig = DEFAULT_REPLAY_CONFIG
+  config: ReplayConfig = DEFAULT_REPLAY_CONFIG,
+  /**
+   * Point-in-time score pivots (scorePivots.ts), accumulated across this
+   * asset's days. Injected rather than local so `main()` can read the final
+   * full-history state and ship it as the live calibration — the same object
+   * the replay itself used, never a second estimate of it. Callers that don't
+   * pass one (rolling.ts, swingCalibration.ts) get a fresh accumulator, so
+   * each of their windows re-earns its pivots from inside the window only.
+   */
+  pivotAcc: AssetPivotAccumulator = new AssetPivotAccumulator()
 ): DayRecord[] {
   const { asset, futuresKlines, spotKlines, fundingRate, oiHistory, longShortHistory, etfFlows } = data;
   const records: DayRecord[] = [];
@@ -814,6 +880,21 @@ export function replayAsset(
       t
     );
     if (structureMetric && structureMetric.id !== ABLATED_METRIC) metricVerdicts.push(structureMetric);
+    /*
+     * POINT-IN-TIME, and the ordering is the whole guarantee: read the pivots
+     * BEFORE today's scores exist, file today's raw scores AFTER the bias is
+     * built. Nothing today can influence the pivot that scored it. The read
+     * also has a side effect — it is what detects a category pivot firing and
+     * restarts the composite's history — so it must happen every day, even on
+     * days that produce no bias.
+     */
+    const knowable = pivotAcc.pivots();
+    const pivots =
+      config.scorePivots === "point-in-time"
+        ? knowable
+        : config.scorePivots === "shipped"
+          ? shippedPivotsFor(asset)
+          : NEUTRAL_PIVOTS;
     const bias = buildMarketBias({
       asset,
       metrics: metricVerdicts,
@@ -821,11 +902,19 @@ export function replayAsset(
       squeezeScore: squeezeRisk?.score ?? null,
       previous: null, // no sequential "what changed" concept in a batch replay
       now: t,
+      pivots,
       // Same `regime` this loop already computes for DayRecord.regimeTags
       // below. Nulled under the fixed-weight ablation variant, which is
       // precisely how regimeWeights.ts turns itself off.
       regimeTags: config.useRegimeWeights ? regime : null,
     });
+
+    if (bias) {
+      for (const c of bias.categories) {
+        if (c.rawScore !== null) pivotAcc.observeCategory(c.category, c.rawScore);
+      }
+      pivotAcc.observeComposite(bias.rawScore);
+    }
 
     const regimeTags = regime ? regimeTagsToStrings(regime) : [];
 
@@ -999,6 +1088,7 @@ export function replayAsset(
       thesisConviction: thesis?.conviction ?? null,
       thesisDominant: thesis?.dominant ?? null,
       biasScore: bias?.score ?? null,
+      biasRawScore: bias?.rawScore ?? null,
       biasVerdict: bias?.verdict ?? null,
       biasConfidence: bias?.confidence ?? null,
       biasAgreement: bias?.agreement ?? null,
@@ -1007,7 +1097,7 @@ export function replayAsset(
         // is no verdict to bucket, so recording them would be a row of nulls
         // pretending to be an opinion.
         .filter((c): c is typeof c & { score: number; verdict: NonNullable<typeof c.verdict> } => c.score !== null && c.verdict !== null)
-        .map((c) => ({ category: c.category, score: c.score, verdict: c.verdict })),
+        .map((c) => ({ category: c.category, score: c.score, rawScore: c.rawScore ?? c.score, verdict: c.verdict })),
       metrics: metricVerdicts.map((m) => ({ id: m.id, verdict: m.verdict })),
       regimeTags,
       action: mtfBlocked
@@ -1087,7 +1177,30 @@ function main() {
   }
   const marketWide: MarketWideData = JSON.parse(fs.readFileSync(marketPath, "utf8"));
 
+  /*
+   * `--pivots=` exists so the shipped-vs-point-in-time gap can be measured
+   * without editing DEFAULT_REPLAY_CONFIG and risking the edit being left in
+   * place. It is deliberately paired with the OUT_OVERRIDE guard below: a
+   * non-default arm may not write the calibration artifact.
+   */
+  const config: ReplayConfig =
+    PIVOT_MODE_OVERRIDE === null
+      ? DEFAULT_REPLAY_CONFIG
+      : { ...DEFAULT_REPLAY_CONFIG, scorePivots: PIVOT_MODE_OVERRIDE as ReplayConfig["scorePivots"] };
+  if (PIVOT_MODE_OVERRIDE !== null) {
+    if (!["point-in-time", "shipped", "off"].includes(PIVOT_MODE_OVERRIDE)) {
+      console.error(`Unknown --pivots=${PIVOT_MODE_OVERRIDE}; expected point-in-time | shipped | off.`);
+      process.exit(1);
+    }
+    if (!OUT_OVERRIDE) {
+      console.error(`--pivots= requires --out=: a non-default arm must not overwrite results.json.`);
+      process.exit(1);
+    }
+    console.log(`[run] pivot mode: ${PIVOT_MODE_OVERRIDE}`);
+  }
+
   const allRecords: DayRecord[] = [];
+  const pivotsByAsset: Record<string, ScorePivots> = {};
   for (const asset of ["BTC", "ETH"] as const) {
     const filePath = path.join(DATA_DIR, `${asset}.json`);
     if (!fs.existsSync(filePath)) {
@@ -1095,7 +1208,9 @@ function main() {
       process.exit(1);
     }
     const data: RawAssetData = JSON.parse(fs.readFileSync(filePath, "utf8"));
-    const records = replayAsset(data, marketWide);
+    const pivotAcc = new AssetPivotAccumulator();
+    const records = replayAsset(data, marketWide, undefined, undefined, config, pivotAcc);
+    pivotsByAsset[asset] = pivotAcc.pivots();
     console.log(`[run] ${asset}: ${records.length} evaluable days (${records[0]?.date} to ${records[records.length - 1]?.date})`);
     allRecords.push(...records);
   }
@@ -1103,6 +1218,42 @@ function main() {
   const outFile = OUT_OVERRIDE ?? "results.json";
   fs.writeFileSync(path.join(DATA_DIR, outFile), JSON.stringify(allRecords, null, 2));
   console.log(`[run] wrote ${allRecords.length} total day-records to scripts/backtest/data/${outFile}`);
+
+  /*
+   * THE LIVE CALIBRATION.
+   *
+   * Live has no history to expand over — it sees one day. So it reads the
+   * pivots the replay arrived at after its whole walk, which is the same
+   * accumulator object the replay itself scored with, not a second estimate
+   * recomputed from the output. Stamped with ENGINE_VERSION because a pivot
+   * measured under a different engine is not a pivot: `pivotsForAsset`
+   * refuses a mismatched artifact and the site falls back to a hard 50.
+   *
+   * Only written by the default full run. `--out` means a variant or an
+   * ablation is being measured, and its distribution is not the shipped
+   * engine's — writing this from one would ship a calibration for an engine
+   * that does not exist.
+   */
+  if (!OUT_OVERRIDE) {
+    const through = allRecords.reduce((latest, r) => (r.date > latest ? r.date : latest), "");
+    const artifact: ScorePivotArtifact = {
+      engineVersion: ENGINE_VERSION,
+      generatedAt: new Date().toISOString(),
+      through,
+      assets: pivotsByAsset,
+    };
+    const pivotPath = path.join(__dirname, "..", "..", "src", "data", "scorePivots.json");
+    fs.writeFileSync(pivotPath, JSON.stringify(artifact, null, 2) + "\n");
+    for (const [asset, p] of Object.entries(pivotsByAsset)) {
+      const cats = Object.entries(p.categories)
+        .map(([c, e]) => `${c}=${e.pivot} (n=${e.n})`)
+        .join(", ");
+      console.log(
+        `[run] ${asset} pivots: composite=${p.composite ? `${p.composite.pivot} (n=${p.composite.n})` : "none"}; ${cats || "no category pivot credible"}`
+      );
+    }
+    console.log(`[run] wrote src/data/scorePivots.json through ${through} for engine ${ENGINE_VERSION}`);
+  }
 }
 
 // Guarded, not unconditional: rolling.ts imports `replayAsset` from this

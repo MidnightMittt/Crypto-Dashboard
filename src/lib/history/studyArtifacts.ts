@@ -103,6 +103,18 @@ export const BLOCKED_ON_BACKTEST_CORPUS: readonly UnrefreshedArtifact[] = [
   { repoPath: "src/data/backtestStats.json", generator: "scripts/backtest/report.ts", blockedBy: "COINALYZE_API_KEY" },
   { repoPath: "src/data/historicalFingerprints.json", generator: "scripts/backtest/report.ts", blockedBy: "COINALYZE_API_KEY" },
   { repoPath: "src/data/executionStats.json", generator: "scripts/backtest/executionReport.ts", blockedBy: "COINALYZE_API_KEY" },
+  /*
+   * The only entry here the LIVE SITE reads at request time rather than
+   * publishing as a statistic — aggregator.ts recentres every crypto score
+   * against it (9.1.0). Staleness therefore changes decisions, not a report.
+   *
+   * It fails safe: `pivotsForAsset` refuses an artifact whose engineVersion
+   * does not match the running engine, so a bump without a regeneration
+   * reverts the site to 8.0.0's hard 50 rather than applying a calibration
+   * measured on a different engine. scorePivots.test.ts fails loudly in that
+   * state, so the safe fallback cannot be reached silently.
+   */
+  { repoPath: "src/data/scorePivots.json", generator: "scripts/backtest/run.ts", blockedBy: "COINALYZE_API_KEY" },
 ];
 
 /** Distinct scripts to invoke, in manifest order, each named once. */

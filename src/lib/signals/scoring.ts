@@ -1,4 +1,5 @@
 import { MetricVerdict, Verdict } from "./types";
+import { PivotEstimate, recentreScore } from "./scorePivots";
 
 /**
  * The one weighted-scoring implementation, shared by the overall market
@@ -312,8 +313,15 @@ export function verdictFromScore(score: number): Verdict {
 }
 
 export interface WeightedScoreResult {
-  /** 0-100, 50 exactly neutral. A weighted sum of opinions — not a probability. */
+  /**
+   * 0-100, 50 neutral. A weighted sum of opinions — not a probability.
+   * Recentred against this scope's own history when a credible pivot was
+   * supplied, so 50 means "typical for this engine" rather than "the metrics
+   * happened to cancel" — see scorePivots.ts for why those are different.
+   */
   score: number;
+  /** Before recentring. Equal to `score` when no pivot was applied. */
+  rawScore: number;
   verdict: Verdict;
   /** Weighted-average evidence quality across the contributing metrics. */
   confidence: number;
@@ -329,7 +337,14 @@ export interface WeightedScoreResult {
  */
 export function computeWeightedScore(
   metrics: MetricVerdict[],
-  weightFn: (id: string) => number
+  weightFn: (id: string) => number,
+  /**
+   * Where this scope actually sits when it has nothing to say. Omitted or
+   * null pivots on 50 — the behavior every caller had before scorePivots.ts
+   * existed, and the one the uncalibrated equity/state-basis path in
+   * search/liveAnalysis.ts deliberately keeps.
+   */
+  pivot: PivotEstimate | null = null
 ): WeightedScoreResult | null {
   let weightedSum = 0;
   let totalWeight = 0;
@@ -376,10 +391,12 @@ export function computeWeightedScore(
    */
   const evidenceMass = confidenceWeightTotal > 0 ? totalWeight / confidenceWeightTotal : 0;
   const normalized = (weightedSum / totalWeight) * evidenceMass;
-  const score = Math.round(50 + normalized * 50);
+  const rawScore = Math.round(50 + normalized * 50);
+  const score = recentreScore(rawScore, pivot);
 
   return {
     score,
+    rawScore,
     verdict: verdictFromScore(score),
     confidence:
       confidenceWeightTotal > 0 ? Math.round(confidenceWeightedSum / confidenceWeightTotal) : 0,

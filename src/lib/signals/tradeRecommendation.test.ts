@@ -21,6 +21,7 @@ function baseBias(overrides: Partial<MarketBias> = {}): MarketBias {
     asset: "BTC",
     basis: "edge",
     score: 50,
+    rawScore: 50,
     verdict: "neutral",
     confidence: 60,
     agreement: 50,

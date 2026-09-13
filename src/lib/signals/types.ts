@@ -109,6 +109,14 @@ export interface CategoryScore {
   category: Category;
   label: string;
   score: number | null;
+  /**
+   * The score before it was recentred against this category's own history
+   * (scorePivots.ts). Equal to `score` for an uncalibrated asset. Kept so the
+   * untranslated evidence balance stays inspectable — Positioning reading a
+   * raw 33 against a typical 33 is a different statement from Positioning
+   * reading 50, and the page should be able to make both.
+   */
+  rawScore: number | null;
   verdict: Verdict | null;
   confidence: number;
   /** The single highest-ranked contributing metric's own explanation, reused verbatim. */
@@ -158,6 +166,12 @@ export interface MarketBias {
    */
   basis: "edge" | "state";
   score: number;
+  /**
+   * The composite before it was recentred against this asset's own history
+   * (scorePivots.ts). Equal to `score` for an uncalibrated asset — every
+   * equity, and every symbol outside the BTC/ETH replay universe.
+   */
+  rawScore: number;
   verdict: Verdict;
   /** Aggregate evidence quality across contributing metrics. */
   confidence: number;

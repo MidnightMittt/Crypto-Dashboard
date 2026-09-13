@@ -7,6 +7,7 @@ import {
   Verdict,
 } from "./types";
 import { computeWeightedScore, metricWeight, rankMetric, verdictFromScore } from "./scoring";
+import { NEUTRAL_PIVOTS, ScorePivots, recentreScore } from "./scorePivots";
 import { regimeAdjustedCategoryWeights } from "./regimeWeights";
 import { RegimeTags } from "@/lib/technicals/regimes";
 import { TechnicalRead } from "@/types/market";
@@ -208,10 +209,12 @@ function metricsForCategory(metrics: MetricVerdict[], category: Category): Metri
 export function buildCategoryScore(
   metrics: MetricVerdict[],
   category: Category,
-  weightFn: (id: string) => number = metricWeight
+  weightFn: (id: string) => number = metricWeight,
+  /** This category's own historical centre — see scorePivots.ts. */
+  pivots: ScorePivots = NEUTRAL_PIVOTS
 ): CategoryScore | null {
   const contributing = metricsForCategory(metrics, category);
-  const result = computeWeightedScore(contributing, weightFn);
+  const result = computeWeightedScore(contributing, weightFn, pivots.categories[category] ?? null);
 
   /*
    * No voter reported, but reads exist → a CONTEXT-ONLY category: displayed,
@@ -227,6 +230,7 @@ export function buildCategoryScore(
       category,
       label: CATEGORY_LABELS[category],
       score: null,
+      rawScore: null,
       verdict: null,
       confidence: Math.round(contributing.reduce((s, m) => s + m.confidence, 0) / contributing.length),
       topReason: `${top.label}: ${top.explanation}`,
@@ -243,6 +247,7 @@ export function buildCategoryScore(
     category,
     label: CATEGORY_LABELS[category],
     score: result.score,
+    rawScore: result.rawScore,
     verdict: result.verdict,
     confidence: result.confidence,
     topReason: top ? `${top.label}: ${top.explanation}` : "No contributing metric currently reports.",
@@ -253,9 +258,10 @@ export function buildCategoryScore(
 /** Every category with at least one contributing metric, in display order. */
 export function buildAllCategories(
   metrics: MetricVerdict[],
-  weightFn: (id: string) => number = metricWeight
+  weightFn: (id: string) => number = metricWeight,
+  pivots: ScorePivots = NEUTRAL_PIVOTS
 ): CategoryScore[] {
-  return CATEGORY_ORDER.map((c) => buildCategoryScore(metrics, c, weightFn)).filter(
+  return CATEGORY_ORDER.map((c) => buildCategoryScore(metrics, c, weightFn, pivots)).filter(
     (c): c is CategoryScore => c !== null
   );
 }
@@ -287,6 +293,8 @@ export function aggregateConflicts(metrics: MetricVerdict[]): string[] {
 
 export interface CombinedCategoryScore {
   score: number;
+  /** Before recentring. Equal to `score` for an uncalibrated asset. */
+  rawScore: number;
   verdict: Verdict;
   confidence: number;
 }
@@ -302,10 +310,21 @@ export interface CombinedCategoryScore {
  * regimeWeights.ts's regimeAdjustedCategoryWeights — null reproduces the
  * exact pre-regime-adjustment behavior, so every caller not yet passing a
  * regime sees zero change.
+ *
+ * THE LINE BELOW IS WHERE THE HARD 50 DID ITS DAMAGE. `(c.score - 50) / 50`
+ * declares 50 to be each category's neutral point. Positioning's ordinary
+ * reading is 33, so on a completely unremarkable day it handed the composite
+ * a -0.34 bearish pull that no metric had asked for, and that is most of why
+ * the composite's own median was 41 rather than 50. The categories arriving
+ * here are already recentred by `buildCategoryScore`, so the 50 in that
+ * expression is now true of them. `compositePivot` corrects the residual
+ * left over after combining — see scorePivots.ts on why one correction does
+ * not finish the job.
  */
 export function combineCategoryScores(
   categories: CategoryScore[],
-  regime: RegimeTags | null = null
+  regime: RegimeTags | null = null,
+  compositePivot: ScorePivots["composite"] = null
 ): CombinedCategoryScore | null {
   const weights = regimeAdjustedCategoryWeights(CATEGORY_WEIGHTS, regime);
   let weightedSum = 0;
@@ -333,10 +352,12 @@ export function combineCategoryScores(
   if (totalWeight <= 0) return null;
 
   const normalized = weightedSum / totalWeight;
-  const score = Math.round(50 + normalized * 50);
+  const rawScore = Math.round(50 + normalized * 50);
+  const score = recentreScore(rawScore, compositePivot);
 
   return {
     score,
+    rawScore,
     verdict: verdictFromScore(score),
     confidence: confWeightTotal > 0 ? Math.round(confWeightedSum / confWeightTotal) : 0,
   };

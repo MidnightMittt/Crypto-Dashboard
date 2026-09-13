@@ -22,7 +22,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { replayAsset, RawAssetData, MarketWideData, DayRecord, ReplayConfig } from "./run";
+import { replayAsset, RawAssetData, MarketWideData, DayRecord, ReplayConfig, DEFAULT_REPLAY_CONFIG } from "./run";
 import { computeTradeStats, TradeStats } from "./tradeStats";
 import { buildWalkForward, WalkForwardTrade } from "./walkForward";
 import { DEFAULT_SWING_CONFIG } from "../../src/lib/signals/swingThesis";
@@ -43,31 +43,35 @@ interface Variant {
  * Adding a third binary component would quadruple the comparison surface and
  * start manufacturing the multiple-comparisons problem this codebase spends
  * real effort controlling elsewhere.
+ *
+ * Every cell spreads DEFAULT_REPLAY_CONFIG first, so a component this 2x2 is
+ * NOT varying (the 9.1.0 score pivots) is held at its production setting in
+ * all four rather than silently switching off in whichever cell forgot it.
  */
 const VARIANTS: Variant[] = [
   {
     key: "fixed",
     label: "A. Fixed weights (control)",
     rationale: "CATEGORY_WEIGHTS applied unmodified. The true baseline — what the engine does with no regime adaptation at all.",
-    config: { useRegimeWeights: false, requireMtfNotWeakening: false, swing: DEFAULT_SWING_CONFIG },
+    config: { ...DEFAULT_REPLAY_CONFIG, useRegimeWeights: false, requireMtfNotWeakening: false, swing: DEFAULT_SWING_CONFIG },
   },
   {
     key: "regime",
     label: "B. Regime weights (currently shipped)",
     rationale: "regimeAdjustedCategoryWeights active. This is production today, and has never been measured against A.",
-    config: { useRegimeWeights: true, requireMtfNotWeakening: false, swing: DEFAULT_SWING_CONFIG },
+    config: { ...DEFAULT_REPLAY_CONFIG, useRegimeWeights: true, requireMtfNotWeakening: false, swing: DEFAULT_SWING_CONFIG },
   },
   {
     key: "fixed+mtf",
     label: "C. Fixed weights + MTF gate",
     rationale: "Selectivity alone: block ENTER when the 4H read weakens the thesis, no regime weighting.",
-    config: { useRegimeWeights: false, requireMtfNotWeakening: true, swing: DEFAULT_SWING_CONFIG },
+    config: { ...DEFAULT_REPLAY_CONFIG, useRegimeWeights: false, requireMtfNotWeakening: true, swing: DEFAULT_SWING_CONFIG },
   },
   {
     key: "regime+mtf",
     label: "D. Regime weights + MTF gate",
     rationale: "Both components together — tests whether they compose or overlap.",
-    config: { useRegimeWeights: true, requireMtfNotWeakening: true, swing: DEFAULT_SWING_CONFIG },
+    config: { ...DEFAULT_REPLAY_CONFIG, useRegimeWeights: true, requireMtfNotWeakening: true, swing: DEFAULT_SWING_CONFIG },
   },
 ];
 

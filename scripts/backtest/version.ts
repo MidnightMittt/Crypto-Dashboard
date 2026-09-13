@@ -389,8 +389,177 @@ import { DEFAULT_COST_CONFIG, CostConfig } from "./costs";
  * side fall back to longShortRatio on ~98% of days, collapsing it into the
  * ratio-only read that 5.0.0 retired longShort for being — and destroying the
  * stated reason squeezeRisk was kept over it.
+ *
+ * 9.1.0: every score now finds its neutral point from its own history instead
+ * of assuming 50 (src/lib/signals/scorePivots.ts). This is the investigation
+ * 8.0.0's last paragraph asked for, and it is a CALIBRATION FIX. Read the
+ * disclosure section before quoting any number from it.
+ *
+ * ── The defect ──────────────────────────────────────────────────────────
+ *
+ * `verdictFromScore` calls <=44 bearish and >=56 bullish. Those thresholds
+ * assume the score is centred on 50. It is not, and never was:
+ *
+ *   scope             median score (2,896 replayed asset-days)
+ *   composite              41        73-82% of days below 50
+ *   positioning            33 BTC / 32 ETH   81-94% below 50
+ *
+ * The arithmetic is in `combineCategoryScores`: `((c.score - 50) / 50) * w`
+ * hardcodes 50 as each category's neutral point, so positioning's typical 33
+ * contributes a permanent -0.34 bearish pull on an ordinary day. Nothing was
+ * bearish about that day. The scoring function simply does not centre there.
+ *
+ * The consequence is not subtle. 61.9% of all replayed days shipped a bearish
+ * verdict, and those 1,793 days preceded a mean 7-day return of +0.326% — a
+ * RISE. The verdict was not weak, it was pointing the wrong way, and it did so
+ * on the majority of days the site was up.
+ *
+ * ── The fix, and why it translates rather than moving the threshold ─────
+ *
+ * A point-in-time expanding median of each scope's own prior history becomes
+ * that scope's neutral point; the score is translated so that pivot lands on
+ * 50. The threshold stays at 44/56.
+ *
+ * Moving the threshold instead would have been less code and worse. The score
+ * is published — it appears on the dashboard, in the API, in every AI summary
+ * — and "38, which is neutral" is not something a user can be asked to hold in
+ * their head. Translation keeps ONE meaning of 50 across the whole product.
+ *
+ * Expanding, not rolling: the pivot describes the ENGINE, whose distribution
+ * is fixed for as long as ENGINE_VERSION is, and it needs no fitted window
+ * length. pivotEffect.ts prints the window sensitivity as a check and says in
+ * its own header that reading a length off that table would be selecting a
+ * constant from an outcome table.
+ *
+ * ── Two design defects my own measurement caught ────────────────────────
+ *
+ * (1) A sigma gate alone was not enough. `leadingDrivers` has median 47 and
+ * was already 53.7% below 50 — the one scope that needed nothing — and it
+ * cleared a 2-sigma test on a 3-point offset because SE was 0.65. Recentred,
+ * it overshoots: pivotEffect §1 still shows the point-in-time arm, which does
+ * correct it for part of the walk, at median 59 with 25.3% of days below 50.
+ * The correction made the only healthy scope sick. Fixed by PIVOT_MIN_OFFSET, a materiality
+ * floor pinned to DIRECTIONAL_THRESHOLD. A pivot must be at least as large as
+ * the deadband it shifts, or the correction is below the resolution of the
+ * verdict it corrects.
+ *
+ * (2) A ratchet — once credible, always credible — was tried and removed.
+ * leadingDrivers' running median started near 25 (genuinely material), latched
+ * the ratchet, then drifted to 47 while the latch kept applying a correction
+ * the scope no longer needed. Materiality is a claim about the present, not a
+ * qualification a scope keeps. The jitter the ratchet guarded against is
+ * bounded (exactly PIVOT_MIN_OFFSET points) and rare.
+ *
+ * ── What actually ships: one pivot ──────────────────────────────────────
+ *
+ * After both gates the ONLY surviving pivot is positioning, 33 for BTC and 32
+ * for ETH. The composite's own residual offset falls below the floor once
+ * positioning is corrected, so it gets nothing and centres itself as a
+ * consequence: median 41 -> 53. leadingDrivers gets nothing. The engine is
+ * therefore "recentre positioning, let the composite follow".
+ *
+ * Residual disclosed: 53, not 50. The composite is corrected indirectly, so it
+ * lands 3 points high. That is inside the deadband and is not chased.
+ *
+ * ── HONEST DISCLOSURE: the deployed change buys no separation ───────────
+ *
+ * Measured POINT-IN-TIME, bullish-minus-bearish 7d separation goes +1.740% ->
+ * +3.186% and the paired improvement is +1.445%, SE 0.988, t = 1.46. That
+ * number describes an engine that will not run.
+ *
+ * Live has no history to expand over. It reads the committed artifact, which
+ * is the pivot set the walk ENDED on. Replaying against that artifact instead
+ * (`--pivots=shipped`) gives separation +1.861% and a deployed improvement of
+ * +0.120%, SE 0.793, t = 0.15. Nothing.
+ *
+ * The whole gap is leadingDrivers. Point-in-time recentred it by a median +19
+ * points on 1,878 of 2,896 asset-days, from 2022-09-13 to 2025-04-08, and then
+ * it stopped qualifying. That was not cheating — its offset was genuinely
+ * large and genuinely knowable at the time. The scope has since re-centred for
+ * real (raw median by year: 25, 31, 54.5, 59, 50), so the final artifact
+ * correctly excludes it and live will never apply it. The mechanism worked on
+ * a disease that has since cured itself. Nothing is recoverable: positioning
+ * is the only scope still off-centre, and it is stationary (39, 36, 39, 32, 32
+ * by year — never once near 50).
+ *
+ * ── What IS claimed, and it is the thing 8.0.0 asked for ────────────────
+ *
+ * Paired panel, 9.0.0 against the shipped artifact, same 2,896 asset-days,
+ * 10-day blocks, 4,000 draws, BTC and ETH drawn together. The control is the
+ * SAME TREE with `--pivots=off`, not a results.json copied aside — 9.0.0's own
+ * entry records what a stale baseline manufactures:
+ *
+ *   bearish verdict, mean fwd 7d   +0.326% -> -0.890%   d -1.215%  t = -2.76
+ *   bullish verdict, mean fwd 7d   +2.066% -> +0.971%   d -1.095%  t = -1.72
+ *   share of days called bearish     61.9% ->   25.7%   d -36.2pp  t = -18.5
+ *
+ * The bearish verdict stops preceding a rise. That is a SIGN fix on the
+ * majority verdict, and it is significant. It is also why separation is flat:
+ * the bullish leg dilutes by almost exactly as much as the bearish leg gains,
+ * so the spread between them barely moves. Both facts are true and both are
+ * printed above; quoting the first without the second would be dishonest.
+ *
+ * This is shipped on correctness, not performance. A verdict that reads
+ * "bearish" on 62% of days while those days rise is broken whether or not
+ * fixing it improves a t-statistic. §4 of the charter — never output a bare
+ * verdict the evidence does not support — is the argument, and the separation
+ * statistic declining to endorse it does not change that.
+ *
+ * ── Replay diff, 9.0.0 -> 9.1.0 (shipped arm), same 2,896 days ──────────
+ *
+ *   verdict     9.0.0                9.1.0
+ *   bullish       377  13.0%          1033  35.7%
+ *   neutral       726  25.1%          1119  38.6%
+ *   bearish      1793  61.9%           744  25.7%
+ *
+ *   book        n     expectancy   PF        n     expectancy   PF
+ *   long      239       +2.141%   2.734    567       +1.058%   1.598
+ *   short     961       -0.128%   0.945    448       +0.628%   1.321
+ *
+ * The short book stops losing money — 8.0.0's closing question, answered. The
+ * book is in-sample and moves for reasons unrelated to verdict quality; it is
+ * a consequence of the claim above, not the evidence for it, exactly as 8.0.0
+ * said of its own improved record.
+ *
+ * ── The artifact is frozen, and that is a real limitation ───────────────
+ *
+ * src/data/scorePivots.json is regenerated only by a full replay, which needs
+ * the backtest corpus and COINALYZE_API_KEY. CI has neither, so the artifact
+ * does not refresh on its own and live drifts further from point-in-time as
+ * time passes. Tolerable today because the one shipped pivot is stationary and
+ * estimated on n=1,448 — a month of new days barely moves an expanding median
+ * at that n — but it is a standing obligation to re-run the replay, not a
+ * solved problem. `pivotsForAsset` refuses an artifact stamped for a different
+ * ENGINE_VERSION and the site falls back to a hard 50, so the failure mode is
+ * reverting to 9.0.0's behaviour rather than shipping a stale correction.
+ *
+ * ── Landed on top of 9.0.0, and re-measured rather than rebased ─────────
+ *
+ * This work was measured against 8.0.0 and was ready to ship as 9.0.0 when
+ * the funding-convention change landed first and took that number. Renumbering
+ * would not have been enough: `fundingBandVerdict` is a POSITIONING metric,
+ * and positioning is the one and only scope this entry recentres, so the
+ * artifact would have been a calibration of a superseded engine.
+ *
+ * Re-run end to end on the merged tree, the pivots are unchanged — 33 BTC,
+ * 32 ETH — and every statistic above moved by less than its own SE. That is
+ * what 9.0.0's table predicted: 32 funding flips moved the composite on 26 of
+ * 2,896 days by at most 2 points and changed no verdict, so the control arm's
+ * verdict distribution is identical. The agreement is the check, not a reason
+ * to have skipped it.
+ *
+ * Measurements: scripts/audit/pivotEffect.ts (§6 is the deployed arm, and now
+ * prints the per-leg claim and the deployed book — three numbers this entry
+ * previously quoted from an out-of-band computation, one of which was wrong:
+ * the long book is 567 at +1.058%, not 581 at +1.098%).
  */
-export const ENGINE_VERSION = "9.0.0";
+/*
+ * Re-exported, not declared. The value lives in src/lib/signals/engineVersion.ts
+ * because the live site has to check the scorePivots calibration against it and
+ * must not import a backtest script to do so. Bump it there; document it here.
+ */
+import { ENGINE_VERSION } from "../../src/lib/signals/engineVersion";
+export { ENGINE_VERSION };
 
 /**
  * Bump when the meaning or shape of the replayed FEATURES changes — a new
