@@ -207,6 +207,12 @@ export interface PaperRecord {
  * FNV-1a rather than a crypto hash: this runs in a module that may be bundled
  * for the browser, and the requirement is only that a changed declaration
  * produces a changed string — not that the string is hard to forge.
+ *
+ * The fields are joined on NUL because it cannot occur inside any of them, so
+ * ["ab", "c"] and ["a", "bc"] cannot canonicalise to the same string. Keep it
+ * written as the escape `\0` and never as a literal control byte: a raw NUL
+ * makes this file binary to grep, and any tool that strips control characters
+ * would silently move EVERY fingerprint at once.
  */
 export function fingerprintDeclaration(d: PaperDeclaration): string {
   const canonical = [
@@ -220,7 +226,7 @@ export function fingerprintDeclaration(d: PaperDeclaration): string {
     d.costNote,
     d.independenceBasis,
     d.killCriteria,
-  ].join(" ");
+  ].join("\0");
   let h = 0x811c9dc5;
   for (let i = 0; i < canonical.length; i++) {
     h ^= canonical.charCodeAt(i);
