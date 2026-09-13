@@ -88,7 +88,8 @@ export interface OptionOrderInputs {
   /** Trading sessions until expiry, approximated by the route and echoed. */
   sessionsToExpiry: number;
   livePrice: LivePrice | null;
-  priceAgeSessions: number;
+  /** Null = no stored close exists for this symbol; see PretradeInputs. */
+  priceAgeSessions: number | null;
   nowMs: number;
 }
 

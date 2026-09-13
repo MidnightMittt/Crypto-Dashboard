@@ -202,6 +202,34 @@ describe("runPretradeChecks", () => {
     expect(c.detail).toContain("as stale as the price");
   });
 
+  /*
+   * NULL age is "no stored close exists", not "very stale". Counting sessions
+   * for a symbol outside the panel would date the panel's newest session for
+   * some OTHER name — a number wearing this symbol's clothes. Unknown, and it
+   * names the cure.
+   */
+  it("reports unknown, not a session count, when no stored close exists", () => {
+    const r = runPretradeChecks(clean({ priceAgeSessions: null }));
+    const c = check(r, "data_freshness");
+    expect(c.status).toBe("unknown");
+    expect(c.detail).toContain("No stored close exists");
+    expect(c.detail).toContain("live_price");
+    expect(r.verdict).toBe("incomplete");
+  });
+
+  /* And a live price restores a full judgement — the uncovered-name path. */
+  it("judges a supplied live price normally even with no stored close", () => {
+    const r = runPretradeChecks(
+      clean({
+        priceAgeSessions: null,
+        livePrice: { value: 20.1, asOfMs: Date.UTC(2026, 7, 21, 18, 59, 30), source: "broker_mid" },
+      })
+    );
+    const c = check(r, "data_freshness");
+    expect(c.status).toBe("pass");
+    expect(c.detail).toContain("broker_mid");
+  });
+
   /* A blocked trade must be arguable: every check carries figures to argue with. */
   it("gives every check a detail sentence and data to re-derive it", () => {
     const r = runPretradeChecks(clean({ stop: 16, stopSurvival: { survival: 0.5, independentN: 9 } }));

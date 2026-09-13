@@ -13,6 +13,7 @@ import { parseHeldPositions } from "@/lib/pretrade/parseHeldPositions";
 // One implementation of "what does this cost to trade" — see measuredSpread.ts.
 import { measuredRoundTripBp } from "@/lib/execution/measuredSpread";
 import { BreakevenReach, runOptionOrderChecks } from "@/lib/pretrade/optionOrder";
+import { REQUEST_SHAPE, collectShapeDefects } from "@/lib/pretrade/requestShape";
 import { parseOptionLeg } from "@/lib/portfolio/buildPortfolio";
 import { reachAt } from "@/lib/research/exitDesign";
 
@@ -28,6 +29,24 @@ import { reachAt } from "@/lib/research/exitDesign";
  * one job: turn a symbol into the measurements that engine needs, and say
  * plainly when a measurement does not exist. Every "unknown" below is a real
  * absence rather than a failure to look.
+ *
+ * Two contracts added after the endpoint was tested cold by its own caller:
+ *
+ *  - ALL SHAPE DEFECTS IN ONE 400. Discovering the request shape used to
+ *    take four round trips, one field per error. Shape validation now lives
+ *    in requestShape.ts and names everything wrong at once, and GET on this
+ *    path returns the full shape with worked examples before a POST is ever
+ *    sent.
+ *
+ *  - A SYMBOL OUTSIDE THE BARS PANEL GETS A PARTIAL AUDIT, NOT A REFUSAL.
+ *    Most checks need only the order and the account; refusing all of them
+ *    because history is missing declined to audit the exact names most
+ *    likely to be traded on a thesis rather than a signal. The engines
+ *    already report unknown per missing measurement — the flat 404 here was
+ *    the only thing in the stack that refused. The response's `coverage`
+ *    block says plainly what is missing and what it costs, and the verdict
+ *    arithmetic is unchanged: unknowns make an audit INCOMPLETE, never a
+ *    pass.
  */
 
 export const dynamic = "force-dynamic";
@@ -77,12 +96,43 @@ function betaOf(symbol: string): number | null {
 }
 
 
+/** GET — the request shape, before the first POST is ever sent. */
+export async function GET(): Promise<NextResponse> {
+  return NextResponse.json(REQUEST_SHAPE);
+}
+
 export async function POST(req: NextRequest): Promise<NextResponse> {
   let body: Record<string, unknown>;
   try {
     body = (await req.json()) as Record<string, unknown>;
   } catch {
-    return NextResponse.json({ error: "body must be JSON" }, { status: 400 });
+    return NextResponse.json(
+      { error: "body must be JSON", see: "GET /api/pretrade/check for the request shape" },
+      { status: 400 }
+    );
+  }
+
+  const nowMs = Date.now();
+
+  /*
+   * EVERY shape defect at once — one 400 for the whole body, never a chain
+   * of them. The held book is parsed here too, so a malformed position row
+   * surfaces in the same response as a missing premium instead of on the
+   * round trip after it.
+   */
+  const defects = collectShapeDefects(body, nowMs);
+  const parsedHeld = parseHeldPositions(body.existing_positions, nowMs);
+  if (!parsedHeld.ok) defects.push(parsedHeld.error);
+  const heldRows = parsedHeld.ok ? parsedHeld.positions : [];
+  if (defects.length > 0) {
+    return NextResponse.json(
+      {
+        error: `${defects.length} defect${defects.length === 1 ? "" : "s"} in the request — all named below, none discovered on a later round trip.`,
+        defects,
+        see: "GET /api/pretrade/check for the full shape, what each optional field unlocks, and worked examples for both paths.",
+      },
+      { status: 400 }
+    );
   }
 
   const symbol = String(body.symbol ?? "").trim().toUpperCase();
@@ -93,58 +143,51 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const accountValue = Number(body.account_value);
   const isOptionOrder = body.option_order !== undefined && body.option_order !== null;
 
-  if (!symbol || !Number.isFinite(accountValue)) {
-    return NextResponse.json(
-      { error: "symbol and account_value are required and must be numeric" },
-      { status: 400 }
-    );
-  }
-  if (!isOptionOrder && (!Number.isFinite(shares) || !Number.isFinite(entry) || !Number.isFinite(stop))) {
-    return NextResponse.json(
-      { error: "shares, entry and stop are required for an equity audit (or send option_order for a defined-risk option audit)" },
-      { status: 400 }
-    );
-  }
-
-  /*
-   * live_price is all-or-nothing. A supplied price without an as_of cannot
-   * be dated; without a source it cannot be argued with. Accepting a partial
-   * one and quietly falling back would be the exact failure this endpoint
-   * already had once: a field accepted and silently unused. So a malformed
-   * live_price is a 400 naming the defect, never a shrug.
-   */
+  // Complete by construction — collectShapeDefects already rejected a partial one.
   let livePrice: LivePrice | null = null;
   if (body.live_price !== undefined && body.live_price !== null) {
     const lp = body.live_price as Record<string, unknown>;
-    const value = Number(lp.value);
-    const asOfMs = typeof lp.as_of === "string" ? Date.parse(lp.as_of) : NaN;
-    const source = typeof lp.source === "string" ? lp.source.trim() : "";
-    const defects: string[] = [];
-    if (!(Number.isFinite(value) && value > 0)) defects.push("value must be a positive number");
-    if (!Number.isFinite(asOfMs)) defects.push("as_of must be an ISO timestamp");
-    if (!source) defects.push("source must name where the price came from (e.g. broker_bid)");
-    if (defects.length > 0) {
-      return NextResponse.json(
-        {
-          error: `live_price is incomplete: ${defects.join("; ")}.`,
-          hint: 'Send all three or none: {"live_price":{"value":15.75,"as_of":"2026-08-21T19:59:59Z","source":"broker_bid"}}',
-        },
-        { status: 400 }
-      );
-    }
-    livePrice = { value, asOfMs, source };
+    livePrice = {
+      value: Number(lp.value),
+      asOfMs: Date.parse(String(lp.as_of)),
+      source: String(lp.source).trim(),
+    };
   }
 
+  /*
+   * ── COVERAGE, NOT PERMISSION ─────────────────────────────────────────
+   *
+   * A symbol outside the bars panel used to be a flat 404 — which meant the
+   * auditor declined the exact trade most in need of auditing: a name
+   * traded on a thesis this week rather than a signal in the universe. The
+   * engines already degrade honestly per missing measurement, so the route
+   * now resolves what it can and states what it cannot:
+   *
+   *   runs in full: max_loss, deployment_cap, reachability, earnings_window
+   *   needs bars:   beta_exposure, stop_survival / breakeven reach
+   *                 probability, cost
+   *   needs a price: breakeven distance — recoverable via live_price
+   *
+   * The block below is LOUD in the response because the other reading of an
+   * uncovered symbol is a typo, and a mostly-unknown audit must not be
+   * mistaken for a measured one. The verdict already cannot be: unknowns
+   * reduce to INCOMPLETE, never to pass.
+   */
   const sp = panel.symbols[symbol];
-  if (!sp) {
-    return NextResponse.json(
-      {
-        error: `${symbol} is not in the positioning universe this endpoint covers.`,
-        hint: "Declared in src/lib/markets/scannerUniverse.ts (positioningUniverse).",
-      },
-      { status: 404 }
-    );
-  }
+  const covered = sp !== undefined;
+  const coverage = covered
+    ? { bars: true as const }
+    : {
+        bars: false as const,
+        note:
+          `${symbol} has no committed daily bars — it is outside the ingest universe declared ` +
+          `in src/lib/markets/scannerUniverse.ts. This audit is PARTIAL: checks needing only ` +
+          `the order and account ran in full; checks needing this name's history ` +
+          `(beta_exposure, ${isOptionOrder ? "breakeven reach probability" : "stop_survival, cost"}) ` +
+          `report unknown rather than a number. Supply live_price to recover the ` +
+          `price-dependent checks. If you expected coverage, check the spelling; if the name ` +
+          `is newly traded, ask for it to be added to the universe.`,
+      };
 
   /*
    * Parsed all-or-nothing. This used to read `Number(p.shares) || 0`, and
@@ -162,12 +205,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
    * beta_exposure counts). Beta is MEASURED here rather than trusted from
    * the caller, so the book's exposure is computed the same way for every
    * position; the underlying price is the caller's snapshot when supplied,
-   * else our last close.
+   * else our last close. Parsed above with the shape pass — a malformed row
+   * lands in the same 400 as every other defect.
    */
-  const parsedHeld = parseHeldPositions(body.existing_positions, Date.now());
-  if (!parsedHeld.ok) {
-    return NextResponse.json({ error: parsedHeld.error }, { status: 400 });
-  }
   const lastCloseOf = (sym: string): number | null => {
     const held = panel.symbols[sym];
     if (!held) return null;
@@ -175,7 +215,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const close = bars[bars.length - 1]?.close;
     return Number.isFinite(close) && close > 0 ? close : null;
   };
-  const existingPositions: HeldPosition[] = parsedHeld.positions.map((p) => {
+  const existingPositions: HeldPosition[] = heldRows.map((p) => {
     const beta = betaOf(p.symbol);
     if (p.kind === "equity") {
       const capital = p.shares * p.price;
@@ -198,10 +238,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     };
   });
 
-  const bars = realBars(panel.sessions, sp);
+  const bars = sp ? realBars(panel.sessions, sp) : [];
   const today = latestCompletedSession(new Date());
   const lastSession = panel.sessions[panel.sessions.length - 1] ?? today;
-  const priceAgeSessions = sessionsBetween(lastSession, today);
+  /*
+   * Null, not the panel's global age, for an uncovered symbol: the panel's
+   * newest session dates OTHER names' closes, and this one has no close to
+   * date. The freshness check states that instead of counting sessions.
+   */
+  const priceAgeSessions = covered ? sessionsBetween(lastSession, today) : null;
   const buyingPowerUsd = Number.isFinite(Number(body.buying_power)) ? Number(body.buying_power) : null;
 
   /*
@@ -229,22 +274,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         { status: 400 }
       );
     }
+    /*
+     * Contracts, premium and the leg were all validated by the shape pass —
+     * every defect already surfaced in the single 400 above. Re-derived here
+     * because the shape pass validates and this path consumes; the ok-check
+     * is type narrowing, not a reachable branch.
+     */
     const contracts = Number(oo.contracts ?? 1);
-    if (!Number.isInteger(contracts) || contracts < 1) {
-      return NextResponse.json(
-        { error: `option_order.contracts must be a positive integer, got ${String(oo.contracts)}.` },
-        { status: 400 }
-      );
-    }
     const premium = Number(oo.premium);
-    if (!(Number.isFinite(premium) && premium > 0)) {
-      return NextResponse.json(
-        { error: "option_order.premium is required: the PER-CONTRACT premium (0.86, not 86)." },
-        { status: 400 }
-      );
-    }
-    // Same validator the portfolio and the held book use — one contract
-    // cannot be a valid leg to one path and an invalid one to another.
     const parsedLeg = parseOptionLeg(
       symbol,
       {
@@ -254,7 +291,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         delta: oo.delta === undefined || oo.delta === null ? undefined : Number(oo.delta),
         multiplier: oo.multiplier === undefined || oo.multiplier === null ? undefined : Number(oo.multiplier),
       },
-      Date.now()
+      nowMs
     );
     if (!parsedLeg.ok) {
       return NextResponse.json({ error: parsedLeg.reason }, { status: 400 });
@@ -274,7 +311,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
      */
     const calendarDays = Math.max(
       0,
-      Math.round((Date.parse(`${leg.expiry}T23:59:59Z`) - Date.now()) / 86_400_000)
+      Math.round((Date.parse(`${leg.expiry}T23:59:59Z`) - nowMs) / 86_400_000)
     );
     const sessionsToExpiry = Math.max(1, Math.round((calendarDays * 5) / 7));
 
@@ -334,11 +371,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       sessionsToExpiry,
       livePrice,
       priceAgeSessions,
-      nowMs: Date.now(),
+      nowMs,
     });
 
     return NextResponse.json({
       ...verdict,
+      coverage,
       inputs_used: {
         instrument: "option",
         order: { ...leg, premium, contracts, side: "buy" },
@@ -346,13 +384,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         sessions_to_expiry: sessionsToExpiry,
         sessions_to_expiry_method: "calendar_days_x_5_over_7_rounded",
         beta_benchmark: BENCHMARK_SYMBOL,
-        price_session: lastSession,
+        price_session: covered ? lastSession : null,
         budget,
         min_breakeven_reach_pct: Number.isFinite(minReach) ? minReach : null,
         live_price: livePrice
           ? { value: livePrice.value, as_of: new Date(livePrice.asOfMs).toISOString(), source: livePrice.source }
           : null,
-        existing_positions_used: parsedHeld.positions.map((src, idx) => {
+        existing_positions_used: heldRows.map((src, idx) => {
           const p = existingPositions[idx];
           return {
             symbol: p.symbol,
@@ -403,15 +441,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     today,
     livePrice,
     buyingPowerUsd,
-    nowMs: Date.now(),
+    nowMs,
   };
 
   return NextResponse.json({
     ...runPretradeChecks(inputs),
+    coverage,
     inputs_used: {
       beta_benchmark: BENCHMARK_SYMBOL,
       stop_width_pct: Number(widthPct.toFixed(2)),
-      price_session: lastSession,
+      price_session: covered ? lastSession : null,
       edge_bp: Number.isFinite(edgeBp) ? edgeBp : null,
       live_price: livePrice
         ? { value: livePrice.value, as_of: new Date(livePrice.asOfMs).toISOString(), source: livePrice.source }
@@ -422,7 +461,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
        * that does not appear here — or an option leg whose
        * market_equivalent_usd reads null — is a bug report, not a shrug.
        */
-      existing_positions_used: parsedHeld.positions.map((src, idx) => {
+      existing_positions_used: heldRows.map((src, idx) => {
         const p = existingPositions[idx];
         return {
           symbol: p.symbol,

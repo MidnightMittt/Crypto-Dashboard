@@ -102,8 +102,13 @@ export interface PretradeInputs {
   earnings: { date: string | null; status: "confirmed" | "none" | "lookup_failed" };
   /** Measured round-trip cost in basis points, and the edge it is charged against. */
   cost: { roundTripBp: number; edgeBp: number } | null;
-  /** Price staleness, from the same module /api/asset uses. */
-  priceAgeSessions: number;
+  /**
+   * Price staleness, from the same module /api/asset uses. NULL means no
+   * stored close exists to date at all — a symbol outside the bars panel —
+   * which is a different fact from "the close is N sessions old" and must
+   * not be dressed up as one.
+   */
+  priceAgeSessions: number | null;
   /** Today, ISO date, for the earnings window. */
   today: string;
   /**
@@ -365,7 +370,7 @@ function priceBandCheck(i: PretradeInputs): PretradeCheck {
 export function sharedFreshnessCheck(
   livePrice: LivePrice | null,
   nowMs: number,
-  priceAgeSessions: number,
+  priceAgeSessions: number | null,
   referenceForGap: number | null
 ): PretradeCheck {
   /*
@@ -420,6 +425,23 @@ export function sharedFreshnessCheck(
           `${LIVE_PRICE_MAX_AGE_SECONDS}s limit — a live price this stale is a stored ` +
           `close with extra steps. Re-quote and resubmit.`,
       data,
+    };
+  }
+
+  /*
+   * No stored close AND no live price: there is nothing to date. Reporting a
+   * session count here would be dating a price that does not exist — the
+   * age would describe the panel's newest session for some other symbol.
+   */
+  if (priceAgeSessions === null) {
+    return {
+      name: "data_freshness",
+      status: "unknown",
+      detail:
+        `No stored close exists for this symbol — it is outside the committed bars panel, ` +
+        `so there is no price to date. Supply live_price with provenance to be judged on ` +
+        `a market price.`,
+      data: { price_age_sessions: null },
     };
   }
 
