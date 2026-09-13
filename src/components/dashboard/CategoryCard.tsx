@@ -5,6 +5,7 @@ import { VerdictBadge, IntensityMeter, ConfidenceLabel } from "@/components/ui/V
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { Collapsible } from "@/components/ui/Collapsible";
 import { HistoricalPerformancePanel } from "./HistoricalPerformancePanel";
+import { RestatementNote } from "@/components/ui/RestatementNote";
 import { CategoryScore, MetricVerdict } from "@/lib/signals/types";
 import { intensityLabel, metricWeight, rankMetric } from "@/lib/signals/scoring";
 import { aggregateConflicts } from "@/lib/signals/categories";
@@ -160,6 +161,7 @@ export function CategoryCard({
                   <VerdictBadge verdict={m.verdict} />
                 </div>
                 <p className="text-[11px] leading-relaxed text-ink-faint">{m.explanation}</p>
+                <RestatementNote metricId={m.id} />
                 <HistoricalPerformancePanel metricId={m.id} currentRegimeTags={currentRegimeTags} />
               </li>
             ))}

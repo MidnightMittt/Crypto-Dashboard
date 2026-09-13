@@ -226,6 +226,61 @@ export function clusterOf(id: string): string {
   return EDGE_CLUSTERS[id] ?? id;
 }
 
+/**
+ * READS THAT STILL PUBLISH A DIRECTION THAT IS NOT THEIR OWN.
+ *
+ * The blocks above fixed the SCORE: longShort no longer votes, so the
+ * cancellation is gone. They did not fix the READER. longShort is role
+ * `state`, which means it keeps rendering a directional badge, and it renders
+ * next to squeezeRisk's — permanently opposite, on every observation where
+ * both call a direction. A reader looking at "Squeeze Setup: bearish" beside
+ * "Long/Short Positioning: bullish" sees the single most informative thing a
+ * disagreement can mean: two independent reads reaching opposite conclusions.
+ * Here it means nothing at all. It is one number under two sign conventions,
+ * and the second is the negation of the first by construction.
+ *
+ * Silencing the vote made the score honest and left the page misleading in
+ * exactly the way it was before.
+ *
+ * Why a table rather than a sentence in each component: three surfaces list
+ * these rows side by side (SignalBreakdown, CategoryCard's "Why?",
+ * EvidenceModuleDetail), and a fourth explains the pair on /validation. Four
+ * hand-written descriptions of one identity is four things to keep in sync
+ * with the arithmetic in EDGE_CLUSTERS above. `RestatementNote` reads this,
+ * and a surface cannot forget to disclose a restatement it was never told
+ * about.
+ *
+ * `spotPerpVolume` is deliberately NOT here. It was the other half of the same
+ * defect, but its verdict is now permanently `neutral` — it publishes no
+ * direction at all, so there is nothing to disclose. A restatement entry for
+ * it would describe a claim it has stopped making. The guard that it stays
+ * that way is a test, not a row in this table.
+ */
+export interface RestatedRead {
+  /** Module id whose direction this one reproduces. */
+  restates: string;
+  /** "inverse": always the opposite call. "identical": always the same call. */
+  relation: "inverse" | "identical";
+  /** Replay evidence: shared directional observations, and how many followed the relation. */
+  measured: { sharedObservations: number; consistent: number };
+  /** Shown wherever this module renders as a read. */
+  disclosure: string;
+}
+
+export const RESTATED_READS: Record<string, RestatedRead> = {
+  longShort: {
+    restates: "squeezeRisk",
+    relation: "inverse",
+    measured: { sharedObservations: 1181, consistent: 1181 },
+    disclosure:
+      "Not a second opinion: this reads the same long/short ratio as Squeeze Setup and interprets it the opposite way — as trend confirmation rather than exposure to an unwind. Across 1,181 replayed observations where both called a direction, they disagreed 1,181 times, because the thresholds make agreement impossible. Which reading is right is genuinely unsettled (the fade returns t=0.04 at 24h, the trend t=-0.04, on the same observations), so the score takes Squeeze Setup's and this row describes the positioning without claiming a direction for it.",
+  },
+};
+
+export function restatedRead(id: string): RestatedRead | null {
+  return RESTATED_READS[id] ?? null;
+}
+
 /** Score distance from 50 beyond which a roll-up reads as directional rather than balanced. */
 export const DIRECTIONAL_THRESHOLD = 6;
 

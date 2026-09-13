@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { VerdictBadge, ConfidenceLabel } from "@/components/ui/VerdictBadge";
 import { HistoricalPerformancePanel } from "./HistoricalPerformancePanel";
+import { RestatementNote } from "@/components/ui/RestatementNote";
 import { MetricVerdict } from "@/lib/signals/types";
 
 /**
@@ -62,6 +63,8 @@ function SignalRow({ metric, currentRegimeTags }: { metric: MetricVerdict; curre
       <p className="text-[11px] leading-relaxed text-ink-faint/70">
         <span className="text-ink-muted">Why it matters:</span> {metric.whyItMatters}
       </p>
+
+      <RestatementNote metricId={metric.id} />
 
       {/*
         Surfaced rather than smoothed over. A metric whose related signals

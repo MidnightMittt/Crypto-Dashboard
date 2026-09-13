@@ -6,6 +6,9 @@ import {
   metricWeight,
   weightForBasis,
   metricRole,
+  EDGE_CLUSTERS,
+  METRIC_WEIGHTS,
+  RESTATED_READS,
 } from "./scoring";
 import { MetricVerdict, Verdict } from "./types";
 
@@ -208,5 +211,75 @@ describe("spotPerpVolume does not vote, in any basis", () => {
       metricWeight
     );
     expect(both).toBeNull(); // nothing with weight, so there is no score at all
+  });
+});
+
+/**
+ * GUARDS ON THE FIX, not on the implementation.
+ *
+ * A restated read that quietly regains a vote reintroduces the cancellation
+ * EDGE_CLUSTERS' comment documents, and it would do so without failing anything
+ * else in the suite — the composite would start double-counting again and every
+ * number would still look plausible. main's own cap test says as much about its
+ * coverage: "this assertion would NOT catch its weight coming back."
+ */
+describe("restated reads never vote", () => {
+  it("gives every restated module zero weight under the edge basis", () => {
+    for (const id of Object.keys(RESTATED_READS)) {
+      expect(metricWeight(id), `${id} must not vote`).toBe(0);
+      expect(METRIC_WEIGHTS[id], `${id} must not carry a declared weight`).toBeUndefined();
+    }
+  });
+
+  it("keeps restated modules out of the edge clusters, which only describe voters", () => {
+    for (const id of Object.keys(RESTATED_READS)) {
+      expect(EDGE_CLUSTERS[id], `${id} does not vote, so it cannot be in a voting cluster`).toBeUndefined();
+    }
+  });
+
+  it("points every restated module at a module that is itself not restated", () => {
+    // Guards a restatement chain (a restates b, b restates c), which would make
+    // "the score takes the other one's reading" stop naming a real voter.
+    for (const [id, r] of Object.entries(RESTATED_READS)) {
+      expect(RESTATED_READS[r.restates], `${id} -> ${r.restates} is a chain`).toBeUndefined();
+      expect(metricRole(r.restates), `${id} defers to ${r.restates}, which must be classified`).not.toBeNull();
+    }
+  });
+
+  it("records the replay evidence for the relation it asserts", () => {
+    for (const [id, r] of Object.entries(RESTATED_READS)) {
+      expect(r.measured.sharedObservations, `${id} needs a measured sample`).toBeGreaterThan(0);
+      expect(r.measured.consistent, `${id}'s relation must hold on every shared observation`).toBe(
+        r.measured.sharedObservations
+      );
+      expect(r.disclosure.length, `${id} needs reader-facing copy`).toBeGreaterThan(80);
+    }
+  });
+
+  it("still classifies longShort, so it is described and graded rather than deleted", () => {
+    // `state`, not `context`: it keeps describing positioning. The point of the
+    // disclosure is that describing is all it does.
+    expect(metricRole("longShort")).toBe("state");
+    expect(metricWeight("longShort")).toBe(0);
+    expect(RESTATED_READS.longShort.restates).toBe("squeezeRisk");
+    expect(RESTATED_READS.longShort.relation).toBe("inverse");
+  });
+
+  it("leaves the leverage axis voting exactly once, at its declared weight", () => {
+    expect(metricWeight("squeezeRisk")).toBe(0.14);
+    expect(metricWeight("longShort")).toBe(0);
+  });
+
+  /**
+   * spotPerpVolume is NOT in RESTATED_READS because it publishes no direction
+   * at all now. That is the condition worth pinning: if its verdict ever goes
+   * directional again it becomes a restatement of Price Action, and this test
+   * fails before the composite can start borrowing a State read's opinion.
+   */
+  it("keeps spotPerpVolume out of the table by keeping it non-directional", () => {
+    expect(metricRole("spotPerpVolume")).toBe("context");
+    expect(metricWeight("spotPerpVolume")).toBe(0);
+    expect(METRIC_WEIGHTS.spotPerpVolume).toBeUndefined();
+    expect(RESTATED_READS.spotPerpVolume).toBeUndefined();
   });
 });

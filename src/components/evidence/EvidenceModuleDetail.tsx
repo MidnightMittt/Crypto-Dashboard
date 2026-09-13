@@ -1,5 +1,6 @@
 import { MetricVerdict } from "@/lib/signals/types";
 import { contributionOf } from "@/lib/signals/categories";
+import { RestatementNote } from "@/components/ui/RestatementNote";
 import { ScoreBasis, weightForBasis } from "@/lib/signals/scoring";
 
 /**
@@ -58,6 +59,14 @@ export function EvidenceModuleDetail({
       </div>
 
       <p className="text-[13px] leading-relaxed text-ink">{metric.explanation}</p>
+
+      {/*
+        Directly under the explanation and above the evidence lists, because it
+        answers the question the header line provokes: a reader just told this
+        module is "0% of the composite's evidence weight" is owed the reason
+        before being shown its evidence.
+      */}
+      <RestatementNote metricId={metric.id} />
 
       {(metric.evidenceFor?.length || metric.conflicts.length) > 0 && (
         <div className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">

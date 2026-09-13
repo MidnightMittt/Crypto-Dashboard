@@ -9,6 +9,7 @@ import labJson from "@/data/signalValidation.json";
 import metricStats from "@/data/backtestMetricStats.json";
 import ivRvJson from "@/data/ivRvHistory.json";
 import paperJson from "@/data/paperLines.json";
+import { metricWeight, restatedRead } from "@/lib/signals/scoring";
 import { ResolutionSchedule } from "@/components/validation/ResolutionSchedule";
 import { EvidenceLadder } from "@/components/validation/EvidenceLadder";
 import { ForwardRecord } from "@/components/validation/ForwardRecord";
@@ -239,6 +240,24 @@ function Decomposition({ d }: { d: RowDecomposition }) {
  * figure appears only where it disagrees — printing "8.5 effective, 8.5
  * distinct" everywhere would train a reader to skip the line that matters.
  */
+/**
+ * Which members of a duplicate pair have been silenced in the composite.
+ *
+ * Derived from metricWeight/restatedRead rather than named here: the equity
+ * family renders through this same component and has no muted members, so a
+ * hand-written sentence would have to be suppressed for one family and would
+ * go stale for the other.
+ */
+function mutedMembers(pairs: FamilyBreadthSummary["duplicatePairs"]): string[] {
+  const muted = new Set<string>();
+  for (const d of pairs) {
+    for (const id of [d.a, d.b]) {
+      if (restatedRead(id) !== null && metricWeight(id) === 0) muted.add(id);
+    }
+  }
+  return [...muted];
+}
+
 function FamilyBreadthNote({ b, label }: { b: FamilyBreadthSummary; label: string }) {
   /*
    * Half a bet of slack before the counting figure is shown at all. Signed and
@@ -303,6 +322,21 @@ function FamilyBreadthNote({ b, label }: { b: FamilyBreadthSummary; label: strin
               </li>
             ))}
           </ul>
+          {/*
+            What the ENGINE does about them, read from the engine rather than
+            written here so this line cannot outlive the fix it describes.
+            Without it the list raises an obvious question and answers none of
+            it: a reader shown two pairs that are "one series measured twice"
+            has every reason to assume the score counts them twice.
+          */}
+          {mutedMembers(b.duplicatePairs).length > 0 && (
+            <p className="mt-1.5 text-[11px] leading-relaxed text-ink-muted">
+              Counted once in the score: {mutedMembers(b.duplicatePairs).join(" and ")}{" "}
+              {mutedMembers(b.duplicatePairs).length === 1 ? "carries" : "carry"} no weight in the
+              composite, so each pair votes through one member only. Still measured here — a retired
+              vote is not a deleted measurement, which is why the pair prints above at all.
+            </p>
+          )}
         </>
       )}
     </div>
