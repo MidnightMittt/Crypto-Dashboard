@@ -1,23 +1,33 @@
 {
   "version": 1,
-  "generatedAt": 1789260315553,
+  "generatedAt": 1789339505222,
   "sourceHint": "~/trading/roundtrips.jsonl",
   "ledger": {
     "source": "read",
     "schemas": [
-      "roundtrip/1.1"
+      "roundtrip/1.2"
     ],
-    "trips": 59,
+    "trips": 60,
     "window": {
       "from": "2026-08-17",
-      "to": "2026-08-21"
+      "to": "2026-09-11"
     },
     "joinable": 0,
-    "inDeclaredNames": 29,
+    "labelBreakdown": [
+      {
+        "status": "unlabelled",
+        "trips": 59
+      },
+      {
+        "status": "predates-declaration",
+        "trips": 1
+      }
+    ],
+    "inDeclaredNames": 30,
     "declaredNameBreakdown": [
       {
         "basket": "miners",
-        "trips": 19
+        "trips": 20
       },
       {
         "basket": "datacenter",
@@ -26,62 +36,69 @@
     ],
     "blockers": [
       {
-        "id": "no-strategy-id",
+        "id": "no-method-id",
         "count": 59,
-        "of": 59,
+        "of": 60,
         "blocks": "register-join",
-        "detail": "No field names the declared strategy this fill was executing, so there is no key to join the register on. Not a sample-size problem: more trading does not add a column."
+        "detail": "No method is named on the trip — either the field is absent, or it carries the producer's unlabelled-pre-log sentinel, which is an honest record of a trade entered before any method was declared. Not a sample-size problem and no longer a schema problem: 1.2 has the column, these rows predate it."
+      },
+      {
+        "id": "label-predates-declaration",
+        "count": 1,
+        "of": 60,
+        "blocks": "register-join",
+        "detail": "The trip names a declared method but was ENTERED before that method was declared here, so it is the trade that motivated the declaration rather than a test of it. Counting it would be the same in-sample loop the paper book refuses when a line's sessions all precede its own declaration. No schema change fixes this — only trading the declared method forward does."
       },
       {
         "id": "entry-price-derived",
         "count": 59,
-        "of": 59,
+        "of": 60,
         "blocks": "execution-quality",
         "detail": "entry.price is derived_from_realized_gain — recovered arithmetically from the exit price and the realised P&L, so it is not an observed fill and carries no independent information about what was paid."
       },
       {
         "id": "no-entry-timestamp",
         "count": 57,
-        "of": 59,
+        "of": 60,
         "blocks": "execution-quality",
         "detail": "entry.ts is absent, so the position's hold span is unknown and no reference price can be paired to the entry."
       },
       {
         "id": "hold-unknown",
         "count": 59,
-        "of": 59,
+        "of": 60,
         "blocks": "register-join",
         "detail": "hold_sessions is null, so a one-session overnight hold cannot be distinguished from a multi-week position in the same name — which is the difference between executing the declared strategy and merely owning the ticker."
       },
       {
         "id": "exit-timestamp-not-a-fill-time",
-        "count": 59,
-        "of": 59,
+        "count": 60,
+        "of": 60,
         "blocks": "execution-quality",
-        "detail": "No timezone offset places these stamps in market hours: the best of the 24 is UTC+4 at 39%, against 27% for stamps scattered around the clock. A genuine fill series clears 90%. These are report or settlement times, so no fill here can be differenced against a reference price."
+        "detail": "No timezone offset places these stamps in market hours: the best of the 24 is UTC+4 at 38%, against 27% for stamps scattered around the clock. A genuine fill series clears 90%. These are report or settlement times, so no fill here can be differenced against a reference price."
       },
       {
         "id": "closed-only",
-        "count": 59,
-        "of": 59,
+        "count": 60,
+        "of": 60,
         "blocks": "any-aggregate",
         "detail": "Every row is a CLOSED trip. Open positions are absent, and that is where losers sit — a loser is held and a winner is taken. Any mean over this log is conditioned on having closed, the same shape as the resolution asymmetry that once published a 100% forward record."
       }
     ],
     "fillTimes": {
       "bestOffsetHours": 4,
-      "bestRthFraction": 0.3898305084745763,
+      "bestRthFraction": 0.38333333333333336,
       "chanceFraction": 0.2708333333333333,
       "threshold": 0.9,
       "credible": false,
-      "n": 59
+      "n": 60
     },
     "realized": {
-      "usd": 140.61,
-      "wins": 24,
+      "usd": 465.61,
+      "wins": 25,
       "losses": 34,
       "flat": 1
     },
-    "statement": "59 round trips are recorded and none of them can test anything on this page. Not one names the strategy it was executing, so there is no key to join the register on; 29 are in names a declared basket holds, which is a coincidence of ticker rather than a join."
+    "statement": "60 round trips are recorded and none of them can test anything on this page: 59 record no method at entry and 1 names a declared method but was entered before it was declared here, which makes it the trade that motivated the declaration rather than a test of it. 30 are in names a declared basket holds, which is a coincidence of ticker rather than a join."
   }
 }

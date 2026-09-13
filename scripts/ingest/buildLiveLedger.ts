@@ -8,6 +8,7 @@ import {
   buildLiveLedger,
   unavailableLedger,
 } from "../../src/lib/validation/roundTrips";
+import { DECLARED_METHODS } from "../../src/lib/validation/methodRegister";
 
 /**
  * THE ROUND-TRIP LOG, READ FROM OUTSIDE THE REPO AND REDUCED TO COUNTS.
@@ -106,7 +107,7 @@ function main(): void {
     return;
   }
 
-  const ledger = buildLiveLedger(rows);
+  const ledger = buildLiveLedger(rows, DECLARED_METHODS);
   const artifact: LiveLedgerArtifact = {
     version: 1,
     generatedAt: Date.now(),
@@ -128,6 +129,10 @@ function main(): void {
       `(chance ${(ledger.fillTimes.chanceFraction * 100).toFixed(0)}%, need ` +
       `${(ledger.fillTimes.threshold * 100).toFixed(0)}%) — ` +
       `${ledger.fillTimes.credible ? "credible" : "NOT fill times"}`
+  );
+  console.log(
+    `  labels: ${ledger.labelBreakdown.map((b) => `${b.status} ${b.trips}`).join(", ") || "none"} ` +
+      `(against ${DECLARED_METHODS.length} declared methods)`
   );
   for (const b of ledger.blockers) {
     console.log(`  blocks ${b.blocks.padEnd(18)} ${b.id.padEnd(32)} ${b.count}/${b.of}`);

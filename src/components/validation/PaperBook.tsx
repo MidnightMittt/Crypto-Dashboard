@@ -7,7 +7,7 @@ import {
   bp,
   bpAbs,
 } from "@/lib/validation/paperBook";
-import { Blocker, JOIN_CONTRACT, LiveLedger } from "@/lib/validation/roundTrips";
+import { Blocker, JOIN_CONTRACT, LabelStatus, LiveLedger } from "@/lib/validation/roundTrips";
 
 /**
  * THE REGISTER, RENDERED — and the ladder it sits on.
@@ -313,6 +313,15 @@ export function PaperBook({ book }: { book: Book }) {
  * The moment it carries a number it must be generated from that log, and the
  * `n=0` here is the thing that will disagree loudly if it is not.
  */
+/** The partition, in a reader's words rather than the enum's. */
+const LABEL_STATUS_TEXT: Record<LabelStatus, string> = {
+  joins: "join the register",
+  unlabelled: "record no method at entry",
+  backfilled: "labelled after the fact",
+  "method-not-declared": "name an undeclared method",
+  "predates-declaration": "entered before the method was declared",
+};
+
 const BLOCKS_LABEL: Record<Blocker["blocks"], string> = {
   "register-join": "blocks the register join",
   "execution-quality": "blocks execution measurement",
@@ -327,10 +336,17 @@ const BLOCKS_LABEL: Record<Blocker["blocks"], string> = {
  * being true, and the round-trip log has existed since 2026-08-21 — so the page
  * was asserting an emptiness it had never actually looked at.
  *
- * It looks now. Fifty-nine real round trips, and the tier is STILL empty, for
+ * It looks now. Sixty real round trips, and the tier is STILL empty, for
  * reasons that are counted rather than claimed. The distinction matters to a
  * reader deciding whether to wait: "no data yet" resolves by waiting, and "no
  * column to join on" does not.
+ *
+ * Schema 1.2 delivered the column, and the tier stayed empty anyway — which is
+ * why the label partition renders beside the blockers. One trip now carries a
+ * perfectly-formed `declared_at_entry` label and still fails, because it was
+ * entered eleven days before the method it names was declared here. A reader
+ * seeing only "0 of 60 joinable" would conclude the schema was still missing
+ * a field, and would be a version out of date.
  */
 export function LiveFills({ ledger }: { ledger: LiveLedger }) {
   if (ledger.source === "unavailable") {
@@ -373,6 +389,29 @@ export function LiveFills({ ledger }: { ledger: LiveLedger }) {
         market impact, neither sees an auction imbalance, and a basket of twelve names hitting one
         opening auction is exactly where both live.
       </p>
+
+      {/*
+        The partition, so "0 joinable" has a shape. Four ways to fail with four
+        different fixes: three need the producer to record more, and
+        `predates-declaration` needs nothing recorded at all — only the method
+        traded forward from its declaration date.
+      */}
+      {ledger.labelBreakdown.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5">
+          {ledger.labelBreakdown.map((b) => (
+            <span key={b.status} className="text-[11px] leading-snug">
+              <span
+                className={`font-mono tabular-nums ${
+                  b.status === "joins" ? "text-success" : "text-ink-faint"
+                }`}
+              >
+                {b.trips}
+              </span>{" "}
+              <span className="text-ink-muted">{LABEL_STATUS_TEXT[b.status]}</span>
+            </span>
+          ))}
+        </div>
+      )}
 
       {ledger.inDeclaredNames > 0 && (
         <div className="mt-3 rounded-md border border-danger/40 bg-danger/5 px-3 py-2">
