@@ -169,6 +169,70 @@ export function coverage(panel: SymbolPanel): number {
   return panel.bars.filter((b) => b !== null).length;
 }
 
+export interface PanelTailAudit {
+  /** Newest session present in ANY input series, or null if there are no bars. */
+  newestRaw: string | null;
+  /** Symbols holding a bar on newestRaw. */
+  holders: string[];
+  /** Last session the panel actually kept. */
+  panelLast: string | null;
+  /** The inputs held a session the panel does not — the calendar discarded it. */
+  discardedByCalendar: boolean;
+  /** `SYM@YYYY-MM-DD` for every symbol whose series stops before newestRaw. */
+  shortOfNewest: string[];
+}
+
+/**
+ * WHY THE PANEL ENDS WHERE IT ENDS — a question that went unasked for a month.
+ *
+ * buildBarsPanel's header claims the panel's last session is the session the
+ * job ran for. Nothing checked it, and across six consecutive committed
+ * panels it was false every time: the 2026-09-12T00:20Z run ended at
+ * 09-10, the 09-11T00:13Z run ended at 09-09, back to 09-05 — always one
+ * session behind the close that preceded the run by about four hours. It is
+ * not confined to this artifact. equityCrossSection.json from the same
+ * commit carries asOf 2026-09-10T20:00Z and the capture log labels that
+ * run's session 2026-09-10, so every bar-derived output inherits it.
+ *
+ * Two causes remain, and they call for opposite responses. If the input
+ * series never held the session, that is the provider's state at that hour
+ * (most likely a null price on the freshest row, which the ingest is right
+ * to drop) and the run should continue and say so. If the series DID hold it
+ * and the quorum calendar dropped it, that is this repository's defect, and
+ * shipping a panel that quietly discards its newest session is how the lag
+ * stayed invisible in the first place.
+ *
+ * The provider's state four hours after a close cannot be reproduced from a
+ * laptop after the fact, so the distinction is measured on the runner rather
+ * than argued about here.
+ */
+export function auditPanelTail(seriesBySymbol: Record<string, Bar[]>, sessions: string[]): PanelTailAudit {
+  const lastBySymbol = new Map<string, string>();
+  for (const [symbol, bars] of Object.entries(seriesBySymbol)) {
+    if (bars.length > 0) lastBySymbol.set(symbol, sessionKey(bars[bars.length - 1].t));
+  }
+
+  const newestRaw = [...lastBySymbol.values()].sort().pop() ?? null;
+  const panelLast = sessions.length > 0 ? sessions[sessions.length - 1] : null;
+
+  // Membership, not just each symbol's own last bar: a symbol that traded on
+  // newestRaw but has later bars still holds it. Only the tail is scanned
+  // because only the tail can be newer than the panel's last session.
+  const holders = Object.entries(seriesBySymbol)
+    .filter(([, bars]) => bars.slice(-10).some((b) => sessionKey(b.t) === newestRaw))
+    .map(([symbol]) => symbol);
+
+  return {
+    newestRaw,
+    holders,
+    panelLast,
+    discardedByCalendar: newestRaw !== null && panelLast !== null && newestRaw > panelLast,
+    shortOfNewest: [...lastBySymbol.entries()]
+      .filter(([, date]) => date !== newestRaw)
+      .map(([symbol, date]) => `${symbol}@${date}`),
+  };
+}
+
 /**
  * Closes on the panel calendar, ALIGNED — index i is always session i.
  *

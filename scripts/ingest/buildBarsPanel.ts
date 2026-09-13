@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { positioningUniverse } from "../../src/lib/markets/scannerUniverse";
-import { alignPanel, coverage, PANEL_SESSIONS } from "../../src/lib/research/barsPanel";
+import { alignPanel, auditPanelTail, coverage, PANEL_SESSIONS } from "../../src/lib/research/barsPanel";
 import { Bar } from "../../src/lib/research/types";
 
 /**
@@ -78,6 +78,34 @@ function main(): void {
         "Shipping this panel would recreate the silent-join problem it exists to close."
     );
   }
+
+  /*
+   * The header above claims "the panel's last session is the session the job
+   * ran for". Nothing checked it, and it has been false every night — see
+   * auditPanelTail's comment in barsPanel.ts for the six-panel measurement
+   * and why the two possible causes are not treated alike here.
+   */
+  const tail = auditPanelTail(seriesBySymbol, panel.sessions);
+
+  if (tail.discardedByCalendar) {
+    throw new Error(
+      `the bar files hold ${tail.newestRaw} on ${tail.holders.length}/${universe.length} symbols, but the ` +
+        `panel ends ${tail.panelLast} — the session was read and then discarded, which is this repository's ` +
+        `defect and not the provider's. Start at the quorum calendar in barsPanel.ts: SESSION_QUORUM counts ` +
+        `a symbol as active from its first bar onward, so a symbol whose series ends earlier votes AGAINST ` +
+        `the date rather than abstaining. Holding it: ` +
+        `${tail.holders.slice(0, 12).join(", ")}${tail.holders.length > 12 ? ", …" : ""}.`
+    );
+  }
+
+  console.log(
+    `[barsPanel] newest session in the raw files: ${tail.newestRaw ?? "none"}, held by ` +
+      `${tail.holders.length}/${universe.length} symbols. Panel ends ${tail.panelLast}.` +
+      (tail.shortOfNewest.length
+        ? ` ${tail.shortOfNewest.length} symbol(s) end earlier: ${tail.shortOfNewest.slice(0, 12).join(", ")}` +
+          `${tail.shortOfNewest.length > 12 ? ", …" : ""}`
+        : " Every symbol reaches it.")
+  );
 
   fs.writeFileSync(OUT, JSON.stringify(panel, null, 0));
 

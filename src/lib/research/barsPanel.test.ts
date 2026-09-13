@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Bar } from "./types";
-import { alignPanel, coverage, sessionKey } from "./barsPanel";
+import { alignPanel, auditPanelTail, coverage, sessionKey } from "./barsPanel";
 
 const DAY = 86_400_000;
 /** 2026-01-05 20:00 UTC — a close-stamped Monday session, like the ingest emits. */
@@ -119,5 +119,70 @@ describe("alignPanel", () => {
 describe("sessionKey", () => {
   it("maps a close-stamped bar to its UTC session date", () => {
     expect(sessionKey(T0)).toBe("2026-01-05");
+  });
+});
+
+describe("auditPanelTail", () => {
+  it("reports the newest raw session and who holds it when the panel keeps it", () => {
+    const seriesBySymbol = { A: series([10, 11, 12]), B: series([20, 21, 22]) };
+    const audit = auditPanelTail(seriesBySymbol, alignPanel(seriesBySymbol).sessions);
+
+    expect(audit.newestRaw).toBe("2026-01-07");
+    expect(audit.panelLast).toBe("2026-01-07");
+    expect(audit.holders.sort()).toEqual(["A", "B"]);
+    expect(audit.discardedByCalendar).toBe(false);
+    expect(audit.shortOfNewest).toEqual([]);
+  });
+
+  it("names the symbols that stop short, without calling it a defect", () => {
+    // B never traded the newest session — which is a provider condition, not
+    // a calendar bug, so long as the panel didn't throw the session away.
+    const seriesBySymbol = { A: series([10, 11, 12]), B: series([20, 21]) };
+    const audit = auditPanelTail(seriesBySymbol, alignPanel(seriesBySymbol).sessions);
+
+    expect(audit.newestRaw).toBe("2026-01-07");
+    expect(audit.holders).toEqual(["A"]);
+    expect(audit.shortOfNewest).toEqual(["B@2026-01-06"]);
+    expect(audit.discardedByCalendar).toBe(false);
+  });
+
+  /*
+   * The case the build refuses to ship: the files hold a session the panel
+   * does not. Three symbols first traded before the newest session, so all
+   * three are ACTIVE for it under the quorum rule, and only one traded —
+   * 1/3 is below SESSION_QUORUM, so the calendar drops a date the data had.
+   * This is the exact arithmetic that would produce the observed
+   * one-session lag from inside this repository rather than from the
+   * provider, and it is why the two causes get different handling.
+   */
+  it("flags a session the inputs held and the quorum calendar dropped", () => {
+    const seriesBySymbol = { A: series([10, 11, 12]), B: series([20, 21]), C: series([30, 31]) };
+    const sessions = alignPanel(seriesBySymbol).sessions;
+    expect(sessions[sessions.length - 1]).toBe("2026-01-06");
+
+    const audit = auditPanelTail(seriesBySymbol, sessions);
+
+    expect(audit.newestRaw).toBe("2026-01-07");
+    expect(audit.panelLast).toBe("2026-01-06");
+    expect(audit.discardedByCalendar).toBe(true);
+    expect(audit.holders).toEqual(["A"]);
+  });
+
+  it("counts a symbol as holding the newest session even when its own series runs later", () => {
+    // Membership, not last-bar equality: A trades every session, so it holds
+    // 01-06 as well, and a naive last-bar check would report it as short.
+    const seriesBySymbol = { A: series([10, 11, 12]), B: series([20, 21, 22]) };
+    const audit = auditPanelTail(seriesBySymbol, ["2026-01-05", "2026-01-06"]);
+
+    expect(audit.newestRaw).toBe("2026-01-07");
+    expect(audit.holders.sort()).toEqual(["A", "B"]);
+    expect(audit.discardedByCalendar).toBe(true);
+  });
+
+  it("says nothing rather than guessing when there are no bars at all", () => {
+    const audit = auditPanelTail({ A: [], B: [] }, []);
+    expect(audit.newestRaw).toBeNull();
+    expect(audit.panelLast).toBeNull();
+    expect(audit.discardedByCalendar).toBe(false);
   });
 });
