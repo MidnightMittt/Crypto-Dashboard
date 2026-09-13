@@ -57,10 +57,39 @@ describe("computeFundingPercentile", () => {
     expect(computeFundingPercentile(0, history)).toBe(0);
   });
 
-  it("counts values equal to current as 'below or equal', matching the OI percentile's convention", () => {
+  it("puts a value tied with its entire history at the middle, not the top", () => {
     const history = Array.from({ length: 12 }, () => historyPoint(0.05));
-    // Every point equals current -> all count as <=, so percentile is 100.
-    expect(computeFundingPercentile(0.05, history)).toBe(100);
+    // Ties count half. A reading identical to every prior reading is the most
+    // ordinary observation possible; the old `v <= current` rule scored it 100.
+    expect(computeFundingPercentile(0.05, history)).toBe(50);
+  });
+
+  it("ranks a point mass by the mass below it plus half its own block", () => {
+    /*
+     * The shape that motivated the correction: Binance's 0.01%/8h baseline is
+     * a large tie block, and where it lands decides squeezeRisk's largest
+     * component. 6 below, a block of 4 at the value, 10 total... plus 2 above.
+     */
+    const history = [
+      ...Array.from({ length: 6 }, (_, i) => historyPoint(0.001 * (i + 1))),
+      ...Array.from({ length: 4 }, () => historyPoint(0.01)),
+      ...Array.from({ length: 2 }, () => historyPoint(0.05)),
+    ];
+    expect(history).toHaveLength(12);
+    // (6 + 0.5*4) / 12 = 66.7 -> 67. The old rule gave (6+4)/12 = 83.
+    expect(computeFundingPercentile(0.01, history)).toBe(67);
+  });
+
+  it("is unchanged from the old rule when nothing ties, which is the production case", () => {
+    // Live funding is an OI-weighted average over ~20 venues; 109 recorded
+    // readings held 102 distinct values. With no ties, midrank == the old
+    // `v <= current` count, so this correction does not move the live site.
+    const history = Array.from({ length: 12 }, (_, i) => historyPoint(0.001 * (i + 1)));
+    const current = 0.0065; // strictly between the 6th and 7th points
+    const oldRule = Math.round(
+      (history.filter((p) => (p.weightedFundingRatePct as number) <= current).length / 12) * 100
+    );
+    expect(computeFundingPercentile(current, history)).toBe(oldRule);
   });
 });
 

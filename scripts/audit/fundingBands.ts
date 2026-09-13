@@ -25,16 +25,33 @@
  *
  * ── The question it actually answered ──────────────────────────────────
  *
- * Both bands read a rank that is broken by ties. 26.8% of the replay sits at
- * exactly 0.010000%/8h — the Binance default — and `computeFundingPercentile`
- * counts ties as BELOW (`values.filter(v => v <= current)`), so the single most
- * ordinary reading in the series is ranked at a median of p94. Section 3
- * measures it. That percentile is live: it feeds squeezeRisk's largest
- * component at 0.35 weight, and it is rendered to the user as a sentence.
+ * Both bands read a rank, and when this script was first run that rank was
+ * broken by ties. 26.8% of the replay sits at exactly 0.010000%/8h — the
+ * Binance default — and `computeFundingPercentile` counted ties as BELOW
+ * (`values.filter(v => v <= current)`), so the single most ordinary reading in
+ * the series ranked at a median of p94, and squeezeRisk's largest component
+ * read `|94 - 50| * 2 = 88` of 100 crowding on the most boring print the
+ * exchange emits.
  *
- * So every candidate band here is evaluated twice — once on the shipped rank,
- * once on a tie-corrected midrank — because a verdict about band edges drawn on
- * a defective rank would be a verdict about the defect.
+ * *** 9.2.0 FIXED THAT, AND IT IS WHY THE COLUMN LABELS READ AS THEY DO. ***
+ *
+ * `computeFundingPercentile` now uses the midrank convention
+ * `(below + 0.5*equal)/n`, and the replay bounds its lookback to the same
+ * 30 days `readHistory` retains in production. So the two ranks this script
+ * still evaluates every candidate band against are no longer
+ * defective-vs-corrected. They are:
+ *
+ *   "shipped"  — read straight off results.json, i.e. what the ENGINE now
+ *                computes: 30-day window, midrank ties. This is the one that
+ *                matters; it is the deployed statistic.
+ *   "midrank"  — this script's own reconstruction over an EXPANDING window of
+ *                daily rows. Retained as a window-sensitivity arm: it answers
+ *                "would a band edge survive if the lookback were four years
+ *                instead of thirty days".
+ *
+ * Both are evaluated because a band edge that only works at one lookback is a
+ * fitted constant, not a finding. The names are kept for continuity with the
+ * 9.0.0/9.1.0 entries that quote this script's output.
  *
  * ── What this script refuses to do ─────────────────────────────────────
  *
@@ -56,13 +73,12 @@
  * irreproducible.
  *
  * Both ranks are point-in-time. The shipped one is computed in the replay from
- * `fundingRate.filter(p => p.t < t)`, strictly prior and expanding. The
- * midrank reconstruction below ranks each day against strictly-prior days of
- * the SAME asset. Neither is look-ahead. They differ in granularity — the
- * shipped rank sees the 8-hourly series, the reconstruction sees daily rows —
- * so the reconstruction is a DIAGNOSTIC for what tie correction buys, not a
- * drop-in replacement. The production fix belongs inside
- * `computeFundingPercentile`, on its own series.
+ * `fundingRate.filter(p => p.t < t && p.t >= t - HISTORY_RETENTION_MS)` —
+ * strictly prior, bounded to 30 days. The midrank reconstruction below ranks
+ * each day against ALL strictly-prior days of the SAME asset. Neither is
+ * look-ahead. They differ in window and in granularity — the shipped rank sees
+ * the 8-hourly series, the reconstruction sees daily rows — so the
+ * reconstruction is a SENSITIVITY arm, not a drop-in replacement.
  */
 
 import { readFileSync, readdirSync } from "node:fs";
@@ -286,22 +302,26 @@ const atModalMid = rows
   .map((r) => r.midrank as number)
   .sort((a, b) => a - b);
 console.log(
-  `\n  computeFundingPercentile counts ties as BELOW, so it ranks that modal value at`
+  `\n  Before 9.2.0, computeFundingPercentile counted ties as BELOW and ranked this modal value at a`
 );
 console.log(
-  `    shipped rank:  min p${atModal[0]}  median p${quantile(atModal, 0.5).toFixed(0)}  max p${atModal[atModal.length - 1]}   (n=${atModal.length})`
+  `  median of p94, handing squeezeRisk |94-50|*2 = 88 of 100 crowding on the most ordinary print`
+);
+console.log(`  in the series. It now uses the midrank (below + 0.5*equal)/n. The modal value ranks at`);
+console.log(
+  `    shipped   (30d, midrank):  min p${atModal[0]}  median p${quantile(atModal, 0.5).toFixed(0)}  max p${atModal[atModal.length - 1]}   (n=${atModal.length})`
 );
 console.log(
-  `    tie-corrected: min p${atModalMid[0].toFixed(0)}  median p${quantile(atModalMid, 0.5).toFixed(0)}  max p${atModalMid[atModalMid.length - 1].toFixed(0)}`
+  `    expanding (4y,  midrank):  min p${atModalMid[0].toFixed(0)}  median p${quantile(atModalMid, 0.5).toFixed(0)}  max p${atModalMid[atModalMid.length - 1].toFixed(0)}`
 );
 const shippedRanks = rows.filter((r) => r.fundingPercentile !== null).map((r) => r.fundingPercentile as number).sort((a, b) => a - b);
 const midRanks = rows.filter((r) => r.midrank != null).map((r) => r.midrank as number).sort((a, b) => a - b);
-console.log(`\n  a point-in-time rank should be roughly uniform. Quartiles of each:`);
+console.log(`\n  a point-in-time rank should be roughly uniform. Quartiles of each (pre-9.2.0 was 24/43/91):`);
 console.log(
-  `    shipped rank:  p25 ${quantile(shippedRanks, 0.25).toFixed(0)}  median ${quantile(shippedRanks, 0.5).toFixed(0)}  p75 ${quantile(shippedRanks, 0.75).toFixed(0)}  (n=${shippedRanks.length})`
+  `    shipped   (30d, midrank):  p25 ${quantile(shippedRanks, 0.25).toFixed(0)}  median ${quantile(shippedRanks, 0.5).toFixed(0)}  p75 ${quantile(shippedRanks, 0.75).toFixed(0)}  (n=${shippedRanks.length})`
 );
 console.log(
-  `    tie-corrected: p25 ${quantile(midRanks, 0.25).toFixed(0)}  median ${quantile(midRanks, 0.5).toFixed(0)}  p75 ${quantile(midRanks, 0.75).toFixed(0)}  (n=${midRanks.length})`
+  `    expanding (4y,  midrank):  p25 ${quantile(midRanks, 0.25).toFixed(0)}  median ${quantile(midRanks, 0.5).toFixed(0)}  p75 ${quantile(midRanks, 0.75).toFixed(0)}  (n=${midRanks.length})`
 );
 const modalRows = rows.filter((r) => r.weightedFundingRatePct === modal[0]);
 const otherRows = rows.filter((r) => r.weightedFundingRatePct !== modal[0] && r.weightedFundingRatePct !== null);
@@ -310,12 +330,11 @@ const sqBear = (rs: Row[]) => (rs.filter((r) => metricVerdict(r, "squeezeRisk") 
 console.log(
   `\n  THIS RANK IS LIVE. computeSqueezeRisk uses |percentile-50|*2 as "Funding crowding" at 0.35 weight,`
 );
-console.log(`  its single largest component, and positioning.ts renders it as a sentence to the user:`);
-console.log(`    "Funding at 1.00 bps/8h sits in the 94th percentile of its recorded range"`);
+console.log(`  its single largest component, and positioning.ts renders it as a sentence to the user.`);
 console.log(
-  `  on the modal day, |94-50|*2 = 88 of a possible 100 crowding, for the most ordinary reading in the series.`
+  `  At the modal value's median rank of p${quantile(atModal, 0.5).toFixed(0)}, crowding now reads ${(Math.abs(quantile(atModal, 0.5) - 50) * 2).toFixed(0)} of 100 rather than 88.`
 );
-console.log(`  Downstream, on this replay:`);
+console.log(`  Downstream, on this replay (pre-9.2.0: 72.5 / 82.6% vs 59.4 / 75.3%):`);
 console.log(
   `    modal-funding days  n=${modalRows.length}  mean squeezeScore ${sqMean(modalRows).toFixed(1)}  squeezeRisk bearish ${sqBear(modalRows).toFixed(1)}%`
 );
@@ -516,13 +535,17 @@ for (const kind of ["shipped", "midrank"] as RankKind[]) {
 // ── 8. The replay's rank is not production's rank ─────────────────────
 
 /**
- * Everything above measures the replay. Production computes the same field
- * from a different series, and the difference is large enough that the two
- * are not the same statistic.
+ * *** THIS SECTION FOUND THE DEFECT 9.2.0 FIXED. Two of its four rows are now
+ * closed; the other two are open and are the reason this section stays. ***
  *
- *                        replay                     production
- *   venue                Binance only               OI-weighted, ~20 venues
+ * Everything above measures the replay. Production computes the same field
+ * from a different series, and when this section was first written the
+ * difference was large enough that the two were not the same statistic:
+ *
+ *                        replay (pre-9.2.0)         production
  *   window               expanding, up to ~4y       rolling 30d (readHistory)
+ *   tie rule             ties counted BELOW         (no ties to break)
+ *   venue                Binance only               OI-weighted, ~20 venues
  *   points ranked        8-hourly, thousands        ~8-30
  *   ties at the 0.01     26.8% of the sample        none observed (102/109
  *   Binance baseline                                 distinct in .data)
@@ -535,13 +558,30 @@ for (const kind of ["shipped", "midrank"] as RankKind[]) {
  *   squeezeRisk "Funding crowding"  score 30 of 100, weight 0.35,
  *     "Funding at 0.67 bps/8h sits in the 65th percentile of its recorded range"
  *
- * The replay's MODAL day — 26.8% of it, the Binance baseline — ranks p94 and
- * scores |94-50|*2 = 88 of 100 on that same component. Production's ordinary
- * day scores 30. So the replay systematically overstates funding crowding
- * relative to the deployed engine, and squeezeRisk is 0.14 of METRIC_WEIGHTS,
- * the second-largest entry. Every squeezeRisk statistic in this file, and in
- * the roster audit that motivated it, is measured on a crowding input
- * production does not reproduce.
+ * Against that, the replay's MODAL day — 26.8% of it, the Binance baseline —
+ * ranked p94 and scored |94-50|*2 = 88 of 100 on the same component, where
+ * production's ordinary day scored 30. squeezeRisk is 0.14 of METRIC_WEIGHTS,
+ * the second-largest entry, and that percentile is its largest component at
+ * 0.35. So every squeezeRisk statistic in this file, and in the roster audit
+ * that motivated it, was measured on a crowding input production does not
+ * reproduce.
+ *
+ * ── WHAT 9.2.0 CLOSED, AND WHAT IT DID NOT ─────────────────────────────
+ *
+ * CLOSED: the window (`run.ts` now slices to `HISTORY_RETENTION_MS`, imported
+ * rather than restated) and the tie rule (`computeFundingPercentile` uses the
+ * midrank, a no-op on production's tie-free series). The rank went from
+ * quartiles 24/43/91 — which is not a percentile — to 24/50/75.
+ *
+ * STILL OPEN, and not fixable by arithmetic: VENUE and POINT DENSITY. The
+ * replay ranks ~90 8-hourly Binance prints; production ranks tens of
+ * OI-weighted multi-venue readings. The two are now the same statistic over
+ * the same window, which is what makes the comparison legitimate — they are
+ * still not the same number. Closing the rest needs a multi-venue historical
+ * funding source, which the corpus does not have.
+ *
+ * The printout below is regenerated every run, so the header row it prints
+ * reflects the CURRENT replay, not the pre-9.2.0 one tabulated above.
  *
  * ── A LOCAL READING THAT LOOKED LIKE A PRODUCTION DEFECT, AND WAS NOT ──
  *
@@ -560,13 +600,16 @@ console.log(`  Production, GET /api/market-data?asset=BTC, probed 2026-09-13:`);
 console.log(`    weightedFundingRatePct 0.006713 %/8h   fundingPercentile 65   historyHours 715.2`);
 console.log(`    squeezeRisk "Funding crowding": score 30 of 100 at 0.35 weight`);
 console.log(`  This replay's modal day (${((modal[1] / fundingValues.length) * 100).toFixed(1)}% of it, the Binance baseline) ranks p${quantile(atModal, 0.5).toFixed(0)} and scores ${(Math.abs(quantile(atModal, 0.5) - 50) * 2).toFixed(0)} of 100.`);
-console.log(`\n                    replay                      production`);
-console.log(`    venue           Binance only                OI-weighted multi-venue`);
-console.log(`    window          expanding, up to ~4y        rolling 30d (readHistory)`);
-console.log(`    points ranked   8-hourly, thousands         tens`);
-console.log(`    ties at 0.01    ${((modal[1] / fundingValues.length) * 100).toFixed(1)}% of the sample          none observed`);
+console.log(`\n                    replay                      production                  status`);
+console.log(`    window          rolling 30d                 rolling 30d (readHistory)   CLOSED by 9.2.0`);
+console.log(`    tie rule        midrank                     (no ties to break)          CLOSED by 9.2.0`);
+console.log(`    venue           Binance only                OI-weighted multi-venue     OPEN`);
+console.log(`    points ranked   ~90 8-hourly prints         tens of readings            OPEN`);
+console.log(`    ties at 0.01    ${((modal[1] / fundingValues.length) * 100).toFixed(1)}% of the sample          none observed             handled by midrank`);
 console.log(`\n  squeezeRisk is 0.14 of METRIC_WEIGHTS, second-largest. Its largest component reads this rank.`);
-console.log(`  So squeezeRisk statistics measured on this replay are not evidence about the deployed squeezeRisk.`);
+console.log(`  The window and tie rule now agree, so the replay measures the same STATISTIC production does.`);
+console.log(`  Venue and density still differ, so it is not the same NUMBER. Treat replayed squeezeRisk as`);
+console.log(`  evidence about the deployed engine's behaviour, not as a forecast of its exact readings.`);
 console.log(`\n  The .data/ table below is DEV state, not production — see this section's doc comment.\n`);
 const MIN_HISTORY_POINTS = 12;
 const DATA_DIR = resolve(".data");

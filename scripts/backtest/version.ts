@@ -552,6 +552,109 @@ import { DEFAULT_COST_CONFIG, CostConfig } from "./costs";
  * prints the per-leg claim and the deployed book — three numbers this entry
  * previously quoted from an out-of-band computation, one of which was wrong:
  * the long book is 567 at +1.058%, not 581 at +1.098%).
+ *
+ * 9.2.0: the replay now ranks funding the way the deployed site ranks it. This
+ * is a MEASUREMENT-VALIDITY fix, not a performance change, and the numbers
+ * below say so — the point is that every squeezeRisk statistic the replay has
+ * ever published described an engine the site does not run.
+ *
+ * ── Two ways the replay's percentile was not production's ───────────────
+ *
+ * `computeFundingPercentile(current, history)` is one function with two
+ * callers. The live aggregator feeds it `readHistory(asset)`; the replay fed
+ * it every prior funding print since 2022. Same code, different question:
+ *
+ *   dimension        replay (before)        production
+ *   window           expanding, ~4 years    rolling 30 days (readHistory)
+ *   venue            Binance only           OI-weighted multi-venue
+ *   points in window thousands              tens
+ *   ties at 0.01%    26.8% of all rows      none observed (102/109 distinct)
+ *
+ * This is not a footnote about a minor input. `computeSqueezeRisk` weights the
+ * funding-crowding term at 0.35, its LARGEST component, and that term is
+ * `|fundingPercentile - 50| * 2`. squeezeRisk carries 0.14 of METRIC_WEIGHTS.
+ * A percentile the site never computes was driving the biggest share of a
+ * voter the site does ship.
+ *
+ * ── The tie rule was independently wrong ────────────────────────────────
+ *
+ * `values.filter(v => v <= current).length` counts a value equal to the
+ * current one as below it. Harmless on a continuous series; not here. Binance
+ * pins funding at its 0.010000%/8h baseline whenever the premium is ~0, and
+ * that single value is 777 of 2,896 replayed rows — 26.8%. Under `<=` an
+ * utterly ordinary day ranked at a median p94, so `|94 - 50| * 2` handed
+ * crowding an 88/100 on the most boring funding print the exchange emits.
+ * Measured: modal-funding days scored squeezeRisk 72.5 and read bearish 82.6%
+ * of the time, against 59.4 and 75.3% elsewhere.
+ *
+ * Fixed to the midrank convention, `(below + 0.5*equal)/n`, which is a no-op
+ * when there are no ties — and production has none, so this changes the replay
+ * and leaves the live number alone. `oiPercentileFromHistory` deliberately
+ * keeps `<=`: OI is a continuous USD sum with no point mass to mis-rank.
+ *
+ * ── What moved, over the same 2,896 asset-days, --pivots=off both arms ──
+ *
+ *   fundingPercentile   before: p25 24  p50 43  p75 91     <- not a percentile
+ *                       after:  p25 24  p50 50  p75 75
+ *                       identical on 70/2,896 rows; median |shift| 15 points
+ *   squeezeScore        p50 64 -> 61, mean 62.9 -> 60.6
+ *   biasScore           p25/p50/p75 34/41/49 -> UNCHANGED
+ *   verdict             70 flips of 2,896 (2.4%): 31 bearish->neutral,
+ *                       17 neutral->bearish, 13 neutral->bullish, 9 the other way
+ *
+ * ── It did not improve the record, and was not supposed to ──────────────
+ *
+ * Verdict-directional forward 7d over all 2,892 labelled days: +6.793% before,
+ * +6.543% after, against an SE of 12.4. On the 70 flipped days alone the
+ * paired delta is -10.34% at SE 72.67, t -0.14. There is no outcome evidence
+ * either way and there was never going to be at n=70.
+ *
+ * The justification is not P&L. It is that the replay is the only instrument
+ * this project has for judging the engine, and an instrument calibrated to a
+ * different engine answers a question nobody asked. Quoting the -10.34% as a
+ * cost would be the mirror of quoting a +10% as a gain: both are one SE of
+ * noise wearing a sign.
+ *
+ * ── Still not matched, stated plainly ───────────────────────────────────
+ *
+ * Window length now agrees; point DENSITY does not. The replay sees ~90
+ * 8-hourly Binance prints inside its 30 days, production tens of multi-venue
+ * readings. And the venue construction still differs. So the replay's
+ * percentile is now the same STATISTIC as production's over the same window,
+ * not the same number. The 30-day bound is imported from
+ * `HISTORY_RETENTION_MS` rather than restated, so the two cannot drift.
+ *
+ * ── The 9.1.0 pivots were re-measured, not carried over ─────────────────
+ *
+ * positioning is the scope 9.1.0 recentres and funding is a positioning
+ * metric, so the shipped artifact was a calibration of the superseded engine
+ * — the same trap 9.1.0's own last section describes, and the reason
+ * `pivotsForAsset` refuses a version-mismatched artifact.
+ *
+ * Regenerated under 9.2.0 from all three arms and re-measured with
+ * scripts/audit/pivotEffect.ts. The pivots barely moved — positioning 33 -> 32
+ * BTC, 32 -> 32 ETH, composite still below PIVOT_MIN_OFFSET in both — and
+ * 9.1.0's claim reproduces inside its own SE on every leg:
+ *
+ *                                 9.1.0 as documented      re-measured under 9.2.0
+ *   bearish verdict, fwd 7d   +0.326% -> -0.890%  t -2.76   +0.333% -> -0.945%  t -2.84
+ *   bullish verdict, fwd 7d   +2.066% -> +0.971%  t -1.72   +2.050% -> +0.924%  t -1.87
+ *   share of days bearish       61.9% ->   25.7%  t -18.5     61.4% ->   25.3%  t -18.38
+ *
+ * That agreement is the CHECK, not a reason the re-run could have been
+ * skipped. 9.1.0's own entry records the alternative: renumbering without
+ * re-measuring ships a calibration of an engine that no longer exists.
+ *
+ * ── The band recalibration this rank was blocking ───────────────────────
+ *
+ * b9c4d47 measured 14 candidate FUNDING_BANDS specifications and declined all
+ * of them. That measurement ran on the OLD rank, so it was re-run here. The
+ * null survived: best standalone |t| 1.14, best conditional t 1.90 as the
+ * argmax of fourteen correlated specifications, sign still unstable across
+ * rank constructions and across BTC/ETH. FUNDING_BANDS and METRIC_WEIGHTS
+ * are unchanged by this entry.
+ *
+ * Measurements: scripts/audit/fundingBands.ts §3 and §8, scripts/audit/pivotEffect.ts §6.
  */
 /*
  * Re-exported, not declared. The value lives in src/lib/signals/engineVersion.ts

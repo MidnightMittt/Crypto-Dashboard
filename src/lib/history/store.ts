@@ -31,7 +31,19 @@ import { LocalHistoryPoint } from "@/types/market";
 export type HistoryPoint = LocalHistoryPoint;
 
 const DATA_DIR = path.join(process.cwd(), ".data");
-const RETENTION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+/**
+ * How far back a series is kept — and therefore the window every percentile
+ * computed from `readHistory` is ranked against.
+ *
+ * Exported because the replay has to rank funding over the SAME window. It
+ * previously used an expanding one (four years of 8-hourly Binance prints),
+ * which made its `fundingPercentile` — and so `squeezeRisk`, whose largest
+ * component at weight 0.35 is that percentile — a statistic about an engine
+ * the site does not run. Import this rather than restating 30.
+ */
+export const HISTORY_RETENTION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const RETENTION_MS = HISTORY_RETENTION_MS;
 const MIN_GAP_MS = 5 * 60 * 1000; // record at most one point per 5 minutes
 
 function fileFor(asset: AssetSymbol | "MARKET"): string {

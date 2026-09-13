@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { computeSqueezeRisk, computeFundingPercentile } from "../../src/lib/sentiment/positioning";
-import { oiPercentileFromHistory } from "../../src/lib/history/store";
+import { oiPercentileFromHistory, HISTORY_RETENTION_MS } from "../../src/lib/history/store";
 import { computeLeverageHeat } from "../../src/lib/sentiment/compositeIndex";
 import { buildMarketThesis, MarketThesisInputs } from "../../src/lib/sentiment/marketThesis";
 import { evaluateMarketStructure } from "../../src/lib/signals/marketStructureEvidence";
@@ -669,7 +669,21 @@ export function replayAsset(
     if (windowStart !== undefined && t < windowStart) continue;
     if (windowEnd !== undefined && t >= windowEnd) continue;
     const priorOi = oiHistory.slice(0, i).map((p) => oiPoint(p.t, p.oiUsd));
-    const priorFunding = fundingRate.filter((p) => p.t < t).map((p) => fundingPoint(p.t, p.fundingRatePct));
+    // Bounded to 30 days because that is what production ranks against: the
+    // live aggregator feeds computeFundingPercentile the output of
+    // readHistory(asset), and that store retains 30 days. An expanding window
+    // here would rank today's funding against four years of it and hand
+    // squeezeRisk — whose largest component (weight 0.35) IS this percentile —
+    // a number the deployed engine never computes.
+    //
+    // What this does NOT match: point density. The replay has ~90 8-hourly
+    // Binance prints inside the 30 days; production has tens of multi-venue
+    // OI-weighted readings. Same window, different resolution. The remaining
+    // gap is measured in scripts/audit/fundingBands.ts §8.
+    const fundingWindowStart = t - HISTORY_RETENTION_MS;
+    const priorFunding = fundingRate
+      .filter((p) => p.t < t && p.t >= fundingWindowStart)
+      .map((p) => fundingPoint(p.t, p.fundingRatePct));
 
     const currentFunding = atOrBefore(fundingRate, t);
     if (!currentFunding) continue; // shouldn't happen inside the aligned window, but skip rather than fabricate

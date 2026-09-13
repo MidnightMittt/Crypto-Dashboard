@@ -166,17 +166,19 @@ export const FUNDING_BANDS: SentimentBand[] = [
  * asset-days, block-bootstrapped over the date axis with BTC and ETH drawn
  * together and 10-day blocks absorbing the 7d overlap:
  *
- *   - Standalone bullish-minus-bearish forward 7d: no |t| above 1.25, and that
- *     one is the argmax of fourteen.
- *   - Conditional on squeezeRisk and basis (the 9 verdict cells): best t 1.25.
- *   - The SIGN is unstable. p45/p55 gives -0.131% on one rank and +0.255% on
- *     the other; p25/p75 gives +0.094% and -0.472%. BTC and ETH disagree in
- *     sign on every specification tested.
- *   - Only 2 of 9 conditional cells are usable at all. In three of them funding
- *     votes one way on every single row (0 bullish / 323 bearish; 93 / 0),
- *     because a percentile-banded funding IS very nearly a function of
- *     squeezeRisk and basis — squeezeRisk's largest component, 0.35 weight, is
- *     literally the funding percentile.
+ *   - Standalone bullish-minus-bearish forward 7d: no |t| above 1.14.
+ *   - Conditional on squeezeRisk and basis (the 9 verdict cells): best t 1.90,
+ *     which is the argmax of fourteen correlated specifications and therefore
+ *     approximately where the maximum lands under the null anyway. Its
+ *     standalone twin at the same edges is t 1.09.
+ *   - The SIGN is unstable across rank constructions. p25/p75 conditional gives
+ *     +1.352% on one and -0.017% on the other; p10/p90 gives +1.172% and
+ *     -0.856%. BTC and ETH disagree in sign on the midrank arm.
+ *   - At most 4 of 9 conditional cells are usable, and only 2 on the expanding
+ *     arm. In several the band votes one way on every single row (0 bullish /
+ *     303 bearish; 83 / 0), because a percentile-banded funding IS very nearly
+ *     a function of squeezeRisk and basis — squeezeRisk's largest component,
+ *     0.35 weight, is literally the funding percentile.
  *
  * So widening the bands would hand the composite a third reading of the
  * perp-vs-spot premium at 24% of the roster weight, with no measured
@@ -184,15 +186,21 @@ export const FUNDING_BANDS: SentimentBand[] = [
  * blocks is weak evidence of absence, which is exactly why this is a decision
  * to LEAVE ALONE rather than a licence to retire the metric.
  *
- * ── A caveat that outgrew this comment ─────────────────────────────────
+ * ── The rank underneath all of this was itself wrong, and 9.2.0 fixed it ─
  *
- * The replay's fundingPercentile and production's are not the same statistic.
- * The replay ranks a single-venue Binance 8-hourly series over an expanding
- * ~4-year window, 26.8% of which sits at exactly 0.010000%/8h — the Binance
- * baseline — which computeFundingPercentile ranks at p94 because it counts
- * ties as below. Production ranks an OI-weighted multi-venue average over a
- * rolling 30 days with no observed ties, and returned p65 when probed on
- * 2026-09-13. See section 8 of the audit script.
+ * The measurement above was FIRST run against a replay whose fundingPercentile
+ * was not production's: it ranked a single-venue Binance 8-hourly series over
+ * an EXPANDING ~4-year window, and 26.8% of that series sits at exactly
+ * 0.010000%/8h — the Binance baseline — which the old `v <= current` rule
+ * ranked at p94 because it counted ties as below. Production ranks over a
+ * rolling 30 days with no observed ties and returned p65 when probed on
+ * 2026-09-13.
+ *
+ * 9.2.0 bounded the replay to the same 30 days and switched the tie rule to
+ * the midrank. THE NULL SURVIVED THE FIX — the figures quoted above are the
+ * re-run, not the original — which is the only reason they are still here.
+ * Remaining unmatched: venue and point density. See section 8 of the audit
+ * script and the 9.2.0 entry in scripts/backtest/version.ts.
  */
 export function fundingBandVerdict(pct: number): Verdict {
   // Monotone BY CONSTRUCTION rather than by a label chain: a sign convention

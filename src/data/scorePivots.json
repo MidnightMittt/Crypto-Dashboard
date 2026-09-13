@@ -1,15 +1,15 @@
 {
-  "engineVersion": "9.1.0",
-  "generatedAt": "2026-09-13T20:24:28.856Z",
+  "engineVersion": "9.2.0",
+  "generatedAt": "2026-09-13T22:01:08.270Z",
   "through": "2026-07-31",
   "assets": {
     "BTC": {
       "composite": null,
       "categories": {
         "positioning": {
-          "pivot": 33,
+          "pivot": 32,
           "n": 1448,
-          "sd": 10.092505482401325
+          "sd": 10.105177142872323
         }
       }
     },
@@ -19,7 +19,7 @@
         "positioning": {
           "pivot": 32,
           "n": 1448,
-          "sd": 7.38971701762133
+          "sd": 7.4891499125404914
         }
       }
     }

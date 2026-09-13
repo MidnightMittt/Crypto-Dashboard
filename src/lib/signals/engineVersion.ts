@@ -12,4 +12,4 @@
  * long — and that file is still the thing to read and to edit when bumping.
  * Bump there, in the same commit as the entry explaining why.
  */
-export const ENGINE_VERSION = "9.1.0";
+export const ENGINE_VERSION = "9.2.0";

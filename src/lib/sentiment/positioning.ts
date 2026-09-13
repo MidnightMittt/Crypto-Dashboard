@@ -43,6 +43,31 @@ const MIN_HISTORY_POINTS = 12;
  * bucket and often returns null. Funding is an OI-weighted AVERAGE, so adding
  * or dropping a venue barely moves it. The same history that can't support an
  * OI percentile can usually support this one.
+ *
+ * ── TIES COUNT HALF, NOT WHOLE ─────────────────────────────────────────
+ *
+ * This used to be `values.filter(v => v <= current).length`, which ranks a
+ * value ABOVE the entire block of observations equal to it. On a series with a
+ * point mass that is badly wrong, and the funding series has the worst possible
+ * point mass: Binance's baseline rate. 26.8% of the backtest corpus sits at
+ * exactly 0.010000%/8h, the rate that obtains when the premium component is
+ * zero — mechanically the most ordinary reading there is — and the old rule
+ * ranked it at a median of p94. Downstream, computeSqueezeRisk turns that into
+ * |94-50|*2 = 88 of 100 "Funding crowding" at 0.35 weight, its largest
+ * component. The engine's most crowded-looking input was its most neutral one.
+ *
+ * The midrank correction below is the standard fix and is a NO-OP wherever
+ * there are no ties, which includes production: the live figure is an
+ * OI-weighted average across ~20 venues and 109 recorded readings held 102
+ * distinct values. This changes the replay, not the deployed site. See
+ * scripts/audit/fundingBands.ts section 8 and ENGINE_VERSION 9.2.0.
+ *
+ * ── THE WINDOW IS THE CALLER'S JOB ─────────────────────────────────────
+ *
+ * Deliberately not windowed here. This ranks a value against whatever list it
+ * is handed, so the caller owns the lookback and the two callers have to agree
+ * on it — see run.ts, which slices to 30 days precisely because the live
+ * aggregator's `readHistory` retains 30.
  */
 export function computeFundingPercentile(
   currentPer8hPct: number,
@@ -54,8 +79,13 @@ export function computeFundingPercentile(
 
   if (values.length < MIN_HISTORY_POINTS) return null;
 
-  const below = values.filter((v) => v <= currentPer8hPct).length;
-  return Math.round((below / values.length) * 100);
+  let below = 0;
+  let equal = 0;
+  for (const v of values) {
+    if (v < currentPer8hPct) below++;
+    else if (v === currentPer8hPct) equal++;
+  }
+  return Math.round(((below + 0.5 * equal) / values.length) * 100);
 }
 
 
