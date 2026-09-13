@@ -7,6 +7,7 @@ import {
   bp,
   bpAbs,
 } from "@/lib/validation/paperBook";
+import { Blocker, JOIN_CONTRACT, LiveLedger } from "@/lib/validation/roundTrips";
 
 /**
  * THE REGISTER, RENDERED — and the ladder it sits on.
@@ -312,31 +313,169 @@ export function PaperBook({ book }: { book: Book }) {
  * The moment it carries a number it must be generated from that log, and the
  * `n=0` here is the thing that will disagree loudly if it is not.
  */
-export function LiveFills() {
+const BLOCKS_LABEL: Record<Blocker["blocks"], string> = {
+  "register-join": "blocks the register join",
+  "execution-quality": "blocks execution measurement",
+  "any-aggregate": "blocks any average",
+};
+
+/**
+ * Rung 3, rendered from a measurement rather than from a sentence.
+ *
+ * The previous version of this component said "nothing has been tested against
+ * a real fill" as prose. That was true, but prose does not know when it stops
+ * being true, and the round-trip log has existed since 2026-08-21 — so the page
+ * was asserting an emptiness it had never actually looked at.
+ *
+ * It looks now. Fifty-nine real round trips, and the tier is STILL empty, for
+ * reasons that are counted rather than claimed. The distinction matters to a
+ * reader deciding whether to wait: "no data yet" resolves by waiting, and "no
+ * column to join on" does not.
+ */
+export function LiveFills({ ledger }: { ledger: LiveLedger }) {
+  if (ledger.source === "unavailable") {
+    return (
+      <section className="rounded-xl border border-hairline bg-panel/20 px-5 py-4 sm:px-6">
+        <div className="flex flex-wrap items-baseline gap-x-3">
+          <h2 className="text-[13px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
+            Live fills — money actually moved
+          </h2>
+          <span className="font-mono text-[11px] text-amber">not read</span>
+        </div>
+        <p className="mt-2 text-[15px] font-semibold leading-snug text-ink-muted">
+          {ledger.statement}
+        </p>
+      </section>
+    );
+  }
+
+  const byQuestion = (q: Blocker["blocks"]) => ledger.blockers.filter((b) => b.blocks === q);
+
   return (
     <section className="rounded-xl border border-hairline bg-panel/20 px-5 py-4 sm:px-6">
       <div className="flex flex-wrap items-baseline gap-x-3">
         <h2 className="text-[13px] font-semibold uppercase tracking-[0.14em] text-ink-faint">
           Live fills — money actually moved
         </h2>
-        <span className="font-mono text-[11px] text-ink-faint">n=0</span>
+        <span className="font-mono text-[11px] text-ink-faint">
+          {ledger.joinable} of {ledger.trips} joinable
+        </span>
       </div>
-      <p className="mt-2 text-[15px] font-semibold leading-snug text-ink-muted">
-        Nothing on this page has been tested against a real fill.
+
+      <p className="mt-2 max-w-3xl text-[15px] font-semibold leading-snug text-ink-muted">
+        {ledger.statement}
       </p>
+
       <p className="mt-1.5 max-w-3xl text-[12px] leading-relaxed text-ink-muted">
         The paper book above answers &ldquo;is the effect there&rdquo;. It cannot answer
         &ldquo;can we get that price&rdquo;, and those fail independently. Every cost quoted above
         is either a modelled tick or the half-spread resting on the top of the book — neither sees
         market impact, neither sees an auction imbalance, and a basket of twelve names hitting one
-        opening auction is exactly where both live. This tier is rendered empty rather than omitted
-        because an omitted tier reads as a solved problem.
+        opening auction is exactly where both live.
       </p>
-      <p className="mt-2 text-[11px] leading-relaxed text-ink-faint">
-        It fills when the round-trip log is joined to the register, so a declared strategy&rsquo;s
-        paper price and its executed price can be differenced on the same date — the same pairing
-        the mark drag uses, against a fill instead of a quote.
-      </p>
+
+      {ledger.inDeclaredNames > 0 && (
+        <div className="mt-3 rounded-md border border-danger/40 bg-danger/5 px-3 py-2">
+          <p className="text-[12px] leading-relaxed text-ink-muted">
+            <span className="font-semibold uppercase tracking-[0.12em] text-danger">
+              Not the join
+            </span>{" "}
+            · {ledger.inDeclaredNames} of these trips are in names a declared basket holds
+            {ledger.declaredNameBreakdown.length > 0 && (
+              <>
+                {" "}
+                (
+                {ledger.declaredNameBreakdown.map((b, i) => (
+                  <span key={b.basket}>
+                    {i > 0 && ", "}
+                    <span className="font-mono">{b.basket}</span> {b.trips}
+                  </span>
+                ))}
+                )
+              </>
+            )}
+            . That is a shared ticker, not an execution. The declared strategy buys the whole
+            basket at the close and sells it at the next open; a discretionary long in one of its
+            names, held for an unrecorded span, is a different position. This count is shown
+            because it is the number a reader would otherwise derive and quietly treat as the join.
+          </p>
+        </div>
+      )}
+
+      <div className="mt-3 space-y-2.5">
+        {(["register-join", "execution-quality", "any-aggregate"] as const).map((q) => {
+          const items = byQuestion(q);
+          if (items.length === 0) return null;
+          return (
+            <div key={q}>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-faint">
+                {BLOCKS_LABEL[q]}
+              </p>
+              <ul className="mt-1 space-y-1">
+                {items.map((b) => (
+                  <li key={b.id} className="flex gap-2 text-[11px] leading-relaxed text-ink-muted">
+                    <span className="mt-[3px] shrink-0 font-mono text-[10px] tabular-nums text-danger">
+                      {b.count}/{b.of}
+                    </span>
+                    <span>
+                      <span className="font-mono text-ink">{b.id}</span> — {b.detail}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-3 rounded-md border border-hairline bg-surface/30 px-3 py-2">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-faint">
+          What would fill this rung
+        </p>
+        <ul className="mt-1 space-y-1">
+          {JOIN_CONTRACT.map((c) => (
+            <li key={c.field} className="text-[11px] leading-relaxed text-ink-muted">
+              <span className="font-mono text-ink">{c.field}</span> — {c.why}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {ledger.realized && (
+        <details className="mt-3 rounded-md border border-hairline bg-surface/20">
+          <summary className="cursor-pointer px-3 py-2 text-[11px] text-ink-muted">
+            <span className="uppercase tracking-[0.12em] text-ink-faint">What is in this log</span>{" "}
+            <span className="text-ink-faint">
+              — real money, and why the total is not on this page
+            </span>
+          </summary>
+          <div className="border-t border-hairline px-3 py-2 text-[11px] leading-relaxed text-ink-muted">
+            <p>
+              {ledger.trips} closed round trips between{" "}
+              <span className="font-mono">{ledger.window?.from}</span> and{" "}
+              <span className="font-mono">{ledger.window?.to}</span>, schema{" "}
+              <span className="font-mono">{ledger.schemas.join(", ")}</span>:{" "}
+              <span className="font-mono">
+                {ledger.realized.wins}W / {ledger.realized.losses}L
+              </span>
+              , realising{" "}
+              <span className="font-mono">
+                {ledger.realized.usd >= 0 ? "+" : "−"}$
+                {Math.abs(ledger.realized.usd).toFixed(2)}
+              </span>
+              .
+            </p>
+            <p className="mt-1.5">
+              That total is provenance, not evidence, and it is deliberately not on the face of
+              this page. It is conditioned on having closed — a loser gets held and a winner gets
+              taken, so the open positions missing from this log are not missing at random. And it
+              answers &ldquo;did the account make money&rdquo;, which this rung does not ask. The
+              question here is whether we can get the price the paper book assumed, and a profit
+              and loss total is silent on that.
+            </p>
+          </div>
+        </details>
+      )}
     </section>
   );
 }

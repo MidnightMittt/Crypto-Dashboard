@@ -62,12 +62,18 @@ export function EvidenceLadder({
   registered,
   withPaperRecord,
   clearingOutOfSample,
+  liveTrips,
+  liveJoinable,
 }: {
   labMeasured: number;
   labCleared: number;
   registered: number;
   withPaperRecord: number;
   clearingOutOfSample: number;
+  /** Round trips on record — real money, whether or not any of it can be used. */
+  liveTrips: number;
+  /** Those naming the strategy they executed. The only ones this rung can read. */
+  liveJoinable: number;
 }) {
   return (
     <section className="rounded-xl border border-hairline bg-panel/60 px-5 py-5 sm:px-6">
@@ -105,8 +111,12 @@ export function EvidenceLadder({
           index={3}
           name="Live"
           question="Can we actually get that price?"
-          headline="n=0"
-          detail="No declared strategy has been differenced against a real fill. Market impact and auction imbalance are invisible to every cost on this page."
+          headline={`${liveJoinable} of ${liveTrips} usable`}
+          detail={
+            liveTrips === 0
+              ? "No round trip is on record at all. Market impact and auction imbalance are invisible to every cost on this page."
+              : `${liveTrips} real round trips exist and none names the strategy it executed, so none can be differenced against a paper price. Not a waiting problem — a missing column.`
+          }
           tone="text-ink-faint"
           faded
         />

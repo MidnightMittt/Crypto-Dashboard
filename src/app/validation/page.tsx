@@ -12,6 +12,8 @@ import { ResolutionSchedule } from "@/components/validation/ResolutionSchedule";
 import { EvidenceLadder } from "@/components/validation/EvidenceLadder";
 import { LiveFills, PaperBook } from "@/components/validation/PaperBook";
 import { PaperLinesArtifact, buildPaperBook } from "@/lib/validation/paperBook";
+import liveLedgerJson from "@/data/liveLedger.json";
+import { LiveLedger } from "@/lib/validation/roundTrips";
 import type { ResolutionSchedule as Schedule } from "@/lib/research/ivRvSchedule";
 
 /**
@@ -79,6 +81,7 @@ const ivRvSymbols = new Set(ivRv.points.map((p) => p.symbol)).size;
  * with the sample size behind it.
  */
 const paperBook = buildPaperBook(paperJson as unknown as PaperLinesArtifact);
+const liveLedger = (liveLedgerJson as unknown as { ledger: LiveLedger }).ledger;
 
 const GROUPS: Array<{ outcome: Outcome; title: string; blurb: string; tone: string }> = [
   {
@@ -239,6 +242,8 @@ export default function ValidationPage() {
           registered={paperBook.totals.registered}
           withPaperRecord={paperBook.totals.withPaperRecord}
           clearingOutOfSample={paperBook.totals.clearing}
+          liveTrips={liveLedger.trips}
+          liveJoinable={liveLedger.joinable}
         />
 
         {/* Rung 2, and the only rung with numbers that were not chosen on their own data. */}
@@ -259,8 +264,8 @@ export default function ValidationPage() {
           lastObservation={ivRvDates[ivRvDates.length - 1] ?? null}
         />
 
-        {/* Rung 3. Empty, and rendered so that its emptiness is a statement. */}
-        <LiveFills />
+        {/* Rung 3. Empty, and rendered so that its emptiness is a measurement. */}
+        <LiveFills ledger={liveLedger} />
 
         {/*
           Rung 1, last, with its headline attached to IT rather than to the
