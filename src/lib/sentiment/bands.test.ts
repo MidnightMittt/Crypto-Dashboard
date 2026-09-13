@@ -168,8 +168,8 @@ describe("bandTrigger", () => {
 
   it("names the band waiting on the other side of each boundary", () => {
     const t = bandTrigger(0, FUNDING_BANDS);
-    expect(t.above!.label).toBe("Bullish");
-    expect(t.below!.label).toBe("Bearish");
+    expect(t.above!.label).toBe("Longs Paying");
+    expect(t.below!.label).toBe("Shorts Paying");
   });
 
   it("reports distance to each boundary from the current value", () => {

@@ -13,7 +13,7 @@ import {
 } from "@/types/market";
 import type { RegimeTags } from "@/lib/technicals/regimes";
 import { technicalConfirmation } from "./technicals";
-import { bandFor, FUNDING_BANDS, LONG_SHORT_BANDS } from "./bands";
+import { bandFor, fundingBandVerdict, FUNDING_BANDS, LONG_SHORT_BANDS } from "./bands";
 import { coinbasePremiumLean, deribitOptionsLean, SQUEEZE_MEANINGFUL_SCORE } from "./leans";
 import { Lean } from "@/components/ui/LeanGauge";
 
@@ -155,18 +155,22 @@ function leanToDirection(lean: Lean): ThesisDirection {
   return "neutral";
 }
 
+/**
+ * Direction comes from `fundingBandVerdict` in ./bands, the one place a funding
+ * rate becomes a direction, rather than a copy of it.
+ *
+ * It WAS a copy — the same five-way label chain, written out again here. Two
+ * engines, one convention, two implementations, which is the shape of defect
+ * 7.0.0 and 6.0.0 were both about. It had not drifted yet; it simply had no
+ * mechanism that would stop it, and the mapping it duplicated turned out to be
+ * wrong in a way that then had to be corrected in two places.
+ *
+ * `ThesisDirection` and `Verdict` are both "bullish" | "bearish" | "neutral",
+ * so this is a shared judgement and not a coerced one.
+ */
 function fundingEvidence(fundingPct: number): ThesisEvidence {
   const band = bandFor(fundingPct, FUNDING_BANDS);
-  const direction: ThesisDirection =
-    band.label === "Crowded Longs"
-      ? "bearish"
-      : band.label === "Extreme Shorts"
-        ? "bullish"
-        : band.label === "Bullish"
-          ? "bullish"
-          : band.label === "Bearish"
-            ? "bearish"
-            : "neutral";
+  const direction: ThesisDirection = fundingBandVerdict(fundingPct);
 
   return {
     source: "Funding Rate",

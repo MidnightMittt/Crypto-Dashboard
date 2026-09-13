@@ -93,10 +93,7 @@ function hypothesis(opts: {
   };
 }
 
-const fundingBullish = FUNDING_BANDS.find((b) => b.label === "Bullish")!;
-const fundingExtremeShorts = FUNDING_BANDS.find((b) => b.label === "Extreme Shorts")!;
-const fundingBearish = FUNDING_BANDS.find((b) => b.label === "Bearish")!;
-const fundingCrowdedLongs = FUNDING_BANDS.find((b) => b.label === "Crowded Longs")!;
+const fundingNeutral = FUNDING_BANDS.find((b) => b.label === "Neutral")!;
 
 const longShortMostlyLongs = LONG_SHORT_BANDS.find((b) => b.label === "Mostly Longs")!;
 const longShortMostlyShorts = LONG_SHORT_BANDS.find((b) => b.label === "Mostly Shorts")!;
@@ -105,9 +102,15 @@ export const SIGNAL_HYPOTHESES: SignalHypothesis[] = [
   hypothesis({
     id: "funding",
     label: "Funding Rate",
-    bullishCondition: `Funding sits in the "Bullish" band (${fundingBullish.min}% to ${fundingBullish.max}%/8h), OR in the "Extreme Shorts" band (below ${fundingExtremeShorts.max}%/8h) — faded: crowded shorts are read as exhaustion, not doubly bearish.`,
-    bearishCondition: `Funding sits in the "Bearish" band (${fundingBearish.min}% to ${fundingBearish.max}%/8h), OR in the "Crowded Longs" band (above ${fundingCrowdedLongs.min}%/8h) — faded: crowded longs are read as the side exposed to an unwind, not doubly bullish.`,
-    neutralCondition: `Funding sits inside the neutral band, ${FUNDING_BANDS.find((b) => b.label === "Neutral")!.min}% to ${FUNDING_BANDS.find((b) => b.label === "Neutral")!.max}%/8h.`,
+    /*
+     * These two conditions previously read "Bullish band ... OR Extreme Shorts
+     * band — faded" and the mirror. Both called themselves faded while one half
+     * of each was the TREND reading, which is how a sign flip at 0.15%/8h came
+     * to look deliberate in the declared hypothesis. One convention now.
+     */
+    bullishCondition: `Funding is negative beyond the neutral band (below ${fundingNeutral.min}%/8h) — faded: shorts are paying to hold, so shorts are the side exposed to an unwind. Read the same way at every magnitude.`,
+    bearishCondition: `Funding is positive beyond the neutral band (above ${fundingNeutral.max}%/8h) — faded: longs are paying to hold, so longs are the side exposed. Read the same way at every magnitude, which is the part that changed: mildly positive funding used to read bullish.`,
+    neutralCondition: `Funding sits inside the neutral band, ${fundingNeutral.min}% to ${fundingNeutral.max}%/8h — which is 2,863 of 2,896 replayed days, because these edges sit at roughly the 99th percentile of observed funding.`,
     hasHistoricalSource: true,
   }),
   hypothesis({

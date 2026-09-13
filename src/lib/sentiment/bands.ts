@@ -1,4 +1,7 @@
 import { SentimentBand } from "@/types/market";
+// TYPE-ONLY on purpose: a runtime import here would put this module on a
+// dependency edge it does not need. See fundingBandVerdict below.
+import type { Verdict } from "@/lib/signals/types";
 
 export function bandFor(value: number, bands: SentimentBand[]): SentimentBand {
   return bands.find((b) => value >= b.min && value <= b.max) ?? bands[bands.length - 1];
@@ -70,13 +73,98 @@ export function bandPosition(
   return { index, position, label: bands[index]?.label ?? "" };
 }
 
+/**
+ * LABELS NAME THE POSITIONING, NEVER THE PRICE IMPLICATION.
+ *
+ * The two middle bands were called "Bearish" and "Bullish", and that is a large
+ * part of why funding's sign convention could be incoherent for so long without
+ * looking incoherent. A band labelled "Bullish" reads as licence to emit a
+ * bullish verdict on mildly positive funding — while the outer band on the SAME
+ * side emitted bearish. One axis, two opposite conventions, the flip sitting at
+ * 0.15%/8h. See `fundingBandVerdict` in signals/evaluators.ts for the
+ * measurement that settled which one survives.
+ *
+ * Renamed to "Longs Paying" / "Shorts Paying": a statement about who pays to
+ * hold, which is all a funding rate observes. What that implies for price is a
+ * separate judgement, and it is now made in exactly one place.
+ *
+ * The band EDGES are unchanged and are known to be miscalibrated — +/-0.04%/8h
+ * is roughly the 99th percentile of observed funding and +/-0.15%/8h is past the
+ * range entirely. Recalibrating them is deliberately not bundled here; it would
+ * move funding from speaking on ~1% of days to speaking on most of them, at the
+ * largest weight in the table, which is a calibration decision needing its own
+ * measurement. See ENGINE_VERSION 9.0.0's note.
+ */
 export const FUNDING_BANDS: SentimentBand[] = [
   { min: -100, max: -0.15, label: "Extreme Shorts", description: "Shorts are paying up heavily — crowded short positioning." },
-  { min: -0.15, max: -0.04, label: "Bearish", description: "Funding leans negative; shorts hold a mild edge." },
+  { min: -0.15, max: -0.04, label: "Shorts Paying", description: "Funding is negative; shorts are paying longs to hold." },
   { min: -0.04, max: 0.04, label: "Neutral", description: "Funding is balanced — no clear positioning skew." },
-  { min: 0.04, max: 0.15, label: "Bullish", description: "Funding leans positive; longs hold a mild edge." },
+  { min: 0.04, max: 0.15, label: "Longs Paying", description: "Funding is positive; longs are paying shorts to hold." },
   { min: 0.15, max: 100, label: "Crowded Longs", description: "Longs are paying up heavily — crowded long positioning, squeeze risk from a downside shock rises." },
 ];
+
+/**
+ * THE ONE PLACE A FUNDING RATE BECOMES A DIRECTION. Fade the crowd, at every
+ * magnitude. Whoever is paying to hold is the side exposed to an unwind.
+ *
+ * Shared by the aggregate CEX rate below, the Hyperliquid cross-check, and
+ * marketThesis.ts's funding pillar — which used to hand-copy this mapping and
+ * could therefore drift from it.
+ *
+ * ── It used to flip sign at 0.15%/8h, and the flip never ran ────────────
+ *
+ * The previous mapping faded the outer bands and TRENDED the middle two:
+ * mildly positive funding read bullish, heavily positive funding read bearish.
+ * Non-monotone on one axis, and the doc comment here described only the fade
+ * half — "crowded longs are BEARISH evidence, not doubly bullish" — so the
+ * declared convention and the shipped behaviour were opposites in the region
+ * that actually occurs.
+ *
+ * Measured over the full 2,896-day replay (2022-08 to 2026-07):
+ *
+ *   Crowded Longs   (> +0.15%/8h)      0 days    <- the fade branch
+ *   Longs Paying    (+0.04..+0.15)    30 days    <- trended, 100% of the
+ *   Neutral         (-0.04..+0.04) 2,863 days       positive-side output
+ *   Shorts Paying   (-0.15..-0.04)     2 days
+ *   Extreme Shorts  (< -0.15%/8h)      1 day
+ *
+ * So the convention this comment advertised had executed once in four years,
+ * on the short side, and every positive-funding verdict the engine ever
+ * published came from the undeclared trend branch.
+ *
+ * ── Why fade won, and how weak the outcome evidence is ─────────────────
+ *
+ * Primarily coherence: squeezeRisk, marketThesis's own framing, and
+ * FUNDING_BANDS' "Crowded Longs" description all fade. The engine now has one
+ * convention on the leverage axis instead of two that fought each other
+ * between 0.005% and 0.15%/8h — which is what made funding and squeezeRisk
+ * disagree on 30 of the 30 replayed days where both spoke.
+ *
+ * The outcome evidence is consistent with fade and is NOT significant, stated
+ * plainly because it would be easy to oversell: in the Longs Paying band
+ * (n=30, ~15 independent dates once BTC/ETH same-day pairs collapse) price was
+ * DOWN 66.7% of the time at 24h and the shipped trend reading won 33.3%,
+ * mean -0.359%. Fade would have been right twice as often. At n_eff ~15 that
+ * is p ~ 0.3. It points the right way and proves nothing; the argument is
+ * coherence, and this is the tiebreak, not the case.
+ *
+ * ── What is NOT fixed here ─────────────────────────────────────────────
+ *
+ * The band EDGES. +/-0.04%/8h is ~p99 of observed funding and +/-0.15%/8h is
+ * past the maximum, so funding stays neutral on 98.9% of days while holding the
+ * largest weight in METRIC_WEIGHTS. That is a live problem, not a replay
+ * artifact — 87 recorded live multi-venue readings across 11 assets have median
+ * 0.0055%/8h and max 0.0100%/8h, the same scale as the replay's single-venue
+ * Binance series (median 0.0058%). Recalibrating the edges is a separate
+ * decision with a much larger blast radius; see ENGINE_VERSION 9.0.0.
+ */
+export function fundingBandVerdict(pct: number): Verdict {
+  // Monotone BY CONSTRUCTION rather than by a label chain: a sign convention
+  // spelled out band-by-band is one edit away from flipping in the middle
+  // again, and renaming a band should not be able to change a verdict.
+  if (bandFor(pct, FUNDING_BANDS).label === "Neutral") return "neutral";
+  return pct > 0 ? "bearish" : "bullish";
+}
 
 export const OI_BANDS: SentimentBand[] = [
   { min: 0, max: 15, label: "Very Low", description: "Open interest is thin relative to its recent range." },

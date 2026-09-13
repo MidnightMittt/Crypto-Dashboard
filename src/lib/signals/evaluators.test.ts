@@ -11,12 +11,35 @@ describe("fundingBandVerdict", () => {
     expect(fundingBandVerdict(-0.2)).toBe("bullish");
   });
 
-  it("hand-computed: mild positive (Bullish band) -> bullish", () => {
-    expect(fundingBandVerdict(0.08)).toBe("bullish");
+  /*
+   * These two asserted the opposite until 9.0.0, which is how the sign flip
+   * survived: the suite pinned "fade at the extreme, trend in the middle" as
+   * intended behaviour, on one axis.
+   */
+  it("hand-computed: mild positive (Longs Paying band) -> bearish, same as the extreme", () => {
+    expect(fundingBandVerdict(0.08)).toBe("bearish");
   });
 
-  it("hand-computed: mild negative (Bearish band) -> bearish", () => {
-    expect(fundingBandVerdict(-0.08)).toBe("bearish");
+  it("hand-computed: mild negative (Shorts Paying band) -> bullish, same as the extreme", () => {
+    expect(fundingBandVerdict(-0.08)).toBe("bullish");
+  });
+
+  /*
+   * THE PROPERTY, not another point sample. The defect was not a wrong value at
+   * 0.08 — it was a mapping that reversed direction as magnitude grew, so the
+   * guard has to be monotonicity itself. Point tests cannot express that: the
+   * old code passed six of them.
+   */
+  it("is monotone in magnitude — no sign reverses as funding gets more extreme", () => {
+    const positive = [0.041, 0.05, 0.08, 0.149, 0.15, 0.2, 0.5, 5];
+    const negative = positive.map((p) => -p);
+    for (const p of positive) expect(fundingBandVerdict(p), `+${p}`).toBe("bearish");
+    for (const p of negative) expect(fundingBandVerdict(p), `${p}`).toBe("bullish");
+  });
+
+  it("crosses the old flip point (0.15) without changing sign", () => {
+    // 0.149 and 0.151 used to be bullish and bearish respectively.
+    expect(fundingBandVerdict(0.149)).toBe(fundingBandVerdict(0.151));
   });
 
   it("hand-computed: inside the neutral band -> neutral", () => {

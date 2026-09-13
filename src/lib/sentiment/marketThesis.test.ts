@@ -42,17 +42,35 @@ describe("buildMarketThesis - null/empty handling", () => {
   });
 });
 
-describe("buildMarketThesis - funding evidence (fade-the-extremes)", () => {
-  it("reads mild positive funding as bullish", () => {
+describe("buildMarketThesis - funding evidence (fade the crowd, at every magnitude)", () => {
+  /*
+   * These two used to assert the opposite, inside a describe block named
+   * "fade-the-extremes", directly above a test titled "reads EXTREME positive
+   * funding as BEARISH, not more bullish". The suite recorded the sign flip
+   * faithfully and never registered it as a contradiction.
+   */
+  it("reads mild positive funding as BEARISH — longs are paying, so longs are exposed", () => {
     const result = buildMarketThesis(baseInputs({ weightedFundingRatePct: 0.08 }), NOW)!;
-    const funding = result.bullishEvidence.find((e) => e.source === "Funding Rate");
-    expect(funding).toBeDefined();
+    expect(result.bearishEvidence.find((e) => e.source === "Funding Rate")).toBeDefined();
+    expect(result.bullishEvidence.find((e) => e.source === "Funding Rate")).toBeUndefined();
   });
 
-  it("reads mild negative funding as bearish", () => {
+  it("reads mild negative funding as BULLISH — shorts are paying, so shorts are exposed", () => {
     const result = buildMarketThesis(baseInputs({ weightedFundingRatePct: -0.08 }), NOW)!;
-    const funding = result.bearishEvidence.find((e) => e.source === "Funding Rate");
-    expect(funding).toBeDefined();
+    expect(result.bullishEvidence.find((e) => e.source === "Funding Rate")).toBeDefined();
+    expect(result.bearishEvidence.find((e) => e.source === "Funding Rate")).toBeUndefined();
+  });
+
+  it("reads the same direction at mild and extreme magnitude — no sign flip on one axis", () => {
+    // The property that was broken: +0.08 and +0.5 must not disagree.
+    for (const pct of [0.05, 0.08, 0.2, 0.5]) {
+      const r = buildMarketThesis(baseInputs({ weightedFundingRatePct: pct }), NOW)!;
+      expect(r.bearishEvidence.find((e) => e.source === "Funding Rate"), `+${pct} must read bearish`).toBeDefined();
+    }
+    for (const pct of [-0.05, -0.08, -0.2, -0.5]) {
+      const r = buildMarketThesis(baseInputs({ weightedFundingRatePct: pct }), NOW)!;
+      expect(r.bullishEvidence.find((e) => e.source === "Funding Rate"), `${pct} must read bullish`).toBeDefined();
+    }
   });
 
   it("reads EXTREME positive funding (crowded longs) as BEARISH, not more bullish", () => {
@@ -237,9 +255,14 @@ describe("buildMarketThesis - conviction arithmetic (hand-verified)", () => {
     // carries neutral WEIGHT, so agreementRatio=1 and participationRatio=1.
     // The long/short ratio is present but weightless context, which is
     // precisely why it does not pull participation below 1.
+    //
+    // Funding is NEGATIVE here to be the bullish side: shorts paying is what
+    // makes shorts the exposed side. It read +0.08 while mild positive funding
+    // was scored bullish; the intended arithmetic is unchanged, only the sign
+    // that produces a bullish funding pillar.
     const result = buildMarketThesis(
       baseInputs({
-        weightedFundingRatePct: 0.08,
+        weightedFundingRatePct: -0.08,
         longShortRatio: 2.5,
         basisPct: 0.05,
       }),
@@ -265,7 +288,7 @@ describe("buildMarketThesis - conviction arithmetic (hand-verified)", () => {
     // coincidence, so nothing failed and the stale numbers survived.
     const result = buildMarketThesis(
       baseInputs({
-        weightedFundingRatePct: 0.08, // bullish, weight 0.17
+        weightedFundingRatePct: -0.08, // bullish (shorts paying), weight 0.17
         basisPct: -0.05, // bearish, weight 0.10
       }),
       NOW
@@ -352,12 +375,12 @@ describe("buildMarketThesis - price action does not vote", () => {
    */
   it("cannot flip dominant, and does not move conviction", () => {
     const withoutRead = buildMarketThesis(
-      baseInputs({ weightedFundingRatePct: 0.08, basisPct: -0.05 }),
+      baseInputs({ weightedFundingRatePct: -0.08, basisPct: -0.05 }),
       NOW
     )!;
     const withRead = buildMarketThesis(
       baseInputs({
-        weightedFundingRatePct: 0.08,
+        weightedFundingRatePct: -0.08,
         basisPct: -0.05,
         technicals: technicalRead("bearish", 95),
       }),
@@ -373,7 +396,7 @@ describe("buildMarketThesis - price action does not vote", () => {
   it("stays out of topSupporting even when it agrees with the thesis", () => {
     const result = buildMarketThesis(
       baseInputs({
-        weightedFundingRatePct: 0.08,
+        weightedFundingRatePct: -0.08,
         technicals: technicalRead("bullish", 95),
       }),
       NOW
@@ -451,7 +474,7 @@ describe("buildMarketThesis - top supporting / opposing", () => {
   it("puts the higher-weighted evidence first in topSupporting", () => {
     const result = buildMarketThesis(
       baseInputs({
-        weightedFundingRatePct: 0.08, // bullish, weight 0.20 - should rank first
+        weightedFundingRatePct: -0.08, // bullish (shorts paying), weight 0.17 - should rank first
         orderFlow: {
           bookImbalance: null,
           cvdHistory: [],
@@ -558,7 +581,7 @@ describe("buildMarketThesis - regime classification", () => {
   it("classifies high-conviction one-sided evidence as Trending", () => {
     const result = buildMarketThesis(
       baseInputs({
-        weightedFundingRatePct: 0.08,
+        weightedFundingRatePct: -0.08,
         longShortRatio: 2.5,
         basisPct: 0.05,
       }),

@@ -5,7 +5,7 @@ import { MacroLiquiditySnapshot, LIQUIDITY_CHANGE_THRESHOLD_BN, NFCI_NEUTRAL_BAN
 import type { HyperliquidConfirmation } from "../providers/hyperliquidConfirm";
 import { MetricVerdict, Verdict } from "./types";
 import { agreementOf, describeConfidence, scoreConfidence } from "./confidence";
-import { bandFor, bandTrigger, FUNDING_BANDS, LONG_SHORT_BANDS } from "../sentiment/bands";
+import { bandFor, bandTrigger, fundingBandVerdict, FUNDING_BANDS, LONG_SHORT_BANDS } from "../sentiment/bands";
 import type { SentimentBand } from "@/types/market";
 import { coinbasePremiumLean, deribitOptionsLean, stablecoinFlowLean } from "../sentiment/leans";
 import { squeezeLean } from "../sentiment/leans";
@@ -88,25 +88,21 @@ function priceActionConflict(verdict: Verdict, ctx: SignalContext, metricLabel: 
 
 // ── Funding ────────────────────────────────────────────────────────────
 
-/**
- * Fade the extremes, matching marketThesis.ts: crowded longs are BEARISH
- * evidence, not doubly bullish. FUNDING_BANDS' own descriptions already
- * frame it that way; this reads them at their word. Shared by the
- * aggregate CEX funding rate below AND the Hyperliquid cross-check, so
- * both venues are classified by the identical rule.
+/*
+ * `fundingBandVerdict` LIVES IN sentiment/bands.ts, beside the band table it
+ * reads, and is re-exported here because this was its home and callers import
+ * it from here.
+ *
+ * It moved for a build failure, which is worth recording because tsc and 2,755
+ * tests all passed with it here. marketThesis.ts needs the same function —
+ * it had hand-copied the mapping — and marketThesis is reachable from
+ * AiMarketSummary.tsx, a "use client" component. Importing it from this module
+ * pulled evaluators' whole dependency chain into the client bundle:
+ * evaluators -> providers/macroLiquidity -> cache/swr -> `after` from
+ * "next/server", which cannot exist client-side. bands.ts imports nothing but
+ * a type, so both engines can share from there.
  */
-export function fundingBandVerdict(pct: number): Verdict {
-  const band = bandFor(pct, FUNDING_BANDS);
-  return band.label === "Crowded Longs"
-    ? "bearish"
-    : band.label === "Extreme Shorts"
-      ? "bullish"
-      : band.label === "Bullish"
-        ? "bullish"
-        : band.label === "Bearish"
-          ? "bearish"
-          : "neutral";
-}
+export { fundingBandVerdict };
 
 function evaluateFunding(data: AggregateMarketData, ctx: SignalContext): MetricVerdict | null {
   const pct = data.weightedFundingRatePct;

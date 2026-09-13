@@ -15,9 +15,21 @@ import { MetricVerdict, Verdict } from "./types";
  * (docs/DECISION_ENGINE_REDESIGN.md §5/§7/§12).
  *
  *  - `edge`    PREDICTS. Has a historical source in the census, so its claim
- *              to move the composite is falsifiable — and gets falsified
- *              (funding's own row is currently a measured anti-signal at 24h;
- *              its weight is a debt the census keeps visible).
+ *              to move the composite is falsifiable — and gets falsified. Only
+ *              etfFlows currently clears; every other Edge weight is a debt the
+ *              census keeps visible.
+ *
+ *              This used to single out funding as "a measured anti-signal at
+ *              24h". That stopped being true at ENGINE_VERSION 9.0.0, which
+ *              made funding fade the crowd at every magnitude instead of
+ *              trending the middle bands: its row went from below-base-rate
+ *              (48.5% at 1h) to not-distinguishable (66.7% at 24h, 95% lower
+ *              bound 43.1%). Do not read the 66.7% as vindication — n_eff is
+ *              17, the interval contains the null, and it does not survive
+ *              BH-FDR. The honest statement is that funding's direction is
+ *              unmeasurable on this sample, not that it is wrong. It holds the
+ *              largest weight in the table either way, which is the actual
+ *              debt.
  *  - `state`   DESCRIBES. Structure, trend character, regime, POSITIONING.
  *              Real, useful, rendered — and NEVER a vote: describing where
  *              the market is carries no claim about where it goes, and the
