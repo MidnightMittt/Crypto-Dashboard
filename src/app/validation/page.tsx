@@ -404,7 +404,7 @@ export default function ValidationPage() {
 
         {/*
           The criterion BEFORE the data, and directly above the collector whose
-          rows will decide it. Sixty-two forward legs resolve on 2026-09-22; a
+          rows will decide it. The first forward legs resolve within days; a
           reclassification rule published after they land is not a rule, it is
           a description. It sits above the schedule because a reader should
           meet the test before meeting the sample.

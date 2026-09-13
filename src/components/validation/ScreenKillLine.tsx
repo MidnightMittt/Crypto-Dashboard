@@ -4,23 +4,32 @@ import type { IvRvScreenStanding } from "@/lib/research/ivRvScreen";
  * THE KILL LINE, ON THE PAGE BEFORE THE DATA THAT DECIDES IT.
  *
  * A pre-declared reclassification criterion is only worth something if it is
- * published while the answer is still unknown. Sixty-two forward legs resolve
- * on 2026-09-22; this panel exists so the sentence that judges them is legible
- * beforehand and cannot be adjusted afterwards to fit whatever they say.
+ * published while the answer is still unknown. The first tranche of forward
+ * legs resolves within days of this being written; the panel exists so the
+ * sentence that judges them is legible beforehand and cannot be adjusted
+ * afterwards to fit whatever they say.
  *
  * ── The number this panel exists to correct ───────────────────────────
  *
- * The obvious reading of "62 rows resolve on the 22nd" is that a hundred-row
- * bar is nearly cleared. It is not. Those 62 rows share ONE observation date,
- * so they share one 21-session forward window: they are 62 measurements of the
- * same three weeks. Every observation collected so far spans 13 sessions end
- * to end, which is less than one non-overlapping window. So the row count can
- * pass while the evidence is a single draw.
+ * The obvious reading of "sixty-odd rows resolve next week" is that a
+ * hundred-row bar is nearly cleared. It is not. Those rows share ONE
+ * observation date, so they share ONE forward window: they are sixty
+ * measurements of the same three weeks. Every observation collected so far
+ * spans 13 sessions end to end, which is less than one non-overlapping window.
+ * So the row count can pass while the evidence is a single draw.
  *
  * That is why `independentWindows` is rendered at the same weight as the row
  * count and described as the binding gate. A reader who takes only the
  * headline should come away knowing the test cannot run yet — and roughly how
  * far away it is, which is months rather than days.
+ *
+ * ── Why counts are read off the standing and not written here ─────────
+ *
+ * Every figure this panel states comes from `standing`. The prose above says
+ * "sixty-odd" rather than 62 on purpose: an earlier version of this file said
+ * 62 and named 2026-09-22, and both went stale the same afternoon the forward
+ * horizon was corrected from 21 sessions to 15. A number written into a
+ * comment stops being recomputed and starts being wrong.
  *
  * ── Why the statistics are absent rather than greyed out ──────────────
  *
@@ -93,7 +102,7 @@ export function ScreenKillLine({ standing }: { standing: IvRvScreenStanding }) {
           value={rows.have}
           need={rows.need}
           met={rows.met}
-          note="necessary, and on its own worth very little — the first 62 land on one date"
+          note="necessary, and on its own worth very little — the first tranche lands on one date"
         />
         <Count
           label="independent windows"
@@ -130,8 +139,8 @@ export function ScreenKillLine({ standing }: { standing: IvRvScreenStanding }) {
             </span>
           </p>
           <p className="mt-1 text-[10px] leading-relaxed text-ink-faint">
-            The 62 rows resolving on 2026-09-22 are one observation date, so they are one{" "}
-            {d.horizonSessions}-session forward window however many rows they contain. Three more
+            Rows resolving together on one observation date are one {d.horizonSessions}-session
+            forward window however many rows they contain. {d.minimumIndependentWindows - 1} more
             non-overlapping windows have to be collected and then matured before the declared test
             can be run at all. Projected on the same declared market calendar the resolution
             schedule uses.
@@ -172,9 +181,66 @@ export function ScreenKillLine({ standing }: { standing: IvRvScreenStanding }) {
             {d.statistic}
           </p>
           <p>
+            <span className="uppercase tracking-[0.12em] text-ink-faint">Horizon</span>{" "}
+            {d.horizonRationale}
+          </p>
+          <p>
             <span className="uppercase tracking-[0.12em] text-ink-faint">Kill criteria</span>{" "}
             {d.killCriteria}
           </p>
+
+          {/*
+            THE CLOCK, SHOWN AS A CHOICE.
+
+            One row is declared and only that row will ever produce a
+            correlation. The rest are here because a horizon is the last free
+            parameter in this declaration, and the cheapest way to show it was
+            not chosen for its date is to print the dates it was chosen
+            against. The declared horizon is deliberately not the soonest.
+          */}
+          <div className="pt-1">
+            <p className="uppercase tracking-[0.12em] text-ink-faint">When each clock could speak</p>
+            <table className="mt-1.5 w-full border-collapse font-mono text-[10px]">
+              <thead>
+                <tr className="text-ink-faint">
+                  <th className="py-0.5 pr-3 text-left font-normal">horizon</th>
+                  <th className="py-0.5 pr-3 text-right font-normal">cal days</th>
+                  <th className="py-0.5 pr-3 text-right font-normal">windows</th>
+                  <th className="py-0.5 text-left font-normal">gate, best case</th>
+                </tr>
+              </thead>
+              <tbody>
+                {standing.horizonCalendar.map((h) => (
+                  <tr
+                    key={h.horizonSessions}
+                    className={h.declared ? "text-ink" : "text-ink-faint"}
+                  >
+                    <td className="py-0.5 pr-3">
+                      {h.horizonSessions}s{h.declared ? " ◂ declared" : ""}
+                    </td>
+                    <td className="py-0.5 pr-3 text-right">{h.calendarDays.toFixed(1)}</td>
+                    <td className="py-0.5 pr-3 text-right">
+                      {h.independentWindows}/{d.minimumIndependentWindows}
+                    </td>
+                    <td className="py-0.5">{h.evaluableDate ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="mt-1.5 text-ink-faint">
+              These are not four tests. Only the declared horizon is ever scored, and no
+              correlation is computed at any other — the columns above are calendar arithmetic over
+              the observation dates already banked, which is why the table can be shown before the
+              data without revealing anything about the answer.
+            </p>
+            {standing.horizonCalendar
+              .filter((h) => !h.declared && h.note !== "")
+              .map((h) => (
+                <p key={h.horizonSessions} className="mt-1 text-ink-faint">
+                  <span className="font-mono">{h.horizonSessions}s</span> — {h.note}
+                </p>
+              ))}
+          </div>
           <p className="text-ink-faint">
             Implied vol sits in the denominator of the screen and the numerator of the premium, so
             a high-IV name is pushed toward a low screen and a low premium at once. That shared

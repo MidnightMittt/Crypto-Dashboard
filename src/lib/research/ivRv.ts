@@ -8,23 +8,23 @@
  *
  * ── The ratio is a SIGNAL. It is not the outcome ──────────────────────
  *
- * IV is forward-looking: `ivConstantMaturityPct` is interpolated to a 21-day
- * tenor, so it is the market's estimate of the NEXT 21 sessions. Trailing
- * realized vol is backward-looking. Their ratio is therefore not a mispricing
- * — it is a comparison of a forecast against a different period's outcome,
- * and a low reading is equally consistent with "options are cheap" and with
- * "realized vol just spiked and is about to mean-revert". Those are opposite
- * trades.
+ * IV is forward-looking: `ivConstantMaturityPct` is interpolated to a 21
+ * CALENDAR day tenor, so it is the market's estimate of the next three weeks
+ * — fifteen sessions. Trailing realized vol is backward-looking. Their ratio
+ * is therefore not a mispricing — it is a comparison of a forecast against a
+ * different period's outcome, and a low reading is equally consistent with
+ * "options are cheap" and with "realized vol just spiked and is about to
+ * mean-revert". Those are opposite trades.
  *
  * What settles it is IV against the realized vol that FOLLOWS, over the same
- * 21 sessions the implied number describes. That is the variance risk premium
- * actually realising, and it is the mechanism any option trade here would be
- * harvesting.
+ * stretch of time the implied number describes. That is the variance risk
+ * premium actually realising, and it is the mechanism any option trade here
+ * would be harvesting.
  *
  * So every observation carries both:
  *
  *   ratio         = IV / trailing RV     known at the time, the screen
- *   forwardRatio  = IV / forward RV      known 21 sessions later, the truth
+ *   forwardRatio  = IV / forward RV      known 15 sessions later, the truth
  *
  * ── Why this is measured from bars rather than option P&L ─────────────
  *
@@ -47,23 +47,65 @@
  */
 
 /**
- * Sessions the implied number describes. Must equal CONSTANT_MATURITY_DAYS in
- * options/ivTermStructure.ts — the tenor IV is interpolated to is the horizon
- * realized vol has to be measured over, or the two sides of the ratio are
- * describing different amounts of time and the ratio mostly measures the
- * mismatch. A test pins them together.
+ * Sessions the implied number describes — CONVERTED from the tenor, not copied
+ * from it.
+ *
+ * ── The unit error this replaces ──────────────────────────────────────
+ *
+ * This was `21`, pinned to `CONSTANT_MATURITY_DAYS = 21` by a test asserting
+ * the two are equal. They are equal as integers and they are not the same
+ * quantity. `ivAtDte` measures its target in CALENDAR days to expiry — it
+ * divides by 365 — while everything here counts trading SESSIONS. So implied
+ * vol describing 21 calendar days was scored against realized vol over 21
+ * sessions, which is 30 calendar days: nine days of realisation, 30% of the
+ * measured window, that the implied number never priced.
+ *
+ * The test passed because both sides were the numeral 21. A pin that compares
+ * two magnitudes without comparing their units is not a pin, and the version
+ * below asserts the CONVERSION instead.
+ *
+ * ── Why 15 and not 14.5 ───────────────────────────────────────────────
+ *
+ * 21 calendar days is exactly three calendar weeks, which is exactly fifteen
+ * trading sessions when no holiday falls inside. The ratio 21 * 252/365 gives
+ * 14.50 and has to be rounded; the calendar gives 15 outright, so 15 is the
+ * answer and the ratio is the sanity check rather than the derivation.
+ *
+ * Where the two disagree — a holiday week — the leg runs one session LONG
+ * against the tenor rather than one short, and that is the side to err on.
+ * A realized window longer than the implied tenor adds unpriced realisation,
+ * which is noise roughly uncorrelated with the screen and attenuates the
+ * measured correlation. A window SHORTER than the tenor does the opposite: the
+ * missing days are priced by IV and absent from RV, so a name with an event in
+ * the gap gets a high screen and a low premium at once — which is a negative
+ * contribution, and negative is the sign this screen predicted in advance.
+ * Erring short would manufacture the result. Erring long can only hide it.
+ *
+ * @see scripts/audit/ivRvHorizonAgreement.ts — the measurement behind this
  */
-export const IV_TENOR_SESSIONS = 21;
+export const IV_TENOR_SESSIONS = 15;
+
+/**
+ * Sessions in one calendar week of trading, used only to state the conversion
+ * above as arithmetic a test can check rather than as a claim in a comment.
+ */
+export const SESSIONS_PER_CALENDAR_WEEK = 5;
+export const CALENDAR_DAYS_PER_WEEK = 7;
 
 /**
  * Trailing windows, plural, because which one belongs in the denominator IS
- * the open question rather than an implementation detail. 21 matches the IV
+ * the open question rather than an implementation detail. 15 matches the IV
  * tenor and is the honest like-for-like; 10 reacts faster and is closer to
  * what a screen "feels"; 63 is the quarter a mean-reversion story would use.
  * Storing all three costs one pass and keeps the choice out of the collector,
  * where it would harden into an assumption before there was any evidence.
+ *
+ * 21 is gone from this list rather than kept alongside. It was here only
+ * because it was believed to be the matched window; retaining it as a fourth
+ * sensitivity would be keeping a specification for no reason except that it
+ * used to be the default, which is how an argmax gets one more draw.
  */
-export const TRAILING_WINDOWS = [10, 21, 63] as const;
+export const TRAILING_WINDOWS = [10, 15, 63] as const;
 
 /** Sessions per year, for annualising a per-session standard deviation. */
 export const ANNUALISATION_SESSIONS = 252;
@@ -90,9 +132,10 @@ export interface IvRvPoint {
   ivTenorSessions: number;
   trailing: TrailingLeg[];
   /**
-   * Realized vol over the `IV_TENOR_SESSIONS` sessions AFTER `date`. Null
-   * until that many sessions have elapsed — which is the point, and why this
-   * field is the only one worth judging the ratio against.
+   * Realized vol over the `IV_TENOR_SESSIONS` sessions AFTER `date` — the
+   * stretch the implied number was quoted over, in sessions. Null until that
+   * many have elapsed, which is the point, and why this field is the only one
+   * worth judging the ratio against.
    */
   forwardRvPct: number | null;
   /**

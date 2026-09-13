@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import { CONSTANT_MATURITY_DAYS } from "../options/ivTermStructure";
 import {
   ANNUALISATION_SESSIONS,
+  CALENDAR_DAYS_PER_WEEK,
   IV_TENOR_SESSIONS,
   MIN_RETURNS,
+  SESSIONS_PER_CALENDAR_WEEK,
   TRAILING_WINDOWS,
   buildIvRvPoint,
   forwardRvPct,
@@ -117,12 +119,19 @@ describe("forwardRvPct", () => {
   });
 
   it("is null until the full horizon has elapsed", () => {
-    const r = steady(30, 0.01);
-    // Needs sessions 21..29 inclusive after index 8 -> resolvable.
-    expect(forwardRvPct(r, 8, IV_TENOR_SESSIONS)).not.toBeNull();
-    // One short.
-    expect(forwardRvPct(r, 9, IV_TENOR_SESSIONS)).toBeNull();
-    expect(forwardRvPct(r, 25, IV_TENOR_SESSIONS)).toBeNull();
+    /*
+     * The boundary is DERIVED from the horizon, not written as a literal. The
+     * previous version pinned indices 8 and 9, which were the boundary only
+     * while the horizon happened to be 21 — so changing the horizon moved the
+     * edge out from under the assertion and the test went on passing without
+     * testing an edge at all.
+     */
+    const len = 30;
+    const r = steady(len, 0.01);
+    const last = len - 1 - IV_TENOR_SESSIONS;
+    expect(forwardRvPct(r, last, IV_TENOR_SESSIONS)).not.toBeNull();
+    expect(forwardRvPct(r, last + 1, IV_TENOR_SESSIONS)).toBeNull();
+    expect(forwardRvPct(r, len - 5, IV_TENOR_SESSIONS)).toBeNull();
   });
 
   /*
@@ -228,18 +237,54 @@ describe("buildIvRvPoint", () => {
 });
 
 /*
- * THE TENOR HAS TO MATCH, and it lives in another module.
+ * THE TENOR HAS TO MATCH, and it lives in another module IN DIFFERENT UNITS.
  *
- * IV is interpolated to CONSTANT_MATURITY_DAYS there; realized vol is measured
- * over IV_TENOR_SESSIONS here. If those drift apart the ratio quietly becomes
- * a comparison of two different amounts of time — and a ratio that varies with
+ * IV is interpolated to CONSTANT_MATURITY_DAYS there, measured in CALENDAR
+ * days to expiry. Realized vol is measured over IV_TENOR_SESSIONS here, in
+ * trading SESSIONS. If those drift apart the ratio quietly becomes a
+ * comparison of two different amounts of time — and a ratio that varies with
  * the tenor rather than with the vol is context, not evidence. A previous
  * measurement here found twelve names decaying 5.2-7.6%/day purely as a
  * function of tenor.
+ *
+ * ── What the old version of this block got wrong ──────────────────────
+ *
+ * It asserted `IV_TENOR_SESSIONS === CONSTANT_MATURITY_DAYS`, and passed,
+ * because both were the numeral 21. Twenty-one calendar days is thirty
+ * calendar days short of twenty-one sessions. The pin compared two magnitudes
+ * and never compared their units, so it certified the exact mismatch it was
+ * written to prevent — for as long as the two happened to share a digit.
+ *
+ * The assertions below convert. They fail if either constant moves without the
+ * other, AND they fail if someone sets them equal again.
  */
 describe("the tenor the two sides agree on", () => {
-  it("measures realized vol over the same horizon implied vol describes", () => {
-    expect(IV_TENOR_SESSIONS).toBe(CONSTANT_MATURITY_DAYS);
+  it("converts the calendar tenor into sessions rather than copying the number", () => {
+    const weeks = CONSTANT_MATURITY_DAYS / CALENDAR_DAYS_PER_WEEK;
+    expect(Number.isInteger(weeks)).toBe(true);
+    expect(IV_TENOR_SESSIONS).toBe(weeks * SESSIONS_PER_CALENDAR_WEEK);
+  });
+
+  it("agrees with the annualisation ratio to within the rounding it needs", () => {
+    const bySessionRatio = (CONSTANT_MATURITY_DAYS * ANNUALISATION_SESSIONS) / 365;
+    expect(Math.abs(IV_TENOR_SESSIONS - bySessionRatio)).toBeLessThanOrEqual(1);
+  });
+
+  it("errs LONG rather than short when the two derivations disagree", () => {
+    /*
+     * The direction is not cosmetic. A realized window shorter than the
+     * implied tenor leaves days that IV priced and RV never saw, which pushes
+     * high-screen names toward low premiums — the negative sign the screen
+     * predicted, manufactured by the mismatch. Longer only adds unpriced
+     * realisation, which is noise. @see scripts/audit/ivRvHorizonAgreement.ts
+     */
+    expect(IV_TENOR_SESSIONS).toBeGreaterThanOrEqual(
+      (CONSTANT_MATURITY_DAYS * ANNUALISATION_SESSIONS) / 365
+    );
+  });
+
+  it("is not the calendar number wearing a sessions label", () => {
+    expect(IV_TENOR_SESSIONS).not.toBe(CONSTANT_MATURITY_DAYS);
   });
 
   it("offers a trailing window at exactly that horizon", () => {

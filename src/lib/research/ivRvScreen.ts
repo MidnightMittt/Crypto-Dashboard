@@ -1,4 +1,5 @@
-import { IV_TENOR_SESSIONS, IvRvPoint, matchedLeg } from "./ivRv";
+import { CONSTANT_MATURITY_DAYS } from "../options/ivTermStructure";
+import { ANNUALISATION_SESSIONS, IV_TENOR_SESSIONS, IvRvPoint, matchedLeg } from "./ivRv";
 import { projectSessionsForward } from "./marketCalendar";
 import { PanelObservation, panelBlockBootstrap, summarizePanel } from "./panelBootstrap";
 
@@ -22,15 +23,68 @@ import { PanelObservation, panelBlockBootstrap, summarizePanel } from "./panelBo
  *
  * ── What is pinned, and why each pin matters ──────────────────────────
  *
- * ONE trailing window. `TRAILING_WINDOWS` stores 10, 21 and 63 because which
+ * ONE trailing window. `TRAILING_WINDOWS` stores 10, 15 and 63 because which
  * belongs in the denominator was an open question at collection time. It is
- * closed here, in advance, at 21 — the window that matches the tenor implied
+ * closed here, in advance, at 15 — the window that matches the tenor implied
  * vol is interpolated to, so both sides of the ratio describe the same amount
  * of time. The other two are computed and reported as sensitivity and are
  * explicitly NOT allowed to rescue a dead result. Three windows scored and
  * the best one quoted is an argmax over three correlated specifications, and
  * this project has already watched that inflate a funding-band t to 1.90 that
  * was 1.14 standalone.
+ *
+ * ── The horizon was corrected on 2026-09-13, before any leg resolved ──
+ *
+ * This declaration originally said 21 sessions on both legs. That was a unit
+ * error inherited from `IV_TENOR_SESSIONS`, which had been pinned to the
+ * options module's `CONSTANT_MATURITY_DAYS` by a test comparing two integers
+ * in different units: implied vol is interpolated to 21 CALENDAR days, and 21
+ * SESSIONS is thirty calendar days. The corrected horizon is fifteen sessions
+ * — three calendar weeks — and `ivRv.ts` carries the derivation.
+ *
+ * The correction reaches the four-window gate on 2026-11-16 instead of
+ * 2026-12-21, and shortening a horizon to get an answer sooner is exactly the
+ * move this file exists to prevent. Three things separate the two:
+ *
+ *   The reason is a unit mismatch, not a result. Zero forward legs had
+ *   resolved when it was made, so there was no answer to shorten toward.
+ *
+ *   The rejected alternative was SHORTER still. The trading session proposed
+ *   ten sessions, to match the CLSK position's holding period. Ten was refused
+ *   — see below — and a search motivated by speed does not refuse the fastest
+ *   option on the table.
+ *
+ *   Had the arithmetic gone the other way, 21 calendar days working out to 28
+ *   sessions, the same correction would have shipped at a gate date in
+ *   February. The audit script prints the power comparison for exactly this
+ *   reason: to show the date was a consequence.
+ *
+ * ── Why not ten sessions, to match how the trade was held ─────────────
+ *
+ * Two reasons, and the second is the disqualifying one.
+ *
+ * The holding period is the wrong clock. CLSK was held seven sessions because
+ * it was closed at a discretionary moment, and a horizon fitted to a realised
+ * exit is a barrier chosen by the outcome — winners close early, losers get
+ * held, and the register already carries that failure under
+ * `outcomes-must-enter-the-sample-together`. The clock known AT ENTRY is the
+ * contract's, and CLSK's was 17 calendar days: nearer fifteen than ten.
+ *
+ * And a ten-session leg against a 21-calendar-day implied number would be
+ * measuring realized vol over a window SHORTER than the tenor. The days in the
+ * gap are priced by IV and invisible to RV, so a name with an event in them
+ * gets a high screen ratio and a low premium at once — a negative contribution
+ * to the correlation, which is the sign this screen predicted in advance. The
+ * shared-IV artefact named further down is tolerable because it pushes against
+ * the hypothesis. A mismatch that pushes FOR it is not tolerable at any size,
+ * and the direction is what rules ten out rather than the magnitude.
+ *
+ * A properly tenored ten-session leg would need implied vol interpolated to
+ * 14 DTE, which the chain does bracket. It is not available retroactively:
+ * `positioningHistory.json` stores only the constant-maturity number, and
+ * CBOE's delayed chain has no date parameter, so the 634 readings already
+ * banked cannot be re-tenored. That leg is a new collector and a new series
+ * starting from zero, not a re-reading of this one.
  *
  * ONE statistic. The within-date rank correlation between the screen and the
  * realised variance premium. No threshold — a threshold is a fourth free
@@ -58,9 +112,9 @@ import { PanelObservation, panelBlockBootstrap, summarizePanel } from "./panelBo
  * kept — as a NECESSARY condition — but it cannot be the gate, and the reason
  * is arithmetic rather than a matter of taste:
  *
- *   62 rows resolve on 2026-09-22. They are one observation date.
- *   n>=100 is first reached on the third observation date, around 2026-09-30.
- *   The forward window is 21 sessions. The ten observation dates collected so
+ *   The first rows resolve on one observation date, not many.
+ *   n>=100 is first reached on the third observation date.
+ *   The forward window is 15 sessions. The ten observation dates collected so
  *   far span 14 sessions end to end — LESS THAN ONE non-overlapping window.
  *
  * So "n >= 100 resolved" describes roughly one and a half independent bets
@@ -93,9 +147,11 @@ export const MIN_CROSS_SECTION = 5;
  * resampling scheme rather than a measurement. Four is the point at which
  * "the interval contains zero" starts to mean something about the world.
  *
- * Reaching four takes 63 further sessions of collection past the first
- * resolution — roughly 2026-12. Stating that now, while it is inconvenient
- * and before anybody is invested in an answer, is the entire point.
+ * Reaching four takes three further horizons of collection past the first
+ * resolution. The date is computed rather than written down here — see
+ * `sessionsUntilEvaluable` — because a distance stated in prose stops being
+ * recomputed the moment the horizon or the collection cadence changes, and
+ * both have already changed once.
  */
 export const MIN_INDEPENDENT_WINDOWS = 4;
 
@@ -113,6 +169,8 @@ export interface IvRvScreenDeclaration {
   primaryTrailingWindow: number;
   sensitivityWindows: number[];
   horizonSessions: number;
+  /** Why this clock and not another — the answer to the only free parameter left. */
+  horizonRationale: string;
   statistic: string;
   /** -1: the screen claims a LOW ratio predicts a HIGH realised premium. */
   predictedSign: -1;
@@ -134,25 +192,63 @@ export const IVRV_SCREEN_DECLARATION: IvRvScreenDeclaration = {
   primaryTrailingWindow: IV_TENOR_SESSIONS,
   sensitivityWindows: [10, 63],
   horizonSessions: IV_TENOR_SESSIONS,
+  horizonRationale:
+    `${IV_TENOR_SESSIONS} sessions because implied vol is interpolated to a ${CONSTANT_MATURITY_DAYS}-` +
+    `calendar-day tenor, and ${CONSTANT_MATURITY_DAYS} calendar days is three calendar weeks. ` +
+    "Corrected on the declaration date from 21 sessions, which was the calendar number reused " +
+    "as a session count and would have scored a three-week forecast against thirty calendar " +
+    "days of realisation. No forward leg had resolved when the correction was made.",
   statistic:
     "Observation-weighted mean of the per-session Spearman correlation between the screen " +
-    "ratio (IV / trailing RV, 21 sessions) and the realised variance premium " +
-    "(ln(forward RV / IV) over the following 21 sessions). Ranks are midranks; both legs " +
-    "are ranked inside their own session, so the common vol factor is removed and only the " +
-    "cross-sectional question survives.",
+    `ratio (IV / trailing RV, ${IV_TENOR_SESSIONS} sessions) and the realised variance premium ` +
+    `(ln(forward RV / IV) over the following ${IV_TENOR_SESSIONS} sessions). Ranks are midranks; ` +
+    "both legs are ranked inside their own session, so the common vol factor is removed and only " +
+    "the cross-sectional question survives.",
   predictedSign: -1,
   minimumResolved: MIN_RESOLVED,
   minimumIndependentWindows: MIN_INDEPENDENT_WINDOWS,
   killCriteria:
-    "Evaluated once BOTH gates are met: at least 100 resolved observations AND at least 4 " +
-    "non-overlapping 21-session forward windows. If the 95% block-bootstrap interval on the " +
-    "correlation then contains zero, or the correlation is significant with the WRONG sign, " +
-    "the screen is inside its own noise floor and the CLSK trade is reclassified in the " +
-    "register from a screened method to one lucky read. The 10- and 63-session windows are " +
-    "reported alongside and cannot overturn this — a result that needs the argmax of three " +
-    "correlated windows is the argmax, not the result.",
+    `Evaluated once BOTH gates are met: at least ${MIN_RESOLVED} resolved observations AND at ` +
+    `least ${MIN_INDEPENDENT_WINDOWS} non-overlapping ${IV_TENOR_SESSIONS}-session forward ` +
+    "windows. If the 95% block-bootstrap interval on the correlation then contains zero, or the " +
+    "correlation is significant with the WRONG sign, the screen is inside its own noise floor " +
+    "and the CLSK trade is reclassified in the register from a screened method to one lucky " +
+    "read. The 10- and 63-session windows are reported alongside and cannot overturn this — a " +
+    "result that needs the argmax of three correlated windows is the argmax, not the result.",
   consequence: { survives: "screened-method", "inside-noise": "one-lucky-read" },
 };
+
+/**
+ * Horizons the gate date is reported at, so "when can this speak" is
+ * answerable per-clock rather than as a single number.
+ *
+ * These are NOT four tests. Exactly one — `horizonSessions` — is declared, and
+ * only it will ever produce a correlation. The others are here because the
+ * trading session asked how the answer's date moves with the clock, and
+ * because the most useful thing this table does is make the argmax hazard
+ * visible: a reader can see that the declared horizon is not the one that
+ * would have spoken soonest, which is the check they would otherwise have to
+ * take on trust.
+ *
+ * 5 and 10 are below the tenor and would measure realized vol over a window
+ * the implied number outlives. 21 is the uncorrected default. Their dates are
+ * shown; their correlations are not computed, here or anywhere.
+ */
+export const REPORTED_HORIZONS = [5, 10, IV_TENOR_SESSIONS, 21] as const;
+
+export interface HorizonGateRow {
+  horizonSessions: number;
+  /** Trading sessions expressed back in calendar days, rounded to one place. */
+  calendarDays: number;
+  /** Non-overlapping windows the observations already collected are worth. */
+  independentWindows: number;
+  /** Best case from the latest observation, if collection continues every session. */
+  sessionsUntilGate: number | null;
+  evaluableDate: string | null;
+  declared: boolean;
+  /** Why this row is not the declared one. Empty on the declared row. */
+  note: string;
+}
 
 /** One condition the verdict is waiting on, with the numbers that make it checkable. */
 export interface ScreenGate {
@@ -185,6 +281,12 @@ export interface IvRvScreenStanding {
    * the resolution schedule projects against. Null when it cannot be dated.
    */
   earliestEvaluableDate: string | null;
+  /**
+   * The same best case at every horizon in `REPORTED_HORIZONS`, so the clock
+   * is visible as a choice. One row is declared; none of the others is ever
+   * scored.
+   */
+  horizonCalendar: HorizonGateRow[];
   gates: ScreenGate[];
   /** Null until every gate is met. Nothing is computed early, not even privately. */
   result: ScreenResult | null;
@@ -304,9 +406,13 @@ export function blockPeriodsFor(
  *
  * A best case, and labelled as one wherever it is shown. It exists because
  * "not yet" is not an answer anybody can plan around, and because the honest
- * distance turns out to be the most surprising number in this file: the first
- * 62 resolutions land on 2026-09-22 and are worth one window, so the gate is
- * roughly three further months away, not nine days.
+ * distance is the most surprising number in this file: the first tranche of
+ * resolutions all land on a single observation date and are worth ONE window
+ * between them, so the gate is months past the day the row count clears, not
+ * days. No figure here is written as a literal — every count and date the
+ * panel shows is computed from the observations actually banked, because the
+ * two that were once hard-coded in prose both went stale the same afternoon
+ * the horizon was corrected.
  *
  * Returns null when there are no observations to anchor from.
  */
@@ -337,6 +443,54 @@ export function sessionsUntilEvaluable(
   }
   /* The last anchor's own forward leg still has to resolve. */
   return Math.max(0, lastAnchor + horizonSessions - latest);
+}
+
+/**
+ * The gate date at every reported horizon, from the observation dates already
+ * banked.
+ *
+ * Every row is arithmetic over the SAME anchors — no row involves the screen,
+ * the premium, or implied vol, so building the whole table reveals nothing
+ * about any answer. What it reveals is the shape of the tradeoff, which is the
+ * thing a reader needs in order to judge whether the declared clock was chosen
+ * for a reason.
+ */
+function buildHorizonCalendar(
+  allPeriods: readonly number[],
+  dateAfter: (sessions: number | null) => string | null
+): HorizonGateRow[] {
+  const declared = IVRV_SCREEN_DECLARATION.horizonSessions;
+  return REPORTED_HORIZONS.map((h) => {
+    const sessionsUntilGate = sessionsUntilEvaluable(
+      allPeriods,
+      h,
+      IVRV_SCREEN_DECLARATION.minimumIndependentWindows
+    );
+    return {
+      horizonSessions: h,
+      calendarDays: Math.round((h * 365 * 10) / ANNUALISATION_SESSIONS) / 10,
+      independentWindows: countIndependentWindows(allPeriods, h),
+      sessionsUntilGate,
+      evaluableDate: dateAfter(sessionsUntilGate),
+      declared: h === declared,
+      note: horizonNote(h, declared),
+    };
+  });
+}
+
+function horizonNote(h: number, declared: number): string {
+  if (h === declared) return "";
+  if (h < declared) {
+    return (
+      "Shorter than the implied tenor. The days in the gap are priced by IV and invisible to " +
+      "realized vol, which pushes high-screen names toward low premiums — the predicted sign, " +
+      "manufactured by the mismatch. Refused for that reason, not for its date."
+    );
+  }
+  return (
+    "The uncorrected default: the 21 in the calendar-day tenor reused as a session count. " +
+    "Scores a three-week forecast against thirty calendar days of realisation."
+  );
 }
 
 /** The screen value at a given trailing window, or null if it is not computable. */
@@ -453,10 +607,13 @@ export function evaluateIvRvScreen(
     d.minimumIndependentWindows
   );
   const latestDate = points.map((p) => p.date).sort().at(-1) ?? null;
-  const earliestEvaluableDate =
-    latestDate !== null && earliestEvaluableInSessions !== null
-      ? projectSessionsForward(latestDate, earliestEvaluableInSessions).date
+  const dateAfter = (sessions: number | null): string | null =>
+    latestDate !== null && sessions !== null
+      ? projectSessionsForward(latestDate, sessions).date
       : null;
+  const earliestEvaluableDate = dateAfter(earliestEvaluableInSessions);
+
+  const horizonCalendar = buildHorizonCalendar(allPeriods, dateAfter);
 
   const primary = correlationOver(rows);
   const sessionsWithStatistic = summarizePanel(primary.observations).periods;
@@ -468,8 +625,9 @@ export function evaluateIvRvScreen(
       need: d.minimumResolved,
       met: rows.length >= d.minimumResolved,
       detail:
-        "Resolved observations carrying a computable screen at the pinned 21-session window. " +
-        "Necessary, and on its own worth very little — the first 62 land on a single date.",
+        `Resolved observations carrying a computable screen at the pinned ${d.primaryTrailingWindow}-` +
+        "session window. Necessary, and on its own worth very little — the first tranche of them " +
+        "all land on a single observation date and are therefore one window between them.",
     },
     {
       id: "independent-windows",
@@ -505,6 +663,7 @@ export function evaluateIvRvScreen(
       blockPeriods,
       earliestEvaluableInSessions,
       earliestEvaluableDate,
+      horizonCalendar,
       gates,
       result: null,
       verdict: "waiting",
@@ -571,6 +730,7 @@ export function evaluateIvRvScreen(
     blockPeriods,
     earliestEvaluableInSessions,
     earliestEvaluableDate,
+    horizonCalendar,
     gates,
     result,
     verdict,
