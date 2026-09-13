@@ -89,6 +89,17 @@ export interface IvRvHistory {
   schedule: ResolutionSchedule;
   /** One sentence generated FROM `schedule`, so the two cannot disagree. */
   reading: string;
+  /**
+   * Each observation date's position in the panel calendar — ten entries, not
+   * one per row.
+   *
+   * Carried because the forward horizon is measured in SESSIONS and a consumer
+   * holding only this artefact has no way to convert. Counting independent
+   * windows from calendar-day gaps instead would be an approximation, and the
+   * one place it is used — the pre-declared kill line in `ivRvScreen.ts` — is
+   * exactly where an approximation makes a gate look met when it is not.
+   */
+  observationSessions: { date: string; sessionIndex: number }[];
   points: IvRvPoint[];
 }
 
@@ -178,6 +189,9 @@ function main(): void {
     horizonSessions: IV_TENOR_SESSIONS,
     schedule,
     reading: scheduleReading(schedule),
+    observationSessions: [...new Set(points.map((p) => p.date))]
+      .sort()
+      .map((date) => ({ date, sessionIndex: sessionIndex.get(date)! })),
     coverage: {
       ivRows: withIv.length,
       joined: points.length,

@@ -11,6 +11,9 @@ import ivRvJson from "@/data/ivRvHistory.json";
 import paperJson from "@/data/paperLines.json";
 import { metricWeight, restatedRead } from "@/lib/signals/scoring";
 import { ResolutionSchedule } from "@/components/validation/ResolutionSchedule";
+import { ScreenKillLine } from "@/components/validation/ScreenKillLine";
+import { evaluateIvRvScreen } from "@/lib/research/ivRvScreen";
+import type { IvRvPoint } from "@/lib/research/ivRv";
 import { EvidenceLadder } from "@/components/validation/EvidenceLadder";
 import { ForwardRecord } from "@/components/validation/ForwardRecord";
 import forwardVerdictJson from "@/data/forwardVerdictRecord.json";
@@ -75,10 +78,20 @@ const ivRv = ivRvJson as unknown as {
   schedule: Schedule;
   reading: string;
   coverage: { joined: number };
-  points: Array<{ date: string; symbol: string }>;
+  observationSessions: Array<{ date: string; sessionIndex: number }>;
+  points: IvRvPoint[];
 };
 const ivRvDates = [...new Set(ivRv.points.map((p) => p.date))].sort();
 const ivRvSymbols = new Set(ivRv.points.map((p) => p.symbol)).size;
+
+/*
+ * The panel calendar, carried by the artefact rather than reconstructed here.
+ * The forward horizon is counted in SESSIONS, and inferring session distance
+ * from calendar-day gaps is precisely how the independent-window gate would
+ * come out looking met when it is not.
+ */
+const ivRvSessionIndex = new Map(ivRv.observationSessions.map((o) => [o.date, o.sessionIndex]));
+const screenStanding = evaluateIvRvScreen(ivRv.points, (d) => ivRvSessionIndex.get(d));
 
 /*
  * The register of declared strategies. Reshaped, never recomputed — every
@@ -388,6 +401,15 @@ export default function ValidationPage() {
 
         {/* Rung 2, and the only rung with numbers that were not chosen on their own data. */}
         <PaperBook book={paperBook} />
+
+        {/*
+          The criterion BEFORE the data, and directly above the collector whose
+          rows will decide it. Sixty-two forward legs resolve on 2026-09-22; a
+          reclassification rule published after they land is not a rule, it is
+          a description. It sits above the schedule because a reader should
+          meet the test before meeting the sample.
+        */}
+        <ScreenKillLine standing={screenStanding} />
 
         {/*
           Placed above the measured signals rather than at the bottom with the
