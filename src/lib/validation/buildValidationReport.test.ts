@@ -199,6 +199,52 @@ describe("buildValidationReport — provenance", () => {
     expect(r.equityFamilyBreadth!.duplicatePairs).toHaveLength(1);
     // The headcount survives beside it rather than being overwritten by it.
     expect(r.equityFamilySize).toBe(12);
+    /*
+     * This artifact was written before the counting figure existed, and an
+     * absent field must stay absent. Defaulting it to the bets figure would
+     * assert the two agree — the exact claim the module family refutes.
+     */
+    expect(r.equityFamilyBreadth!.distinctTests).toBeNull();
+  });
+
+  /*
+   * The crypto modules get the same measurement and it does not come back the
+   * same. The two families are corrected separately, so their breadth reads
+   * stay separate too — a combined figure would describe a correction nobody
+   * ran.
+   */
+  it("carries the module family's breadth as its own read, not merged with equity", () => {
+    const base = inputs();
+    const r = buildValidationReport({
+      ...base,
+      moduleBreadth: {
+        breadth: {
+          effective_bets: 8.53,
+          distinct_tests: 2.95,
+          mean_pairwise_rho: 0.037,
+          pairs_measured: 54,
+          near_duplicates: [
+            { a: "squeezeRisk", b: "longShort", rho: -1 },
+            { a: "technicals", b: "spotPerpVolume", rho: 1 },
+          ],
+        },
+        bestCaseBets: 9,
+        sentence: "19 declared modules, of which 12 produce enough readings to correlate at all.",
+      },
+    });
+    expect(r.cryptoFamilyBreadth).not.toBeNull();
+    expect(r.cryptoFamilyBreadth!.effectiveBets).toBe(8.53);
+    expect(r.cryptoFamilyBreadth!.distinctTests).toBe(2.95);
+    expect(r.cryptoFamilyBreadth!.duplicatePairs).toHaveLength(2);
+    // The inverse pair survives as a negative rho, not as its magnitude. The
+    // sign is what tells a reader it is one idea and not two.
+    expect(r.cryptoFamilyBreadth!.duplicatePairs[0].rho).toBe(-1);
+    // Equity is untouched by it.
+    expect(r.equityFamilyBreadth).toBeNull();
+  });
+
+  it("reports the module breadth as unmeasured when the artifact predates it", () => {
+    expect(buildValidationReport(inputs()).cryptoFamilyBreadth).toBeNull();
   });
 
   it("preserves the declared kill criteria for lab hypotheses", () => {

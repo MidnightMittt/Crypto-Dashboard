@@ -259,8 +259,12 @@ describe("buildBrief — effective breadth of the basket", () => {
       n: 3,
       sessions: 299,
       mean_pairwise_rho: rho,
+      /* No inverse pair in this fixture, so the counting figure equals the
+         portfolio one — see effectiveBreadth.ts on when the two separate. */
+      mean_abs_rho: Math.abs(rho),
       pairs_measured: 3,
       effective_bets: bets,
+      distinct_tests: bets,
       participation_ratio: bets + 0.5,
       breadth_pct: (bets / 3) * 100,
       near_duplicates: [],

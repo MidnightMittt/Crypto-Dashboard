@@ -59,6 +59,7 @@ export const metadata = { title: "Validation — Leverage Terminal" };
 const report = buildValidationReport({
   lab: labJson as Parameters<typeof buildValidationReport>[0]["lab"],
   moduleGrades: metricStats.moduleGrades as Parameters<typeof buildValidationReport>[0]["moduleGrades"],
+  moduleBreadth: metricStats.moduleBreadth as Parameters<typeof buildValidationReport>[0]["moduleBreadth"],
 });
 
 /*
@@ -232,20 +233,42 @@ function Decomposition({ d }: { d: RowDecomposition }) {
  * is STRICTER than correcting across three, so every survivor cleared a
  * harder bar than it strictly had to. What shrinks is the coverage claim, and
  * a red box would say the opposite of that.
+ *
+ * Used by both families. On the equity hypotheses the effective and distinct
+ * counts agree; on the crypto modules they are 8.5 and 3.0, so the second
+ * figure appears only where it disagrees — printing "8.5 effective, 8.5
+ * distinct" everywhere would train a reader to skip the line that matters.
  */
-function FamilyBreadthNote({ b }: { b: FamilyBreadthSummary }) {
+function FamilyBreadthNote({ b, label }: { b: FamilyBreadthSummary; label: string }) {
+  /*
+   * Half a bet of slack before the counting figure is shown at all. Signed and
+   * absolute rho differ slightly on any family with a mildly negative pair,
+   * and surfacing a 0.1 gap as a second headline number invents a
+   * disagreement out of rounding.
+   */
+  const diverges =
+    b.distinctTests !== null && b.effectiveBets !== null && b.distinctTests < b.effectiveBets - 0.5;
   return (
     <div className="mt-3 rounded-md border border-line/60 bg-surface/40 px-3 py-2">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="text-[10px] uppercase tracking-[0.12em] text-ink-faint">
-          How many ideas that is
-        </span>
+        <span className="text-[10px] uppercase tracking-[0.12em] text-ink-faint">{label}</span>
         <span className="font-mono text-[11px] text-ink">
           {b.effectiveBets === null ? "unmeasured" : `${b.effectiveBets.toFixed(1)} effective`}
           {b.otherEndBets !== null && b.effectiveBets !== null && b.otherEndBets !== b.effectiveBets
             ? `–${b.otherEndBets.toFixed(1)}`
             : ""}
         </span>
+        {/*
+          The counting answer, in amber, because where it appears it is the
+          figure a multiple-testing claim has to use — and it is the smaller
+          of the two, so the muted-grey treatment given to the bets figure
+          would leave the more generous number reading as the conclusion.
+        */}
+        {diverges && (
+          <span className="font-mono text-[11px] text-amber">
+            {b.distinctTests!.toFixed(1)} distinct ideas
+          </span>
+        )}
         <span className="font-mono text-[11px] text-ink-faint">
           mean pairwise rho {b.meanPairwiseRho ?? "—"} over {b.pairsMeasured} measurable pairs
         </span>
@@ -265,14 +288,18 @@ function FamilyBreadthNote({ b }: { b: FamilyBreadthSummary }) {
       {b.duplicatePairs.length > 0 && (
         <>
           <p className="mt-1.5 text-[11px] leading-relaxed text-ink-muted">
-            {b.duplicatePairs.every((d) => d.rho >= 0.999)
-              ? "These are not similar tests. Each pair is one series and a subset of its own dates:"
+            {b.duplicatePairs.every((d) => Math.abs(d.rho) >= 0.999)
+              ? "These are not similar tests. Each pair is one series measured twice:"
               : "These pairs move together closely enough to count as one test, not two:"}
           </p>
           <ul className="mt-1 flex flex-col gap-0.5 font-mono text-[10px] text-ink-faint">
             {b.duplicatePairs.map((d) => (
               <li key={`${d.a}/${d.b}`}>
-                {d.a} ≡ {d.b} · rho {d.rho.toFixed(3)}
+                {/* ≡ for a duplicate, ≡− for one that is the other negated. The
+                    sign is the whole difference between "we tested this twice"
+                    and "we tested this twice and called the second one a
+                    disagreement", so it cannot be dropped from the glyph. */}
+                {d.a} {d.rho < 0 ? "≡−" : "≡"} {d.b} · rho {d.rho.toFixed(3)}
               </li>
             ))}
           </ul>
@@ -401,7 +428,29 @@ export default function ValidationPage() {
             broad search. The panel above already learned this lesson about a
             table of miners; this is the same arithmetic on a table of tests.
           */}
-          {report.equityFamilyBreadth && <FamilyBreadthNote b={report.equityFamilyBreadth} />}
+          {report.equityFamilyBreadth && (
+            <FamilyBreadthNote b={report.equityFamilyBreadth} label="How many ideas that is" />
+          )}
+
+          {/*
+            The same measurement on the crypto modules, and it does not come
+            back the same. Kept as its own block rather than averaged in with
+            the equity one: the two families are corrected separately, so a
+            combined breadth figure would describe a correction nobody ran.
+
+            It is the crypto family, not the equity one, that makes the whole
+            measurement worth having. There the two counts agree and the note
+            is a footnote; here they disagree threefold, because two module
+            pairs are one series measured twice — and one of those pairs is
+            inverted, which the effective-bets figure scores as extra
+            diversification. See src/lib/research/moduleBreadth.ts.
+          */}
+          {report.cryptoFamilyBreadth && (
+            <FamilyBreadthNote
+              b={report.cryptoFamilyBreadth}
+              label="How many ideas the crypto modules are"
+            />
+          )}
         </section>
 
         {GROUPS.map((group) => {

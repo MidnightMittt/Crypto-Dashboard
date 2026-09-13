@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1786786814192,
+  "generatedAt": 1789277851433,
   "coverageStart": "2022-08-14",
   "coverageEnd": "2026-07-31",
   "metrics": {
@@ -1125,6 +1125,33 @@
       "survivesFdr": false,
       "sentence": "No measured directional record with an effective sample behind it. This is an absence of evidence, not evidence the module fails."
     }
+  },
+  "moduleBreadth": {
+    "declared": 19,
+    "measured": 12,
+    "breadth": {
+      "effective_bets": 8.53,
+      "distinct_tests": 2.95,
+      "mean_pairwise_rho": 0.037,
+      "mean_abs_rho": 0.279,
+      "pairs_measured": 54,
+      "near_duplicates": [
+        {
+          "a": "squeezeRisk",
+          "b": "longShort",
+          "rho": -1
+        },
+        {
+          "a": "technicals",
+          "b": "spotPerpVolume",
+          "rho": 1
+        }
+      ]
+    },
+    "bestCaseBets": 9,
+    "inversePairs": 1,
+    "sentence": "19 declared modules, of which 12 produce enough readings to correlate at all; those 12 are worth between 8.5 and 9.0 independent bets. The remaining 7 are unmeasured rather than independent, so no share of the headcount is quoted here — a percentage would have to treat silence as either evidence or nothing, and it is neither. Those are independent BETS, not distinct IDEAS, and here the two part company: 1 pair is inversely related — squeezeRisk and longShort at -1.000, one signal and its own negation. A basket of the two hedges itself, which is why the bets figure is high. A SEARCH over the two has still only tried one thing. Counted that way — on mean |rho| rather than mean rho — the family is worth 3.0 distinct ideas, not 8.5. For anything about coverage or multiple testing, 3.0 is the figure that applies. The upper end assumes all 12 of 66 pairs too sparse to correlate — pairs that never share enough dates — are perfectly independent. They are not, so the true figure sits nearer the lower end. This does not make a surviving result wrong. Correcting across 12 correlated tests is stricter than correcting across 3, so a survivor cleared a harder bar rather than an easier one. What it costs is the COVERAGE the headcount implies: \"19 ideas were tried\" describes a broad search, and this one was narrow.",
+    "duplicateSentence": "2 pairs correlate at or above 0.999 in absolute value — squeezeRisk/longShort at -1.000, technicals/spotPerpVolume at 1.000. A pair at 1.000 is not two similar tests; it is one series and a subset of itself. A pair at -1.000 is the same statement upside down: one signal and its negation, which is one idea however many names it is given."
   },
   "agreementBuckets": [
     {

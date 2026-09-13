@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1789274534879,
+  "generatedAt": 1789277853302,
   "instruments": 87,
   "familySize": 12,
   "familyBreadth": {
@@ -9,8 +9,10 @@
       "n": 12,
       "sessions": 4954,
       "mean_pairwise_rho": 0.405,
+      "mean_abs_rho": 0.456,
       "pairs_measured": 41,
       "effective_bets": 2.2,
+      "distinct_tests": 2,
       "participation_ratio": 2.55,
       "breadth_pct": 18.3,
       "near_duplicates": [
@@ -36,13 +38,15 @@
         }
       ],
       "near_duplicates_total": 4,
-      "sentence": "12 names, mean pairwise correlation 0.41 over 4954 sessions, worth about 2.2 independent bets — 18.3% of the headcount. \"12 names show X\" is therefore closer to 2 observations than to 12. The set holds roughly 2 genuinely different bets, not 12; most of these names are restatements of a few. Participation ratio 2.55 counts the directions spanning these 12 — close to the effective-bets figure, so there is little structure here beyond the common factor. 4 pairs correlate at 0.95 or above — momentum-12-1/momentum-12-1-broad-up at 1.000, momentum-12-1/momentum-12-1-broad-down at 1.000, momentum-12-1-long-only/momentum-12-1-long-only-broad-up at 1.000, and 1 more. Those are not similar names, they are the same position listed twice; collapse them before counting anything.",
+      "sentence": "12 names, mean pairwise correlation 0.41 over 4954 sessions, worth about 2.2 independent bets — 18.3% of the headcount. \"12 names show X\" is therefore closer to 2 observations than to 12. The set holds roughly 2 genuinely different bets, not 12; most of these names are restatements of a few. Participation ratio 2.55 counts the directions spanning these 12 — close to the effective-bets figure, so there is little structure here beyond the common factor. 4 pairs correlate at 0.95 or above in absolute value — momentum-12-1/momentum-12-1-broad-up at 1.000, momentum-12-1/momentum-12-1-broad-down at 1.000, momentum-12-1-long-only/momentum-12-1-long-only-broad-up at 1.000, and 1 more. Those are not similar names, they are the same position listed twice; collapse them before counting anything.",
       "ranking_caution": "Read as a ranking, names near each other are frequently the same bet twice — a difference of a few points between neighbours is not a reason to prefer one. None of this makes an individual row WRONG — correlation does not bias the individual estimates, and for a PAIRED question (\"does A reach further than B?\") it actively helps, because the shared factor cancels out of the difference. What it costs is the ordering's value as a menu."
     },
     "bestCaseBets": 3.19,
     "pairsUnmeasurable": 25,
-    "sentence": "12 declared hypotheses are worth between 2.2 and 3.2 independent ideas — 18% of the headcount at the measured end. The upper end assumes all 25 of 66 pairs too sparse to correlate — mostly pairs at different holding periods, which never share enough dates — are perfectly independent. They are not, so the true figure sits nearer the lower end. This does not make a surviving hypothesis wrong. Correcting across 12 correlated tests is stricter than correcting across 3, so a survivor cleared a harder bar rather than an easier one. What it costs is the COVERAGE the headcount implies: \"12 ideas were tried\" describes a broad search, and this one was narrow.",
-    "duplicateSentence": "4 pairs correlate at or above 0.999 — momentum-12-1/momentum-12-1-broad-up at 1.000, momentum-12-1/momentum-12-1-broad-down at 1.000, momentum-12-1-long-only/momentum-12-1-long-only-broad-up at 1.000, momentum-12-1-long-only/momentum-12-1-long-only-broad-down at 1.000. A pair at 1.000 is not two similar tests; it is one series and a subset of itself."
+    "distinctTests": 2,
+    "inversePairs": 0,
+    "sentence": "12 declared hypotheses are worth between 2.2 and 3.2 independent bets — 18% of the headcount at the measured end. The upper end assumes all 25 of 66 pairs too sparse to correlate — pairs that never share enough dates — are perfectly independent. They are not, so the true figure sits nearer the lower end. This does not make a surviving result wrong. Correcting across 12 correlated tests is stricter than correcting across 3, so a survivor cleared a harder bar rather than an easier one. What it costs is the COVERAGE the headcount implies: \"12 ideas were tried\" describes a broad search, and this one was narrow.",
+    "duplicateSentence": "4 pairs correlate at or above 0.999 in absolute value — momentum-12-1/momentum-12-1-broad-up at 1.000, momentum-12-1/momentum-12-1-broad-down at 1.000, momentum-12-1-long-only/momentum-12-1-long-only-broad-up at 1.000, momentum-12-1-long-only/momentum-12-1-long-only-broad-down at 1.000. A pair at 1.000 is not two similar tests; it is one series and a subset of itself."
   },
   "costPp": 2,
   "results": [

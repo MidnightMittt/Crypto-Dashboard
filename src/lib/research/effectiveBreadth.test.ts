@@ -284,6 +284,90 @@ describe("effectiveBreadth", () => {
     it("agrees in number and grammar with what it found", () => {
       expect(effectiveBreadth(withDupe(), 400).sentence).toContain("1 pair correlates at");
     });
+
+    /*
+     * THE ONE DUPLICATE A SIGNED SCREEN CANNOT SEE.
+     *
+     * A short leg is the same position with the sign flipped, and the crypto
+     * module family contains a pair at exactly -1.000 by design. Screening on
+     * `rho >= 0.95` walked straight past it: the panel read 8.5 effective bets
+     * of 12 with an exact duplicate inside it and nothing said so. Flipping
+     * the screen back to the signed value fails these two.
+     */
+    const withInverse = () => {
+      const base = factorPanel(3, 0.3, 400, 40);
+      const [a] = [...base.values()];
+      const short: ReturnSeries = a.map((v) => (v === null ? null : -v));
+      return new Map<string, ReturnSeries>([...base, ["SHORT", short]]);
+    };
+
+    it("catches an exact negation, which is one position and not two", () => {
+      const b = effectiveBreadth(withInverse(), 400);
+      expect(b.near_duplicates_total).toBe(1);
+      expect(b.near_duplicates[0].rho).toBeCloseTo(-1, 3);
+      expect([b.near_duplicates[0].a, b.near_duplicates[0].b]).toContain("SHORT");
+    });
+
+    /*
+     * Ordering is by magnitude too. A -1.000 listed under a +0.96 would put
+     * the weaker duplicate at the head of a truncated list, and the list is
+     * capped — so the sort is what decides which pairs a reader ever sees.
+     */
+    it("ranks a -1.000 above a +0.96", () => {
+      const base = factorPanel(2, 0.96, 400, 44);
+      const [a] = [...base.values()];
+      const panel = new Map<string, ReturnSeries>([
+        ...base,
+        ["SHORT", a.map((v) => (v === null ? null : -v))],
+      ]);
+      const b = effectiveBreadth(panel, 400);
+      expect(Math.abs(b.near_duplicates[0].rho)).toBeCloseTo(1, 3);
+    });
+  });
+
+  /**
+   * BETS AND IDEAS ARE DIFFERENT QUESTIONS.
+   *
+   * The formula is exact for a basket's variance and the answer it gives for
+   * a hedged pair — "more diversification than two unrelated names" — is
+   * correct for a basket and absurd for a count of what was tried.
+   */
+  describe("distinct tests vs effective bets", () => {
+    it("scores a hedged pair as diversification and as one idea at the same time", () => {
+      const base = factorPanel(2, 0.0, 400, 45);
+      const [a] = [...base.values()];
+      const panel = new Map<string, ReturnSeries>([
+        ...base,
+        ["SHORT", a.map((v) => (v === null ? null : -v))],
+      ]);
+      const b = effectiveBreadth(panel, 400);
+
+      // Signed rho averages near -1/3 across the three pairs, so the basket
+      // reads as MORE than three bets. Nothing is wrong with that number.
+      expect(b.effective_bets!).toBeGreaterThan(3);
+      // And |rho| cannot cancel, so the counting figure sees two ideas.
+      expect(b.distinct_tests!).toBeLessThan(2.5);
+      expect(b.mean_abs_rho!).toBeGreaterThan(b.mean_pairwise_rho!);
+    });
+
+    it("gives the same answer twice when nothing is inversely related", () => {
+      const b = effectiveBreadth(factorPanel(8, 0.5, 400, 46), 400);
+      expect(b.mean_abs_rho).toBeCloseTo(b.mean_pairwise_rho!, 2);
+      expect(b.distinct_tests!).toBeCloseTo(b.effective_bets!, 1);
+    });
+
+    /*
+     * mean|rho| is non-negative, so its denominator cannot go non-positive
+     * the way the signed one can. A panel that refuses `effective_bets` for
+     * that reason must still refuse `distinct_tests` — not because the
+     * arithmetic fails, but because the pairs behind it were never measured.
+     */
+    it("refuses the counting figure exactly when the read itself was refused", () => {
+      const b = effectiveBreadth(new Map(), 400);
+      expect(b.effective_bets).toBeNull();
+      expect(b.distinct_tests).toBeNull();
+      expect(b.mean_abs_rho).toBeNull();
+    });
   });
 
   it("reports how many pairs it actually measured", () => {

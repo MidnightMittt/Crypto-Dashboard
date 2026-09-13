@@ -259,6 +259,35 @@ export interface ModuleGradeSnapshot {
   sentence: string;
 }
 
+/**
+ * The module family's breadth read, as `familyBreadth()` emits it, trimmed to
+ * the fields a consumer uses.
+ *
+ * Carries BOTH counts on purpose. `effective_bets` is exact for a basket's
+ * variance and uses signed rho, so it credits an inverse pair as
+ * diversification; `distinct_tests` runs the same closed form on mean |rho|,
+ * which cannot cancel, and answers how many things were tried. On this family
+ * they are 8.5 and 3.0 and the gap IS the finding — dropping either one turns
+ * a measured disagreement back into a single confident number.
+ */
+export interface ModuleBreadthSnapshot {
+  declared: number;
+  measured: number;
+  breadth: {
+    effective_bets: number | null;
+    distinct_tests: number | null;
+    mean_pairwise_rho: number | null;
+    mean_abs_rho: number | null;
+    pairs_measured: number;
+    near_duplicates: { a: string; b: string; rho: number }[];
+  };
+  bestCaseBets: number | null;
+  /** Duplicate pairs whose correlation is negative — one idea, inverted. */
+  inversePairs: number;
+  sentence: string;
+  duplicateSentence: string | null;
+}
+
 export interface BacktestMetricStats {
   generatedAt: number;
   coverageStart: string;
@@ -270,6 +299,18 @@ export interface BacktestMetricStats {
    * weight is actually validated.
    */
   moduleGrades: Record<string, ModuleGradeSnapshot>;
+  /**
+   * How many distinct ideas the graded family above actually holds.
+   *
+   * The FDR correction spans every declared module, so the grades carry an
+   * implicit claim about how wide the search was. Measured, that claim is
+   * roughly three times too generous: two module pairs emit the same
+   * direction call on every observation they share, one of them with the
+   * sign flipped by design. Optional because artifacts written before the
+   * measurement existed do not carry it, and an absent block must read as
+   * "unmeasured" rather than as a zero.
+   */
+  moduleBreadth?: ModuleBreadthSnapshot | null;
   /**
    * Does the composite bias score's own "agreement" figure (how much the
    * metrics concur, src/lib/signals/confidence.ts's agreementOf) historically

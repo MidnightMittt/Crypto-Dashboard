@@ -163,7 +163,108 @@ describe("familyBreadth", () => {
       series("twin", parent.map((x) => x * 1.01)),
       series("other", noise(99, 200)),
     ]);
-    expect(r.sentence).toContain("does not make a surviving hypothesis wrong");
+    expect(r.sentence).toContain("does not make a surviving result wrong");
     expect(r.sentence).toContain("harder");
+  });
+});
+
+/**
+ * THE CRYPTO CASE: A SIGNAL AND ITS OWN NEGATION.
+ *
+ * `squeezeRisk` fades a crowded side and `longShort` trends it, off
+ * overlapping positioning inputs, so on all 1181 observations where both take
+ * a position they take opposite ones. The signed formula scores that as
+ * diversification — correctly, for a basket — and the family reads 8.5 bets
+ * of 12. Nobody holds these. They are tests, and two of them are one test.
+ */
+describe("familyBreadth — one idea, inverted", () => {
+  it("separates the counting answer from the portfolio answer", () => {
+    const a = noise(3, 300);
+    const family = [
+      series("squeeze", a),
+      series(
+        "longshort",
+        a.map((x) => -x)
+      ),
+      series("other", noise(41, 300)),
+    ];
+    const r = familyBreadth(family);
+
+    /*
+     * The whole finding in two assertions. A perfect hedge inside a
+     * three-name family drags mean SIGNED rho toward zero, so the bets figure
+     * comes out near the headcount — while mean |rho| cannot cancel and the
+     * counting figure collapses.
+     */
+    expect(r.breadth.effective_bets!).toBeGreaterThan(2.9);
+    expect(r.distinctTests!).toBeLessThan(2);
+    expect(r.distinctTests!).toBeLessThan(r.breadth.effective_bets!);
+  });
+
+  it("sees the negation as a duplicate, which a signed screen cannot", () => {
+    const a = noise(3, 300);
+    const r = familyBreadth([
+      series("squeeze", a),
+      series(
+        "longshort",
+        a.map((x) => -x)
+      ),
+      series("other", noise(41, 300)),
+    ]);
+    expect(r.breadth.near_duplicates_total).toBe(1);
+    expect(r.breadth.near_duplicates[0].rho).toBeLessThan(-0.999);
+    expect(r.inversePairs).toBe(1);
+    expect(r.duplicateSentence).toContain("one signal and its negation");
+  });
+
+  /*
+   * The sentence is what a reader actually gets, and the failure mode is
+   * subtle: quoting "8.5 independent ideas" is TRUE and reads as coverage.
+   * The prose has to hand the reader the smaller figure for the question
+   * multiple testing asks, or the measurement makes the overstatement more
+   * credible rather than less.
+   */
+  it("points the coverage claim at the counting figure, not the bets figure", () => {
+    const a = noise(3, 300);
+    const r = familyBreadth([
+      series("squeeze", a),
+      series(
+        "longshort",
+        a.map((x) => -x)
+      ),
+      series("other", noise(41, 300)),
+    ]);
+    expect(r.sentence).toContain("independent BETS, not distinct IDEAS");
+    expect(r.sentence).toContain("squeeze");
+    expect(r.sentence).toContain(`${r.distinctTests!.toFixed(1)} is the figure that applies`);
+    // And the correction is framed against the small number, not the large one.
+    expect(r.sentence).toContain(`correcting across ${Math.round(r.distinctTests!)}`);
+  });
+
+  /*
+   * Silence is not diversification. Seven of the nineteen crypto modules never
+   * emit a directional call in the replay, so the measured end covers twelve
+   * — and "8.5 of 19" would be a claim about the seven that nothing supports.
+   */
+  it("refuses a percentage of the headcount when part of the family is silent", () => {
+    const r = familyBreadth(
+      [
+        series("a", noise(11, 200)),
+        series("b", noise(12, 200)),
+        series("silent", []),
+        series("also-silent", []),
+      ],
+      "modules"
+    );
+    expect(r.declared).toBe(4);
+    expect(r.measured).toBe(2);
+    expect(r.sentence).toContain("4 declared modules");
+    expect(r.sentence).toContain("unmeasured rather than independent");
+    expect(r.sentence).not.toMatch(/% of the headcount/);
+  });
+
+  it("keeps the percentage when every declared member was measured", () => {
+    const r = familyBreadth([series("a", noise(11, 200)), series("b", noise(12, 200))]);
+    expect(r.sentence).toContain("% of the headcount at the measured end");
   });
 });

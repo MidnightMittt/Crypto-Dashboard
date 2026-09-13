@@ -45,6 +45,8 @@ import { DayFingerprint } from "../../src/lib/signals/similarity";
 import { effectiveSampleSize } from "../../src/lib/research/overlap";
 import { gradeModules } from "../../src/lib/research/edgeGate";
 import { benjaminiHochberg } from "../../src/lib/research/multipleTesting";
+import { familyBreadth } from "../../src/lib/research/familyBreadth";
+import { moduleFamilySeries } from "../../src/lib/research/moduleBreadth";
 
 /**
  * Aggregates run.ts's per-day output into descriptive statistics. These are
@@ -987,6 +989,23 @@ function main() {
     rolling?.stats,
     assetsPerDay(records)
   );
+  /*
+   * How many DISTINCT modules is the graded family, as opposed to how many
+   * are declared? The FDR correction below spans every id in
+   * `metricPerformance`, and "twelve modules were tested" is the coverage
+   * claim that correction implies. It is not true here: see moduleBreadth.ts
+   * for the two exact pairs that make it false, one of them an exact
+   * negation the earlier duplicate screen could not see.
+   *
+   * Fed the DECLARED ids rather than the graded-and-measured ones, so the
+   * family scored for breadth is the same family the correction spans.
+   * `familyBreadth` reports `declared` against `measured` itself and drops
+   * the too-thin series on its own.
+   */
+  const moduleBreadth = familyBreadth(
+    moduleFamilySeries(records, Object.keys(metricPerformance)),
+    "modules"
+  );
   const agreementValidation = agreementValidationSection(records);
   const scoreCalibration = scoreCalibrationSection(records);
   const leakTripwire = leakTripwireSection(records);
@@ -1107,6 +1126,30 @@ including which specific combos).
 
 ${signalResearch.markdown}
 
+## Module Family Breadth — how many ideas are these ${DECLARED_COUNT} modules?
+
+The Benjamini-Hochberg correction applied to the module grades spans every cell that produced a
+p-value, and quoting the roster alongside it implies a search as wide as the roster. Correlating
+each module's DIRECTION CALL against every other's says how wide it actually was.
+
+Direction, not P&L, and the choice is not cosmetic: every module shares the same forward return on
+a given row, and modules are graded at whichever horizon suits them — so two modules emitting
+identical calls at different horizons would show only ~0.4 P&L correlation and pass as separate
+ideas. See src/lib/research/moduleBreadth.ts, which also records the coin-flip null run to confirm
+the shared return does not manufacture the correlation on its own.
+
+${moduleBreadth.sentence}${moduleBreadth.duplicateSentence ? `\n\n${moduleBreadth.duplicateSentence}` : ""}
+
+| | |
+|---|---|
+| declared | ${moduleBreadth.declared} |
+| measured (enough calls to correlate) | ${moduleBreadth.measured} |
+| mean pairwise rho (signed) | ${moduleBreadth.breadth.mean_pairwise_rho ?? "—"} |
+| mean pairwise \\|rho\\| | ${moduleBreadth.breadth.mean_abs_rho ?? "—"} |
+| effective bets (portfolio question) | ${moduleBreadth.breadth.effective_bets ?? "—"} |
+| distinct tests (counting question) | ${moduleBreadth.distinctTests ?? "—"} |
+| duplicate pairs, of which inverse | ${moduleBreadth.breadth.near_duplicates_total} / ${moduleBreadth.inversePairs} |
+
 ## Agreement Validation
 
 Does \`bias.agreement\` (how much the ${DECLARED_COUNT} metrics concur, NOT the same axis as confidence — see
@@ -1225,12 +1268,47 @@ ${scoreCalibration.markdown}
         EDGE_GATE_COST_PP
       ).map((g) => [g.metricId, g])
     ),
+    /*
+     * Written beside the grades because it qualifies them: the correction
+     * above spans the declared family, and this says how many distinct
+     * things that family holds. A reader who has one without the other
+     * either overstates the coverage or cannot check it.
+     */
+    moduleBreadth: {
+      declared: moduleBreadth.declared,
+      measured: moduleBreadth.measured,
+      breadth: {
+        effective_bets: moduleBreadth.breadth.effective_bets,
+        distinct_tests: moduleBreadth.breadth.distinct_tests,
+        mean_pairwise_rho: moduleBreadth.breadth.mean_pairwise_rho,
+        mean_abs_rho: moduleBreadth.breadth.mean_abs_rho,
+        pairs_measured: moduleBreadth.breadth.pairs_measured,
+        near_duplicates: moduleBreadth.breadth.near_duplicates,
+      },
+      bestCaseBets: moduleBreadth.bestCaseBets,
+      inversePairs: moduleBreadth.inversePairs,
+      sentence: moduleBreadth.sentence,
+      duplicateSentence: moduleBreadth.duplicateSentence,
+    },
     agreementBuckets: agreementValidation.stats,
     scoreCalibration: scoreCalibration.cells,
   };
   fs.mkdirSync(path.dirname(METRIC_STATS_OUT_PATH), { recursive: true });
   fs.writeFileSync(METRIC_STATS_OUT_PATH, JSON.stringify(metricStatsOut, null, 2));
   console.log(`[report] wrote src/data/backtestMetricStats.json`);
+
+  console.log(
+    `[report] MODULE BREADTH — ${moduleBreadth.declared} declared, ${moduleBreadth.measured} with enough calls to correlate`
+  );
+  console.log(
+    `[report]   signed rho ${moduleBreadth.breadth.mean_pairwise_rho ?? "--"} -> ` +
+      `${moduleBreadth.breadth.effective_bets ?? "--"} effective bets; ` +
+      `|rho| ${moduleBreadth.breadth.mean_abs_rho ?? "--"} -> ` +
+      `${moduleBreadth.distinctTests ?? "--"} distinct tests`
+  );
+  for (const d of moduleBreadth.breadth.near_duplicates) {
+    console.log(`[report]   duplicate  ${d.a} / ${d.b}  rho=${d.rho.toFixed(3)}`);
+  }
 
   /*
    * "Similar Historical Setups" source data — every day's fingerprint, no

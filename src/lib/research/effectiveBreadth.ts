@@ -80,21 +80,56 @@ export interface BreadthResult {
   sessions: number;
   /** Mean pairwise correlation over pairs with enough overlap. */
   mean_pairwise_rho: number | null;
+  /**
+   * Mean |rho| over the same pairs. Equal to `mean_pairwise_rho` on a panel
+   * where nothing is inversely related, and far larger where something is —
+   * which is exactly when the two answer different questions. See
+   * `distinct_tests`.
+   */
+  mean_abs_rho: number | null;
   /** Pairs that cleared the overlap minimum, out of n(n-1)/2. */
   pairs_measured: number;
   /**
    * n / (1 + (n-1)rho) — independent bets in an equal-weighted basket.
    * Exact for the equal-weighted average's variance.
+   *
+   * Uses SIGNED rho, and must: an inversely-related pair genuinely does
+   * damp a basket's variance, and pretending otherwise would understate a
+   * real hedge. This is the portfolio question. It is not the counting
+   * question — for that see `distinct_tests`.
    */
   effective_bets: number | null;
+  /**
+   * n / (1 + (n-1)mean|rho|) — how many distinct THINGS are here, as opposed
+   * to how many independent BETS.
+   *
+   * The two diverge precisely when a panel contains an inverse pair, and then
+   * they diverge enormously. A signal and its own negation are one idea
+   * measured twice: they cannot both be evidence, and a multiple-testing
+   * correction spanning both is not spanning two searches. But their returns
+   * cancel, so `effective_bets` scores them as MORE diversification than two
+   * unrelated names — the right answer to "how much risk did I lay off" and
+   * the wrong answer to "how many things did I try".
+   *
+   * A heuristic, unlike `effective_bets`: mean|rho| is not a variance
+   * identity, it is the same closed form fed a quantity that cannot cancel.
+   * Quoted as a companion, never alone.
+   */
+  distinct_tests: number | null;
   /** n / (1 + (n-1)mean(rho^2)) — factors spanning the panel. */
   participation_ratio: number | null;
   /** Independent bets as a share of headcount, the figure that travels best. */
   breadth_pct: number | null;
   /**
-   * Pairs at or above NEAR_DUPLICATE_RHO, strongest first. Not a summary —
-   * these are the specific rows that are the same row, named so the reader
-   * can collapse them by hand.
+   * Pairs whose |rho| is at or above NEAR_DUPLICATE_RHO, strongest first. Not
+   * a summary — these are the specific rows that are the same row, named so
+   * the reader can collapse them by hand.
+   *
+   * Matched on MAGNITUDE, so a pair at -0.99 is listed alongside one at
+   * +0.99 and its `rho` is reported with its sign. It is the same row either
+   * way; one of the two is just written upside down. Screening on the signed
+   * value would have made an exact negation the one kind of duplicate this
+   * list cannot see, which is the kind hardest to spot by eye.
    */
   near_duplicates: { a: string; b: string; rho: number }[];
   /** How many pairs cleared the threshold, before the list was truncated. */
@@ -177,8 +212,10 @@ export function effectiveBreadth(
     n,
     sessions,
     mean_pairwise_rho: null,
+    mean_abs_rho: null,
     pairs_measured: 0,
     effective_bets: null,
+    distinct_tests: null,
     participation_ratio: null,
     breadth_pct: null,
     near_duplicates: [],
@@ -193,21 +230,22 @@ export function effectiveBreadth(
     );
   }
 
-  let sum = 0, sumSq = 0, pairs = 0;
+  let sum = 0, sumAbs = 0, sumSq = 0, pairs = 0;
   const dupes: { a: string; b: string; rho: number }[] = [];
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
       const rho = pairRho(series.get(names[i])!, series.get(names[j])!);
       if (rho === null) continue;
       sum += rho;
+      sumAbs += Math.abs(rho);
       sumSq += rho * rho;
       pairs++;
-      if (rho >= NEAR_DUPLICATE_RHO) {
+      if (Math.abs(rho) >= NEAR_DUPLICATE_RHO) {
         dupes.push({ a: names[i], b: names[j], rho: Number(rho.toFixed(3)) });
       }
     }
   }
-  dupes.sort((x, y) => y.rho - x.rho);
+  dupes.sort((x, y) => Math.abs(y.rho) - Math.abs(x.rho));
   const total = (n * (n - 1)) / 2;
   if (pairs < total / 2) {
     return empty(
@@ -216,9 +254,13 @@ export function effectiveBreadth(
   }
 
   const meanRho = sum / pairs;
+  const meanAbsRho = sumAbs / pairs;
   const meanRhoSq = sumSq / pairs;
   const denom = 1 + (n - 1) * meanRho;
   const denomSq = 1 + (n - 1) * meanRhoSq;
+  /* mean|rho| >= 0, so this denominator cannot go non-positive the way the
+   * signed one can. No refusal branch is needed and none is offered. */
+  const tests = n / (1 + (n - 1) * meanAbsRho);
 
   /*
    * A non-positive denominator means the average pair is negatively
@@ -232,8 +274,10 @@ export function effectiveBreadth(
     n,
     sessions,
     mean_pairwise_rho: Number(meanRho.toFixed(3)),
+    mean_abs_rho: Number(meanAbsRho.toFixed(3)),
     pairs_measured: pairs,
     effective_bets: bets === null ? null : r2(bets),
+    distinct_tests: r2(tests),
     participation_ratio: pr === null ? null : r2(pr),
     breadth_pct: bets === null ? null : Number(((bets / n) * 100).toFixed(1)),
     near_duplicates: dupes.slice(0, MAX_NEAR_DUPLICATES),
@@ -275,10 +319,25 @@ function duplicateClause(dupes: { a: string; b: string; rho: number }[]): string
    */
   const shown = dupes.slice(0, 3).map((d) => `${d.a}/${d.b} at ${d.rho.toFixed(3)}`);
   const rest = dupes.length - shown.length;
+  const inverse = dupes.filter((d) => d.rho < 0).length;
+  /*
+   * An inverse pair needs its own sentence. "The same position listed twice"
+   * is wrong for it and a reader who checks would be right to distrust the
+   * rest of the clause — it is the same position listed twice with one of
+   * them short, which is one idea, not two, and not a hedge worth counting.
+   */
+  const inverseNote =
+    inverse === 0
+      ? ""
+      : ` ${inverse} of those ${inverse === 1 ? "is" : "are"} INVERSE — the two move oppositely, ` +
+        `which is still one thing measured twice rather than two things. Note that the effective-bets ` +
+        `figure above scores an inverse pair as diversification, correctly for a basket and ` +
+        `misleadingly for a count.`;
   return (
-    ` ${dupes.length} pair${dupes.length === 1 ? " correlates" : "s correlate"} at ${NEAR_DUPLICATE_RHO} or above — ` +
+    ` ${dupes.length} pair${dupes.length === 1 ? " correlates" : "s correlate"} at ${NEAR_DUPLICATE_RHO} or above in absolute value — ` +
     `${shown.join(", ")}${rest > 0 ? `, and ${rest} more` : ""}. ` +
-    `Those are not similar names, they are the same position listed twice; collapse them before counting anything.`
+    `Those are not similar names, they are the same position listed twice; collapse them before counting anything.` +
+    inverseNote
   );
 }
 

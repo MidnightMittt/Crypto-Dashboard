@@ -136,6 +136,18 @@ export interface ValidationReport {
   equityFamilyBreadth: FamilyBreadthSummary | null;
   equityInstruments: number;
   costPp: number;
+  /**
+   * The same read on the crypto modules, and it does not tell the same story.
+   *
+   * On the equity family the signed and absolute answers agree (2.2 and 2.0),
+   * so the breadth note is a footnote to a conclusion that holds either way.
+   * On the modules they are 8.5 and 3.0, because two pairs are one series
+   * twice and one of those pairs is inverted by design. Rendered in the crypto
+   * section rather than folded in with the equity one: the families are
+   * corrected separately and combining their breadth would invent a number
+   * neither correction uses. Null when the artifact predates the measurement.
+   */
+  cryptoFamilyBreadth: FamilyBreadthSummary | null;
 }
 
 /** The breadth read, reduced to what the page renders. */
@@ -143,6 +155,13 @@ export interface FamilyBreadthSummary {
   effectiveBets: number | null;
   /** The other end of the bracket; see familyBreadth.ts on why it is a range. */
   otherEndBets: number | null;
+  /**
+   * The counting answer to `effectiveBets`'s portfolio answer, from mean
+   * |rho|. Equal-ish on a family with no inverse pair, far lower where there
+   * is one. Null on an artifact written before the measurement existed — the
+   * page then shows the bets figure alone, which is what it always showed.
+   */
+  distinctTests: number | null;
   meanPairwiseRho: number | null;
   pairsMeasured: number;
   duplicatePairs: { a: string; b: string; rho: number }[];
@@ -185,10 +204,20 @@ interface ModuleGrade {
   sentence?: string;
 }
 
-/** The artifact's `familyBreadth` block, as `familyBreadth()` emits it. */
+/**
+ * A `familyBreadth` block as `familyBreadth()` emits it — the lab artifact's
+ * and the backtest artifact's are the same shape, so both flatten through
+ * `summariseBreadth`.
+ *
+ * `distinct_tests` is optional because the equity artifact was written before
+ * the counting figure existed. Absent must mean unmeasured; defaulting it to
+ * the bets figure would silently assert the two agree, which on the module
+ * family is the exact claim being refuted.
+ */
 interface LabFamilyBreadth {
   breadth: {
     effective_bets: number | null;
+    distinct_tests?: number | null;
     mean_pairwise_rho: number | null;
     pairs_measured: number;
     near_duplicates: { a: string; b: string; rho: number }[];
@@ -207,6 +236,13 @@ export interface ValidationInputs {
     familyBreadth?: LabFamilyBreadth | null;
   };
   moduleGrades: Record<string, ModuleGrade>;
+  /**
+   * The module family's breadth, from backtestMetricStats.json. Same shape as
+   * the lab's, and deliberately a sibling of `moduleGrades` rather than a
+   * field inside it — it describes the family the grades were corrected
+   * across, not any one grade.
+   */
+  moduleBreadth?: LabFamilyBreadth | null;
 }
 
 /**
@@ -222,6 +258,7 @@ function summariseBreadth(fb: LabFamilyBreadth | null | undefined): FamilyBreadt
   return {
     effectiveBets: fb.breadth.effective_bets,
     otherEndBets: fb.bestCaseBets,
+    distinctTests: fb.breadth.distinct_tests ?? null,
     meanPairwiseRho: fb.breadth.mean_pairwise_rho,
     pairsMeasured: fb.breadth.pairs_measured,
     duplicatePairs: fb.breadth.near_duplicates,
@@ -374,5 +411,6 @@ export function buildValidationReport(inputs: ValidationInputs): ValidationRepor
     equityFamilyBreadth: summariseBreadth(inputs.lab.familyBreadth),
     equityInstruments: inputs.lab.instruments,
     costPp: inputs.lab.costPp,
+    cryptoFamilyBreadth: summariseBreadth(inputs.moduleBreadth),
   };
 }

@@ -77,6 +77,23 @@ export interface FamilyBreadth {
   bestCaseBets: number | null;
   /** Pairs that could not be correlated, out of every pair. */
   pairsUnmeasurable: number;
+  /**
+   * How many distinct ideas the family holds, from mean |rho| — the counting
+   * answer, where `breadth.effective_bets` is the portfolio answer.
+   *
+   * On the equity family the two are 2.2 and 2.0 and the distinction is
+   * academic, because nothing in it is inversely related to anything else. On
+   * the crypto module family they are 8.5 and 3.0, because `squeezeRisk` is
+   * `longShort` with the sign flipped by design — one fades a crowded side,
+   * the other trends it, off overlapping inputs. Scoring that pair as 2.0
+   * bets of diversification is right for a basket and absurd for a claim
+   * about how many ideas were tried.
+   *
+   * Null only when the breadth read itself was refused.
+   */
+  distinctTests: number | null;
+  /** Duplicate pairs whose correlation is negative — one idea, inverted. */
+  inversePairs: number;
   /** The bracket in one sentence, in the direction that survives both ends. */
   sentence: string;
   /**
@@ -101,7 +118,16 @@ export interface FamilyBreadth {
  * like — the gate would start to look like an independent idea purely by
  * being switched off.
  */
-export function familyBreadth(family: readonly FamilySeries[]): FamilyBreadth {
+export function familyBreadth(
+  family: readonly FamilySeries[],
+  /*
+   * What the members are called in the prose. The equity family are declared
+   * hypotheses; the crypto family are modules, and calling them hypotheses on
+   * a page that uses that word for the other family would read as one study.
+   * Defaulted so the equity sentence stays byte-identical.
+   */
+  unit: string = "hypotheses"
+): FamilyBreadth {
   const usable = family.filter((f) => f.periods.length >= MIN_PERIODS);
   const dates = [...new Set(usable.flatMap((f) => f.periods.map((p) => p.entryTime)))].sort(
     (a, b) => a - b
@@ -139,7 +165,9 @@ export function familyBreadth(family: readonly FamilySeries[]): FamilyBreadth {
     breadth,
     bestCaseBets: bestCase,
     pairsUnmeasurable: unmeasurable,
-    sentence: describe(family.length, breadth, bestCase, unmeasurable, totalPairs),
+    distinctTests: breadth.distinct_tests,
+    inversePairs: breadth.near_duplicates.filter((d) => d.rho < 0).length,
+    sentence: describe(family.length, breadth, bestCase, unmeasurable, totalPairs, unit),
     duplicateSentence: breadth.near_duplicates.length > 0 ? duplicates(breadth) : null,
   };
 }
@@ -149,11 +177,12 @@ function describe(
   breadth: BreadthResult,
   bestCase: number | null,
   unmeasurable: number,
-  totalPairs: number
+  totalPairs: number,
+  unit: string
 ): string {
   if (breadth.effective_bets === null) {
     return (
-      `${declared} declared hypotheses, but their period series could not be correlated ` +
+      `${declared} declared ${unit}, but their period series could not be correlated ` +
       `well enough to say how many distinct ideas that is. Reported as unmeasured rather ` +
       `than as a headcount. ${breadth.sentence}`
     );
@@ -163,10 +192,17 @@ function describe(
   const other = bestCase ?? measuredBets;
   const low = Math.min(measuredBets, other);
   const high = Math.max(measuredBets, other);
+  /*
+   * BETS, not ideas. `effective_bets` is a variance identity and nothing
+   * else, and the sentence three clauses down exists to say that those two
+   * words are not synonyms — opening with "independent ideas" would concede
+   * the point before making it. The word only ever looked harmless because
+   * on the equity family the two counts happen to agree.
+   */
   const bracket =
     high > low + 0.05
-      ? `between ${low.toFixed(1)} and ${high.toFixed(1)} independent ideas`
-      : `about ${measuredBets.toFixed(1)} independent ideas`;
+      ? `between ${low.toFixed(1)} and ${high.toFixed(1)} independent bets`
+      : `about ${measuredBets.toFixed(1)} independent bets`;
 
   /*
    * Only claim the true figure sits low when the correlation actually pulls
@@ -176,18 +212,55 @@ function describe(
    */
   const missing =
     unmeasurable > 0 && other > measuredBets
-      ? ` The upper end assumes all ${unmeasurable} of ${totalPairs} pairs too sparse to correlate ` +
-        `— mostly pairs at different holding periods, which never share enough dates — are perfectly ` +
-        `independent. They are not, so the true figure sits nearer the lower end.`
+      ? /*
+         * No cause is named for the sparse pairs. On the equity family they
+         * are mostly hypotheses at different holding periods; on the module
+         * family they are modules that rarely take a position at all, and one
+         * explanation carried onto the other family would be a confident
+         * statement about something this function never measured.
+         */
+        ` The upper end assumes all ${unmeasurable} of ${totalPairs} pairs too sparse to correlate ` +
+        `— pairs that never share enough dates — are perfectly independent. They are not, so the ` +
+        `true figure sits nearer the lower end.`
       : unmeasurable > 0
         ? ` ${unmeasurable} of ${totalPairs} pairs were too sparse to correlate and are excluded ` +
           `rather than assumed independent; the measurable ones do not average positive, so no ` +
           `collapse is being claimed here.`
         : "";
 
+  /*
+   * THE COUNTING FIGURE, AND WHY IT IS NOT THE BRACKET.
+   *
+   * `effective_bets` uses signed rho, so an inversely-related pair reads as
+   * diversification — true of a basket, false of a search. Where the family
+   * contains an inversion the two answers separate by a lot, and the sentence
+   * has to lead the reader to the one that matches the question being asked,
+   * or the bracket becomes a way of overstating coverage rather than
+   * measuring it.
+   */
+  const tests = breadth.distinct_tests;
+  const inverse = breadth.near_duplicates.filter((d) => d.rho < 0);
+  const diverges = tests !== null && tests < measuredBets - 0.5;
+  const counting = !diverges
+    ? ""
+    : ` Those are independent BETS, not distinct IDEAS, and here the two part company: ` +
+      `${inverse.length > 0 ? `${inverse.length} pair${inverse.length === 1 ? " is" : "s are"} inversely related` : `some pairs are inversely related`} ` +
+      `— ${inverse.length > 0 ? `${inverse[0].a} and ${inverse[0].b} at ${inverse[0].rho.toFixed(3)}, ` : ""}` +
+      `one signal and its own negation. A basket of the two hedges itself, which is why the bets ` +
+      `figure is high. A SEARCH over the two has still only tried one thing. Counted that way — on ` +
+      `mean |rho| rather than mean rho — the family is worth ${tests.toFixed(1)} distinct ideas, not ` +
+      `${measuredBets.toFixed(1)}. For anything about coverage or multiple testing, ${tests.toFixed(1)} ` +
+      `is the figure that applies.`;
+
+  const forCorrection = Math.max(1, Math.round(diverges && tests !== null ? tests : high));
+  /*
+   * The correction spans the members that produced a p-value, which is the
+   * measured set — the silent ones were never corrected across and claiming
+   * they were would overstate the very strictness this sentence is crediting.
+   */
   const stakes =
-    ` This does not make a surviving hypothesis wrong. Correcting across ${declared} correlated ` +
-    `tests is stricter than correcting across ${Math.round(high)}, so a survivor cleared a harder ` +
+    ` This does not make a surviving result wrong. Correcting across ${breadth.n} correlated ` +
+    `tests is stricter than correcting across ${forCorrection}, so a survivor cleared a harder ` +
     `bar rather than an easier one. What it costs is the COVERAGE the headcount implies: ` +
     `"${declared} ideas were tried" describes a broad search, and this one was narrow.`;
 
@@ -196,12 +269,30 @@ function describe(
    * a consumer rendering them as a list does not print each pair twice. See
    * `duplicateSentence`.
    */
-  return (
-    `${declared} declared hypotheses are worth ${bracket} — ` +
-    `${((measuredBets / breadth.n) * 100).toFixed(0)}% of the headcount at the measured end.` +
-    missing +
-    stakes
-  );
+  /*
+   * THE HEADCOUNT THE PERCENTAGE IS OF.
+   *
+   * `breadth.n` is what could be correlated, which is not always what was
+   * declared: seven crypto modules never emit a directional call in the
+   * replay and so have no series to correlate at all. Dividing by `n` and
+   * calling it "of the headcount" reported 71% on a family where the measured
+   * end is 45% of what was declared — a real overstatement, invisible on the
+   * equity family only because there the two counts happen to be equal.
+   *
+   * Rather than pick a denominator, the unequal case refuses the percentage
+   * and names both counts. The silent members are UNMEASURED, not
+   * independent, and no fraction can say that.
+   */
+  const opening =
+    breadth.n === declared
+      ? `${declared} declared ${unit} are worth ${bracket} — ` +
+        `${((measuredBets / declared) * 100).toFixed(0)}% of the headcount at the measured end.`
+      : `${declared} declared ${unit}, of which ${breadth.n} produce enough readings to correlate ` +
+        `at all; those ${breadth.n} are worth ${bracket}. The remaining ${declared - breadth.n} are ` +
+        `unmeasured rather than independent, so no share of the headcount is quoted here — a ` +
+        `percentage would have to treat silence as either evidence or nothing, and it is neither.`;
+
+  return opening + counting + missing + stakes;
 }
 
 /**
@@ -217,10 +308,22 @@ function duplicates(breadth: BreadthResult): string {
     .slice(0, 4)
     .map((d) => `${d.a}/${d.b} at ${d.rho.toFixed(3)}`);
   const rest = breadth.near_duplicates_total - shown.length;
+  /*
+   * Compared on magnitude, because the list is now matched on magnitude. A
+   * pair at -1.000 is as exact a duplicate as one at +1.000, and screening
+   * this line on the signed value would describe the family as "0.95 or
+   * above" while displaying a negative number three words later.
+   */
+  const strongest = Math.abs(breadth.near_duplicates[0].rho);
+  const anyInverse = breadth.near_duplicates.some((d) => d.rho < 0);
   return (
     `${breadth.near_duplicates_total} pair${breadth.near_duplicates_total === 1 ? "" : "s"} ` +
-    `correlate at ${breadth.near_duplicates[0].rho >= 0.999 ? "or above 0.999" : "0.95 or above"} — ` +
+    `correlate at ${strongest >= 0.999 ? "or above 0.999" : "0.95 or above"} in absolute value — ` +
     `${shown.join(", ")}${rest > 0 ? `, and ${rest} more` : ""}. ` +
-    `A pair at 1.000 is not two similar tests; it is one series and a subset of itself.`
+    `A pair at 1.000 is not two similar tests; it is one series and a subset of itself.` +
+    (anyInverse
+      ? ` A pair at -1.000 is the same statement upside down: one signal and its negation, ` +
+        `which is one idea however many names it is given.`
+      : "")
   );
 }
