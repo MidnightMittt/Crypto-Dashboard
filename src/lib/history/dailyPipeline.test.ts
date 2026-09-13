@@ -143,3 +143,56 @@ describe("the daily pipeline commits what it generates", () => {
     expect(contributing.size, "no invoked script matched the data-file pattern").toBeGreaterThanOrEqual(8);
   });
 });
+
+/**
+ * THE PAPER BOOK GOES RED WHEN IT IS SHORT A DECLARED STRATEGY.
+ *
+ * buildPaperLines refuses per strategy, so its characteristic failure is not a
+ * missing file but a file missing a LINE — a four-line book where five were
+ * declared, written, committed and served, with the absence recorded only in a
+ * list on /validation. The script now exits non-zero for that, which only
+ * means anything if the workflow lets the exit code through.
+ *
+ * The obvious way to do that is wrong, and these assertions exist to keep it
+ * from being reintroduced as a simplification.
+ */
+describe("the nightly job fails when the paper book is incomplete", () => {
+  const yml = workflowSource("daily-intelligence.yml");
+
+  it("does not swallow the paper lines exit code", () => {
+    expect(
+      /buildPaperLines\.ts[^\n]*\|\|/.test(yml),
+      "the paper lines step discards its exit code with `|| ...`, so an incomplete book reports green"
+    ).toBe(false);
+  });
+
+  it("records the outcome and judges it at a gate that survives an earlier failure", () => {
+    const at = yml.indexOf("steps.paper.outputs.complete");
+    expect(at, "nothing in the job consumes the paper lines outcome").toBeGreaterThan(-1);
+    const gate = yml.slice(yml.lastIndexOf("- name:", at));
+    expect(gate, "the gate must run even when an earlier step failed").toContain("if: always()");
+    expect(gate, "the gate must be able to fail the run").toContain("exit 1");
+  });
+
+  /*
+   * THE LOAD-BEARING ONE, and the reason the outcome is carried rather than
+   * thrown where it happens.
+   *
+   * A failing step ends the job. The paper lines run several steps ABOVE the
+   * CBOE positioning capture, which is the one irreplaceable thing this
+   * pipeline does — the delayed chain has no date parameter, so a session not
+   * recorded is gone for good. Failing in place would trade a recomputable
+   * artefact for a permanently lost observation. The gate therefore has to sit
+   * after the capture, and anyone moving it above would be quietly undoing
+   * that trade.
+   */
+  it("gates only after the irrecoverable positioning capture has run", () => {
+    const capture = yml.indexOf("recordPositioning.ts");
+    const gate = yml.indexOf("steps.paper.outputs.complete");
+    expect(capture, "the positioning capture is no longer in this job").toBeGreaterThan(-1);
+    expect(
+      gate,
+      "the paper book gate runs before the CBOE capture, so a bad book would cost a session that cannot be recovered"
+    ).toBeGreaterThan(capture);
+  });
+});

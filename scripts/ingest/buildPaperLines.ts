@@ -117,19 +117,44 @@ function main(): void {
   const spreads = readJson<{ observations: SpreadObservation[] }>(SPREADS).observations;
 
   const lines: PaperLineEntry[] = [];
-  const refusals: { id: string; reason: string }[] = [];
+
+  /**
+   * A refusal is one of two different events, and collapsing them is what let
+   * a missing line look routine.
+   *
+   * `undeclared` — the strategy is no longer declared. Removing a basket or
+   * retiring a hypothesis is a deliberate act, and the absence it produces is
+   * information rather than a fault.
+   *
+   * `failed` — a strategy that IS declared could not be computed. That is a
+   * broken input every time, and it is the case this job must not survive.
+   *
+   * Both are written to the artefact, which carries only `id` and `reason`;
+   * the kind decides the exit code and stays in here.
+   */
+  type RefusalKind = "undeclared" | "failed";
+  const refusals: { id: string; reason: string; kind: RefusalKind }[] = [];
 
   /**
    * Each strategy is produced independently and a failure costs only that
    * strategy. The alternative — one throw taking the artefact down — means a
    * single bad basket hides three good lines, and the reader cannot tell a
    * broken producer from a retired one.
+   *
+   * Independent, but not forgiven: everything refused in here is `failed`, and
+   * the gate below turns any of it into a non-zero exit. Producing the other
+   * three lines is worth doing; shipping them as if they were the whole book
+   * is not.
    */
   const produce = (id: string, source: PaperLineEntry["source"], build: () => PaperLine): void => {
     try {
       const line = build();
       if (line.full.n === 0) {
-        refusals.push({ id, reason: "no sessions computable from the committed inputs" });
+        refusals.push({
+          id,
+          kind: "failed",
+          reason: "no sessions computable from the committed inputs",
+        });
         return;
       }
       lines.push({
@@ -140,7 +165,11 @@ function main(): void {
         caveatSinceDeclared: paperCaveat(line.sinceDeclared),
       });
     } catch (err) {
-      refusals.push({ id, reason: err instanceof Error ? err.message : String(err) });
+      refusals.push({
+        id,
+        kind: "failed",
+        reason: err instanceof Error ? err.message : String(err),
+      });
     }
   };
 
@@ -168,7 +197,11 @@ function main(): void {
   const scanned = BASKETS.find((b) => b.name === "scanned");
   let markSessions: ReturnType<typeof markToOpenSessions> = [];
   if (!scanned) {
-    refusals.push({ id: MARK_TO_OPEN_DECLARATION.id, reason: "the scanned basket is not declared" });
+    refusals.push({
+      id: MARK_TO_OPEN_DECLARATION.id,
+      kind: "undeclared",
+      reason: "the scanned basket is not declared",
+    });
   } else {
     markSessions = markToOpenSessions(bars, scanned.symbols, spreads);
     produce(MARK_TO_OPEN_DECLARATION.id, "mark-to-open", () =>
@@ -194,7 +227,11 @@ function main(): void {
    */
   const momentum = FAMILY.find((h) => h.id === MOMENTUM_ID);
   if (!momentum) {
-    refusals.push({ id: `${MOMENTUM_ID}-paper`, reason: "the hypothesis is no longer declared" });
+    refusals.push({
+      id: `${MOMENTUM_ID}-paper`,
+      kind: "undeclared",
+      reason: "the hypothesis is no longer declared",
+    });
   } else {
     const declaration = momentumDeclaration(momentum, HYPOTHESES_DECLARED_ON);
     produce(declaration.id, "momentum", () => {
@@ -205,10 +242,42 @@ function main(): void {
   }
 
   /*
-   * Every strategy refusing is a broken input, not a quiet day. Going red
-   * there is the difference between "the pipeline told me" and "the page
-   * stopped updating and nobody noticed for 26 days", which this repository
-   * has already paid for once.
+   * ── A DECLARED STRATEGY THAT PRODUCED NO LINE GOES RED ────────────────
+   *
+   * This used to fire only when EVERY strategy refused, which made the common
+   * case the silent one. A single refusal wrote a book that was short a line,
+   * exited 0, and got committed; the strategy's absence was visible only as an
+   * extra entry in a list on /validation that nobody reads on a green day. The
+   * measured instance: the momentum leg refuses whenever the 146MB bar corpus
+   * is absent, and off-runner it always is.
+   *
+   * That is the same shape as the marketContext staleness this pipeline has
+   * already paid 26 days for — a number quietly missing from a page whose
+   * every other number refreshed on time. A missing line is worse than a stale
+   * one, because a book with four lines does not look incomplete.
+   *
+   * THROWING BEFORE THE WRITE IS THE POINT. The artefact is not rewritten, so
+   * production keeps yesterday's COMPLETE book rather than today's truncated
+   * one, and the alarm is the exit code rather than a gap on the page. This is
+   * only safe because the output is a pure projection — every input is already
+   * committed or already on the runner, so tomorrow's run reproduces it
+   * exactly. A store would have to be written first and gated after.
+   *
+   * A retirement is not a failure: `undeclared` refusals are recorded, carried
+   * into the artefact, and deliberately do not reach this check.
+   */
+  const broken = refusals.filter((r) => r.kind === "failed");
+  if (broken.length) {
+    throw new Error(
+      `${broken.length} declared strategy/strategies produced no line, so the book was ` +
+        `NOT rewritten and production keeps the previous copy:\n  ` +
+        broken.map((r) => `${r.id}: ${r.reason}`).join("\n  ")
+    );
+  }
+
+  /*
+   * The backstop for the other direction: everything refused as `undeclared`
+   * is individually legitimate, but an empty book is not something to publish.
    */
   if (!lines.length) {
     throw new Error(
@@ -223,7 +292,9 @@ function main(): void {
     engineVersion: PAPER_ENGINE_VERSION,
     lines,
     markDrag: drag,
-    refusals,
+    // `kind` is this script's business, not the reader's — the artefact shape
+    // stays exactly what /validation already consumes.
+    refusals: refusals.map(({ id, reason }) => ({ id, reason })),
   };
   fs.writeFileSync(OUT, JSON.stringify(out, null, 0));
 
@@ -262,7 +333,7 @@ function main(): void {
   } else {
     console.log(`  mark drag: not computable — the two legs share no dates yet`);
   }
-  for (const r of refusals) console.log(`  REFUSED ${r.id}: ${r.reason}`);
+  for (const r of refusals) console.log(`  REFUSED [${r.kind}] ${r.id}: ${r.reason}`);
   console.log(`[paper] wrote ${OUT}`);
 }
 
