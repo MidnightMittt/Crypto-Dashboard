@@ -11,6 +11,7 @@ import {
   PAPER_ENGINE_VERSION,
   PaperLine,
   buildPaperLine,
+  declarationGrace,
   paperCaveat,
 } from "../../src/lib/research/paperEngine";
 import {
@@ -118,21 +119,36 @@ function main(): void {
 
   const lines: PaperLineEntry[] = [];
 
+  /*
+   * ONE instant for the whole run, used for both the artefact's stamp and the
+   * grace arithmetic. Reading the clock twice would let a run that straddles
+   * midnight UTC stamp itself one day and judge a declaration's age by the
+   * next — rare, and exactly the kind of thing that produces one unreproducible
+   * red run a year.
+   */
+  const runAt = Date.now();
+
   /**
-   * A refusal is one of two different events, and collapsing them is what let
+   * A refusal is one of three different events, and collapsing them is what let
    * a missing line look routine.
    *
    * `undeclared` — the strategy is no longer declared. Removing a basket or
    * retiring a hypothesis is a deliberate act, and the absence it produces is
    * information rather than a fault.
    *
-   * `failed` — a strategy that IS declared could not be computed. That is a
-   * broken input every time, and it is the case this job must not survive.
+   * `pending` — declared so recently that it cannot have produced anything
+   * yet. A leg whose inputs accrue forward only has nothing to backfill from,
+   * so its record is legitimately empty for a few sessions. Expires by date;
+   * see `declarationGrace`.
    *
-   * Both are written to the artefact, which carries only `id` and `reason`;
-   * the kind decides the exit code and stays in here.
+   * `failed` — a strategy that IS declared, and old enough to have spoken,
+   * could not be computed. That is a broken input every time, and it is the
+   * case this job must not survive.
+   *
+   * All three are written to the artefact, which carries only `id` and
+   * `reason`; the kind decides the exit code and stays in here.
    */
-  type RefusalKind = "undeclared" | "failed";
+  type RefusalKind = "undeclared" | "pending" | "failed";
   const refusals: { id: string; reason: string; kind: RefusalKind }[] = [];
 
   /**
@@ -150,10 +166,21 @@ function main(): void {
     try {
       const line = build();
       if (line.full.n === 0) {
+        /*
+         * The ONLY graced path, and deliberately so. An empty record can mean
+         * "declared yesterday" or "the input broke"; the declaration date is
+         * the only thing that tells them apart. A thrown build — the catch
+         * below — is a broken input at any age and is never graced.
+         */
+        const grace = declarationGrace(line.full.declaration.declaredOn, runAt);
         refusals.push({
           id,
-          kind: "failed",
-          reason: "no sessions computable from the committed inputs",
+          kind: grace.active ? "pending" : "failed",
+          reason: grace.active
+            ? `declared ${line.full.declaration.declaredOn} and has produced no session yet — ` +
+              `not a fault until ${grace.expiresOn}`
+            : `no sessions computable from the committed inputs, ` +
+              `and the grace on its ${line.full.declaration.declaredOn} declaration ran out ${grace.expiresOn}`,
         });
         return;
       }
@@ -263,8 +290,10 @@ function main(): void {
    * committed or already on the runner, so tomorrow's run reproduces it
    * exactly. A store would have to be written first and gated after.
    *
-   * A retirement is not a failure: `undeclared` refusals are recorded, carried
-   * into the artefact, and deliberately do not reach this check.
+   * A retirement is not a failure and neither is a newborn: `undeclared` and
+   * `pending` refusals are recorded, carried into the artefact, and
+   * deliberately do not reach this check. `pending` expires by date, so it
+   * cannot become a permanent excuse.
    */
   const broken = refusals.filter((r) => r.kind === "failed");
   if (broken.length) {
@@ -276,10 +305,15 @@ function main(): void {
   }
 
   /*
-   * The backstop for the other direction: everything refused as `undeclared`
-   * is individually legitimate, but an empty book is not something to publish.
+   * The backstop for the other direction: each remaining refusal is
+   * individually legitimate, but an empty book is not something to publish.
+   *
+   * Unless something is on its way. A book with no lines and a pending
+   * declaration is the first day of a new strategy, which is a real state and
+   * not a broken one — throwing there would make the grace unreachable in
+   * exactly the case it was written for.
    */
-  if (!lines.length) {
+  if (!lines.length && !refusals.some((r) => r.kind === "pending")) {
     throw new Error(
       `No paper line could be produced. Refusals:\n  ` +
         refusals.map((r) => `${r.id}: ${r.reason}`).join("\n  ")
@@ -288,7 +322,7 @@ function main(): void {
 
   const out: PaperLines = {
     version: 1,
-    generatedAt: Date.now(),
+    generatedAt: runAt,
     engineVersion: PAPER_ENGINE_VERSION,
     lines,
     markDrag: drag,
