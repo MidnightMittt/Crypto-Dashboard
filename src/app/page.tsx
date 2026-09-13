@@ -127,6 +127,9 @@ export default function BriefPage() {
             <Link href="/scanner" className="hover:text-ink">
               Scanner
             </Link>
+            <Link href="/trade" className="hover:text-ink">
+              Desk
+            </Link>
             <Link href="/crypto" className="hover:text-ink">
               Crypto
             </Link>

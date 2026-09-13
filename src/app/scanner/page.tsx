@@ -152,6 +152,14 @@ export default async function ScannerPage({
             <Link href="/intelligence" className="hover:text-ink">
               ← Intelligence
             </Link>
+            {/*
+              The desk is downstream of this page by construction: the scanner
+              answers "what should I look at", and the desk is where a
+              candidate gets argued against before it becomes an order.
+            */}
+            <Link href="/trade" className="hover:text-ink">
+              Desk →
+            </Link>
             <Link href="/crypto" className="hover:text-ink">
               Crypto
             </Link>

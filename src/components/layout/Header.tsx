@@ -73,6 +73,18 @@ export function Header({ venueCount, updatedAt }: { venueCount?: number; updated
           >
             Scanner
           </Link>
+          {/*
+            The desk sits after the scanner because that is the order of the
+            questions: the scanner answers "what should I look at", the desk
+            answers "should I actually place this". It is the only surface
+            whose job is to argue against a trade rather than find one.
+          */}
+          <Link
+            href="/trade"
+            className="hidden text-[11px] uppercase tracking-widest text-ink-faint transition-colors hover:text-ink sm:inline"
+          >
+            Desk
+          </Link>
           <Link
             href="/markets"
             className="hidden text-[11px] uppercase tracking-widest text-ink-faint transition-colors hover:text-ink sm:inline"
