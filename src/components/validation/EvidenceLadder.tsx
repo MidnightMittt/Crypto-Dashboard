@@ -15,6 +15,14 @@
  *             claim is fixed?                    nobody traded it
  *   LIVE      can we get that price?             empty
  *
+ * Rung 2 has TWO occupants and the tier line names both: the paper book
+ * (hypotheses the site is testing) and the forward verdict register (the
+ * directional word the site published). Their counts are reported side by
+ * side and never summed — one counts strategies, the other counts calls, and
+ * a total over both would describe neither. A rung with an unnamed second
+ * occupant is the failure this line exists to prevent: the page would carry
+ * a section the frame above it does not account for.
+ *
  * They are not degrees of confidence and must not be read as a progress bar.
  * A strategy can clear the first two and die entirely on the third, because
  * the third measures something neither of the others touches.
@@ -64,6 +72,8 @@ export function EvidenceLadder({
   clearingOutOfSample,
   liveTrips,
   liveJoinable,
+  verdictResolved,
+  verdictOpen,
 }: {
   labMeasured: number;
   labCleared: number;
@@ -74,6 +84,15 @@ export function EvidenceLadder({
   liveTrips: number;
   /** Those naming the strategy they executed. The only ones this rung can read. */
   liveJoinable: number;
+  /**
+   * The forward verdict register, which shares rung 2 with the paper book.
+   * Counted separately and never added to it: the paper book measures
+   * hypotheses the site is testing, the register measures the directional
+   * word the site actually published. Summing them would invent a
+   * denominator that describes neither.
+   */
+  verdictResolved: number;
+  verdictOpen: number;
 }) {
   return (
     <section className="rounded-xl border border-hairline bg-panel/60 px-5 py-5 sm:px-6">
@@ -104,7 +123,7 @@ export function EvidenceLadder({
           name="Paper"
           question="Is it still there now the claim is fixed?"
           headline={`${clearingOutOfSample} of ${registered} clear`}
-          detail={`${withPaperRecord} of ${registered} have any out-of-sample record at all. Recomputed nightly, out of sample by date — but nobody traded it.`}
+          detail={`${withPaperRecord} of ${registered} have any out-of-sample record at all, and the verdict register shares this rung: ${verdictResolved.toLocaleString()} published calls scored, ${verdictOpen.toLocaleString()} still inside their window. Out of sample by date — but nobody traded any of it.`}
           tone="text-amber"
         />
         <Tier

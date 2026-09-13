@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
 import forwardVerdictJson from "@/data/forwardVerdictRecord.json";
 import forwardReachJson from "@/data/forwardReachRecord.json";
-import { ForwardVerdictRecord, MIN_INDEPENDENT_BLOCKS, MIN_VERDICT_N, VerdictCell } from "@/lib/research/forwardVerdict";
+import {
+  ForwardVerdictRecord,
+  MIN_INDEPENDENT_BLOCKS,
+  MIN_VERDICT_N,
+  countByEngine,
+  countExpired,
+  rankCellsByEdge,
+} from "@/lib/research/forwardVerdict";
 
 /**
  * GET /api/record — the forward track record, as data.
@@ -19,10 +26,10 @@ import { ForwardVerdictRecord, MIN_INDEPENDENT_BLOCKS, MIN_VERDICT_N, VerdictCel
  *
  * ── Ranked by expectancy, never hit rate ──────────────────────────────
  *
- * Cells are ordered by edge vs baseline. The account's own ledger is the
- * argument: a +5% take-profit won 91% of the time and returned +2.03%,
- * while a 20-day hold won 55% and returned +9.99%. A hit-rate leaderboard
- * steers a reader into the worse strategy, so this route never offers one.
+ * Cells are ordered by edge vs baseline, by `rankCellsByEdge` — which lives
+ * in the library because /validation renders the same cells and an ordering
+ * that differs between the JSON and the page is two opinions about which
+ * call did best. The reasoning for the ordering is stated there.
  *
  * ── Two baselines, both named ─────────────────────────────────────────
  *
@@ -35,19 +42,6 @@ import { ForwardVerdictRecord, MIN_INDEPENDENT_BLOCKS, MIN_VERDICT_N, VerdictCel
 
 export const dynamic = "force-dynamic";
 
-/*
- * Ranked by edge — expectancy, never hit rate. And a cell that cannot
- * support a claim sorts BELOW every one that can, regardless of how
- * flattering its point estimate is: the top row of a ranked list is read as
- * a recommendation, and a recommendation from one independent period is
- * noise with a rank attached.
- */
-const rankByEdge = (cells: VerdictCell[]): VerdictCell[] =>
-  [...cells].sort((a, b) => {
-    if (a.publishable !== b.publishable) return a.publishable ? -1 : 1;
-    return (b.edgeVsBaselinePct ?? -Infinity) - (a.edgeVsBaselinePct ?? -Infinity);
-  });
-
 export function GET() {
   const v = forwardVerdictJson as unknown as ForwardVerdictRecord;
   const r = forwardReachJson as unknown as {
@@ -58,9 +52,7 @@ export function GET() {
     predictions: unknown[];
   };
 
-  const expired = v.predictions.filter((p) => p.expired).length;
-  const byEngine = new Map<number, number>();
-  for (const p of v.predictions) byEngine.set(p.engine ?? 1, (byEngine.get(p.engine ?? 1) ?? 0) + 1);
+  const expired = countExpired(v.predictions);
 
   return NextResponse.json({
     verdict_record: {
@@ -69,7 +61,7 @@ export function GET() {
       generated_at: new Date(v.generatedAt).toISOString(),
       min_cell_n: MIN_VERDICT_N,
       totals: { ...v.totals, expired },
-      predictions_by_engine: Object.fromEntries(byEngine),
+      predictions_by_engine: countByEngine(v.predictions),
       finding: v.finding ?? "This record predates the finding field; re-run the daily job to populate it.",
       cannot_yet_answer: v.cannotYetAnswer ?? [],
       baseline_cohort_pct: v.baselineReturnPct,
@@ -79,7 +71,7 @@ export function GET() {
         "the same windows, a mixed bullish/bearish/neutral set, not an index. The market " +
         "baseline is mean SPY return over the same windows, shown so 'beat the register' and " +
         "'rode the index' stay distinguishable.",
-      cells: rankByEdge(v.cells),
+      cells: rankCellsByEdge(v.cells),
       legacy: v.legacy
         ? {
             engine: v.legacy.engine,
@@ -87,7 +79,7 @@ export function GET() {
             totals: v.legacy.totals,
             baseline_cohort_pct: v.legacy.baselineReturnPct,
             baseline_market_pct: v.legacy.marketBaselineReturnPct ?? null,
-            cells: rankByEdge(v.legacy.cells),
+            cells: rankCellsByEdge(v.legacy.cells),
           }
         : null,
       independent_n_note:

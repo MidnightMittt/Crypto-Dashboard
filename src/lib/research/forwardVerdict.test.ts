@@ -2,9 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   CloseBar,
   ForwardVerdict,
+  VerdictCell,
   VerdictPrediction,
+  countByEngine,
+  countExpired,
   expireUnresolvable,
   pruneVerdicts,
+  rankCellsByEdge,
   registerVerdicts,
   resolveVerdicts,
   summariseVerdicts,
@@ -306,5 +310,80 @@ describe("summariseVerdicts — independent periods, not headcount", () => {
     expect(bull.publishable).toBe(true);
     expect(bull.claim).toContain("independent periods");
     expect(bull.claim).not.toContain("NO CLAIM");
+  });
+});
+
+/*
+ * These three moved out of /api/record's route file so that /validation
+ * could render the same numbers without recomputing them. The ordering in
+ * particular is a claim about which call did best, and a claim that lives in
+ * two places eventually disagrees with itself.
+ */
+const cell = (over: Partial<VerdictCell> = {}): VerdictCell => ({
+  verdict: "bullish",
+  n: 40,
+  independentN: 10,
+  hitRatePct: 55,
+  meanReturnPct: 1,
+  medianReturnPct: 1,
+  edgeVsBaselinePct: 0.5,
+  claim: "",
+  publishable: true,
+  ...over,
+});
+
+describe("rankCellsByEdge", () => {
+  it("orders publishable cells by edge, highest first", () => {
+    const ranked = rankCellsByEdge([
+      cell({ verdict: "neutral", edgeVsBaselinePct: 0.2 }),
+      cell({ verdict: "bullish", edgeVsBaselinePct: 2.4 }),
+      cell({ verdict: "bearish", edgeVsBaselinePct: 1.1 }),
+    ]);
+    expect(ranked.map((c) => c.verdict)).toEqual(["bullish", "bearish", "neutral"]);
+  });
+
+  /*
+   * The load-bearing one. A cell with one independent period and a gaudy
+   * point estimate must not take the top row, because the top row of a
+   * ranked list is read as a recommendation.
+   */
+  it("sinks an unpublishable cell below every publishable one, however flattering", () => {
+    const ranked = rankCellsByEdge([
+      cell({ verdict: "neutral", edgeVsBaselinePct: 99, independentN: 1, publishable: false }),
+      cell({ verdict: "bullish", edgeVsBaselinePct: 0.1 }),
+    ]);
+    expect(ranked[0].verdict).toBe("bullish");
+    expect(ranked[1].publishable).toBe(false);
+  });
+
+  it("sorts a null edge last rather than treating it as zero", () => {
+    const ranked = rankCellsByEdge([
+      cell({ verdict: "neutral", edgeVsBaselinePct: null }),
+      cell({ verdict: "bearish", edgeVsBaselinePct: -5 }),
+    ]);
+    expect(ranked.map((c) => c.verdict)).toEqual(["bearish", "neutral"]);
+  });
+
+  it("does not mutate the caller's array", () => {
+    const input = [cell({ edgeVsBaselinePct: 1 }), cell({ edgeVsBaselinePct: 9 })];
+    rankCellsByEdge(input);
+    expect(input[0].edgeVsBaselinePct).toBe(1);
+  });
+});
+
+describe("countExpired and countByEngine", () => {
+  it("counts only the calls that can no longer resolve", () => {
+    expect(
+      countExpired([pred(), pred({ expired: true }), pred({ expired: false }), pred({ expired: true })])
+    ).toBe(2);
+  });
+
+  it("attributes an engine-less prediction to engine 1 rather than dropping it", () => {
+    expect(countByEngine([pred(), pred({ engine: 2 }), pred({ engine: 2 })])).toEqual({ 1: 1, 2: 2 });
+  });
+
+  it("returns an empty tally for an empty register", () => {
+    expect(countByEngine([])).toEqual({});
+    expect(countExpired([])).toBe(0);
   });
 });

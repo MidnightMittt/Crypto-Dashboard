@@ -10,6 +10,9 @@ import ivRvJson from "@/data/ivRvHistory.json";
 import paperJson from "@/data/paperLines.json";
 import { ResolutionSchedule } from "@/components/validation/ResolutionSchedule";
 import { EvidenceLadder } from "@/components/validation/EvidenceLadder";
+import { ForwardRecord } from "@/components/validation/ForwardRecord";
+import forwardVerdictJson from "@/data/forwardVerdictRecord.json";
+import { ForwardVerdictRecord } from "@/lib/research/forwardVerdict";
 import { LiveFills, PaperBook } from "@/components/validation/PaperBook";
 import { PaperLinesArtifact, buildPaperBook } from "@/lib/validation/paperBook";
 import liveLedgerJson from "@/data/liveLedger.json";
@@ -82,6 +85,7 @@ const ivRvSymbols = new Set(ivRv.points.map((p) => p.symbol)).size;
  */
 const paperBook = buildPaperBook(paperJson as unknown as PaperLinesArtifact);
 const liveLedger = (liveLedgerJson as unknown as { ledger: LiveLedger }).ledger;
+const forwardVerdict = forwardVerdictJson as unknown as ForwardVerdictRecord;
 
 const GROUPS: Array<{ outcome: Outcome; title: string; blurb: string; tone: string }> = [
   {
@@ -244,7 +248,17 @@ export default function ValidationPage() {
           clearingOutOfSample={paperBook.totals.clearing}
           liveTrips={liveLedger.trips}
           liveJoinable={liveLedger.joinable}
+          verdictResolved={forwardVerdict.totals.resolved}
+          verdictOpen={forwardVerdict.totals.open}
         />
+
+        {/*
+          Rung 2, and FIRST on it, because it is the site's own published word
+          rather than a hypothesis the site is testing. It also has no numbers
+          yet, which puts it first under the page's own ordering rule: the
+          strongest-looking figures are the ones you reach last.
+        */}
+        <ForwardRecord record={forwardVerdict} />
 
         {/* Rung 2, and the only rung with numbers that were not chosen on their own data. */}
         <PaperBook book={paperBook} />

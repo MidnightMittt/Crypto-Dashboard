@@ -465,6 +465,52 @@ export function summariseVerdicts(
   };
 }
 
+/**
+ * Cell order, and it is a claim rather than a presentation choice.
+ *
+ * Ranked by EDGE — expectancy — never by hit rate. The account's own ledger
+ * is the argument: a +5% take-profit won 91% of the time and returned
+ * +2.03%, while a 20-day hold won 55% and returned +9.99%. A hit-rate
+ * leaderboard steers a reader into the worse strategy.
+ *
+ * And a cell that cannot support a claim sorts BELOW every one that can,
+ * however flattering its point estimate. The top row of a ranked list is
+ * read as a recommendation, and a recommendation from one independent
+ * period is noise with a rank attached.
+ *
+ * Lives here, not in the route, because /api/record and /validation both
+ * order these cells and an ordering that differs between the JSON and the
+ * page is two opinions about which call did best.
+ */
+export function rankCellsByEdge(cells: readonly VerdictCell[]): VerdictCell[] {
+  return [...cells].sort((a, b) => {
+    if (a.publishable !== b.publishable) return a.publishable ? -1 : 1;
+    return (b.edgeVsBaselinePct ?? -Infinity) - (a.edgeVsBaselinePct ?? -Infinity);
+  });
+}
+
+/**
+ * Predictions that can no longer resolve — the symbol left the data set.
+ * They are neither open nor resolved, and folding them into either one
+ * would move a number the record is judged on.
+ */
+export function countExpired(predictions: readonly VerdictPrediction[]): number {
+  return predictions.filter((p) => p.expired).length;
+}
+
+/**
+ * How many registered calls belong to each engine version.
+ *
+ * Engine versions never share a cell, so this is the count that says whether
+ * a record described as "engine 2" is speaking for most of the register or
+ * for a recent sliver of it.
+ */
+export function countByEngine(predictions: readonly VerdictPrediction[]): Record<number, number> {
+  const byEngine = new Map<number, number>();
+  for (const p of predictions) byEngine.set(p.engine ?? 1, (byEngine.get(p.engine ?? 1) ?? 0) + 1);
+  return Object.fromEntries([...byEngine].sort((a, b) => a[0] - b[0]));
+}
+
 export const MAX_VERDICT_PREDICTIONS = 60_000;
 
 export function pruneVerdicts(
