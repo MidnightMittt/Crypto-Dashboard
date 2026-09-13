@@ -66,13 +66,27 @@ export interface MarketThesisInputs {
 /**
  * Weights are a defensible starting point, not settled science — same
  * framing this app already uses for FUNDING_BANDS, chartLean's flat-price
- * bands, and lib/signals/scoring.ts's METRIC_WEIGHTS. Sum to 1.0 when every
- * source answers; missing sources are dropped and the rest renormalized,
- * the same renormalization rule buildMarketBias uses.
+ * bands, and lib/signals/scoring.ts's METRIC_WEIGHTS. Missing sources are
+ * dropped and the rest renormalized, the same renormalization rule
+ * buildMarketBias uses.
+ *
+ * These sum to 0.90, not 1.0. The missing 0.10 was `longShort`, removed for
+ * the reason documented on EDGE_CLUSTERS in lib/signals/scoring.ts: it and
+ * `squeezeRisk` read one input — the long/short ratio — under opposite sign
+ * conventions, so a crowded long side was pushing 0.10 bullish here and 0.16
+ * bearish there, on every observation where both spoke. That is not two
+ * pillars disagreeing; it is one pillar minus itself, netting a 0.06 bear
+ * lean nobody chose. Positioning now enters as context (weight 0, the
+ * `liquidations` treatment) and the ratio's one directional claim is
+ * squeezeRisk's.
+ *
+ * Not redistributed to the survivors on purpose. Everything renormalizes, so
+ * the remaining eight already hold their exact previous ratios to each
+ * other; inventing new numbers to reach 1.00 would change eight weights to
+ * fix one and imply a recalibration that did not happen.
  */
 const WEIGHTS = {
   funding: 0.17,
-  longShort: 0.1,
   basis: 0.1,
   coinbasePremium: 0.07,
   orderFlow: 0.1,
@@ -120,17 +134,24 @@ function fundingEvidence(fundingPct: number): ThesisEvidence {
   };
 }
 
+/**
+ * CONTEXT, NOT A PILLAR — direction "neutral" and weight 0, the same shape
+ * `liquidationsEvidence` uses, for the reason on WEIGHTS above.
+ *
+ * The band is still computed and still named in `detail`, so the reader gets
+ * the placement exactly as before ("2.50:1 long/short (71% long) — Mostly
+ * Longs"). What is gone is the inference from that placement to a direction,
+ * which `squeezeRiskEvidence` makes — the other way — off the same ratio.
+ */
 function longShortEvidence(longShortRatio: number): ThesisEvidence {
   const longPct = (longShortRatio / (longShortRatio + 1)) * 100;
   const band = bandFor(longPct, LONG_SHORT_BANDS);
-  const direction: ThesisDirection =
-    band.label === "Mostly Longs" ? "bullish" : band.label === "Mostly Shorts" ? "bearish" : "neutral";
 
   return {
     source: "Long/Short Positioning",
-    direction,
-    detail: `${longShortRatio.toFixed(2)}:1 long/short (${longPct.toFixed(0)}% long) — ${band.label}`,
-    weight: WEIGHTS.longShort,
+    direction: "neutral",
+    detail: `${longShortRatio.toFixed(2)}:1 long/short (${longPct.toFixed(0)}% long) — ${band.label}. Describes how the crowd is placed; whether that crowd is about to be forced out is the squeeze read's call.`,
+    weight: 0,
   };
 }
 
@@ -365,7 +386,9 @@ export function buildMarketThesis(inputs: MarketThesisInputs, now: number): Mark
   };
 
   push(fundingEvidence(inputs.weightedFundingRatePct));
-  if (inputs.longShortRatio !== null) push(longShortEvidence(inputs.longShortRatio));
+  // Straight to `neutral`, not through `push` — it is context, and routing it
+  // by direction is what let it become a pillar in the first place.
+  if (inputs.longShortRatio !== null) neutral.push(longShortEvidence(inputs.longShortRatio));
   if (inputs.basisPct !== null) push(basisEvidence(inputs.basisPct));
   if (inputs.coinbasePremiumPct !== null) push(coinbasePremiumEvidence(inputs.coinbasePremiumPct));
   if (inputs.orderFlow) push(orderFlowEvidence(inputs.orderFlow));

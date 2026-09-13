@@ -88,7 +88,18 @@ describe("top reasons", () => {
   });
 
   it("caps each side at five entries", () => {
-    const ids = ["funding", "squeezeRisk", "technicals", "orderFlow", "openInterest", "basis", "longShort"];
+    // SIX edge voters, so the cap actually binds — plus technicals (state)
+    // and orderFlow (context), which must be excluded for having no weight.
+    const ids = [
+      "funding",
+      "squeezeRisk",
+      "openInterest",
+      "basis",
+      "etfFlows",
+      "spotPerpVolume",
+      "technicals",
+      "orderFlow",
+    ];
     const bias = build(ids.map((id) => metric(id, "bullish")))!;
     expect(bias.topBullish).toHaveLength(5);
   });
@@ -134,7 +145,18 @@ describe("topReasons", () => {
   });
 
   it("defaults to five and respects a smaller explicit limit", () => {
-    const ids = ["funding", "squeezeRisk", "technicals", "orderFlow", "openInterest", "basis", "longShort"];
+    // SIX edge voters, so the cap actually binds — plus technicals (state)
+    // and orderFlow (context), which must be excluded for having no weight.
+    const ids = [
+      "funding",
+      "squeezeRisk",
+      "openInterest",
+      "basis",
+      "etfFlows",
+      "spotPerpVolume",
+      "technicals",
+      "orderFlow",
+    ];
     const bias = build(ids.map((id) => metric(id, "bullish")))!;
     expect(topReasons(bias)).toHaveLength(5);
     expect(topReasons(bias, 2)).toHaveLength(2);
@@ -326,19 +348,45 @@ describe("agreement, opportunity and counter-risk", () => {
     expect(bias.agreement).toBe(0);
   });
 
-  it("counts the leverage cluster as ONE opinion, not four", () => {
-    // funding+basis+squeezeRisk+longShort all read leveraged demand (§4's
-    // double-counting map). All four bullish + etfFlows bearish used to read
-    // 4-vs-1 (60% agreement); under cluster counting it is 1-vs-1 — an even
-    // split, agreement 0.
+  it("counts the leverage cluster as ONE opinion, not three", () => {
+    // funding+basis+squeezeRisk all read leveraged demand (§4's
+    // double-counting map). All three bullish + etfFlows bearish would read
+    // 3-vs-1 (75% agreement) per metric; under cluster counting it is 1-vs-1
+    // — an even split, agreement 0.
+    //
+    // longShort used to be the fourth member here. It left the cluster by
+    // leaving the Edge roster: the agreement loop skips zero-weight metrics,
+    // so a demotion removes a metric from the concurrence arithmetic in the
+    // same act that stops it voting. See EDGE_CLUSTERS in scoring.ts for why
+    // clustering was the wrong instrument for it.
     const bias = build([
       metric("funding", "bullish"),
       metric("basis", "bullish"),
       metric("squeezeRisk", "bullish"),
-      metric("longShort", "bullish"),
       metric("etfFlows", "bearish"),
     ])!;
     expect(bias.agreement).toBe(0);
+  });
+
+  /*
+   * THE DEFECT CLUSTERING COULD NOT FIX. squeezeRisk fades a crowded side and
+   * longShort trended it, both off the long/short ratio, so on all 1181 replay
+   * observations where both took a position they took OPPOSITE ones. A split
+   * cluster counts as a disagreement — correctly, in general — which meant
+   * this pair drove agreement to 0 every single time it spoke, reporting a
+   * conflict that was a property of two sign conventions and never of the
+   * market.
+   */
+  it("no longer manufactures a leverage-cluster split from the demoted pair", () => {
+    const bias = build([
+      metric("squeezeRisk", "bearish"), // crowded longs, fade them
+      metric("longShort", "bullish"), // crowd is long — a description now
+      metric("etfFlows", "bearish"),
+    ])!;
+    // One leverage opinion (bearish) + one etfFlows opinion (bearish).
+    // Unanimous, because the only thing arguing the other way was not an
+    // argument.
+    expect(bias.agreement).toBe(100);
   });
 
   it("a cluster split against itself is a disagreement, never netted into consensus", () => {
@@ -438,17 +486,20 @@ describe("category rollup fields", () => {
   });
 
   it("computes the overall score BY combining categories, not the old flat per-metric sum", () => {
-    // openInterest+longShort (both positioning-only, weights
-    // 0.09+0.08=0.17) at full weight vs. etfFlows (leadingDrivers-only,
-    // weight 0.08) at full weight: under FLAT per-metric weighting a lone
-    // 0.08 would barely dent a combined 0.17 bullish weight (score >75).
-    // Under CATEGORY weighting leadingDrivers gets its full 20% category
-    // weight to fight positioning's 35%, a much closer contest —
-    // hand-computed: positioning scores 100 (w 0.35), leadingDrivers 0
+    // openInterest+squeezeRisk (both positioning, weights 0.09+0.14=0.23) at
+    // full weight vs. etfFlows (leadingDrivers-only, weight 0.08) at full
+    // weight: under FLAT per-metric weighting a lone 0.08 would barely dent a
+    // combined 0.23 bullish weight. Under CATEGORY weighting leadingDrivers
+    // gets its full 20% category weight to fight positioning's 35%, a much
+    // closer contest — positioning scores 100 (w 0.35), leadingDrivers 0
     // (w 0.20), combined pull (0.35-0.20)/0.55 = 0.273 → score 64.
+    //
+    // The bullish pair was openInterest+longShort until longShort stopped
+    // voting; squeezeRisk replaces it as the second positioning voter, which
+    // makes the flat-weighting contrast sharper rather than weaker.
     const bias = build([
       metric("openInterest", "bullish", 100),
-      metric("longShort", "bullish", 100),
+      metric("squeezeRisk", "bullish", 100),
       metric("etfFlows", "bearish", 100),
     ])!;
     expect(bias.verdict).toBe("bullish");

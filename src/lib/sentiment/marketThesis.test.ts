@@ -72,15 +72,68 @@ describe("buildMarketThesis - funding evidence (fade-the-extremes)", () => {
   });
 });
 
-describe("buildMarketThesis - long/short evidence", () => {
-  it("reads a long-heavy ratio as bullish (direct, not contrarian)", () => {
+/*
+ * These used to assert the opposite: "reads a long-heavy ratio as bullish
+ * (direct, not contrarian)". That reading was deliberate and it was wrong —
+ * not because the trend interpretation is indefensible, but because
+ * `squeezeRiskEvidence` was simultaneously making the CONTRARIAN call off the
+ * same long/short ratio, at 0.16 against this one's 0.10. Every observation
+ * where both spoke, they cancelled to a 0.06 bear lean that no one designed.
+ *
+ * One input, one directional claim. Positioning describes; the squeeze read
+ * predicts.
+ */
+describe("buildMarketThesis - long/short evidence is context, never a pillar", () => {
+  it("keeps a long-heavy ratio out of the bullish pillars", () => {
     const result = buildMarketThesis(baseInputs({ longShortRatio: 2.5 }), NOW)!; // ~71% long
-    expect(result.bullishEvidence.find((e) => e.source === "Long/Short Positioning")).toBeDefined();
+    expect(result.bullishEvidence.find((e) => e.source === "Long/Short Positioning")).toBeUndefined();
+    const ctx = result.neutralEvidence.find((e) => e.source === "Long/Short Positioning");
+    expect(ctx).toBeDefined();
+    // The placement itself is still reported — this is a demotion, not a deletion.
+    expect(ctx!.detail).toContain("71% long");
+    expect(ctx!.detail).toContain("Mostly Longs");
   });
 
-  it("reads a short-heavy ratio as bearish", () => {
+  it("keeps a short-heavy ratio out of the bearish pillars", () => {
     const result = buildMarketThesis(baseInputs({ longShortRatio: 0.4 }), NOW)!; // ~29% long
-    expect(result.bearishEvidence.find((e) => e.source === "Long/Short Positioning")).toBeDefined();
+    expect(result.bearishEvidence.find((e) => e.source === "Long/Short Positioning")).toBeUndefined();
+    expect(result.neutralEvidence.find((e) => e.source === "Long/Short Positioning")).toBeDefined();
+  });
+
+  /*
+   * The load-bearing assertion. Weight 0 is what stops it moving conviction:
+   * a merely-neutral pillar at weight 0.10 would still enter neutralWeight
+   * and drag participationRatio down, so the demotion would have swapped a
+   * phantom vote for a phantom damper.
+   */
+  it("carries zero weight, so it cannot move conviction in either direction", () => {
+    const withRatio = buildMarketThesis(
+      baseInputs({ weightedFundingRatePct: 0.08, longShortRatio: 2.5 }),
+      NOW
+    )!;
+    const without = buildMarketThesis(baseInputs({ weightedFundingRatePct: 0.08 }), NOW)!;
+    expect(withRatio.neutralEvidence.find((e) => e.source === "Long/Short Positioning")!.weight).toBe(0);
+    expect(withRatio.conviction).toBe(without.conviction);
+    expect(withRatio.dominant).toBe(without.dominant);
+  });
+
+  /*
+   * The pair that motivated all of this: a crowded long side must now produce
+   * exactly one directional read, not two opposed ones.
+   */
+  it("no longer opposes the squeeze read on the same crowded side", () => {
+    const result = buildMarketThesis(
+      baseInputs({
+        longShortRatio: 2.5, // crowd is long
+        squeezeRisk: { score: 85, side: "long", components: [] }, // ...and exposed
+      }),
+      NOW
+    )!;
+    const bullSources = result.bullishEvidence.map((e) => e.source);
+    const bearSources = result.bearishEvidence.map((e) => e.source);
+    expect(bearSources).toContain("Squeeze Setup");
+    expect(bullSources).not.toContain("Long/Short Positioning");
+    expect(result.dominant).toBe("bearish");
   });
 
   it("is absent entirely when longShortRatio is null (not defaulted to neutral)", () => {
@@ -179,8 +232,10 @@ describe("buildMarketThesis - liquidations are always neutral context, never dir
 
 describe("buildMarketThesis - conviction arithmetic (hand-verified)", () => {
   it("is maximal (10) when every present source agrees and none are neutral", () => {
-    // Funding mildly bullish, long/short bullish, basis bullish - all
-    // agree, nothing neutral -> agreementRatio=1, participationRatio=1.
+    // Funding mildly bullish and basis bullish — they agree, and nothing
+    // carries neutral WEIGHT, so agreementRatio=1 and participationRatio=1.
+    // The long/short ratio is present but weightless context, which is
+    // precisely why it does not pull participation below 1.
     const result = buildMarketThesis(
       baseInputs({
         weightedFundingRatePct: 0.08,
@@ -197,14 +252,20 @@ describe("buildMarketThesis - conviction arithmetic (hand-verified)", () => {
     expect(result.conviction).toBe(0);
   });
 
-  it("computes a specific mixed case by hand: bull=0.2 (funding), bear=0.12 (long/short), rest absent", () => {
-    // agreementRatio = max(0.2,0.12)/(0.2+0.12) = 0.2/0.32 = 0.625
-    // participationRatio = 0.32/0.32 = 1 (nothing neutral, nothing else present)
-    // conviction = round(0.625 * 1 * 10) = round(6.25) = 6
+  it("computes a specific mixed case by hand: bull=0.17 (funding), bear=0.10 (basis), rest absent", () => {
+    // agreementRatio = max(0.17,0.10)/(0.17+0.10) = 0.17/0.27 = 0.6296
+    // participationRatio = 0.27/0.27 = 1 (nothing neutral, nothing else present)
+    // conviction = round(0.6296 * 1 * 10) = round(6.296) = 6
+    //
+    // The bear side used to be long/short at what this comment called 0.12.
+    // Two things were wrong with that: long/short no longer votes at all, and
+    // the weights quoted here (0.20/0.12) had not matched WEIGHTS since
+    // technicals took its haircut — the arithmetic reached the same 6 by
+    // coincidence, so nothing failed and the stale numbers survived.
     const result = buildMarketThesis(
       baseInputs({
-        weightedFundingRatePct: 0.08, // bullish, weight 0.20
-        longShortRatio: 0.4, // bearish, weight 0.12
+        weightedFundingRatePct: 0.08, // bullish, weight 0.17
+        basisPct: -0.05, // bearish, weight 0.10
       }),
       NOW
     )!;
@@ -287,20 +348,27 @@ describe("buildMarketThesis - invalidation", () => {
   });
 
   it("says there's nothing to invalidate when the thesis itself is neutral/balanced", () => {
-    const result = buildMarketThesis(
-      baseInputs({ weightedFundingRatePct: 0.08, longShortRatio: 0.4 }), // bull 0.20 vs bear 0.12... not balanced actually
-      NOW
-    );
-    // Construct a genuinely balanced case instead: equal bull/bear weight.
+    // Equal bull/bear weight, so `dominant` is neutral and there is no thesis
+    // to name a reversal for. Basis and order flow both weigh 0.10; funding
+    // stays at 0 so it lands in neutral and cannot tip the balance.
     const balanced = buildMarketThesis(
       baseInputs({
-        basisPct: 0.05, // bullish, weight 0.12
-        longShortRatio: 0.4, // bearish, weight 0.12
+        basisPct: 0.05, // bullish, weight 0.10
+        orderFlow: {
+          bookImbalance: null,
+          cvdHistory: [],
+          totalBuyUsd: 0,
+          totalSellUsd: 0,
+          dominantFlow: "sellers", // bearish, weight 0.10
+          buyerSharePct: 30,
+          windowHours: 24,
+          venue: "OKX",
+        },
       }),
       NOW
     )!;
+    expect(balanced.dominant).toBe("neutral");
     expect(balanced.invalidation[0]).toMatch(/no dominant thesis/i);
-    expect(result).not.toBeNull(); // sanity: the other case still built fine
   });
 });
 

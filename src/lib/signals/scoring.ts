@@ -18,13 +18,13 @@ import { MetricVerdict, Verdict } from "./types";
  *              to move the composite is falsifiable — and gets falsified
  *              (funding's own row is currently a measured anti-signal at 24h;
  *              its weight is a debt the census keeps visible).
- *  - `state`   DESCRIBES. Structure, trend character, regime. Real, useful,
- *              rendered — and NEVER a vote: describing where the market is
- *              carries no claim about where it goes, and the census agreed
- *              (marketStructure @7d is BH-significant in the WRONG direction;
- *              technicals' 13-vote blob sits at 48% @24h). State's jobs are
- *              to condition which Edge statistics apply, gate the planner,
- *              and set stop context.
+ *  - `state`   DESCRIBES. Structure, trend character, regime, POSITIONING.
+ *              Real, useful, rendered — and NEVER a vote: describing where
+ *              the market is carries no claim about where it goes, and the
+ *              census agreed (marketStructure @7d is BH-significant in the
+ *              WRONG direction; technicals' 13-vote blob sits at 48% @24h).
+ *              State's jobs are to condition which Edge statistics apply,
+ *              gate the planner, and set stop context.
  *  - `context` DISPLAYED ONLY. Either no historical source exists to test it
  *              (orderFlow, options, exchangeFlow, spotCvd, sectorBreadth,
  *              coinbasePremium), or it is backward-looking (liquidations), or
@@ -44,11 +44,34 @@ export const METRIC_ROLES: Record<string, MetricRole> = {
   squeezeRisk: "edge",
   openInterest: "edge",
   basis: "edge",
-  longShort: "edge",
   etfFlows: "edge",
   spotPerpVolume: "edge",
   stablecoins: "edge",
   macroLiquidity: "edge",
+
+  /*
+   * POSITIONING IS A DESCRIPTION. `longShort` was an Edge voter at 0.08 until
+   * the module-breadth read measured what it actually is — see the block
+   * comment on EDGE_CLUSTERS below for the full arithmetic. In one line: its
+   * only input, the long/short ratio, is also the input that decides
+   * `squeezeRisk`'s direction, and the two map it to OPPOSITE verdicts
+   * (crowd-long reads bullish here, bearish there). On all 1181 replay
+   * observations where both took a position they took opposite ones, so they
+   * were never two opinions.
+   *
+   * Which of the two directions is right is not a matter of taste, and it is
+   * not settled: over those 1181 observations the fade reading returns t=0.04
+   * at 24h and the trend reading t=-0.04, on nEff=49. The mirror is exact
+   * because the observations are the same observations.
+   *
+   * So the ratio keeps exactly one predictive claim — squeezeRisk's fade,
+   * which is the better-informed of the two (it requires funding to confirm
+   * the crowded side, and it has the historical source). `longShort` keeps
+   * the reading it can actually support: the crowd IS positioned this way.
+   * That sentence is true; "and therefore price rises" was the part nothing
+   * measured.
+   */
+  longShort: "state",
 
   technicals: "state",
   marketStructure: "state",
@@ -86,7 +109,6 @@ export const METRIC_WEIGHTS: Record<string, number> = {
   squeezeRisk: 0.14,
   openInterest: 0.09,
   basis: 0.08,
-  longShort: 0.08,
   etfFlows: 0.08,
   spotPerpVolume: 0.05,
   stablecoins: 0.04,
@@ -128,19 +150,55 @@ function stateWeight(id: string): number {
 
 /**
  * CORRELATION CLUSTERS among the Edge voters — the redesign's §4
- * double-counting map, made executable. funding, basis, squeezeRisk and
- * longShort all read the same leveraged-demand phenomenon; when they agree
- * it is ONE cluster agreeing, and any statistic that counts them as four
- * independent opinions inflates exactly when a user most needs it honest.
- * Every edge voter not named here is its own cluster. Used by
- * marketBias.ts's agreement figure; the SCORE still weights metrics
- * individually — clustering fixes the concurrence claim, not the vote.
+ * double-counting map, made executable. funding, basis and squeezeRisk all
+ * read the same leveraged-demand phenomenon; when they agree it is ONE
+ * cluster agreeing, and any statistic that counts them as three independent
+ * opinions inflates exactly when a user most needs it honest. Every edge
+ * voter not named here is its own cluster. Used by marketBias.ts's agreement
+ * figure; the SCORE still weights metrics individually — clustering fixes
+ * the concurrence claim, not the vote.
+ *
+ * ── Why longShort is no longer in this map ──────────────────────────────
+ *
+ * Because clustering was the wrong instrument for it. Clustering says "these
+ * read one phenomenon, so count their concurrence once". longShort and
+ * squeezeRisk were not two correlated reads of one phenomenon — they were
+ * one input under two opposite sign conventions, and no amount of
+ * concurrence-counting repairs that.
+ *
+ * The arithmetic the clustering could not reach, all of it measured on the
+ * replay rather than assumed:
+ *
+ *   1. THE SCORE. Both voted at full weight, squeezeRisk 0.14 and longShort
+ *      0.08, and they are opposed on 1181 of 1181 shared observations. That
+ *      is not a double vote — it is a deterministic 57% CANCELLATION, the
+ *      composite quietly running squeezeRisk at 0.06 whenever both fired.
+ *      Nobody chose 0.06. It was the residue of subtracting two weights that
+ *      were each set for a different reason.
+ *
+ *   2. THE SAME IDEA AT THREE WEIGHTS. Worse than a wrong weight: the
+ *      leveraged-positioning idea voted at 0.06 on the 1181 observations
+ *      where both wrappers fired, at 0.14 on the 1167 where only squeezeRisk
+ *      did, and at 0.08 — IN THE OPPOSITE DIRECTION — on the 91 where only
+ *      longShort did. The weight on an idea moved with which wrapper
+ *      happened to clear its own threshold.
+ *
+ *   3. THE AGREEMENT FIGURE, which clustering was supposed to protect, was
+ *      the thing clustering broke. marketBias.ts counts a cluster whose
+ *      members point both ways as a disagreement — correctly, since two
+ *      reads of one phenomenon conflicting is real news. But these two could
+ *      not do anything else. The leverage cluster was FORCED to split on all
+ *      1181 observations, so the statistic reported a conflict that was a
+ *      property of the sign conventions and never of the market.
+ *
+ * Removing the metric from the Edge roster fixes all three at once: the
+ * marketBias loop skips anything with zero weight, so longShort leaves the
+ * cluster arithmetic by the same act that stops it voting.
  */
 export const EDGE_CLUSTERS: Record<string, string> = {
   funding: "leverage",
   basis: "leverage",
   squeezeRisk: "leverage",
-  longShort: "leverage",
 };
 
 export function clusterOf(id: string): string {

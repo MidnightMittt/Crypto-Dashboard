@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1789277851433,
+  "generatedAt": 1789280297162,
   "coverageStart": "2022-08-14",
   "coverageEnd": "2026-07-31",
   "metrics": {
@@ -1156,158 +1156,158 @@
   "agreementBuckets": [
     {
       "bucketLabel": "0-25%",
-      "n": 389,
-      "winRate": 0.5038560411311054,
-      "meanReturnPct": 0.28215619703680556,
+      "n": 206,
+      "winRate": 0.5,
+      "meanReturnPct": 0.061043405983906625,
       "significant": false
     },
     {
       "bucketLabel": "25-50%",
-      "n": 286,
-      "winRate": 0.527972027972028,
-      "meanReturnPct": 0.20164699976773348,
+      "n": 302,
+      "winRate": 0.5298013245033113,
+      "meanReturnPct": 0.2210197588349834,
       "significant": false
     },
     {
       "bucketLabel": "50-75%",
-      "n": 835,
-      "winRate": 0.5365269461077844,
-      "meanReturnPct": -0.04923883957442257,
-      "significant": true
+      "n": 614,
+      "winRate": 0.5228013029315961,
+      "meanReturnPct": 0.27831258166101885,
+      "significant": false
     },
     {
       "bucketLabel": "75-100%",
-      "n": 311,
-      "winRate": 0.5209003215434084,
-      "meanReturnPct": 0.14638186507654796,
+      "n": 785,
+      "winRate": 0.5121019108280255,
+      "meanReturnPct": -0.12242936725829405,
       "significant": false
     }
   ],
   "scoreCalibration": {
     "bearish:clear:bull": {
       "key": "bearish:clear:bull",
-      "n": 35,
-      "effectiveN": 18,
-      "hitRatePct": 42.857142857142854,
+      "n": 40,
+      "effectiveN": 20,
+      "hitRatePct": 40,
       "interval": {
-        "point": 0.42857142857142855,
-        "lower": 0.27984333081678914,
-        "upper": 0.5914287074102662
+        "point": 0.4,
+        "lower": 0.2634811061240136,
+        "upper": 0.5540438017260649
       },
-      "nullRatePct": 42.91716686674671,
-      "edgePP": -0.06002400960385956,
+      "nullRatePct": 42.902661064425786,
+      "edgePP": -2.902661064425782,
       "calibrated": true
     },
     "bearish:leaning:neutral": {
       "key": "bearish:leaning:neutral",
-      "n": 488,
-      "effectiveN": 244,
-      "hitRatePct": 53.68852459016394,
+      "n": 434,
+      "effectiveN": 217,
+      "hitRatePct": 52.53456221198156,
       "interval": {
-        "point": 0.5368852459016393,
-        "lower": 0.492527684623662,
-        "upper": 0.5806666120767392
+        "point": 0.5253456221198156,
+        "lower": 0.4783482434439112,
+        "upper": 0.571898238388788
       },
-      "nullRatePct": 50.20863762309838,
-      "edgePP": 3.4798869670655486,
+      "nullRatePct": 50.186910200653635,
+      "edgePP": 2.3476520113279276,
       "calibrated": true
     },
     "bearish:clear:neutral": {
       "key": "bearish:clear:neutral",
-      "n": 317,
-      "effectiveN": 159,
-      "hitRatePct": 44.79495268138801,
+      "n": 430,
+      "effectiveN": 215,
+      "hitRatePct": 47.20930232558139,
       "interval": {
-        "point": 0.4479495268138801,
-        "lower": 0.39415468150387134,
-        "upper": 0.5029908258118881
+        "point": 0.4720930232558139,
+        "lower": 0.4253627353545332,
+        "upper": 0.5193175350483051
       },
-      "nullRatePct": 50.252227903926894,
-      "edgePP": -5.4572752225388825,
+      "nullRatePct": 50.24085237155413,
+      "edgePP": -3.031550045972742,
       "calibrated": true
     },
     "bearish:clear:bear": {
       "key": "bearish:clear:bear",
-      "n": 160,
-      "effectiveN": 80,
-      "hitRatePct": 63.125,
+      "n": 203,
+      "effectiveN": 102,
+      "hitRatePct": 64.5320197044335,
       "interval": {
-        "point": 0.63125,
-        "lower": 0.5542312628458188,
-        "upper": 0.7021138900335476
+        "point": 0.645320197044335,
+        "lower": 0.5773660661909803,
+        "upper": 0.7078763608643122
       },
-      "nullRatePct": 57.50962930282353,
-      "edgePP": 5.61537069717647,
+      "nullRatePct": 57.513780444349905,
+      "edgePP": 7.0182392600835914,
       "calibrated": true
     },
     "bearish:leaning:bear": {
       "key": "bearish:leaning:bear",
-      "n": 305,
-      "effectiveN": 153,
-      "hitRatePct": 52.131147540983605,
+      "n": 313,
+      "effectiveN": 157,
+      "hitRatePct": 49.52076677316294,
       "interval": {
-        "point": 0.521311475409836,
-        "lower": 0.46533188705533945,
-        "upper": 0.5767608880112317
+        "point": 0.4952076677316294,
+        "lower": 0.44021223069695775,
+        "upper": 0.5503193156656411
       },
-      "nullRatePct": 57.53601668469697,
-      "edgePP": -5.4048691437133645,
+      "nullRatePct": 57.54231681086941,
+      "edgePP": -8.02155003770647,
       "calibrated": true
     },
     "bearish:leaning:bull": {
       "key": "bearish:leaning:bull",
-      "n": 123,
-      "effectiveN": 62,
-      "hitRatePct": 43.90243902439025,
+      "n": 144,
+      "effectiveN": 72,
+      "hitRatePct": 43.75,
       "interval": {
-        "point": 0.43902439024390244,
-        "lower": 0.354485645582187,
-        "upper": 0.5272566219388786
+        "point": 0.4375,
+        "lower": 0.3591410554401721,
+        "upper": 0.5191070154681514
       },
-      "nullRatePct": 43.75213500034147,
-      "edgePP": 0.1503040240487752,
+      "nullRatePct": 43.88422035480843,
+      "edgePP": -0.13422035480842864,
       "calibrated": true
     },
     "bullish:leaning:bull": {
       "key": "bullish:leaning:bull",
-      "n": 191,
-      "effectiveN": 96,
-      "hitRatePct": 59.16230366492147,
+      "n": 168,
+      "effectiveN": 84,
+      "hitRatePct": 57.738095238095234,
       "interval": {
-        "point": 0.5916230366492147,
-        "lower": 0.520773955480825,
-        "upper": 0.6588591413527055
+        "point": 0.5773809523809523,
+        "lower": 0.5017727861422681,
+        "upper": 0.6495293432606238
       },
-      "nullRatePct": 56.97347001627888,
-      "edgePP": 2.1888336486425852,
+      "nullRatePct": 57.25206749366423,
+      "edgePP": 0.4860277444310057,
       "calibrated": true
     },
     "bullish:leaning:bear": {
       "key": "bullish:leaning:bear",
-      "n": 13,
-      "effectiveN": 7,
-      "hitRatePct": 61.53846153846154,
+      "n": 5,
+      "effectiveN": 3,
+      "hitRatePct": 40,
       "interval": {
-        "point": 0.6153846153846154,
-        "lower": 0.3552248097226855,
-        "upper": 0.8229055341876319
+        "point": 0.4,
+        "lower": 0.11761823115925325,
+        "upper": 0.769280067791163
       },
-      "nullRatePct": 42.444967786021074,
-      "edgePP": 19.093493752440466,
-      "calibrated": true
+      "nullRatePct": 42.50118972081218,
+      "edgePP": -2.5011897208121745,
+      "calibrated": false
     },
     "bullish:leaning:neutral": {
       "key": "bullish:leaning:neutral",
-      "n": 119,
-      "effectiveN": 60,
-      "hitRatePct": 52.10084033613446,
+      "n": 103,
+      "effectiveN": 52,
+      "hitRatePct": 49.51456310679612,
       "interval": {
-        "point": 0.5210084033613446,
-        "lower": 0.43200647604311226,
-        "upper": 0.6086963477559917
+        "point": 0.49514563106796117,
+        "lower": 0.40051410341890453,
+        "upper": 0.5901262464073804
       },
-      "nullRatePct": 49.52317674904877,
-      "edgePP": 2.577663587085688,
+      "nullRatePct": 49.375602477852695,
+      "edgePP": 0.13896062894341865,
       "calibrated": true
     },
     "bullish:clear:neutral": {
@@ -1326,16 +1326,16 @@
     },
     "bullish:clear:bull": {
       "key": "bullish:clear:bull",
-      "n": 45,
-      "effectiveN": 23,
-      "hitRatePct": 64.44444444444444,
+      "n": 42,
+      "effectiveN": 21,
+      "hitRatePct": 66.66666666666666,
       "interval": {
-        "point": 0.6444444444444445,
-        "lower": 0.49835546011952203,
-        "upper": 0.7678110864309596
+        "point": 0.6666666666666666,
+        "lower": 0.5155222701166692,
+        "upper": 0.7898771923802769
       },
-      "nullRatePct": 57.920946156240284,
-      "edgePP": 6.523498288204166,
+      "nullRatePct": 58.24329731892759,
+      "edgePP": 8.423369347739074,
       "calibrated": true
     }
   }

@@ -70,3 +70,68 @@ describe("intensityLabel", () => {
     expect(intensityLabel(80)).toBe("Strongly Bullish");
   });
 });
+
+/**
+ * ONE INPUT, ONE DIRECTIONAL CLAIM.
+ *
+ * `squeezeRisk` and `longShort` both read the long/short ratio — squeezeRisk
+ * via the crowded side that funding and the ratio agree on — and they mapped
+ * it to OPPOSITE verdicts. On all 1181 replay observations where both took a
+ * position they took opposing ones, so the composite ran squeezeRisk at
+ * 0.14 - 0.08 = 0.06 whenever both fired: a deterministic 57% cancellation
+ * rather than the double vote it looked like.
+ *
+ * The measured case for keeping squeezeRisk's direction rather than
+ * longShort's is not that the fade works — over those 1181 observations the
+ * fade reads t=0.04 at 24h and the trend t=-0.04 on nEff=49, an exact mirror
+ * because they are the same observations. It is that squeezeRisk requires
+ * funding to confirm the crowded side, so it uses strictly more information
+ * than the ratio alone, and it is the one of the two with a historical source.
+ */
+describe("longShort is a description, not a vote", () => {
+  it("carries no weight in the edge composite", () => {
+    expect(metricWeight("longShort")).toBe(0);
+    // The metric it used to oppose still votes, at its full weight.
+    expect(metricWeight("squeezeRisk")).toBe(0.14);
+  });
+
+  it("cannot move the score, in either direction, at any confidence", () => {
+    const base = computeWeightedScore(
+      [metric("squeezeRisk", "bearish"), metric("etfFlows", "bearish")],
+      metricWeight
+    )!;
+
+    for (const verdict of ["bullish", "bearish", "neutral"] as Verdict[]) {
+      const withLongShort = computeWeightedScore(
+        [
+          metric("squeezeRisk", "bearish"),
+          metric("etfFlows", "bearish"),
+          metric("longShort", verdict, 100),
+        ],
+        metricWeight
+      )!;
+      expect(withLongShort.score).toBe(base.score);
+      expect(withLongShort.confidence).toBe(base.confidence);
+      expect(withLongShort.totalWeight).toBe(base.totalWeight);
+    }
+  });
+
+  /*
+   * The cancellation itself, reproduced as arithmetic. Before the demotion
+   * these two opposed verdicts left 0.06 of net bearish weight; now the
+   * crowded-side read stands at its own 0.14 and the score is identical to
+   * the one squeezeRisk produces alone.
+   */
+  it("leaves squeezeRisk at full weight instead of netting it down", () => {
+    const opposed = computeWeightedScore(
+      [metric("squeezeRisk", "bearish", 100), metric("longShort", "bullish", 100)],
+      metricWeight
+    )!;
+    const alone = computeWeightedScore([metric("squeezeRisk", "bearish", 100)], metricWeight)!;
+
+    expect(opposed.score).toBe(alone.score);
+    expect(opposed.totalWeight).toBeCloseTo(0.14, 10);
+    // Unopposed and fully confident, so the read is as bearish as it gets.
+    expect(opposed.score).toBe(0);
+  });
+});

@@ -239,6 +239,16 @@ function evaluateOpenInterest(data: AggregateMarketData, ctx: SignalContext): Me
 
 // ── Squeeze risk ───────────────────────────────────────────────────────
 
+/**
+ * THE ONE DIRECTIONAL CLAIM ON POSITIONING. `sr.side` is decided by funding
+ * and the long/short ratio agreeing (positioning.ts), and `squeezeLean` maps
+ * a crowded long side to BEARISH — fade the crowd. `longShort` reads the same
+ * ratio and calls a crowded long side bullish, which is why the two were
+ * opposed on every shared observation until longShort was demoted to a
+ * description. Keep exactly one of these predictive: this one, because it
+ * requires funding to confirm the crowded side and so uses strictly more
+ * information than the ratio alone.
+ */
 function evaluateSqueeze(data: AggregateMarketData, ctx: SignalContext): MetricVerdict | null {
   const sr = data.squeezeRisk;
   if (!sr) return null;
@@ -289,6 +299,18 @@ function evaluateSqueeze(data: AggregateMarketData, ctx: SignalContext): MetricV
 
 // ── Long/short positioning ─────────────────────────────────────────────
 
+/**
+ * A DESCRIPTION OF THE CROWD, not a forecast — role "state" in scoring.ts,
+ * so it renders and never votes.
+ *
+ * The verdict below is unchanged and still reads bullish when the crowd is
+ * long, because that sentence is true as a description: the crowd IS
+ * positioned bullishly. What changed is that it is no longer also asserting
+ * "and therefore price rises". That claim was being made here at weight 0.08
+ * while `squeezeRisk` made the opposite one at 0.14 off the SAME long/short
+ * ratio, and the two cancelled to a 0.06 net bet on the fade that nobody
+ * chose. The ratio's one predictive claim now lives in squeezeRisk alone.
+ */
 function evaluateLongShort(data: AggregateMarketData, ctx: SignalContext): MetricVerdict | null {
   const ratio = data.longShortRatio;
   if (ratio === null) return null;
@@ -310,7 +332,7 @@ function evaluateLongShort(data: AggregateMarketData, ctx: SignalContext): Metri
     explanation: `${ratio.toFixed(2)}:1 long/short (${longPct.toFixed(0)}% long) — ${band.label.toLowerCase()}.`,
     nextTrigger: triggerFromBands(longPct, LONG_SHORT_BANDS, (n) => `${n}% long`),
     whyItMatters:
-      "Shows how the crowd is actually placed. Heavily one-sided positioning is what makes a market vulnerable to a move in the other direction.",
+      "Shows how the crowd is actually placed — a description of positioning, not a forecast. Whether a crowded side is about to be forced out is the Squeeze Setup's call, which reads this same ratio alongside funding; this row deliberately makes no directional claim of its own.",
     asOf: data.updatedAt,
     conflicts,
   };

@@ -30,8 +30,27 @@ import { DEFAULT_COST_CONFIG, CostConfig } from "./costs";
  * showed they did not earn their place. This changes what the engine would
  * have decided on 116 of 2,896 historical days, so it is a major bump even
  * though the diff is a handful of emptied objects.
+ *
+ * 5.0.0: `longShort` left the Edge roster. It was never a second opinion —
+ * it read the same long/short ratio `squeezeRisk` reads and mapped it to the
+ * opposite verdict, so on all 1,181 replay observations where both took a
+ * position they took opposite ones and the pair netted 0.14 − 0.08 = 0.06
+ * instead of voting 0.22. Removing it restores squeezeRisk to full weight
+ * and stops the leverage cluster registering a manufactured disagreement.
+ *
+ * Measured on the same 2,896 replayed days, old engine vs new: 2,449 days
+ * rescored (mean |delta| 1.7 points), 216 verdicts flipped, 395 actions
+ * changed, and mean agreement rose 38.9 -> 49.3 — that last figure is the
+ * manufactured split going away, not the market agreeing more.
+ *
+ * It cost in-sample expectancy: 0.42% -> 0.21% net per trade, profit factor
+ * 1.19 -> 1.10. That is NOT evidence the change was wrong. Overlap-corrected
+ * (6-day blocks, 138h median hold) the standard error on expectancy is
+ * 0.37pp, so the two numbers are 0.6 SE apart and NEITHER is distinguishable
+ * from zero. What the drop actually shows is how much of the old record
+ * rested on a weight — 0.06 — that no one chose.
  */
-export const ENGINE_VERSION = "4.0.0";
+export const ENGINE_VERSION = "5.0.0";
 
 /**
  * Bump when the meaning or shape of the replayed FEATURES changes — a new
