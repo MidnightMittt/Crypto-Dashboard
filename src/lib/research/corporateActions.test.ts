@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { Bar } from "./types";
 import {
+  CORPORATE_ACTION_AUDITED_SYMBOLS,
+  DECLARED_PRICE_EVENTS,
   MAX_SESSION_MOVE,
   adjustForCorporateActions,
   findPriceBreaks,
   formatAdjustmentNotes,
 } from "./corporateActions";
+import { positioningUniverse } from "../markets/scannerUniverse";
 
 /**
  * Fixtures use the real reported prices. The HUT and CORZ series are the raw
@@ -277,5 +280,52 @@ describe("adjustForCorporateActions — declared steps only", () => {
     const { bars, undeclared } = adjustForCorporateActions(spiky, "NOBODY");
     expect(undeclared).toHaveLength(0);
     expect(bars[2].close).toBeCloseTo(104, 10);
+  });
+});
+
+/*
+ * THE FAILURE THIS SUITE COULD NOT CATCH, until now.
+ *
+ * Every test above is about judging one break correctly. None of them can
+ * see the failure that actually shipped: the registry stayed correct while
+ * the UNIVERSE grew around it. 91d4b03 declared "zero undeclared steps
+ * remain across the scanner universe" on a 16-symbol universe; 48fb3ad took
+ * it to 35 without re-running the sweep, and three new names carried seven
+ * unjudged steps into the replay corpus for three weeks.
+ *
+ * The sweep itself cannot live here — the raw bars are 146MB and gitignored,
+ * so no test in CI can re-detect a break. What CAN be asserted without them
+ * is the bookkeeping: that the set of symbols the sweep covered still
+ * contains the set of symbols the site records. That is exactly the
+ * invariant that broke, and it is checkable from two declared lists.
+ */
+describe("audit coverage", () => {
+  it("has swept every symbol the site records positioning for", () => {
+    const audited = new Set(CORPORATE_ACTION_AUDITED_SYMBOLS);
+    const unswept = positioningUniverse().filter((s) => !audited.has(s));
+
+    expect(
+      unswept,
+      unswept.length === 0
+        ? ""
+        : `${unswept.length} symbol(s) entered the universe after the last corporate-action sweep: ` +
+          `${unswept.join(", ")}. Their price series have never been checked for unadjusted actions, ` +
+          `and an unadjusted step injects one enormous fictional return into every statistic computed ` +
+          `across it. Run the sweep over scripts/ingest/data, judge anything it surfaces on volume and ` +
+          `intraday range, then extend CORPORATE_ACTION_AUDITED_SYMBOLS with the swept set.`
+    ).toEqual([]);
+  });
+
+  /*
+   * The inverse direction is a warning, not a failure: a symbol can leave the
+   * universe and its declarations should stay (the bars are still on disk and
+   * still feed historical studies). What must never happen is a declaration
+   * for a symbol nobody ever swept — that would mean the list above is a
+   * description of the registry rather than of an audit.
+   */
+  it("declares nothing for a symbol outside the swept set", () => {
+    const audited = new Set(CORPORATE_ACTION_AUDITED_SYMBOLS);
+    const orphans = [...new Set(DECLARED_PRICE_EVENTS.map((e) => e.symbol))].filter((s) => !audited.has(s));
+    expect(orphans).toEqual([]);
   });
 });

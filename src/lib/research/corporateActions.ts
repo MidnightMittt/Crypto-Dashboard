@@ -249,6 +249,115 @@ export const DECLARED_PRICE_EVENTS: DeclaredPriceEvent[] = [
     treatment: "keep",
     reason: "real — first session trading as an operating company after the AltC de-SPAC: -54% on 18.3x volume, 94% range, sustained for days. The shares are the same shares; the market repriced them",
   },
+  /*
+   * SEVEN MORE, 2026-09-13 — and the reason they exist is worth recording,
+   * because it is a failure of process rather than of judgement.
+   *
+   * 91d4b03 (2026-08-15) closed this list with "Zero undeclared steps remain
+   * across the scanner universe." True when written. Six days later 48fb3ad
+   * grew resolveUniverse() from 16 symbols to 35 and nothing re-ran the audit,
+   * so three names entered the corpus carrying seven unjudged steps between
+   * them. The claim was about a universe, and the universe moved underneath
+   * it. A declaration list is only ever true relative to a symbol set — see
+   * the coverage test in corporateActions.test.ts, which now ties the two
+   * together so the next expansion fails loudly instead of quietly.
+   *
+   * Every one of the seven is REAL, and by a wide margin: the thinnest
+   * volume multiple in the group is 35x and the largest is 1,633x. That is
+   * not a coincidence. The expansion added ETH/BTC-treasury microcaps whose
+   * entire price history IS violent repricing — a shell trading three shares
+   * a session announces a treasury strategy and trades a hundred million.
+   * The doctrine's test (a genuine crash is the highest-volume session in a
+   * symbol's history; an unadjusted action is a session nobody traded) does
+   * not merely pass here, it passes unanimously.
+   *
+   * The prices are still barely meaningful on the two pre-2020 rows, for the
+   * CLSK 2018 reason: a "return" computed across three shares is arithmetic,
+   * not information. Kept anyway — a real move on thin volume is a data
+   * quality problem for whatever consumes it, not a licence to rewrite it.
+   */
+  {
+    symbol: "MSTR",
+    date: "2000-03-20",
+    treatment: "keep",
+    reason: "real — the accounting-restatement collapse: -62% on 35.4x volume, 39% intraday range, and it kept moving (-17% the next session, then +23%, +33%). The single highest-volume session of its first two years",
+  },
+  {
+    symbol: "BMNR",
+    date: "2025-06-30",
+    treatment: "keep",
+    reason: "real — the ETH-treasury announcement: +695% on 1,633x volume (110M shares against a 67.5K median), a 178% intraday range, and it ran again the next two sessions. Nothing about this is a share-count change",
+  },
+  {
+    symbol: "SBET",
+    date: "1999-02-09",
+    treatment: "keep",
+    reason: "real — 720 shares against a 3-share median (240x) and a 250% range in a near-dormant shell. It decayed straight back over the following week, so there is no permanent level change for an action to explain; it is classified a step only because the retrace missed the 25% tolerance by three sessions",
+  },
+  {
+    symbol: "SBET",
+    date: "2018-07-10",
+    treatment: "keep",
+    reason: "real — +146% on 628x volume (59K shares against a 94-share median), a 195% range, and the next session opened higher again on 42K shares. Genuine trading in a microcap, not an unadjusted split",
+  },
+  {
+    symbol: "SBET",
+    date: "2025-05-27",
+    treatment: "keep",
+    reason: "real — the ETH-treasury announcement: +433% on 1,033x volume, an 88% range, and the ramp had already started the prior session (+79% on 6M shares). A split does not pre-announce itself in the tape",
+  },
+  {
+    symbol: "SBET",
+    date: "2025-05-29",
+    treatment: "keep",
+    reason: "real — the second leg two sessions later: +172% on 371x volume and a 220% intraday range, holding above 55 for the following week",
+  },
+  {
+    symbol: "SBET",
+    date: "2025-06-13",
+    treatment: "keep",
+    reason: "real, and the only one of the seven that had to be argued rather than read off — the -72% happened in the gap (32.53 close to a 10.25 open) and the level HELD, which is the shape of an unadjusted action. It is not one: 41.9M shares against a 103K median (408x) and 47M the next session are the two largest prints in the symbol's history, and the day traded a 28% range at the new level. An action nobody traded through looks like the opposite of this, and a split misadjustment would scale volume down, not up 400-fold",
+  },
+];
+
+/**
+ * THE SYMBOL SET THE LIST ABOVE WAS AUDITED AGAINST.
+ *
+ * A declaration list is not true on its own — it is true relative to a
+ * universe, and this repository has now watched that distinction cost it
+ * something twice. `91d4b03` asserted zero undeclared steps; six days later
+ * the universe grew by nineteen symbols and the assertion, unchanged and
+ * unverified, was silently false for three weeks. The sentence was never
+ * wrong about the symbols it had seen. It was wrong about which symbols
+ * those were.
+ *
+ * So the audited set is declared rather than described, and a test asserts
+ * that `positioningUniverse()` is a subset of it. Adding a symbol to the
+ * scanner now fails that test until someone runs the sweep and extends this
+ * list — which is the review that did not happen, made unskippable.
+ *
+ * Last swept 2026-09-13 over every series in scripts/ingest/data:
+ * 164 series, 1,147,481 sessions, zero undeclared steps remaining.
+ *
+ * Crypto spot pseudo-symbols are included: they cannot have corporate
+ * actions, but they go through the same guard, and leaving them out would
+ * mean the subset test could not be a plain subset test.
+ */
+export const CORPORATE_ACTION_SWEPT_ON = "2026-09-13";
+
+export const CORPORATE_ACTION_AUDITED_SYMBOLS: readonly string[] = [
+  "ABT","ADBE","AEM","AEP","AMAT","AMD","AMGN","APLD","ASML","AU","AVGO","BA","BIIB","BITU",
+  "BITX","BKR","BLK","BMNR","BNB-USD.SPOT","BSX","BTC-USD.SPOT","BTDR","CEG","CFG","CIFR",
+  "CLSK","CME","COIN","CONL","COPX","CORZ","COST","CRM","CSX","D","DBA","DHI","DHR","DIA",
+  "DUK","ETHT","ETHU","FCX","FDX","FITB","FTI","GD","GDX","GILD","GLD","GLXY","GOLD","GS",
+  "HAL","HBAN","HD","HOOD","HUT","HYG","IBIT","ICE","IEF","IGV","IHI","INTC","IONQ","IREN",
+  "ISRG","ITA","ITB","IWM","IYT","KCE","KEY","KGC","KLAC","KRE","LEN","LHX","LMT","LOW","LQD",
+  "LRCX","LULU","MARA","MDT","MS","MSFT","MSTR","MSTU","MSTX","MTB","MU","NEE","NEM","NOC",
+  "NOW","NSC","NVDA","NVR","ODFL","OIH","OKLO","ORCL","PANW","PHM","PLTR","PUR","PURR","QCOM",
+  "QQQ","REGN","RF","RIOT","ROST","RTX","SBET","SCCO","SCHW","SHY","SLB","SLV","SMH","SNOW",
+  "SO","SOL-USD.SPOT","SOLT","SOLZ","SPY","SYK","TECK","TFC","TGT","TIP","TJX","TLT","TSM",
+  "TXN","UNP","UPS","USB","USO","VRTX","VST","VTI","WGMI","WMT","WPM","WULF","XBI","XLB",
+  "XLC","XLE","XLF","XLI","XLK","XLP","XLRE","XLU","XLV","XLY","XRP-USD.SPOT","XRT","XXRP",
 ];
 
 export interface AdjustOptions {
