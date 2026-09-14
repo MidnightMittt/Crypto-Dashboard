@@ -72,7 +72,7 @@ const panel = barsPanelJson as unknown as BarsPanel;
 const snapshot = equityExecutionJson as unknown as EquityExecutionSnapshot;
 const earnings = earningsJson as {
   entries: { symbol: string; date: string }[];
-  sweep?: { throughDate?: string };
+  sweep?: { throughDate?: string; universe?: string[] };
 };
 
 const DEFAULT_BUDGET_USD = 195;
@@ -117,6 +117,17 @@ export function GET(req: NextRequest) {
 
   const eventBySymbol = new Map(earnings.entries.map((e) => [e.symbol, e.date]));
   const eventsKnownThrough = earnings.sweep?.throughDate ?? null;
+  /*
+   * Coverage is PER NAME, not global. A symbol outside the calendar's swept
+   * universe was never looked at, and handing it the global throughDate
+   * would let "no event known" render as "no event exists" — a clean
+   * catalyst column that reads as permission to hold, on a name nobody
+   * checked. Today every ranked name is inside the 170-name universe, but
+   * that is a fact about today's two files, and this check is what makes
+   * it a guarantee instead of a coincidence. No manifest at all (an old
+   * artifact) means no name is covered.
+   */
+  const sweptUniverse = new Set(earnings.sweep?.universe ?? []);
   const today = view.session;
 
   /*
@@ -173,7 +184,8 @@ export function GET(req: NextRequest) {
       bars: realBars(panel.sessions, sp),
       contracts,
       eventDate: eventBySymbol.get(entry.symbol) ?? null,
-      eventsKnownThrough,
+      // Null unless THIS name was in the sweep — coverage is per name.
+      eventsKnownThrough: sweptUniverse.has(entry.symbol) ? eventsKnownThrough : null,
       ivRvRatio: null,
     });
   }
