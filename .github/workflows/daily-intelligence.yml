@@ -109,13 +109,34 @@ jobs:
       # momentum leg re-runs the declared hypothesis over the raw bar files,
       # which are 146MB and gitignored and invisible to anything off-runner.
       #
-      # Warning, not red. Every input — barsPanel, spreadHistory, the bar
-      # files — is already committed or already on this runner, so the output
-      # holds no state: delete it and the next run rebuilds it identically. A
-      # failure here costs a stale artefact for a day and never an
-      # observation, which is the opposite of the CBOE capture above.
+      # RED, BUT NOT HERE — recorded now and judged at the gate below.
+      #
+      # This was `|| echo ::warning::`, on the reasoning that the output holds
+      # no state: every input is already committed or already on this runner,
+      # so a failure costs a stale artefact for a day and never an observation.
+      # That argument is still sound for the ARTEFACT and still wrong for the
+      # BOOK. The script refuses per strategy, so its usual failure was not a
+      # missing file but a file missing a line — four lines where there should
+      # be five, exit 0, committed, and the absence visible only to a reader of
+      # a list on /validation. buildPaperLines now exits non-zero instead.
+      #
+      # It must not fail IN PLACE, and this is the whole reason for the split.
+      # A failing step ends the job, and three steps below this one is the CBOE
+      # positioning capture — the one thing in this pipeline that cannot be
+      # recovered, because the delayed chain has no date parameter and a
+      # session not recorded is gone for good. Going red here would trade a
+      # recomputable artefact for a permanently lost observation, which is
+      # exactly backwards. So the outcome is carried to the end of the job,
+      # after the irreplaceable captures and after the commit.
       - name: Rebuild paper lines
-        run: npx tsx scripts/ingest/buildPaperLines.ts || echo "::warning::paper lines projection failed"
+        id: paper
+        run: |
+          if npx tsx scripts/ingest/buildPaperLines.ts; then
+            echo "complete=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "complete=no" >> "$GITHUB_OUTPUT"
+            echo "::error::a declared paper strategy produced no line — the book was not rewritten, so production keeps the previous copy. The run is failed at the gate."
+          fi
 
       - name: Append signal history ledger
         run: npx tsx scripts/ingest/appendHistory.ts
@@ -251,3 +272,32 @@ jobs:
 
           echo "::error::push failed three times against a moving main"
           exit 1
+
+      # THE GATE. Last, and after the commit, deliberately — the same order as
+      # refresh-studies and for the same reason: if the ingest, the snapshots
+      # and the positioning capture all succeeded, that work is real and
+      # belongs on main. Failing before the commit would throw away a good
+      # night's data to report a bad paper book.
+      #
+      # `always()` so it is reached even when an earlier step failed, because
+      # "did every declared strategy produce a line" is a separate question
+      # from "did the rest of the job work" and both belong in the log.
+      - name: Every declared paper strategy produced a line
+        if: always()
+        run: |
+          case "${{ steps.paper.outputs.complete }}" in
+            yes)
+              echo "paper book complete — every declared strategy produced a line."
+              ;;
+            no)
+              echo "::error::the paper book is short a declared strategy; see the refusal in the Rebuild paper lines step above."
+              exit 1
+              ;;
+            *)
+              # Empty means the step never ran to completion — an earlier step
+              # failed, or the job was cancelled. Silence here would read as
+              # success, which is the failure this gate exists to prevent.
+              echo "::error::the paper lines step did not run to completion, so book completeness is unverified."
+              exit 1
+              ;;
+          esac

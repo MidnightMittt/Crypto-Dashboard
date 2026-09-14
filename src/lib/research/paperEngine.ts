@@ -207,6 +207,12 @@ export interface PaperRecord {
  * FNV-1a rather than a crypto hash: this runs in a module that may be bundled
  * for the browser, and the requirement is only that a changed declaration
  * produces a changed string — not that the string is hard to forge.
+ *
+ * The fields are joined on NUL because it cannot occur inside any of them, so
+ * ["ab", "c"] and ["a", "bc"] cannot canonicalise to the same string. Keep it
+ * written as the escape `\0` and never as a literal control byte: a raw NUL
+ * makes this file binary to grep, and any tool that strips control characters
+ * would silently move EVERY fingerprint at once.
  */
 export function fingerprintDeclaration(d: PaperDeclaration): string {
   const canonical = [
@@ -220,13 +226,69 @@ export function fingerprintDeclaration(d: PaperDeclaration): string {
     d.costNote,
     d.independenceBasis,
     d.killCriteria,
-  ].join(" ");
+  ].join("\0");
   let h = 0x811c9dc5;
   for (let i = 0; i < canonical.length; i++) {
     h ^= canonical.charCodeAt(i);
     h = Math.imul(h, 0x01000193) >>> 0;
   }
   return h.toString(16).padStart(8, "0");
+}
+
+/**
+ * How long a newly declared strategy may produce nothing before the silence
+ * becomes a fault.
+ *
+ * A strategy whose inputs accrue FORWARD ONLY has nothing to backfill from:
+ * the mark-to-open leg needs a 15:50 quote that only exists once the recorder
+ * has run, so on the day it is declared its record is legitimately empty. An
+ * empty record is otherwise a broken input, and the two are indistinguishable
+ * from the record alone — the declaration date is what separates them.
+ *
+ * SEVEN DAYS, and the asymmetry is deliberate. Too long and a genuinely
+ * broken new strategy sits invisible for that whole window; too short and a
+ * normal declaration goes red for a day, which costs nothing here because the
+ * gate runs after the irreplaceable captures and the artefact is recomputable.
+ * Cheap false alarm, expensive silence — so this is sized to the longest
+ * ordinary wait rather than to the worst imaginable one. Declared Friday, the
+ * first complete overnight observation lands Tuesday; a holiday Monday pushes
+ * it to Wednesday, which is five days. Seven clears that and little else: a
+ * strategy that has produced nothing in a week is broken, not young.
+ */
+export const DECLARATION_GRACE_DAYS = 7;
+
+export interface DeclarationGrace {
+  /** True while an empty record is explained by the declaration being new. */
+  active: boolean;
+  /** The UTC date the grace runs out, so the refusal can name its own deadline. */
+  expiresOn: string;
+}
+
+/**
+ * Whether an empty record is too-new rather than broken.
+ *
+ * Keyed on `declaredOn` and not on "is this the first run", which matters for
+ * the case that is actually dangerous: a strategy that produced lines for
+ * months and today produces none. Its declaration is old, so it gets no grace
+ * and goes red — which is the whole point, because that is a broken input
+ * wearing the same empty record as a newborn.
+ *
+ * `asOfMs` is a parameter rather than a `Date.now()` read so the policy can be
+ * asserted at both edges instead of only on the day a test happens to run.
+ */
+export function declarationGrace(declaredOn: string, asOfMs: number): DeclarationGrace {
+  const declared = Date.parse(`${declaredOn}T00:00:00Z`);
+  /*
+   * An unparseable date gets NO grace. The alternative — treating a malformed
+   * declaration as indefinitely young — would let a typo silence the strategy
+   * permanently, which is the failure this whole gate exists to prevent.
+   */
+  if (!Number.isFinite(declared)) return { active: false, expiresOn: declaredOn };
+  const expires = declared + DECLARATION_GRACE_DAYS * 86_400_000;
+  return {
+    active: asOfMs < expires,
+    expiresOn: new Date(expires).toISOString().slice(0, 10),
+  };
 }
 
 const mean = (xs: number[]): number | null =>

@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   BP,
+  DECLARATION_GRACE_DAYS,
   PAPER_ENGINE_VERSION,
   PaperDeclaration,
   PaperSession,
   buildPaperLine,
   buildPaperRecord,
+  declarationGrace,
   fingerprintDeclaration,
   paperCaveat,
   sessionsToReachT,
@@ -413,5 +415,76 @@ describe("buildPaperLine", () => {
 describe("BP", () => {
   it("is the basis-point scale the whole engine converts through", () => {
     expect(BP).toBe(10_000);
+  });
+});
+
+/**
+ * THE GRACE ON A NEW DECLARATION.
+ *
+ * buildPaperLines fails the nightly run when a declared strategy produces no
+ * line. A leg whose inputs accrue forward only — the mark-to-open needs a
+ * 15:50 quote that does not exist until the recorder has run — is legitimately
+ * empty on the day it is declared, and an empty record looks identical whether
+ * the strategy is newborn or broken. `declaredOn` is the only thing separating
+ * them, so the whole gate turns on this function being right at its edges.
+ *
+ * It takes `asOfMs` rather than reading the clock precisely so those edges can
+ * be asserted, instead of whichever side of the window today happens to fall on.
+ */
+describe("declarationGrace", () => {
+  const DAY = 86_400_000;
+  const declaredOn = "2026-03-02";
+  const declaredMs = Date.parse("2026-03-02T00:00:00Z");
+
+  it("covers the day of declaration", () => {
+    expect(declarationGrace(declaredOn, declaredMs).active).toBe(true);
+  });
+
+  /*
+   * Both sides of the boundary, because an off-by-one here is invisible: it
+   * either reds a normal declaration a day early or lets a broken one hide a
+   * day longer, and neither shows up in a run that happens mid-window.
+   */
+  it("is still active the instant before it expires and over the instant after", () => {
+    const expiry = declaredMs + DECLARATION_GRACE_DAYS * DAY;
+    expect(declarationGrace(declaredOn, expiry - 1).active).toBe(true);
+    expect(declarationGrace(declaredOn, expiry).active).toBe(false);
+    expect(declarationGrace(declaredOn, expiry + DAY).active).toBe(false);
+  });
+
+  it("names its own deadline, so the refusal can say when silence becomes a fault", () => {
+    expect(declarationGrace(declaredOn, declaredMs).expiresOn).toBe("2026-03-09");
+  });
+
+  /*
+   * THE CASE THE GATE EXISTS FOR. A strategy that ran for months and today
+   * produces nothing carries an old declaration date, so it gets no cover.
+   */
+  it("gives an established declaration no cover at all", () => {
+    expect(declarationGrace("2025-01-01", Date.parse("2026-03-02T00:00:00Z")).active).toBe(false);
+  });
+
+  /*
+   * A future date is a declaration that has not started. Grace, rather than a
+   * failure, is the honest reading — but it still expires on a real date.
+   */
+  it("treats a future declaration as not yet started", () => {
+    const future = declarationGrace("2026-06-01", Date.parse("2026-03-02T00:00:00Z"));
+    expect(future.active).toBe(true);
+    expect(future.expiresOn).toBe("2026-06-08");
+  });
+
+  /*
+   * A malformed date must NOT read as indefinitely young. The failure that
+   * would cause — a typo silencing a strategy forever, with the run green —
+   * is the exact one the gate was added to prevent.
+   */
+  it("refuses grace to a declaration date it cannot parse", () => {
+    expect(declarationGrace("not-a-date", Date.now()).active).toBe(false);
+    expect(declarationGrace("", Date.now()).active).toBe(false);
+  });
+
+  it("is sized to cover a long weekend with a holiday in it", () => {
+    expect(DECLARATION_GRACE_DAYS).toBeGreaterThanOrEqual(5);
   });
 });
