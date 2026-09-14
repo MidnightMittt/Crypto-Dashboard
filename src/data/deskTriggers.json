@@ -1,0 +1,39 @@
+{
+  "note": "Declared decision levels the desk evaluates. Hand-maintained, never generated: a trigger enters this file when its owner declares it in so many words, and its provenance travels with it. Levels here are DATA the desk reads — changing one is a declaration event, not an edit.",
+  "triggers": [
+    {
+      "id": "pons-floor",
+      "subject": "PONS (on-chain, PONS/WETH 0.3% pool)",
+      "kind": "price_floor",
+      "level": 0.408,
+      "unit": "USD",
+      "declared_by": "trading session, relayed by Mitchell in chat",
+      "declared_on": "2026-09-14",
+      "on_breach": "Floor. Below this the position's thesis is off; the trading session decides, the desk only reports the crossing.",
+      "source_required": "no wired source for on-chain PONS. Needs the pool's contract address from the trading session, plus either an RPC URL (env DESK_RPC_URL) for direct slot0 reads or Mitchell's approval of a named public indexer queried BY POOL ADDRESS. Public dashboards are disqualified by the record: scopl.live served a wrong-pool fallback on four queries and a 24h volume ~20x off the chain's own Swap events."
+    },
+    {
+      "id": "pons-review",
+      "subject": "PONS (on-chain, PONS/WETH 0.3% pool)",
+      "kind": "price_review",
+      "level": 0.455,
+      "unit": "USD",
+      "declared_by": "trading session, relayed by Mitchell in chat",
+      "declared_on": "2026-09-14",
+      "on_breach": "Review alert. Above this the position is re-examined, not auto-acted on.",
+      "source_required": "same as pons-floor: pool address plus RPC or an approved by-address source."
+    },
+    {
+      "id": "lp-fee-yield-falsifier",
+      "subject": "Uniswap v3 position #1109566, PONS/WETH 0.3%, ticks 77640-87000",
+      "kind": "rate_falsifier",
+      "level": 0.25,
+      "unit": "% of position value per day, fee yield on ACTIVE liquidity",
+      "declared_by": "trading session, relayed by Mitchell in chat",
+      "declared_on": "2026-09-14",
+      "consecutive_readings": 3,
+      "on_breach": "Falsifier: fee yield sustained under 0.25%/day across three consecutive readings kills the LP thesis. Three readings, not one — a single quiet window is weather.",
+      "source_required": "fee-yield readings do not exist on this side at all. They require parsing Swap events against active liquidity (the TVL-based number is the metric that misled the book for three days). Blocked on the same pool address + RPC; until then the desk can hold the declaration and count nothing."
+    }
+  ]
+}
