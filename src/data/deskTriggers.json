@@ -1,86 +1,103 @@
 {
-  "note": "Declared decision levels the desk evaluates. Hand-maintained, never generated: a trigger enters this file when its owner declares it in so many words, and its provenance travels with it. Levels here are DATA the desk reads — changing one is a declaration event, not an edit. The LP price triggers are declared in POOL TICKS, which are fixed and single-sourced from slot0(); the USD versions quoted before 2026-09-14 had two moving parts (PONS/WETH and ETH/USD) and were stale the moment ETH moved — 'floor $0.408' was only true at ETH $2,480.",
-  "triggers": [
+ "note": "Declared decision levels the desk evaluates. Hand-maintained, never generated: a trigger enters this file when its owner declares it in so many words, and its provenance travels with it. Levels here are DATA the desk reads \u2014 changing one is a declaration event, not an edit. The LP price triggers are declared in POOL TICKS, which are fixed and single-sourced from slot0(); the USD versions quoted before 2026-09-14 had two moving parts (PONS/WETH and ETH/USD) and were stale the moment ETH moved \u2014 'floor $0.408' was only true at ETH $2,480.",
+ "triggers": [
+  {
+   "id": "pons-floor",
+   "subject": "PONS/WETH 0.3% pool 0xEd50bDeeA8aDC232f159486192a4157281D722ff, Robinhood Chain (4663)",
+   "kind": "pool_tick",
+   "level": 87000,
+   "unit": "pool tick (rising tick = falling PONS; 87000 is the position's upper tick = its price floor)",
+   "breach_when": "at_or_above",
+   "declared_by": "trading session, relayed by Mitchell in chat; redeclared in ticks 2026-09-14 replacing the same-day $0.408 USD form",
+   "declared_on": "2026-09-14",
+   "on_breach": "Floor: the position is out of range on the low-price side and the thesis is off. The trading session decides; the desk only reports the crossing.",
+   "source_required": "wired: eth_call slot0() on the pool by address, DESK_RPC_URL or the public Robinhood Chain RPC. A transport failure renders as attempted-and-failed, which is a different fact from unwired."
+  },
+  {
+   "id": "pons-review",
+   "subject": "PONS/WETH 0.3% pool 0xEd50bDeeA8aDC232f159486192a4157281D722ff, Robinhood Chain (4663)",
+   "kind": "pool_tick",
+   "level": 85596,
+   "unit": "pool tick (85% of the way from 77640 to 87000, toward the floor)",
+   "breach_when": "at_or_above",
+   "declared_by": "trading session, declared directly in ticks, relayed by Mitchell in chat",
+   "declared_on": "2026-09-14",
+   "on_breach": "Review: 15% of range remains before the position is all-PONS and stops earning. Re-examine, do not auto-act.",
+   "source_required": "wired: same slot0() read as pons-floor.",
+   "derivation": "85% through the range: 77640 + 0.85 x (87000 - 77640) = 85596. Declared in the unit that cannot drift, with the rationale attached (15% of range left before the position stops earning).",
+   "superseded": [
     {
-      "id": "pons-floor",
-      "subject": "PONS/WETH 0.3% pool 0xEd50bDeeA8aDC232f159486192a4157281D722ff, Robinhood Chain (4663)",
-      "kind": "pool_tick",
-      "level": 87000,
-      "unit": "pool tick (rising tick = falling PONS; 87000 is the position's upper tick = its price floor)",
-      "breach_when": "at_or_above",
-      "declared_by": "trading session, relayed by Mitchell in chat; redeclared in ticks 2026-09-14 replacing the same-day $0.408 USD form",
-      "declared_on": "2026-09-14",
-      "on_breach": "Floor: the position is out of range on the low-price side and the thesis is off. The trading session decides; the desk only reports the crossing.",
-      "source_required": "wired: eth_call slot0() on the pool by address, DESK_RPC_URL or the public Robinhood Chain RPC. A transport failure renders as attempted-and-failed, which is a different fact from unwired."
+     "form": "$0.455 USD",
+     "declared_on": "2026-09-09",
+     "retired_on": "2026-09-14",
+     "why_retired": "A PONS/USD level has two moving parts (PONS/WETH and ETH/USD) and was quoted around a stale ETH for a week \u2014 never declared in a stable unit."
     },
     {
-      "id": "pons-review",
-      "subject": "PONS/WETH 0.3% pool 0xEd50bDeeA8aDC232f159486192a4157281D722ff, Robinhood Chain (4663)",
-      "kind": "pool_tick",
-      "level": 85596,
-      "unit": "pool tick (85% of the way from 77640 to 87000, toward the floor)",
-      "breach_when": "at_or_above",
-      "declared_by": "trading session, declared directly in ticks, relayed by Mitchell in chat",
-      "declared_on": "2026-09-14",
-      "on_breach": "Review: 15% of range remains before the position is all-PONS and stops earning. Re-examine, do not auto-act.",
-      "source_required": "wired: same slot0() read as pons-floor.",
-      "derivation": "85% through the range: 77640 + 0.85 x (87000 - 77640) = 85596. Declared in the unit that cannot drift, with the rationale attached (15% of range left before the position stops earning).",
-      "superseded": [
-        {
-          "form": "$0.455 USD",
-          "declared_on": "2026-09-09",
-          "retired_on": "2026-09-14",
-          "why_retired": "A PONS/USD level has two moving parts (PONS/WETH and ETH/USD) and was quoted around a stale ETH for a week — never declared in a stable unit."
-        },
-        {
-          "form": "pool_tick 86039",
-          "declared_on": "2026-09-14",
-          "retired_on": "2026-09-14",
-          "why_retired": "The site's arithmetic translation of the $0.455 figure at that day's ETH. Checking it exposed that the trading session's OWN monitor (scripts/lp_range_check.sh) had been firing on a different rule the whole time — pos > 85% of range, which is tick 85596, a 443-tick / ~4.5% gap. Two statements of one trigger disagreed and neither side was reading the other. The range-fraction rule is the one that was actually watching the position and the one with a stated rationale, so it governs; the dollar figure and its translation are both retired."
-        }
-      ]
-    },
-    {
-      "id": "lp-fee-yield-falsifier",
-      "subject": "Uniswap v3 position #1109566, PONS/WETH 0.3%, ticks 77640-87000",
-      "kind": "rate_falsifier",
-      "level": 0.25,
-      "unit": "% of position value per day, fee yield on ACTIVE liquidity",
-      "breach_when": "at_or_below",
-      "declared_by": "trading session, relayed by Mitchell in chat",
-      "declared_on": "2026-09-14",
-      "consecutive_readings": 3,
-      "on_breach": "Falsifier: fee yield sustained under 0.25%/day across three consecutive readings kills the LP thesis. Three readings, not one — a single quiet window is weather.",
-      "source_required": "fee-yield readings require parsing Swap events against active liquidity (the TVL-based figure is refused by construction — it is the metric that misled the book for three days). The pool address is now known; the remaining blocker is the log scan itself: the public RPC caps eth_getLogs at 10,000 events, so the reader needs windowed scans or a better endpoint via DESK_RPC_URL."
+     "form": "pool_tick 86039",
+     "declared_on": "2026-09-14",
+     "retired_on": "2026-09-14",
+     "why_retired": "The site's arithmetic translation of the $0.455 figure at that day's ETH. Checking it exposed that the trading session's OWN monitor (scripts/lp_range_check.sh) had been firing on a different rule the whole time \u2014 pos > 85% of range, which is tick 85596, a 443-tick / ~4.5% gap. Two statements of one trigger disagreed and neither side was reading the other. The range-fraction rule is the one that was actually watching the position and the one with a stated rationale, so it governs; the dollar figure and its translation are both retired."
     }
+   ]
+  },
+  {
+   "id": "lp-fee-yield-falsifier",
+   "subject": "Uniswap v3 position #1109566, PONS/WETH 0.3%, ticks 77640-87000",
+   "kind": "rate_falsifier",
+   "level": 0.25,
+   "unit": "% of position value per day, fee yield on ACTIVE liquidity",
+   "breach_when": "at_or_below",
+   "declared_by": "trading session, relayed by Mitchell in chat",
+   "declared_on": "2026-09-14",
+   "consecutive_readings": 3,
+   "on_breach": "Falsifier: fee yield sustained under 0.25%/day across three consecutive readings kills the LP thesis. Three readings, not one \u2014 a single quiet window is weather.",
+   "source_required": "fee-yield readings require parsing Swap events against active liquidity (the TVL-based figure is refused by construction \u2014 it is the metric that misled the book for three days). The pool address is now known; the remaining blocker is the log scan itself: the public RPC caps eth_getLogs at 10,000 events, so the reader needs windowed scans or a better endpoint via DESK_RPC_URL."
+  }
+ ],
+ "declared_events": [
+  {
+   "id": "frmi-annual-meeting",
+   "subject": "FRMI",
+   "date": "2026-10-30",
+   "date_precision": "exact",
+   "source": "8-K filed 2026-08-31, EDGAR CIK 0002071778",
+   "declared_by": "trading session, relayed by Mitchell in chat 2026-09-14",
+   "why_it_matters": "Financing-adjacent; the FRMI thesis is entirely event-driven and Nasdaq's earnings calendar does not carry it."
+  },
+  {
+   "id": "frmi-proxy-statement",
+   "subject": "FRMI",
+   "date": "2026-10-30",
+   "date_precision": "deadline \u2014 the proxy is DUE BEFORE this date and had not been filed as of 2026-09-14; the thing to watch is the filing itself, which can land any day",
+   "source": "implied by the 2026-10-30 annual meeting (8-K, EDGAR CIK 0002071778); no proxy on EDGAR as of declaration",
+   "declared_by": "trading session, relayed by Mitchell in chat 2026-09-14",
+   "why_it_matters": "Financing-adjacent disclosure ahead of the meeting."
+  },
+  {
+   "id": "robinhood-chain-gas-waiver-lapse",
+   "subject": "Robinhood Chain (4663)",
+   "date": "2026-09-29",
+   "date_precision": "approximate \u2014 '90-day waiver from the 2026-07-01 mainnet launch' puts the lapse at end-September; press-sourced, no filing, exact date unconfirmed",
+   "source": "press coverage of the mainnet launch; stamped as press, not filing",
+   "declared_by": "trading session, relayed by Mitchell in chat 2026-09-14",
+   "why_it_matters": "The largest unpriced risk in the book: the waiver is what made 10,000+ daily token deployments economical, and every dollar of the Pons fee run-rate underwriting the PONS thesis was earned under it."
+  }
+ ],
+ "book_or_thesis": {
+  "names": [
+   "FRMI",
+   "CLSK",
+   "CIFR",
+   "RIOT",
+   "MARA",
+   "WULF",
+   "IREN",
+   "HOOD",
+   "IBIT",
+   "PURR"
   ],
-  "declared_events": [
-    {
-      "id": "frmi-annual-meeting",
-      "subject": "FRMI",
-      "date": "2026-10-30",
-      "date_precision": "exact",
-      "source": "8-K filed 2026-08-31, EDGAR CIK 0002071778",
-      "declared_by": "trading session, relayed by Mitchell in chat 2026-09-14",
-      "why_it_matters": "Financing-adjacent; the FRMI thesis is entirely event-driven and Nasdaq's earnings calendar does not carry it."
-    },
-    {
-      "id": "frmi-proxy-statement",
-      "subject": "FRMI",
-      "date": "2026-10-30",
-      "date_precision": "deadline — the proxy is DUE BEFORE this date and had not been filed as of 2026-09-14; the thing to watch is the filing itself, which can land any day",
-      "source": "implied by the 2026-10-30 annual meeting (8-K, EDGAR CIK 0002071778); no proxy on EDGAR as of declaration",
-      "declared_by": "trading session, relayed by Mitchell in chat 2026-09-14",
-      "why_it_matters": "Financing-adjacent disclosure ahead of the meeting."
-    },
-    {
-      "id": "robinhood-chain-gas-waiver-lapse",
-      "subject": "Robinhood Chain (4663)",
-      "date": "2026-09-29",
-      "date_precision": "approximate — '90-day waiver from the 2026-07-01 mainnet launch' puts the lapse at end-September; press-sourced, no filing, exact date unconfirmed",
-      "source": "press coverage of the mainnet launch; stamped as press, not filing",
-      "declared_by": "trading session, relayed by Mitchell in chat 2026-09-14",
-      "why_it_matters": "The largest unpriced risk in the book: the waiver is what made 10,000+ daily token deployments economical, and every dollar of the Pons fee run-rate underwriting the PONS thesis was earned under it."
-    }
-  ]
+  "declared_by": "trading session, amended interrupt declaration, channel note 2026-09-14",
+  "declared_on": "2026-09-14",
+  "note": "A DECLARED field, not inferred from positions - the book is empty today and the thesis names are not. Amended as positions and theses change, as a declaration event. Any filing species on these names interrupts: on ten names volume is tractable and a missed financing 8-K is the failure the watch was built to prevent."
+ }
 }

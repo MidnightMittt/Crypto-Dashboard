@@ -5,9 +5,12 @@ import ivRvJson from "@/data/ivRvHistory.json";
 import asymmetryJson from "@/data/asymmetryForward.json";
 import edgarJson from "@/data/edgarWatch.json";
 import lpSwapJson from "@/data/lpSwapVolume.json";
+import registerJson from "@/data/researchRegister.json";
+import filingWatchJson from "@/data/filingWatch.json";
 import barsPanelJson from "@/data/barsPanel.json";
 import { BarsPanel } from "@/lib/research/barsPanel";
 import { DeclaredTrigger, TriggerReading, evaluateTrigger } from "@/lib/desk/triggers";
+import { classifyFiling } from "@/lib/desk/filingAlerts";
 import {
   EthUsdReading,
   PoolState,
@@ -53,6 +56,7 @@ const store = deskTriggersJson as unknown as {
     declared_by: string;
     why_it_matters: string;
   }[];
+  book_or_thesis: { names: string[]; declared_by: string; declared_on: string; note: string };
 };
 const earnings = earningsJson as unknown as {
   generatedAt: number | string;
@@ -79,6 +83,24 @@ const lpSwaps = lpSwapJson as unknown as {
     wethVolume: number;
   }[];
   method: string;
+};
+const register = registerJson as unknown as {
+  source: { file: string; snapshotDate: string; note: string };
+  baseRate: string;
+  entries: {
+    id: string;
+    name: string;
+    status: string;
+    evidence: string;
+    reopen: string | null;
+    addendum: string | null;
+  }[];
+};
+const filingWatch = filingWatchJson as unknown as {
+  generatedAt: number;
+  lookbackDays: number;
+  watched: { symbol: string; registrant: string; hits: { form: string; filingDate: string; filer: string | null; accessionNumber: string }[] }[];
+  unwatched: { symbol: string; reason: string }[];
 };
 const edgar = edgarJson as unknown as {
   generatedAt: number;
@@ -323,6 +345,72 @@ export async function GET() {
     },
   };
 
+  /*
+   * §4 REGISTER. The most expensive thing the account owns: months of
+   * work whose entire output is knowing what not to do, previously
+   * living in a markdown file one person read. Served verbatim from the
+   * committed store, which is modelled from the trading session's own
+   * snapshot — statuses in the FILE's vocabulary, addenda preserved,
+   * reopen conditions as fields. The desk does not summarise it further:
+   * two rebuilds were paid for this week because summaries stood in for
+   * the record.
+   */
+  const statusCounts = new Map<string, number>();
+  for (const e of register.entries) {
+    const head = e.status.split(/[\s—;]/)[0];
+    statusCounts.set(head, (statusCounts.get(head) ?? 0) + 1);
+  }
+  const registerSection = {
+    source: register.source,
+    base_rate: register.baseRate,
+    entries: register.entries,
+    status_counts: Object.fromEntries([...statusCounts.entries()].sort((a, b) => b[1] - a[1])),
+    reopen_conditions: register.entries
+      .filter((e) => e.reopen !== null)
+      .map((e) => ({ id: e.id, status: e.status, reopens: e.reopen })),
+  };
+
+  /*
+   * §5 FILINGS. Every hit classified by the trading session's amended
+   * declaration — three categorical rules, no scores. The book-or-thesis
+   * list is a declared field with provenance; a name outside the watch
+   * stays visibly unwatched.
+   */
+  const bookNames = store.book_or_thesis.names;
+  const classified = filingWatch.watched.flatMap((w) =>
+    w.hits.map((h) => ({
+      symbol: w.symbol,
+      form: h.form,
+      filingDate: h.filingDate,
+      filer: h.filer,
+      accessionNumber: h.accessionNumber,
+      ...classifyFiling(
+        { symbol: w.symbol, form: h.form, filer: h.filer, registrant: w.registrant },
+        bookNames
+      ),
+    }))
+  );
+  const interrupts = classified
+    .filter((c) => c.level === "interrupt")
+    .sort((a, b) => b.filingDate.localeCompare(a.filingDate));
+  const filingsSection = {
+    declaration: {
+      rules: [
+        "(a) INTERRUPT: name on the declared book-or-thesis list, ANY species",
+        "(b) INTERRUPT: filer is not the registrant, any watched name",
+        "(c) INTERRUPT: proxy-family species, any watched name",
+        "ROW otherwise. Facts, never scores.",
+      ],
+      book_or_thesis: store.book_or_thesis,
+    },
+    interrupts,
+    row_count: classified.length - interrupts.length,
+    unwatched: filingWatch.unwatched,
+    source: "filingWatch.json — SEC submissions API, nightly",
+    age_seconds: ageSeconds(filingWatch.generatedAt),
+    lookback_days: filingWatch.lookbackDays,
+  };
+
   return NextResponse.json({
     generated_at: new Date(now).toISOString(),
     posture:
@@ -338,6 +426,8 @@ export async function GET() {
     triggers: evaluated,
     lp_oracle: lpOracle,
     calendar,
+    register: registerSection,
+    filings: filingsSection,
     blocked_on: [],
     blocked_on_note:
       "Empty. The Swap-log scan is live (nightly, incremental, windowed under the public RPC's " +

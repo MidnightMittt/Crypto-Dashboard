@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import deskTriggersJson from "../../data/deskTriggers.json";
+import registerJson from "../../data/researchRegister.json";
+import { FilingHitInput, classifyFiling } from "./filingAlerts";
 import { DeclaredTrigger, evaluateTrigger } from "./triggers";
 import {
   decodeSwapData,
@@ -218,5 +220,86 @@ describe("swap-scan machinery", () => {
     // Nibbles 4 and 6: the larger cut (1/4) governs.
     expect(lpFeeShareFromSlot0(slot0With(0x46))).toBeCloseTo(1 - 1 / 4, 10);
     expect(lpFeeShareFromSlot0(slot0With(0x64))).toBeCloseTo(1 - 1 / 4, 10);
+  });
+});
+
+describe("filing classification — the amended declaration, no scores", () => {
+  const BOOK = ["FRMI", "CLSK"];
+  const hit = (over: Partial<FilingHitInput>): FilingHitInput => ({
+    symbol: "MSFT",
+    form: "8-K",
+    filer: "MICROSOFT CORP",
+    registrant: "MICROSOFT CORP",
+    ...over,
+  });
+
+  it("(a) any species on a book-or-thesis name interrupts — the FRMI financing 8-K case", () => {
+    /*
+     * The site's own first proposal missed exactly this: a self-filed 8-K
+     * on the thesis name, no third party, no proxy species. The amendment
+     * exists because of it.
+     */
+    const c = classifyFiling(hit({ symbol: "FRMI", form: "8-K", filer: "Fermi Inc.", registrant: "Fermi Inc." }), BOOK);
+    expect(c.level).toBe("interrupt");
+    expect(c.rule).toContain("book-or-thesis");
+  });
+
+  it("(b) a filer who is not the registrant interrupts on any watched name", () => {
+    const c = classifyFiling(hit({ form: "PX14A6G", filer: "NEUGEBAUER TOBY R" }), BOOK);
+    expect(c.level).toBe("interrupt");
+    expect(c.rule).toContain("not the registrant");
+  });
+
+  it("(c) proxy-family species interrupt regardless of filer", () => {
+    const c = classifyFiling(hit({ form: "DEF 14A" }), BOOK);
+    expect(c.level).toBe("interrupt");
+    expect(c.rule).toContain("proxy-family");
+  });
+
+  it("rows the routine case, and a NULL filer does not fake an interrupt", () => {
+    expect(classifyFiling(hit({ form: "424B5" }), BOOK).level).toBe("row");
+    // Missing data is missing data — a failed header fetch must not page a human.
+    expect(classifyFiling(hit({ form: "424B5", filer: null }), BOOK).level).toBe("row");
+  });
+
+  it("compares filers loosely on case and punctuation, so 'Fermi Inc.' matches 'FERMI INC'", () => {
+    expect(classifyFiling(hit({ filer: "Microsoft Corp." }), BOOK).level).toBe("row");
+  });
+});
+
+describe("the register store", () => {
+  const reg = registerJson as unknown as {
+    source: { pointInTime: boolean; file: string };
+    entries: { id: string; status: string; evidence: string; reopen: string | null; addendum: string | null }[];
+  };
+
+  it("is a point-in-time snapshot with its source named", () => {
+    expect(reg.source.pointInTime).toBe(true);
+    expect(reg.source.file).toBe("REGISTER_SNAPSHOT_2026-09-14.md");
+  });
+
+  it("every entry carries a status and one-line evidence; ids are unique", () => {
+    expect(reg.entries.length).toBeGreaterThanOrEqual(40);
+    expect(new Set(reg.entries.map((e) => e.id)).size).toBe(reg.entries.length);
+    for (const e of reg.entries) {
+      expect(e.status.length).toBeGreaterThan(0);
+      expect(e.evidence.length).toBeGreaterThan(20);
+    }
+  });
+
+  it("preserves the compound statuses and addenda the source warned about flattening", () => {
+    const wyckoff = reg.entries.find((e) => e.id === "wyckoff")!;
+    expect(wyckoff.status).toContain("REJECTED <=21 SESSIONS");
+    expect(wyckoff.status).toContain("UNTESTABLE MULTI-MONTH");
+    expect(wyckoff.addendum).toContain("UNFALSIFIABILITY");
+    expect(wyckoff.reopen).toContain("3,000 names");
+  });
+
+  it("carries the dated reopen conditions the calendar cares about", () => {
+    const shortSale = reg.entries.find((e) => e.id === "short-sale-share")!;
+    expect(shortSale.reopen).toContain("2028");
+    const vrp = reg.entries.find((e) => e.id === "variance-risk-premium")!;
+    expect(vrp.reopen).toContain("March 2027");
+    expect(vrp.reopen).toContain("Do not peek");
   });
 });
