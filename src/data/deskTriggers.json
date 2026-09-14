@@ -17,14 +17,28 @@
       "id": "pons-review",
       "subject": "PONS/WETH 0.3% pool 0xEd50bDeeA8aDC232f159486192a4157281D722ff, Robinhood Chain (4663)",
       "kind": "pool_tick",
-      "level": 86039,
-      "unit": "pool tick",
+      "level": 85596,
+      "unit": "pool tick (85% of the way from 77640 to 87000, toward the floor)",
       "breach_when": "at_or_above",
-      "declared_by": "trading session, relayed by Mitchell in chat; redeclared in ticks 2026-09-14 replacing the same-day $0.455 USD form",
+      "declared_by": "trading session, declared directly in ticks, relayed by Mitchell in chat",
       "declared_on": "2026-09-14",
-      "on_breach": "Review: PONS has fallen to the declared attention level on the way toward the floor. Re-examine, do not auto-act.",
+      "on_breach": "Review: 15% of range remains before the position is all-PONS and stops earning. Re-examine, do not auto-act.",
       "source_required": "wired: same slot0() read as pons-floor.",
-      "derivation": "The declared $0.455 at the declaration day's ETH $2,480 implies PONS/WETH 5450.5, tick ln(5450.5)/ln(1.0001) = 86039. The tick is now the pinned form; the USD figure drifts with ETH and is rendered beside it as a stamped convenience only."
+      "derivation": "85% through the range: 77640 + 0.85 x (87000 - 77640) = 85596. Declared in the unit that cannot drift, with the rationale attached (15% of range left before the position stops earning).",
+      "superseded": [
+        {
+          "form": "$0.455 USD",
+          "declared_on": "2026-09-09",
+          "retired_on": "2026-09-14",
+          "why_retired": "A PONS/USD level has two moving parts (PONS/WETH and ETH/USD) and was quoted around a stale ETH for a week — never declared in a stable unit."
+        },
+        {
+          "form": "pool_tick 86039",
+          "declared_on": "2026-09-14",
+          "retired_on": "2026-09-14",
+          "why_retired": "The site's arithmetic translation of the $0.455 figure at that day's ETH. Checking it exposed that the trading session's OWN monitor (scripts/lp_range_check.sh) had been firing on a different rule the whole time — pos > 85% of range, which is tick 85596, a 443-tick / ~4.5% gap. Two statements of one trigger disagreed and neither side was reading the other. The range-fraction rule is the one that was actually watching the position and the one with a stated rationale, so it governs; the dollar figure and its translation are both retired."
+        }
+      ]
     },
     {
       "id": "lp-fee-yield-falsifier",
