@@ -167,6 +167,10 @@ jobs:
           # resumes where it stopped; completed windows are never re-scanned.
           npx tsx scripts/ingest/scanLpSwaps.ts || echo "::warning::lp swap scan failed"
 
+          # One submissions request per CIK, paced; per-name failures land in
+          # `unwatched` with the reason and never look like clean coverage.
+          npx tsx scripts/ingest/watchFilings.ts || echo "::warning::filing watch failed"
+
       # WHY THIS DOES NOT REBASE, and it is not a style preference.
       #
       # The old sequence committed first and then `git pull --rebase origin
@@ -210,7 +214,7 @@ jobs:
           # commit somebody's half-finished study under a message about the
           # daily refresh. That is the blanket-staging failure the repository
           # rule exists to prevent, arriving through a hand-written list.
-          DATA_PATHS="src/data/marketIntelligence.json src/data/equityMarkets.json src/data/marketContext.json src/data/signalLedger.json src/data/earningsCalendar.json src/data/forwardReachRecord.json src/data/forwardVerdictRecord.json src/data/equityCrossSection.json src/data/macroSeries.json src/data/positioningHistory.json src/data/positioningLatest.json src/data/ivRvHistory.json src/data/asymmetryForward.json src/data/edgarWatch.json src/data/lpSwapVolume.json src/data/universeHistory.json src/data/captureLog.json src/data/barsPanel.json src/data/paperLines.json"
+          DATA_PATHS="src/data/marketIntelligence.json src/data/equityMarkets.json src/data/marketContext.json src/data/signalLedger.json src/data/earningsCalendar.json src/data/forwardReachRecord.json src/data/forwardVerdictRecord.json src/data/equityCrossSection.json src/data/macroSeries.json src/data/positioningHistory.json src/data/positioningLatest.json src/data/ivRvHistory.json src/data/asymmetryForward.json src/data/edgarWatch.json src/data/lpSwapVolume.json src/data/filingWatch.json src/data/universeHistory.json src/data/captureLog.json src/data/barsPanel.json src/data/paperLines.json"
 
           stage_onto_tip() {
             # Explicit refspec: `git fetch origin main` only updates the
