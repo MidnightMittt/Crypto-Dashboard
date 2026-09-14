@@ -338,7 +338,7 @@ function midranks(values: readonly number[]): number[] {
  * leg (every value tied), because a correlation is undefined there rather
  * than zero.
  */
-function sessionTerms(x: readonly number[], y: readonly number[]): number[] {
+export function sessionTerms(x: readonly number[], y: readonly number[]): number[] {
   const n = x.length;
   if (n < MIN_CROSS_SECTION) return [];
   const rx = midranks(x);
