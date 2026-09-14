@@ -1,0 +1,5956 @@
+{
+  "generatedAt": 1789343346229,
+  "session": "2026-09-11",
+  "panelSession": "2026-09-11",
+  "deltaBand": [
+    0.3,
+    0.5
+  ],
+  "maxSpreadPctOfMid": 25,
+  "minOpenInterest": 10,
+  "expiriesExamined": 2,
+  "entries": [
+    {
+      "symbol": "ABT",
+      "spot": 101.95,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-10-02",
+          "kind": "put",
+          "strike": 101,
+          "delta": -0.405,
+          "bid": 1.7,
+          "ask": 1.95,
+          "mid": 1.83,
+          "costUsd": 182.5,
+          "spreadPctOfMid": 13.7,
+          "openInterest": 18
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-10-02",
+        "kind": "put",
+        "strike": 101,
+        "delta": -0.405,
+        "bid": 1.7,
+        "ask": 1.95,
+        "mid": 1.83,
+        "costUsd": 182.5,
+        "spreadPctOfMid": 13.7,
+        "openInterest": 18
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 11,
+        "unpriceable": 0,
+        "spread": 5,
+        "openInterest": 2,
+        "both": 3,
+        "passed": 1,
+        "medianSpreadPctOfMid": 26.7
+      },
+      "detail": "ABT: cheapest qualifying contract $183 (2026-10-02 101 put, delta -0.405)."
+    },
+    {
+      "symbol": "ADBE",
+      "spot": 252.23,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "put",
+          "strike": 245,
+          "delta": -0.335,
+          "bid": 4.45,
+          "ask": 5,
+          "mid": 4.72,
+          "costUsd": 472.5,
+          "spreadPctOfMid": 11.6,
+          "openInterest": 129
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "put",
+          "strike": 245,
+          "delta": -0.35,
+          "bid": 5.4,
+          "ask": 6.8,
+          "mid": 6.1,
+          "costUsd": 610,
+          "spreadPctOfMid": 23,
+          "openInterest": 122
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "put",
+        "strike": 245,
+        "delta": -0.335,
+        "bid": 4.45,
+        "ask": 5,
+        "mid": 4.72,
+        "costUsd": 472.5,
+        "spreadPctOfMid": 11.6,
+        "openInterest": 129
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 13,
+        "unpriceable": 0,
+        "spread": 5,
+        "openInterest": 0,
+        "both": 2,
+        "passed": 6,
+        "medianSpreadPctOfMid": 27.6
+      },
+      "detail": "ADBE: cheapest qualifying contract $473 (2026-09-25 245 put, delta -0.335)."
+    },
+    {
+      "symbol": "AEM",
+      "spot": 200.36,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 205,
+          "delta": 0.434,
+          "bid": 4.9,
+          "ask": 6,
+          "mid": 5.45,
+          "costUsd": 545,
+          "spreadPctOfMid": 20.2,
+          "openInterest": 25
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 210,
+          "delta": 0.361,
+          "bid": 4.8,
+          "ask": 5.5,
+          "mid": 5.15,
+          "costUsd": 515,
+          "spreadPctOfMid": 13.6,
+          "openInterest": 74
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-10-02",
+        "kind": "call",
+        "strike": 210,
+        "delta": 0.361,
+        "bid": 4.8,
+        "ask": 5.5,
+        "mid": 5.15,
+        "costUsd": 515,
+        "spreadPctOfMid": 13.6,
+        "openInterest": 74
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 12,
+        "unpriceable": 0,
+        "spread": 4,
+        "openInterest": 1,
+        "both": 3,
+        "passed": 4,
+        "medianSpreadPctOfMid": 24.9
+      },
+      "detail": "AEM: cheapest qualifying contract $515 (2026-10-02 210 call, delta 0.361)."
+    },
+    {
+      "symbol": "AEP",
+      "spot": 123.33,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-10-16",
+          "kind": "call",
+          "strike": 125,
+          "delta": 0.447,
+          "bid": 2.35,
+          "ask": 2.6,
+          "mid": 2.48,
+          "costUsd": 247.5,
+          "spreadPctOfMid": 10.1,
+          "openInterest": 446
+        },
+        {
+          "expiry": "2026-11-20",
+          "kind": "put",
+          "strike": 120,
+          "delta": -0.361,
+          "bid": 2.75,
+          "ask": 3.3,
+          "mid": 3.03,
+          "costUsd": 302.5,
+          "spreadPctOfMid": 18.2,
+          "openInterest": 267
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-10-16",
+        "kind": "call",
+        "strike": 125,
+        "delta": 0.447,
+        "bid": 2.35,
+        "ask": 2.6,
+        "mid": 2.48,
+        "costUsd": 247.5,
+        "spreadPctOfMid": 10.1,
+        "openInterest": 446
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 4,
+        "unpriceable": 0,
+        "spread": 2,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 2,
+        "medianSpreadPctOfMid": 25
+      },
+      "detail": "AEP: cheapest qualifying contract $248 (2026-10-16 125 call, delta 0.447)."
+    },
+    {
+      "symbol": "AMAT",
+      "spot": 456.49,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 475,
+          "delta": 0.358,
+          "bid": 8.75,
+          "ask": 11,
+          "mid": 9.88,
+          "costUsd": 987.5,
+          "spreadPctOfMid": 22.8,
+          "openInterest": 32
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 480,
+          "delta": 0.368,
+          "bid": 11.05,
+          "ask": 14.15,
+          "mid": 12.6,
+          "costUsd": 1260,
+          "spreadPctOfMid": 24.6,
+          "openInterest": 100
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 475,
+        "delta": 0.358,
+        "bid": 8.75,
+        "ask": 11,
+        "mid": 9.88,
+        "costUsd": 987.5,
+        "spreadPctOfMid": 22.8,
+        "openInterest": 32
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 29,
+        "unpriceable": 0,
+        "spread": 5,
+        "openInterest": 7,
+        "both": 1,
+        "passed": 16,
+        "medianSpreadPctOfMid": 21.5
+      },
+      "detail": "AMAT: cheapest qualifying contract $988 (2026-09-25 475 call, delta 0.358)."
+    },
+    {
+      "symbol": "AMD",
+      "spot": 516.13,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "put",
+          "strike": 495,
+          "delta": -0.31,
+          "bid": 9.5,
+          "ask": 10.5,
+          "mid": 10,
+          "costUsd": 1000,
+          "spreadPctOfMid": 10,
+          "openInterest": 158
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 550,
+          "delta": 0.32,
+          "bid": 11.4,
+          "ask": 12.1,
+          "mid": 11.75,
+          "costUsd": 1175,
+          "spreadPctOfMid": 6,
+          "openInterest": 1656
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "put",
+        "strike": 495,
+        "delta": -0.31,
+        "bid": 9.5,
+        "ask": 10.5,
+        "mid": 10,
+        "costUsd": 1000,
+        "spreadPctOfMid": 10,
+        "openInterest": 158
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 33,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 7,
+        "both": 0,
+        "passed": 26,
+        "medianSpreadPctOfMid": 3.8
+      },
+      "detail": "AMD: cheapest qualifying contract $1000 (2026-09-25 495 put, delta -0.31)."
+    },
+    {
+      "symbol": "AMGN",
+      "spot": 377.35,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 390,
+          "delta": 0.315,
+          "bid": 4.4,
+          "ask": 5,
+          "mid": 4.7,
+          "costUsd": 470,
+          "spreadPctOfMid": 12.8,
+          "openInterest": 15
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-10-02",
+        "kind": "call",
+        "strike": 390,
+        "delta": 0.315,
+        "bid": 4.4,
+        "ask": 5,
+        "mid": 4.7,
+        "costUsd": 470,
+        "spreadPctOfMid": 12.8,
+        "openInterest": 15
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 13,
+        "unpriceable": 0,
+        "spread": 5,
+        "openInterest": 1,
+        "both": 6,
+        "passed": 1,
+        "medianSpreadPctOfMid": 51.8
+      },
+      "detail": "AMGN: cheapest qualifying contract $470 (2026-10-02 390 call, delta 0.315)."
+    },
+    {
+      "symbol": "APLD",
+      "spot": 26.42,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "put",
+          "strike": 25,
+          "delta": -0.319,
+          "bid": 0.7,
+          "ask": 0.85,
+          "mid": 0.77,
+          "costUsd": 77.5,
+          "spreadPctOfMid": 19.4,
+          "openInterest": 3633
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "put",
+          "strike": 25,
+          "delta": -0.34,
+          "bid": 1.02,
+          "ask": 1.2,
+          "mid": 1.11,
+          "costUsd": 111,
+          "spreadPctOfMid": 16.2,
+          "openInterest": 588
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "put",
+        "strike": 25,
+        "delta": -0.319,
+        "bid": 0.7,
+        "ask": 0.85,
+        "mid": 0.77,
+        "costUsd": 77.5,
+        "spreadPctOfMid": 19.4,
+        "openInterest": 3633
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 13,
+        "unpriceable": 0,
+        "spread": 3,
+        "openInterest": 2,
+        "both": 0,
+        "passed": 8,
+        "medianSpreadPctOfMid": 15.8
+      },
+      "detail": "APLD: cheapest qualifying contract $78 (2026-09-25 25 put, delta -0.319)."
+    },
+    {
+      "symbol": "ASML",
+      "spot": 1698.3,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 1710,
+          "delta": 0.489,
+          "bid": 42.7,
+          "ask": 52.9,
+          "mid": 47.8,
+          "costUsd": 4780,
+          "spreadPctOfMid": 21.3,
+          "openInterest": 16
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "put",
+          "strike": 1660,
+          "delta": -0.373,
+          "bid": 38.1,
+          "ask": 48.2,
+          "mid": 43.15,
+          "costUsd": 4315,
+          "spreadPctOfMid": 23.4,
+          "openInterest": 20
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-10-02",
+        "kind": "put",
+        "strike": 1660,
+        "delta": -0.373,
+        "bid": 38.1,
+        "ask": 48.2,
+        "mid": 43.15,
+        "costUsd": 4315,
+        "spreadPctOfMid": 23.4,
+        "openInterest": 20
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 65,
+        "unpriceable": 0,
+        "spread": 29,
+        "openInterest": 4,
+        "both": 22,
+        "passed": 10,
+        "medianSpreadPctOfMid": 33.1
+      },
+      "detail": "ASML: cheapest qualifying contract $4315 (2026-10-02 1660 put, delta -0.373)."
+    },
+    {
+      "symbol": "AU",
+      "spot": 104.42,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-10-16",
+          "kind": "call",
+          "strike": 115,
+          "delta": 0.314,
+          "bid": 2.85,
+          "ask": 3.3,
+          "mid": 3.08,
+          "costUsd": 307.5,
+          "spreadPctOfMid": 14.6,
+          "openInterest": 174
+        },
+        {
+          "expiry": "2026-12-18",
+          "kind": "call",
+          "strike": 125,
+          "delta": 0.308,
+          "bid": 4.8,
+          "ask": 5.4,
+          "mid": 5.1,
+          "costUsd": 510,
+          "spreadPctOfMid": 11.8,
+          "openInterest": 357
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-10-16",
+        "kind": "call",
+        "strike": 115,
+        "delta": 0.314,
+        "bid": 2.85,
+        "ask": 3.3,
+        "mid": 3.08,
+        "costUsd": 307.5,
+        "spreadPctOfMid": 14.6,
+        "openInterest": 174
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 11,
+        "unpriceable": 0,
+        "spread": 6,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 5,
+        "medianSpreadPctOfMid": 27.1
+      },
+      "detail": "AU: cheapest qualifying contract $308 (2026-10-16 115 call, delta 0.314)."
+    },
+    {
+      "symbol": "AVGO",
+      "spot": 361.99,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 375,
+          "delta": 0.307,
+          "bid": 4.2,
+          "ask": 4.9,
+          "mid": 4.55,
+          "costUsd": 455,
+          "spreadPctOfMid": 15.4,
+          "openInterest": 743
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "put",
+          "strike": 350,
+          "delta": -0.32,
+          "bid": 6.25,
+          "ask": 6.95,
+          "mid": 6.6,
+          "costUsd": 660,
+          "spreadPctOfMid": 10.6,
+          "openInterest": 930
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 375,
+        "delta": 0.307,
+        "bid": 4.2,
+        "ask": 4.9,
+        "mid": 4.55,
+        "costUsd": 455,
+        "spreadPctOfMid": 15.4,
+        "openInterest": 743
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 16,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 16,
+        "medianSpreadPctOfMid": 11.5
+      },
+      "detail": "AVGO: cheapest qualifying contract $455 (2026-09-25 375 call, delta 0.307)."
+    },
+    {
+      "symbol": "BA",
+      "spot": 210.45,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "put",
+          "strike": 205,
+          "delta": -0.312,
+          "bid": 2.29,
+          "ask": 2.68,
+          "mid": 2.49,
+          "costUsd": 248.5,
+          "spreadPctOfMid": 15.7,
+          "openInterest": 312
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "put",
+          "strike": 205,
+          "delta": -0.336,
+          "bid": 3.25,
+          "ask": 3.6,
+          "mid": 3.43,
+          "costUsd": 342.5,
+          "spreadPctOfMid": 10.2,
+          "openInterest": 271
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "put",
+        "strike": 205,
+        "delta": -0.312,
+        "bid": 2.29,
+        "ask": 2.68,
+        "mid": 2.49,
+        "costUsd": 248.5,
+        "spreadPctOfMid": 15.7,
+        "openInterest": 312
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 9,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 2,
+        "both": 0,
+        "passed": 7,
+        "medianSpreadPctOfMid": 10.9
+      },
+      "detail": "BA: cheapest qualifying contract $249 (2026-09-25 205 put, delta -0.312)."
+    },
+    {
+      "symbol": "BIIB",
+      "spot": 217.15,
+      "cheapestByExpiry": [],
+      "cheapest": null,
+      "missReason": "band_contracts_all_gated",
+      "gates": {
+        "inBand": 9,
+        "unpriceable": 0,
+        "spread": 2,
+        "openInterest": 0,
+        "both": 7,
+        "passed": 0,
+        "medianSpreadPctOfMid": 89.2
+      },
+      "detail": "BIIB excluded: 9 contracts sat in the delta band and all 9 failed a gate — 9 on the spread gate (median market 89.2% of mid against a 25% limit), 7 on open interest under 10. Quotable, not tradeable. A median market this far past the limit is more consistent with a stale or one-sided quote feed than with the underlying's liquidity, so treat this exclusion as unconfirmed until the chain is read from a live venue."
+    },
+    {
+      "symbol": "BITU",
+      "spot": 13.2,
+      "cheapestByExpiry": [],
+      "cheapest": null,
+      "missReason": "band_contracts_all_gated",
+      "gates": {
+        "inBand": 8,
+        "unpriceable": 0,
+        "spread": 8,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 0,
+        "medianSpreadPctOfMid": 42.5
+      },
+      "detail": "BITU excluded: 8 contracts sat in the delta band and all 8 failed a gate — 8 on the spread gate (median market 42.5% of mid against a 25% limit). Quotable, not tradeable."
+    },
+    {
+      "symbol": "BITX",
+      "spot": 17.03,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 18,
+          "delta": 0.371,
+          "bid": 0.5,
+          "ask": 0.58,
+          "mid": 0.54,
+          "costUsd": 54,
+          "spreadPctOfMid": 14.8,
+          "openInterest": 127
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 19,
+          "delta": 0.327,
+          "bid": 0.46,
+          "ask": 0.58,
+          "mid": 0.52,
+          "costUsd": 52,
+          "spreadPctOfMid": 23.1,
+          "openInterest": 524
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-10-02",
+        "kind": "call",
+        "strike": 19,
+        "delta": 0.327,
+        "bid": 0.46,
+        "ask": 0.58,
+        "mid": 0.52,
+        "costUsd": 52,
+        "spreadPctOfMid": 23.1,
+        "openInterest": 524
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 11,
+        "unpriceable": 0,
+        "spread": 8,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 3,
+        "medianSpreadPctOfMid": 41.3
+      },
+      "detail": "BITX: cheapest qualifying contract $52 (2026-10-02 19 call, delta 0.327)."
+    },
+    {
+      "symbol": "BKR",
+      "spot": 59.06,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-10-16",
+          "kind": "call",
+          "strike": 60,
+          "delta": 0.494,
+          "bid": 1.95,
+          "ask": 2.3,
+          "mid": 2.13,
+          "costUsd": 212.5,
+          "spreadPctOfMid": 16.5,
+          "openInterest": 1040
+        },
+        {
+          "expiry": "2026-12-18",
+          "kind": "call",
+          "strike": 65,
+          "delta": 0.344,
+          "bid": 1.95,
+          "ask": 2.45,
+          "mid": 2.2,
+          "costUsd": 220,
+          "spreadPctOfMid": 22.7,
+          "openInterest": 1451
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-10-16",
+        "kind": "call",
+        "strike": 60,
+        "delta": 0.494,
+        "bid": 1.95,
+        "ask": 2.3,
+        "mid": 2.13,
+        "costUsd": 212.5,
+        "spreadPctOfMid": 16.5,
+        "openInterest": 1040
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 4,
+        "unpriceable": 0,
+        "spread": 1,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 3,
+        "medianSpreadPctOfMid": 19.6
+      },
+      "detail": "BKR: cheapest qualifying contract $213 (2026-10-16 60 call, delta 0.494)."
+    },
+    {
+      "symbol": "BLK",
+      "spot": 1079.65,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "put",
+          "strike": 1080,
+          "delta": -0.461,
+          "bid": 17.3,
+          "ask": 22.2,
+          "mid": 19.75,
+          "costUsd": 1975,
+          "spreadPctOfMid": 24.8,
+          "openInterest": 13
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "put",
+        "strike": 1080,
+        "delta": -0.461,
+        "bid": 17.3,
+        "ask": 22.2,
+        "mid": 19.75,
+        "costUsd": 1975,
+        "spreadPctOfMid": 24.8,
+        "openInterest": 13
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 24,
+        "unpriceable": 0,
+        "spread": 3,
+        "openInterest": 5,
+        "both": 15,
+        "passed": 1,
+        "medianSpreadPctOfMid": 29.6
+      },
+      "detail": "BLK: cheapest qualifying contract $1975 (2026-09-25 1080 put, delta -0.461)."
+    },
+    {
+      "symbol": "BMNR",
+      "spot": 25.03,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 27,
+          "delta": 0.35,
+          "bid": 0.8,
+          "ask": 1,
+          "mid": 0.9,
+          "costUsd": 90,
+          "spreadPctOfMid": 22.2,
+          "openInterest": 1140
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "put",
+          "strike": 23.5,
+          "delta": -0.32,
+          "bid": 1.01,
+          "ask": 1.14,
+          "mid": 1.08,
+          "costUsd": 107.5,
+          "spreadPctOfMid": 12.1,
+          "openInterest": 108
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 27,
+        "delta": 0.35,
+        "bid": 0.8,
+        "ask": 1,
+        "mid": 0.9,
+        "costUsd": 90,
+        "spreadPctOfMid": 22.2,
+        "openInterest": 1140
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 14,
+        "unpriceable": 0,
+        "spread": 1,
+        "openInterest": 2,
+        "both": 0,
+        "passed": 11,
+        "medianSpreadPctOfMid": 11.5
+      },
+      "detail": "BMNR: cheapest qualifying contract $90 (2026-09-25 27 call, delta 0.35)."
+    },
+    {
+      "symbol": "BSX",
+      "spot": 42.98,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "put",
+          "strike": 42,
+          "delta": -0.331,
+          "bid": 0.6,
+          "ask": 0.75,
+          "mid": 0.68,
+          "costUsd": 67.5,
+          "spreadPctOfMid": 22.2,
+          "openInterest": 110
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "put",
+          "strike": 43,
+          "delta": -0.439,
+          "bid": 1.3,
+          "ask": 1.55,
+          "mid": 1.43,
+          "costUsd": 142.5,
+          "spreadPctOfMid": 17.5,
+          "openInterest": 163
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "put",
+        "strike": 42,
+        "delta": -0.331,
+        "bid": 0.6,
+        "ask": 0.75,
+        "mid": 0.68,
+        "costUsd": 67.5,
+        "spreadPctOfMid": 22.2,
+        "openInterest": 110
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 10,
+        "unpriceable": 0,
+        "spread": 5,
+        "openInterest": 0,
+        "both": 3,
+        "passed": 2,
+        "medianSpreadPctOfMid": 32.7
+      },
+      "detail": "BSX: cheapest qualifying contract $68 (2026-09-25 42 put, delta -0.331)."
+    },
+    {
+      "symbol": "BTDR",
+      "spot": 11.96,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "put",
+          "strike": 12,
+          "delta": -0.473,
+          "bid": 0.75,
+          "ask": 0.95,
+          "mid": 0.85,
+          "costUsd": 85,
+          "spreadPctOfMid": 23.5,
+          "openInterest": 41
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "put",
+          "strike": 12,
+          "delta": -0.462,
+          "bid": 0.95,
+          "ask": 1.2,
+          "mid": 1.08,
+          "costUsd": 107.5,
+          "spreadPctOfMid": 23.3,
+          "openInterest": 29
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "put",
+        "strike": 12,
+        "delta": -0.473,
+        "bid": 0.75,
+        "ask": 0.95,
+        "mid": 0.85,
+        "costUsd": 85,
+        "spreadPctOfMid": 23.5,
+        "openInterest": 41
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 10,
+        "unpriceable": 0,
+        "spread": 7,
+        "openInterest": 0,
+        "both": 1,
+        "passed": 2,
+        "medianSpreadPctOfMid": 33.6
+      },
+      "detail": "BTDR: cheapest qualifying contract $85 (2026-09-25 12 put, delta -0.473)."
+    },
+    {
+      "symbol": "CEG",
+      "spot": 284.75,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 290,
+          "delta": 0.438,
+          "bid": 6.3,
+          "ask": 7.8,
+          "mid": 7.05,
+          "costUsd": 705,
+          "spreadPctOfMid": 21.3,
+          "openInterest": 46
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 295,
+          "delta": 0.395,
+          "bid": 6.4,
+          "ask": 7.9,
+          "mid": 7.15,
+          "costUsd": 715,
+          "spreadPctOfMid": 21,
+          "openInterest": 22
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 290,
+        "delta": 0.438,
+        "bid": 6.3,
+        "ask": 7.8,
+        "mid": 7.05,
+        "costUsd": 705,
+        "spreadPctOfMid": 21.3,
+        "openInterest": 46
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 16,
+        "unpriceable": 0,
+        "spread": 8,
+        "openInterest": 0,
+        "both": 5,
+        "passed": 3,
+        "medianSpreadPctOfMid": 37.1
+      },
+      "detail": "CEG: cheapest qualifying contract $705 (2026-09-25 290 call, delta 0.438)."
+    },
+    {
+      "symbol": "CFG",
+      "spot": 70.48,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-11-20",
+          "kind": "call",
+          "strike": 72.5,
+          "delta": 0.409,
+          "bid": 2,
+          "ask": 2.55,
+          "mid": 2.28,
+          "costUsd": 227.5,
+          "spreadPctOfMid": 24.2,
+          "openInterest": 125
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-11-20",
+        "kind": "call",
+        "strike": 72.5,
+        "delta": 0.409,
+        "bid": 2,
+        "ask": 2.55,
+        "mid": 2.28,
+        "costUsd": 227.5,
+        "spreadPctOfMid": 24.2,
+        "openInterest": 125
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 5,
+        "unpriceable": 0,
+        "spread": 4,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 1,
+        "medianSpreadPctOfMid": 38.5
+      },
+      "detail": "CFG: cheapest qualifying contract $228 (2026-11-20 72.5 call, delta 0.409)."
+    },
+    {
+      "symbol": "CIFR",
+      "spot": 16.85,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 19,
+          "delta": 0.307,
+          "bid": 0.54,
+          "ask": 0.6,
+          "mid": 0.57,
+          "costUsd": 57,
+          "spreadPctOfMid": 10.5,
+          "openInterest": 4514
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 19,
+        "delta": 0.307,
+        "bid": 0.54,
+        "ask": 0.6,
+        "mid": 0.57,
+        "costUsd": 57,
+        "spreadPctOfMid": 10.5,
+        "openInterest": 4514
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 16,
+        "unpriceable": 0,
+        "spread": 9,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 7,
+        "medianSpreadPctOfMid": 30.2
+      },
+      "detail": "CIFR: cheapest qualifying contract $57 (2026-09-25 19 call, delta 0.307)."
+    },
+    {
+      "symbol": "CLSK",
+      "spot": 13.67,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 14,
+          "delta": 0.482,
+          "bid": 0.6,
+          "ask": 0.75,
+          "mid": 0.68,
+          "costUsd": 67.5,
+          "spreadPctOfMid": 22.2,
+          "openInterest": 2245
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 14,
+        "delta": 0.482,
+        "bid": 0.6,
+        "ask": 0.75,
+        "mid": 0.68,
+        "costUsd": 67.5,
+        "spreadPctOfMid": 22.2,
+        "openInterest": 2245
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 10,
+        "unpriceable": 0,
+        "spread": 9,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 1,
+        "medianSpreadPctOfMid": 53.1
+      },
+      "detail": "CLSK: cheapest qualifying contract $68 (2026-09-25 14 call, delta 0.482)."
+    },
+    {
+      "symbol": "CME",
+      "spot": 275.54,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-10-02",
+          "kind": "put",
+          "strike": 270,
+          "delta": -0.338,
+          "bid": 3.3,
+          "ask": 4.2,
+          "mid": 3.75,
+          "costUsd": 375,
+          "spreadPctOfMid": 24,
+          "openInterest": 1112
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-10-02",
+        "kind": "put",
+        "strike": 270,
+        "delta": -0.338,
+        "bid": 3.3,
+        "ask": 4.2,
+        "mid": 3.75,
+        "costUsd": 375,
+        "spreadPctOfMid": 24,
+        "openInterest": 1112
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 9,
+        "unpriceable": 0,
+        "spread": 3,
+        "openInterest": 1,
+        "both": 4,
+        "passed": 1,
+        "medianSpreadPctOfMid": 36.8
+      },
+      "detail": "CME: cheapest qualifying contract $375 (2026-10-02 270 put, delta -0.338)."
+    },
+    {
+      "symbol": "COIN",
+      "spot": 175.26,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 187.5,
+          "delta": 0.327,
+          "bid": 4.2,
+          "ask": 5.25,
+          "mid": 4.72,
+          "costUsd": 472.5,
+          "spreadPctOfMid": 22.2,
+          "openInterest": 153
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "put",
+          "strike": 165,
+          "delta": -0.309,
+          "bid": 5.3,
+          "ask": 6.05,
+          "mid": 5.68,
+          "costUsd": 567.5,
+          "spreadPctOfMid": 13.2,
+          "openInterest": 159
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 187.5,
+        "delta": 0.327,
+        "bid": 4.2,
+        "ask": 5.25,
+        "mid": 4.72,
+        "costUsd": 472.5,
+        "spreadPctOfMid": 22.2,
+        "openInterest": 153
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 21,
+        "unpriceable": 0,
+        "spread": 5,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 16,
+        "medianSpreadPctOfMid": 14.2
+      },
+      "detail": "COIN: cheapest qualifying contract $473 (2026-09-25 187.5 call, delta 0.327)."
+    },
+    {
+      "symbol": "CONL",
+      "spot": 5.32,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-10-16",
+          "kind": "call",
+          "strike": 7,
+          "delta": 0.312,
+          "bid": 0.35,
+          "ask": 0.4,
+          "mid": 0.38,
+          "costUsd": 37.5,
+          "spreadPctOfMid": 13.3,
+          "openInterest": 1265
+        },
+        {
+          "expiry": "2026-12-18",
+          "kind": "put",
+          "strike": 6,
+          "delta": -0.425,
+          "bid": 1.85,
+          "ask": 2.1,
+          "mid": 1.98,
+          "costUsd": 197.5,
+          "spreadPctOfMid": 12.7,
+          "openInterest": 678
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-10-16",
+        "kind": "call",
+        "strike": 7,
+        "delta": 0.312,
+        "bid": 0.35,
+        "ask": 0.4,
+        "mid": 0.38,
+        "costUsd": 37.5,
+        "spreadPctOfMid": 13.3,
+        "openInterest": 1265
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 9,
+        "unpriceable": 0,
+        "spread": 5,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 4,
+        "medianSpreadPctOfMid": 22.2
+      },
+      "detail": "CONL: cheapest qualifying contract $38 (2026-10-16 7 call, delta 0.312)."
+    },
+    {
+      "symbol": "CORZ",
+      "spot": 17.94,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "put",
+          "strike": 18,
+          "delta": -0.482,
+          "bid": 0.87,
+          "ask": 1.02,
+          "mid": 0.95,
+          "costUsd": 94.5,
+          "spreadPctOfMid": 15.9,
+          "openInterest": 50
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "put",
+        "strike": 18,
+        "delta": -0.482,
+        "bid": 0.87,
+        "ask": 1.02,
+        "mid": 0.95,
+        "costUsd": 94.5,
+        "spreadPctOfMid": 15.9,
+        "openInterest": 50
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 8,
+        "unpriceable": 0,
+        "spread": 5,
+        "openInterest": 1,
+        "both": 1,
+        "passed": 1,
+        "medianSpreadPctOfMid": 44.5
+      },
+      "detail": "CORZ: cheapest qualifying contract $95 (2026-09-25 18 put, delta -0.482)."
+    },
+    {
+      "symbol": "COST",
+      "spot": 904.77,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 930,
+          "delta": 0.324,
+          "bid": 9.2,
+          "ask": 9.75,
+          "mid": 9.48,
+          "costUsd": 947.5,
+          "spreadPctOfMid": 5.8,
+          "openInterest": 239
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 930,
+          "delta": 0.352,
+          "bid": 11.35,
+          "ask": 12.9,
+          "mid": 12.13,
+          "costUsd": 1212.5,
+          "spreadPctOfMid": 12.8,
+          "openInterest": 93
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 930,
+        "delta": 0.324,
+        "bid": 9.2,
+        "ask": 9.75,
+        "mid": 9.48,
+        "costUsd": 947.5,
+        "spreadPctOfMid": 5.8,
+        "openInterest": 239
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 27,
+        "unpriceable": 0,
+        "spread": 2,
+        "openInterest": 5,
+        "both": 1,
+        "passed": 19,
+        "medianSpreadPctOfMid": 15.6
+      },
+      "detail": "COST: cheapest qualifying contract $948 (2026-09-25 930 call, delta 0.324)."
+    },
+    {
+      "symbol": "CRM",
+      "spot": 247.72,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 257.5,
+          "delta": 0.31,
+          "bid": 3.1,
+          "ask": 3.7,
+          "mid": 3.4,
+          "costUsd": 340,
+          "spreadPctOfMid": 17.6,
+          "openInterest": 15
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 260,
+          "delta": 0.31,
+          "bid": 3.6,
+          "ask": 4.55,
+          "mid": 4.08,
+          "costUsd": 407.5,
+          "spreadPctOfMid": 23.3,
+          "openInterest": 140
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 257.5,
+        "delta": 0.31,
+        "bid": 3.1,
+        "ask": 3.7,
+        "mid": 3.4,
+        "costUsd": 340,
+        "spreadPctOfMid": 17.6,
+        "openInterest": 15
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 13,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 3,
+        "both": 0,
+        "passed": 10,
+        "medianSpreadPctOfMid": 13.7
+      },
+      "detail": "CRM: cheapest qualifying contract $340 (2026-09-25 257.5 call, delta 0.31)."
+    },
+    {
+      "symbol": "CSX",
+      "spot": 48.95,
+      "cheapestByExpiry": [],
+      "cheapest": null,
+      "missReason": "band_contracts_all_gated",
+      "gates": {
+        "inBand": 8,
+        "unpriceable": 0,
+        "spread": 6,
+        "openInterest": 0,
+        "both": 2,
+        "passed": 0,
+        "medianSpreadPctOfMid": 72.4
+      },
+      "detail": "CSX excluded: 8 contracts sat in the delta band and all 8 failed a gate — 8 on the spread gate (median market 72.4% of mid against a 25% limit), 2 on open interest under 10. Quotable, not tradeable. A median market this far past the limit is more consistent with a stale or one-sided quote feed than with the underlying's liquidity, so treat this exclusion as unconfirmed until the chain is read from a live venue."
+    },
+    {
+      "symbol": "D",
+      "spot": 64.36,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-10-16",
+          "kind": "put",
+          "strike": 65,
+          "delta": -0.444,
+          "bid": 1.45,
+          "ask": 1.7,
+          "mid": 1.58,
+          "costUsd": 157.5,
+          "spreadPctOfMid": 15.9,
+          "openInterest": 452
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-10-16",
+        "kind": "put",
+        "strike": 65,
+        "delta": -0.444,
+        "bid": 1.45,
+        "ask": 1.7,
+        "mid": 1.58,
+        "costUsd": 157.5,
+        "spreadPctOfMid": 15.9,
+        "openInterest": 452
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 6,
+        "unpriceable": 0,
+        "spread": 5,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 1,
+        "medianSpreadPctOfMid": 40.9
+      },
+      "detail": "D: cheapest qualifying contract $158 (2026-10-16 65 put, delta -0.444)."
+    },
+    {
+      "symbol": "DHI",
+      "spot": 137.89,
+      "cheapestByExpiry": [],
+      "cheapest": null,
+      "missReason": "band_contracts_all_gated",
+      "gates": {
+        "inBand": 13,
+        "unpriceable": 0,
+        "spread": 3,
+        "openInterest": 0,
+        "both": 10,
+        "passed": 0,
+        "medianSpreadPctOfMid": 86.2
+      },
+      "detail": "DHI excluded: 13 contracts sat in the delta band and all 13 failed a gate — 13 on the spread gate (median market 86.2% of mid against a 25% limit), 10 on open interest under 10. Quotable, not tradeable. A median market this far past the limit is more consistent with a stale or one-sided quote feed than with the underlying's liquidity, so treat this exclusion as unconfirmed until the chain is read from a live venue."
+    },
+    {
+      "symbol": "DHR",
+      "spot": 200.14,
+      "cheapestByExpiry": [],
+      "cheapest": null,
+      "missReason": "band_contracts_all_gated",
+      "gates": {
+        "inBand": 8,
+        "unpriceable": 0,
+        "spread": 1,
+        "openInterest": 0,
+        "both": 7,
+        "passed": 0,
+        "medianSpreadPctOfMid": 66.2
+      },
+      "detail": "DHR excluded: 8 contracts sat in the delta band and all 8 failed a gate — 8 on the spread gate (median market 66.2% of mid against a 25% limit), 7 on open interest under 10. Quotable, not tradeable. A median market this far past the limit is more consistent with a stale or one-sided quote feed than with the underlying's liquidity, so treat this exclusion as unconfirmed until the chain is read from a live venue."
+    },
+    {
+      "symbol": "DIA",
+      "spot": 525.79,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 531,
+          "delta": 0.324,
+          "bid": 2.37,
+          "ask": 2.6,
+          "mid": 2.49,
+          "costUsd": 248.5,
+          "spreadPctOfMid": 9.3,
+          "openInterest": 88
+        },
+        {
+          "expiry": "2026-09-30",
+          "kind": "call",
+          "strike": 533,
+          "delta": 0.301,
+          "bid": 2.4,
+          "ask": 2.65,
+          "mid": 2.53,
+          "costUsd": 252.5,
+          "spreadPctOfMid": 9.9,
+          "openInterest": 11
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 531,
+        "delta": 0.324,
+        "bid": 2.37,
+        "ask": 2.6,
+        "mid": 2.49,
+        "costUsd": 248.5,
+        "spreadPctOfMid": 9.3,
+        "openInterest": 88
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 29,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 2,
+        "both": 0,
+        "passed": 27,
+        "medianSpreadPctOfMid": 7.4
+      },
+      "detail": "DIA: cheapest qualifying contract $249 (2026-09-25 531 call, delta 0.324)."
+    },
+    {
+      "symbol": "DUK",
+      "spot": 119.42,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-10-16",
+          "kind": "call",
+          "strike": 120,
+          "delta": 0.5,
+          "bid": 2.25,
+          "ask": 2.6,
+          "mid": 2.42,
+          "costUsd": 242.5,
+          "spreadPctOfMid": 14.4,
+          "openInterest": 2180
+        },
+        {
+          "expiry": "2026-12-18",
+          "kind": "call",
+          "strike": 125,
+          "delta": 0.325,
+          "bid": 2.05,
+          "ask": 2.5,
+          "mid": 2.28,
+          "costUsd": 227.5,
+          "spreadPctOfMid": 19.8,
+          "openInterest": 761
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-12-18",
+        "kind": "call",
+        "strike": 125,
+        "delta": 0.325,
+        "bid": 2.05,
+        "ask": 2.5,
+        "mid": 2.28,
+        "costUsd": 227.5,
+        "spreadPctOfMid": 19.8,
+        "openInterest": 761
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 4,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 4,
+        "medianSpreadPctOfMid": 17.1
+      },
+      "detail": "DUK: cheapest qualifying contract $228 (2026-12-18 125 call, delta 0.325)."
+    },
+    {
+      "symbol": "ETHT",
+      "spot": 17.82,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-10-16",
+          "kind": "call",
+          "strike": 20,
+          "delta": 0.437,
+          "bid": 1.25,
+          "ask": 1.6,
+          "mid": 1.43,
+          "costUsd": 142.5,
+          "spreadPctOfMid": 24.6,
+          "openInterest": 99
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-10-16",
+        "kind": "call",
+        "strike": 20,
+        "delta": 0.437,
+        "bid": 1.25,
+        "ask": 1.6,
+        "mid": 1.43,
+        "costUsd": 142.5,
+        "spreadPctOfMid": 24.6,
+        "openInterest": 99
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 17,
+        "unpriceable": 0,
+        "spread": 3,
+        "openInterest": 1,
+        "both": 12,
+        "passed": 1,
+        "medianSpreadPctOfMid": 44.5
+      },
+      "detail": "ETHT: cheapest qualifying contract $143 (2026-10-16 20 call, delta 0.437)."
+    },
+    {
+      "symbol": "ETHU",
+      "spot": 27.71,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 30,
+          "delta": 0.387,
+          "bid": 1.25,
+          "ask": 1.4,
+          "mid": 1.33,
+          "costUsd": 132.5,
+          "spreadPctOfMid": 11.3,
+          "openInterest": 195
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "put",
+          "strike": 28,
+          "delta": -0.465,
+          "bid": 2.35,
+          "ask": 3,
+          "mid": 2.68,
+          "costUsd": 267.5,
+          "spreadPctOfMid": 24.3,
+          "openInterest": 70
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 30,
+        "delta": 0.387,
+        "bid": 1.25,
+        "ask": 1.4,
+        "mid": 1.33,
+        "costUsd": 132.5,
+        "spreadPctOfMid": 11.3,
+        "openInterest": 195
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 22,
+        "unpriceable": 0,
+        "spread": 7,
+        "openInterest": 1,
+        "both": 10,
+        "passed": 4,
+        "medianSpreadPctOfMid": 32.8
+      },
+      "detail": "ETHU: cheapest qualifying contract $133 (2026-09-25 30 call, delta 0.387)."
+    },
+    {
+      "symbol": "FCX",
+      "spot": 71.07,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 75,
+          "delta": 0.3,
+          "bid": 1,
+          "ask": 1.25,
+          "mid": 1.13,
+          "costUsd": 112.5,
+          "spreadPctOfMid": 22.2,
+          "openInterest": 316
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "put",
+          "strike": 68,
+          "delta": -0.317,
+          "bid": 1.56,
+          "ask": 1.79,
+          "mid": 1.68,
+          "costUsd": 167.5,
+          "spreadPctOfMid": 13.7,
+          "openInterest": 774
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 75,
+        "delta": 0.3,
+        "bid": 1,
+        "ask": 1.25,
+        "mid": 1.13,
+        "costUsd": 112.5,
+        "spreadPctOfMid": 22.2,
+        "openInterest": 316
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 16,
+        "unpriceable": 0,
+        "spread": 4,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 12,
+        "medianSpreadPctOfMid": 22.5
+      },
+      "detail": "FCX: cheapest qualifying contract $113 (2026-09-25 75 call, delta 0.3)."
+    },
+    {
+      "symbol": "FDX",
+      "spot": 311.99,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-10-02",
+          "kind": "put",
+          "strike": 310,
+          "delta": -0.462,
+          "bid": 6.95,
+          "ask": 8.35,
+          "mid": 7.65,
+          "costUsd": 765,
+          "spreadPctOfMid": 18.3,
+          "openInterest": 10
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-10-02",
+        "kind": "put",
+        "strike": 310,
+        "delta": -0.462,
+        "bid": 6.95,
+        "ask": 8.35,
+        "mid": 7.65,
+        "costUsd": 765,
+        "spreadPctOfMid": 18.3,
+        "openInterest": 10
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 10,
+        "unpriceable": 0,
+        "spread": 5,
+        "openInterest": 0,
+        "both": 4,
+        "passed": 1,
+        "medianSpreadPctOfMid": 42.4
+      },
+      "detail": "FDX: cheapest qualifying contract $765 (2026-10-02 310 put, delta -0.462)."
+    },
+    {
+      "symbol": "FITB",
+      "spot": 54.72,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-10-16",
+          "kind": "call",
+          "strike": 55,
+          "delta": 0.483,
+          "bid": 1.25,
+          "ask": 1.5,
+          "mid": 1.38,
+          "costUsd": 137.5,
+          "spreadPctOfMid": 18.2,
+          "openInterest": 280
+        },
+        {
+          "expiry": "2026-11-20",
+          "kind": "call",
+          "strike": 55,
+          "delta": 0.5,
+          "bid": 2.2,
+          "ask": 2.4,
+          "mid": 2.3,
+          "costUsd": 230,
+          "spreadPctOfMid": 8.7,
+          "openInterest": 387
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-10-16",
+        "kind": "call",
+        "strike": 55,
+        "delta": 0.483,
+        "bid": 1.25,
+        "ask": 1.5,
+        "mid": 1.38,
+        "costUsd": 137.5,
+        "spreadPctOfMid": 18.2,
+        "openInterest": 280
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 2,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 2,
+        "medianSpreadPctOfMid": 13.5
+      },
+      "detail": "FITB: cheapest qualifying contract $138 (2026-10-16 55 call, delta 0.483)."
+    },
+    {
+      "symbol": "FTI",
+      "spot": 76.34,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-10-16",
+          "kind": "put",
+          "strike": 75,
+          "delta": -0.41,
+          "bid": 2.35,
+          "ask": 2.7,
+          "mid": 2.53,
+          "costUsd": 252.5,
+          "spreadPctOfMid": 13.9,
+          "openInterest": 356
+        },
+        {
+          "expiry": "2027-01-15",
+          "kind": "put",
+          "strike": 70,
+          "delta": -0.301,
+          "bid": 3,
+          "ask": 3.5,
+          "mid": 3.25,
+          "costUsd": 325,
+          "spreadPctOfMid": 15.4,
+          "openInterest": 127
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-10-16",
+        "kind": "put",
+        "strike": 75,
+        "delta": -0.41,
+        "bid": 2.35,
+        "ask": 2.7,
+        "mid": 2.53,
+        "costUsd": 252.5,
+        "spreadPctOfMid": 13.9,
+        "openInterest": 356
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 6,
+        "unpriceable": 0,
+        "spread": 3,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 3,
+        "medianSpreadPctOfMid": 22.6
+      },
+      "detail": "FTI: cheapest qualifying contract $253 (2026-10-16 75 put, delta -0.41)."
+    },
+    {
+      "symbol": "GD",
+      "spot": 355.9,
+      "cheapestByExpiry": [],
+      "cheapest": null,
+      "missReason": "band_contracts_all_gated",
+      "gates": {
+        "inBand": 11,
+        "unpriceable": 0,
+        "spread": 4,
+        "openInterest": 0,
+        "both": 7,
+        "passed": 0,
+        "medianSpreadPctOfMid": 60.3
+      },
+      "detail": "GD excluded: 11 contracts sat in the delta band and all 11 failed a gate — 11 on the spread gate (median market 60.3% of mid against a 25% limit), 7 on open interest under 10. Quotable, not tradeable. A median market this far past the limit is more consistent with a stale or one-sided quote feed than with the underlying's liquidity, so treat this exclusion as unconfirmed until the chain is read from a live venue."
+    },
+    {
+      "symbol": "GILD",
+      "spot": 143.72,
+      "cheapestByExpiry": [],
+      "cheapest": null,
+      "missReason": "band_contracts_all_gated",
+      "gates": {
+        "inBand": 18,
+        "unpriceable": 0,
+        "spread": 13,
+        "openInterest": 0,
+        "both": 5,
+        "passed": 0,
+        "medianSpreadPctOfMid": 107.8
+      },
+      "detail": "GILD excluded: 18 contracts sat in the delta band and all 18 failed a gate — 18 on the spread gate (median market 107.8% of mid against a 25% limit), 5 on open interest under 10. Quotable, not tradeable. A median market this far past the limit is more consistent with a stale or one-sided quote feed than with the underlying's liquidity, so treat this exclusion as unconfirmed until the chain is read from a live venue."
+    },
+    {
+      "symbol": "GLXY",
+      "spot": 24.4,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "put",
+          "strike": 23,
+          "delta": -0.305,
+          "bid": 0.82,
+          "ask": 0.92,
+          "mid": 0.87,
+          "costUsd": 87,
+          "spreadPctOfMid": 11.5,
+          "openInterest": 155
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "put",
+          "strike": 24,
+          "delta": -0.404,
+          "bid": 1.58,
+          "ask": 1.77,
+          "mid": 1.68,
+          "costUsd": 167.5,
+          "spreadPctOfMid": 11.3,
+          "openInterest": 54
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "put",
+        "strike": 23,
+        "delta": -0.305,
+        "bid": 0.82,
+        "ask": 0.92,
+        "mid": 0.87,
+        "costUsd": 87,
+        "spreadPctOfMid": 11.5,
+        "openInterest": 155
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 15,
+        "unpriceable": 0,
+        "spread": 5,
+        "openInterest": 3,
+        "both": 0,
+        "passed": 7,
+        "medianSpreadPctOfMid": 20.8
+      },
+      "detail": "GLXY: cheapest qualifying contract $87 (2026-09-25 23 put, delta -0.305)."
+    },
+    {
+      "symbol": "GOLD",
+      "spot": 48.22,
+      "cheapestByExpiry": [],
+      "cheapest": null,
+      "missReason": "band_contracts_all_gated",
+      "gates": {
+        "inBand": 5,
+        "unpriceable": 0,
+        "spread": 3,
+        "openInterest": 0,
+        "both": 2,
+        "passed": 0,
+        "medianSpreadPctOfMid": 48.9
+      },
+      "detail": "GOLD excluded: 5 contracts sat in the delta band and all 5 failed a gate — 5 on the spread gate (median market 48.9% of mid against a 25% limit), 2 on open interest under 10. Quotable, not tradeable."
+    },
+    {
+      "symbol": "GS",
+      "spot": 1029.18,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 1060,
+          "delta": 0.328,
+          "bid": 11.8,
+          "ask": 13.7,
+          "mid": 12.75,
+          "costUsd": 1275,
+          "spreadPctOfMid": 14.9,
+          "openInterest": 48
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 1070,
+          "delta": 0.323,
+          "bid": 13.4,
+          "ask": 17.15,
+          "mid": 15.27,
+          "costUsd": 1527.5,
+          "spreadPctOfMid": 24.5,
+          "openInterest": 56
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 1060,
+        "delta": 0.328,
+        "bid": 11.8,
+        "ask": 13.7,
+        "mid": 12.75,
+        "costUsd": 1275,
+        "spreadPctOfMid": 14.9,
+        "openInterest": 48
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 34,
+        "unpriceable": 0,
+        "spread": 5,
+        "openInterest": 5,
+        "both": 0,
+        "passed": 24,
+        "medianSpreadPctOfMid": 19.2
+      },
+      "detail": "GS: cheapest qualifying contract $1275 (2026-09-25 1060 call, delta 0.328)."
+    },
+    {
+      "symbol": "HAL",
+      "spot": 35.84,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "put",
+          "strike": 35,
+          "delta": -0.362,
+          "bid": 0.51,
+          "ask": 0.62,
+          "mid": 0.56,
+          "costUsd": 56.5,
+          "spreadPctOfMid": 19.5,
+          "openInterest": 108
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "put",
+          "strike": 35,
+          "delta": -0.366,
+          "bid": 0.7,
+          "ask": 0.84,
+          "mid": 0.77,
+          "costUsd": 77,
+          "spreadPctOfMid": 18.2,
+          "openInterest": 67
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "put",
+        "strike": 35,
+        "delta": -0.362,
+        "bid": 0.51,
+        "ask": 0.62,
+        "mid": 0.56,
+        "costUsd": 56.5,
+        "spreadPctOfMid": 19.5,
+        "openInterest": 108
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 8,
+        "unpriceable": 0,
+        "spread": 3,
+        "openInterest": 0,
+        "both": 2,
+        "passed": 3,
+        "medianSpreadPctOfMid": 27.5
+      },
+      "detail": "HAL: cheapest qualifying contract $57 (2026-09-25 35 put, delta -0.362)."
+    },
+    {
+      "symbol": "HBAN",
+      "spot": 16.86,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-10-16",
+          "kind": "call",
+          "strike": 17,
+          "delta": 0.437,
+          "bid": 0.35,
+          "ask": 0.4,
+          "mid": 0.38,
+          "costUsd": 37.5,
+          "spreadPctOfMid": 13.3,
+          "openInterest": 1575
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-10-16",
+        "kind": "call",
+        "strike": 17,
+        "delta": 0.437,
+        "bid": 0.35,
+        "ask": 0.4,
+        "mid": 0.38,
+        "costUsd": 37.5,
+        "spreadPctOfMid": 13.3,
+        "openInterest": 1575
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 3,
+        "unpriceable": 0,
+        "spread": 2,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 1,
+        "medianSpreadPctOfMid": 40.3
+      },
+      "detail": "HBAN: cheapest qualifying contract $38 (2026-10-16 17 call, delta 0.437)."
+    },
+    {
+      "symbol": "HD",
+      "spot": 308.74,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "put",
+          "strike": 302.5,
+          "delta": -0.305,
+          "bid": 2.92,
+          "ask": 3.5,
+          "mid": 3.21,
+          "costUsd": 321,
+          "spreadPctOfMid": 18.1,
+          "openInterest": 23
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 320,
+          "delta": 0.302,
+          "bid": 3.05,
+          "ask": 3.6,
+          "mid": 3.33,
+          "costUsd": 332.5,
+          "spreadPctOfMid": 16.5,
+          "openInterest": 57
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "put",
+        "strike": 302.5,
+        "delta": -0.305,
+        "bid": 2.92,
+        "ask": 3.5,
+        "mid": 3.21,
+        "costUsd": 321,
+        "spreadPctOfMid": 18.1,
+        "openInterest": 23
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 11,
+        "unpriceable": 0,
+        "spread": 2,
+        "openInterest": 1,
+        "both": 2,
+        "passed": 6,
+        "medianSpreadPctOfMid": 18.1
+      },
+      "detail": "HD: cheapest qualifying contract $321 (2026-09-25 302.5 put, delta -0.305)."
+    },
+    {
+      "symbol": "HOOD",
+      "spot": 112.57,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 120,
+          "delta": 0.318,
+          "bid": 2.38,
+          "ask": 2.53,
+          "mid": 2.46,
+          "costUsd": 245.5,
+          "spreadPctOfMid": 6.1,
+          "openInterest": 1846
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 122,
+          "delta": 0.316,
+          "bid": 2.97,
+          "ask": 3.15,
+          "mid": 3.06,
+          "costUsd": 306,
+          "spreadPctOfMid": 5.9,
+          "openInterest": 241
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 120,
+        "delta": 0.318,
+        "bid": 2.38,
+        "ask": 2.53,
+        "mid": 2.46,
+        "costUsd": 245.5,
+        "spreadPctOfMid": 6.1,
+        "openInterest": 1846
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 30,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 30,
+        "medianSpreadPctOfMid": 5.3
+      },
+      "detail": "HOOD: cheapest qualifying contract $246 (2026-09-25 120 call, delta 0.318)."
+    },
+    {
+      "symbol": "HUT",
+      "spot": 98.6,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 110,
+          "delta": 0.365,
+          "bid": 4.25,
+          "ask": 5.25,
+          "mid": 4.75,
+          "costUsd": 475,
+          "spreadPctOfMid": 21.1,
+          "openInterest": 573
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-10-02",
+        "kind": "call",
+        "strike": 110,
+        "delta": 0.365,
+        "bid": 4.25,
+        "ask": 5.25,
+        "mid": 4.75,
+        "costUsd": 475,
+        "spreadPctOfMid": 21.1,
+        "openInterest": 573
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 37,
+        "unpriceable": 0,
+        "spread": 7,
+        "openInterest": 4,
+        "both": 25,
+        "passed": 1,
+        "medianSpreadPctOfMid": 42.1
+      },
+      "detail": "HUT: cheapest qualifying contract $475 (2026-10-02 110 call, delta 0.365)."
+    },
+    {
+      "symbol": "IBIT",
+      "spot": 43.77,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 45.5,
+          "delta": 0.314,
+          "bid": 0.61,
+          "ask": 0.64,
+          "mid": 0.63,
+          "costUsd": 62.5,
+          "spreadPctOfMid": 4.8,
+          "openInterest": 2744
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 46,
+          "delta": 0.308,
+          "bid": 0.74,
+          "ask": 0.77,
+          "mid": 0.76,
+          "costUsd": 75.5,
+          "spreadPctOfMid": 4,
+          "openInterest": 1408
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 45.5,
+        "delta": 0.314,
+        "bid": 0.61,
+        "ask": 0.64,
+        "mid": 0.63,
+        "costUsd": 62.5,
+        "spreadPctOfMid": 4.8,
+        "openInterest": 2744
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 15,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 15,
+        "medianSpreadPctOfMid": 3.6
+      },
+      "detail": "IBIT: cheapest qualifying contract $63 (2026-09-25 45.5 call, delta 0.314)."
+    },
+    {
+      "symbol": "ICE",
+      "spot": 157.4,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 162.5,
+          "delta": 0.302,
+          "bid": 1.65,
+          "ask": 2.1,
+          "mid": 1.88,
+          "costUsd": 187.5,
+          "spreadPctOfMid": 24,
+          "openInterest": 25
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-10-02",
+        "kind": "call",
+        "strike": 162.5,
+        "delta": 0.302,
+        "bid": 1.65,
+        "ask": 2.1,
+        "mid": 1.88,
+        "costUsd": 187.5,
+        "spreadPctOfMid": 24,
+        "openInterest": 25
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 7,
+        "unpriceable": 0,
+        "spread": 3,
+        "openInterest": 0,
+        "both": 3,
+        "passed": 1,
+        "medianSpreadPctOfMid": 35.3
+      },
+      "detail": "ICE: cheapest qualifying contract $188 (2026-10-02 162.5 call, delta 0.302)."
+    },
+    {
+      "symbol": "INTC",
+      "spot": 102.94,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 110,
+          "delta": 0.308,
+          "bid": 2.16,
+          "ask": 2.22,
+          "mid": 2.19,
+          "costUsd": 219,
+          "spreadPctOfMid": 2.7,
+          "openInterest": 5111
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 112,
+          "delta": 0.31,
+          "bid": 2.65,
+          "ask": 2.74,
+          "mid": 2.7,
+          "costUsd": 269.5,
+          "spreadPctOfMid": 3.3,
+          "openInterest": 529
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 110,
+        "delta": 0.308,
+        "bid": 2.16,
+        "ask": 2.22,
+        "mid": 2.19,
+        "costUsd": 219,
+        "spreadPctOfMid": 2.7,
+        "openInterest": 5111
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 29,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 29,
+        "medianSpreadPctOfMid": 3.1
+      },
+      "detail": "INTC: cheapest qualifying contract $219 (2026-09-25 110 call, delta 0.308)."
+    },
+    {
+      "symbol": "IONQ",
+      "spot": 36.75,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 40,
+          "delta": 0.316,
+          "bid": 0.8,
+          "ask": 0.92,
+          "mid": 0.86,
+          "costUsd": 86,
+          "spreadPctOfMid": 14,
+          "openInterest": 1516
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 40,
+          "delta": 0.353,
+          "bid": 1.27,
+          "ask": 1.42,
+          "mid": 1.35,
+          "costUsd": 134.5,
+          "spreadPctOfMid": 11.2,
+          "openInterest": 567
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 40,
+        "delta": 0.316,
+        "bid": 0.8,
+        "ask": 0.92,
+        "mid": 0.86,
+        "costUsd": 86,
+        "spreadPctOfMid": 14,
+        "openInterest": 1516
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 18,
+        "unpriceable": 0,
+        "spread": 10,
+        "openInterest": 1,
+        "both": 0,
+        "passed": 7,
+        "medianSpreadPctOfMid": 28.3
+      },
+      "detail": "IONQ: cheapest qualifying contract $86 (2026-09-25 40 call, delta 0.316)."
+    },
+    {
+      "symbol": "IREN",
+      "spot": 43.83,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 48,
+          "delta": 0.303,
+          "bid": 1.13,
+          "ask": 1.21,
+          "mid": 1.17,
+          "costUsd": 117,
+          "spreadPctOfMid": 6.8,
+          "openInterest": 1016
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 49,
+          "delta": 0.318,
+          "bid": 1.42,
+          "ask": 1.62,
+          "mid": 1.52,
+          "costUsd": 152,
+          "spreadPctOfMid": 13.2,
+          "openInterest": 520
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 48,
+        "delta": 0.303,
+        "bid": 1.13,
+        "ask": 1.21,
+        "mid": 1.17,
+        "costUsd": 117,
+        "spreadPctOfMid": 6.8,
+        "openInterest": 1016
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 23,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 2,
+        "both": 0,
+        "passed": 21,
+        "medianSpreadPctOfMid": 8.1
+      },
+      "detail": "IREN: cheapest qualifying contract $117 (2026-09-25 48 call, delta 0.303)."
+    },
+    {
+      "symbol": "ISRG",
+      "spot": 369.15,
+      "cheapestByExpiry": [],
+      "cheapest": null,
+      "missReason": "band_contracts_all_gated",
+      "gates": {
+        "inBand": 18,
+        "unpriceable": 0,
+        "spread": 13,
+        "openInterest": 0,
+        "both": 5,
+        "passed": 0,
+        "medianSpreadPctOfMid": 89.4
+      },
+      "detail": "ISRG excluded: 18 contracts sat in the delta band and all 18 failed a gate — 18 on the spread gate (median market 89.4% of mid against a 25% limit), 5 on open interest under 10. Quotable, not tradeable. A median market this far past the limit is more consistent with a stale or one-sided quote feed than with the underlying's liquidity, so treat this exclusion as unconfirmed until the chain is read from a live venue."
+    },
+    {
+      "symbol": "IWM",
+      "spot": 288.89,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 293,
+          "delta": 0.318,
+          "bid": 1.9,
+          "ask": 1.95,
+          "mid": 1.92,
+          "costUsd": 192.5,
+          "spreadPctOfMid": 2.6,
+          "openInterest": 884
+        },
+        {
+          "expiry": "2026-09-30",
+          "kind": "put",
+          "strike": 285,
+          "delta": -0.373,
+          "bid": 3.11,
+          "ask": 3.19,
+          "mid": 3.15,
+          "costUsd": 315,
+          "spreadPctOfMid": 2.5,
+          "openInterest": 50369
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 293,
+        "delta": 0.318,
+        "bid": 1.9,
+        "ask": 1.95,
+        "mid": 1.92,
+        "costUsd": 192.5,
+        "spreadPctOfMid": 2.6,
+        "openInterest": 884
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 14,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 14,
+        "medianSpreadPctOfMid": 2.3
+      },
+      "detail": "IWM: cheapest qualifying contract $193 (2026-09-25 293 call, delta 0.318)."
+    },
+    {
+      "symbol": "KEY",
+      "spot": 21.84,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-10-16",
+          "kind": "call",
+          "strike": 22,
+          "delta": 0.483,
+          "bid": 0.5,
+          "ask": 0.6,
+          "mid": 0.55,
+          "costUsd": 55,
+          "spreadPctOfMid": 18.2,
+          "openInterest": 389
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-10-16",
+        "kind": "call",
+        "strike": 22,
+        "delta": 0.483,
+        "bid": 0.5,
+        "ask": 0.6,
+        "mid": 0.55,
+        "costUsd": 55,
+        "spreadPctOfMid": 18.2,
+        "openInterest": 389
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 4,
+        "unpriceable": 0,
+        "spread": 3,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 1,
+        "medianSpreadPctOfMid": 32.9
+      },
+      "detail": "KEY: cheapest qualifying contract $55 (2026-10-16 22 call, delta 0.483)."
+    },
+    {
+      "symbol": "KGC",
+      "spot": 29.13,
+      "cheapestByExpiry": [],
+      "cheapest": null,
+      "missReason": "band_contracts_all_gated",
+      "gates": {
+        "inBand": 15,
+        "unpriceable": 0,
+        "spread": 9,
+        "openInterest": 0,
+        "both": 6,
+        "passed": 0,
+        "medianSpreadPctOfMid": 89.6
+      },
+      "detail": "KGC excluded: 15 contracts sat in the delta band and all 15 failed a gate — 15 on the spread gate (median market 89.6% of mid against a 25% limit), 6 on open interest under 10. Quotable, not tradeable. A median market this far past the limit is more consistent with a stale or one-sided quote feed than with the underlying's liquidity, so treat this exclusion as unconfirmed until the chain is read from a live venue."
+    },
+    {
+      "symbol": "KLAC",
+      "spot": 180.64,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 190,
+          "delta": 0.376,
+          "bid": 5,
+          "ask": 6.1,
+          "mid": 5.55,
+          "costUsd": 555,
+          "spreadPctOfMid": 19.8,
+          "openInterest": 80
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-10-02",
+        "kind": "call",
+        "strike": 190,
+        "delta": 0.376,
+        "bid": 5,
+        "ask": 6.1,
+        "mid": 5.55,
+        "costUsd": 555,
+        "spreadPctOfMid": 19.8,
+        "openInterest": 80
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 13,
+        "unpriceable": 0,
+        "spread": 7,
+        "openInterest": 0,
+        "both": 4,
+        "passed": 2,
+        "medianSpreadPctOfMid": 29.1
+      },
+      "detail": "KLAC: cheapest qualifying contract $555 (2026-10-02 190 call, delta 0.376)."
+    },
+    {
+      "symbol": "LEN",
+      "spot": 79.6,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "put",
+          "strike": 78,
+          "delta": -0.391,
+          "bid": 2.05,
+          "ask": 2.5,
+          "mid": 2.28,
+          "costUsd": 227.5,
+          "spreadPctOfMid": 19.8,
+          "openInterest": 66
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "put",
+        "strike": 78,
+        "delta": -0.391,
+        "bid": 2.05,
+        "ask": 2.5,
+        "mid": 2.28,
+        "costUsd": 227.5,
+        "spreadPctOfMid": 19.8,
+        "openInterest": 66
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 17,
+        "unpriceable": 0,
+        "spread": 8,
+        "openInterest": 0,
+        "both": 6,
+        "passed": 3,
+        "medianSpreadPctOfMid": 46.5
+      },
+      "detail": "LEN: cheapest qualifying contract $228 (2026-09-25 78 put, delta -0.391)."
+    },
+    {
+      "symbol": "LHX",
+      "spot": 245.54,
+      "cheapestByExpiry": [],
+      "cheapest": null,
+      "missReason": "band_contracts_all_gated",
+      "gates": {
+        "inBand": 8,
+        "unpriceable": 0,
+        "spread": 2,
+        "openInterest": 0,
+        "both": 6,
+        "passed": 0,
+        "medianSpreadPctOfMid": 54.3
+      },
+      "detail": "LHX excluded: 8 contracts sat in the delta band and all 8 failed a gate — 8 on the spread gate (median market 54.3% of mid against a 25% limit), 6 on open interest under 10. Quotable, not tradeable. A median market this far past the limit is more consistent with a stale or one-sided quote feed than with the underlying's liquidity, so treat this exclusion as unconfirmed until the chain is read from a live venue."
+    },
+    {
+      "symbol": "LMT",
+      "spot": 524.19,
+      "cheapestByExpiry": [],
+      "cheapest": null,
+      "missReason": "band_contracts_all_gated",
+      "gates": {
+        "inBand": 16,
+        "unpriceable": 0,
+        "spread": 7,
+        "openInterest": 1,
+        "both": 8,
+        "passed": 0,
+        "medianSpreadPctOfMid": 55.6
+      },
+      "detail": "LMT excluded: 16 contracts sat in the delta band and all 16 failed a gate — 15 on the spread gate (median market 55.6% of mid against a 25% limit), 9 on open interest under 10. Quotable, not tradeable. A median market this far past the limit is more consistent with a stale or one-sided quote feed than with the underlying's liquidity, so treat this exclusion as unconfirmed until the chain is read from a live venue."
+    },
+    {
+      "symbol": "LOW",
+      "spot": 196.82,
+      "cheapestByExpiry": [],
+      "cheapest": null,
+      "missReason": "band_contracts_all_gated",
+      "gates": {
+        "inBand": 6,
+        "unpriceable": 0,
+        "spread": 4,
+        "openInterest": 0,
+        "both": 2,
+        "passed": 0,
+        "medianSpreadPctOfMid": 46.8
+      },
+      "detail": "LOW excluded: 6 contracts sat in the delta band and all 6 failed a gate — 6 on the spread gate (median market 46.8% of mid against a 25% limit), 2 on open interest under 10. Quotable, not tradeable."
+    },
+    {
+      "symbol": "LRCX",
+      "spot": 298.22,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 315,
+          "delta": 0.318,
+          "bid": 5.8,
+          "ask": 6.55,
+          "mid": 6.18,
+          "costUsd": 617.5,
+          "spreadPctOfMid": 12.1,
+          "openInterest": 207
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "put",
+          "strike": 285,
+          "delta": -0.336,
+          "bid": 8.15,
+          "ask": 10.1,
+          "mid": 9.13,
+          "costUsd": 912.5,
+          "spreadPctOfMid": 21.4,
+          "openInterest": 129
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 315,
+        "delta": 0.318,
+        "bid": 5.8,
+        "ask": 6.55,
+        "mid": 6.18,
+        "costUsd": 617.5,
+        "spreadPctOfMid": 12.1,
+        "openInterest": 207
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 21,
+        "unpriceable": 0,
+        "spread": 2,
+        "openInterest": 5,
+        "both": 1,
+        "passed": 13,
+        "medianSpreadPctOfMid": 19.6
+      },
+      "detail": "LRCX: cheapest qualifying contract $618 (2026-09-25 315 call, delta 0.318)."
+    },
+    {
+      "symbol": "LULU",
+      "spot": 98.97,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 103,
+          "delta": 0.324,
+          "bid": 1.33,
+          "ask": 1.64,
+          "mid": 1.49,
+          "costUsd": 148.5,
+          "spreadPctOfMid": 20.9,
+          "openInterest": 16
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 100,
+          "delta": 0.499,
+          "bid": 3.1,
+          "ask": 3.45,
+          "mid": 3.28,
+          "costUsd": 327.5,
+          "spreadPctOfMid": 10.7,
+          "openInterest": 798
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 103,
+        "delta": 0.324,
+        "bid": 1.33,
+        "ask": 1.64,
+        "mid": 1.49,
+        "costUsd": 148.5,
+        "spreadPctOfMid": 20.9,
+        "openInterest": 16
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 21,
+        "unpriceable": 0,
+        "spread": 3,
+        "openInterest": 6,
+        "both": 6,
+        "passed": 6,
+        "medianSpreadPctOfMid": 21.4
+      },
+      "detail": "LULU: cheapest qualifying contract $149 (2026-09-25 103 call, delta 0.324)."
+    },
+    {
+      "symbol": "MARA",
+      "spot": 11.98,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 13,
+          "delta": 0.332,
+          "bid": 0.37,
+          "ask": 0.41,
+          "mid": 0.39,
+          "costUsd": 39,
+          "spreadPctOfMid": 10.3,
+          "openInterest": 3643
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 13.5,
+          "delta": 0.314,
+          "bid": 0.42,
+          "ask": 0.46,
+          "mid": 0.44,
+          "costUsd": 44,
+          "spreadPctOfMid": 9.1,
+          "openInterest": 553
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 13,
+        "delta": 0.332,
+        "bid": 0.37,
+        "ask": 0.41,
+        "mid": 0.39,
+        "costUsd": 39,
+        "spreadPctOfMid": 10.3,
+        "openInterest": 3643
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 9,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 9,
+        "medianSpreadPctOfMid": 7.8
+      },
+      "detail": "MARA: cheapest qualifying contract $39 (2026-09-25 13 call, delta 0.332)."
+    },
+    {
+      "symbol": "MDT",
+      "spot": 90.96,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 93,
+          "delta": 0.301,
+          "bid": 0.72,
+          "ask": 0.89,
+          "mid": 0.81,
+          "costUsd": 80.5,
+          "spreadPctOfMid": 21.1,
+          "openInterest": 150
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 91,
+          "delta": 0.467,
+          "bid": 1.55,
+          "ask": 1.94,
+          "mid": 1.75,
+          "costUsd": 174.5,
+          "spreadPctOfMid": 22.3,
+          "openInterest": 676
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 93,
+        "delta": 0.301,
+        "bid": 0.72,
+        "ask": 0.89,
+        "mid": 0.81,
+        "costUsd": 80.5,
+        "spreadPctOfMid": 21.1,
+        "openInterest": 150
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 10,
+        "unpriceable": 0,
+        "spread": 7,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 3,
+        "medianSpreadPctOfMid": 34.6
+      },
+      "detail": "MDT: cheapest qualifying contract $81 (2026-09-25 93 call, delta 0.301)."
+    },
+    {
+      "symbol": "MS",
+      "spot": 214.38,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 220,
+          "delta": 0.344,
+          "bid": 2.3,
+          "ask": 2.7,
+          "mid": 2.5,
+          "costUsd": 250,
+          "spreadPctOfMid": 16,
+          "openInterest": 557
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 220,
+          "delta": 0.384,
+          "bid": 3.4,
+          "ask": 4.15,
+          "mid": 3.78,
+          "costUsd": 377.5,
+          "spreadPctOfMid": 19.9,
+          "openInterest": 81
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 220,
+        "delta": 0.344,
+        "bid": 2.3,
+        "ask": 2.7,
+        "mid": 2.5,
+        "costUsd": 250,
+        "spreadPctOfMid": 16,
+        "openInterest": 557
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 8,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 1,
+        "both": 1,
+        "passed": 6,
+        "medianSpreadPctOfMid": 14.6
+      },
+      "detail": "MS: cheapest qualifying contract $250 (2026-09-25 220 call, delta 0.344)."
+    },
+    {
+      "symbol": "MSFT",
+      "spot": 495.63,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "put",
+          "strike": 487.5,
+          "delta": -0.334,
+          "bid": 4.6,
+          "ask": 5.5,
+          "mid": 5.05,
+          "costUsd": 505,
+          "spreadPctOfMid": 17.8,
+          "openInterest": 21
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 510,
+          "delta": 0.335,
+          "bid": 5.7,
+          "ask": 6.4,
+          "mid": 6.05,
+          "costUsd": 605,
+          "spreadPctOfMid": 11.6,
+          "openInterest": 1254
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "put",
+        "strike": 487.5,
+        "delta": -0.334,
+        "bid": 4.6,
+        "ask": 5.5,
+        "mid": 5.05,
+        "costUsd": 505,
+        "spreadPctOfMid": 17.8,
+        "openInterest": 21
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 15,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 3,
+        "both": 0,
+        "passed": 12,
+        "medianSpreadPctOfMid": 11.4
+      },
+      "detail": "MSFT: cheapest qualifying contract $505 (2026-09-25 487.5 put, delta -0.334)."
+    },
+    {
+      "symbol": "MSTR",
+      "spot": 130.97,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 142,
+          "delta": 0.31,
+          "bid": 3.15,
+          "ask": 3.3,
+          "mid": 3.22,
+          "costUsd": 322.5,
+          "spreadPctOfMid": 4.7,
+          "openInterest": 188
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 146,
+          "delta": 0.301,
+          "bid": 3.6,
+          "ask": 3.95,
+          "mid": 3.78,
+          "costUsd": 377.5,
+          "spreadPctOfMid": 9.3,
+          "openInterest": 83
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 142,
+        "delta": 0.31,
+        "bid": 3.15,
+        "ask": 3.3,
+        "mid": 3.22,
+        "costUsd": 322.5,
+        "spreadPctOfMid": 4.7,
+        "openInterest": 188
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 43,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 43,
+        "medianSpreadPctOfMid": 6.2
+      },
+      "detail": "MSTR: cheapest qualifying contract $323 (2026-09-25 142 call, delta 0.31)."
+    },
+    {
+      "symbol": "MSTU",
+      "spot": 30.41,
+      "cheapestByExpiry": [],
+      "cheapest": null,
+      "missReason": "band_contracts_all_gated",
+      "gates": {
+        "inBand": 41,
+        "unpriceable": 0,
+        "spread": 6,
+        "openInterest": 0,
+        "both": 35,
+        "passed": 0,
+        "medianSpreadPctOfMid": 69.7
+      },
+      "detail": "MSTU excluded: 41 contracts sat in the delta band and all 41 failed a gate — 41 on the spread gate (median market 69.7% of mid against a 25% limit), 35 on open interest under 10. Quotable, not tradeable. A median market this far past the limit is more consistent with a stale or one-sided quote feed than with the underlying's liquidity, so treat this exclusion as unconfirmed until the chain is read from a live venue."
+    },
+    {
+      "symbol": "MSTX",
+      "spot": 14.01,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-10-02",
+          "kind": "put",
+          "strike": 13.5,
+          "delta": -0.391,
+          "bid": 1.31,
+          "ask": 1.66,
+          "mid": 1.49,
+          "costUsd": 148.5,
+          "spreadPctOfMid": 23.6,
+          "openInterest": 22
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-10-02",
+        "kind": "put",
+        "strike": 13.5,
+        "delta": -0.391,
+        "bid": 1.31,
+        "ask": 1.66,
+        "mid": 1.49,
+        "costUsd": 148.5,
+        "spreadPctOfMid": 23.6,
+        "openInterest": 22
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 15,
+        "unpriceable": 0,
+        "spread": 10,
+        "openInterest": 0,
+        "both": 4,
+        "passed": 1,
+        "medianSpreadPctOfMid": 40.3
+      },
+      "detail": "MSTX: cheapest qualifying contract $149 (2026-10-02 13.5 put, delta -0.391)."
+    },
+    {
+      "symbol": "MTB",
+      "spot": 239.83,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-10-16",
+          "kind": "put",
+          "strike": 240,
+          "delta": -0.478,
+          "bid": 6.4,
+          "ask": 7.7,
+          "mid": 7.05,
+          "costUsd": 705,
+          "spreadPctOfMid": 18.4,
+          "openInterest": 28
+        },
+        {
+          "expiry": "2026-12-18",
+          "kind": "call",
+          "strike": 250,
+          "delta": 0.387,
+          "bid": 6.3,
+          "ask": 7.6,
+          "mid": 6.95,
+          "costUsd": 695,
+          "spreadPctOfMid": 18.7,
+          "openInterest": 180
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-12-18",
+        "kind": "call",
+        "strike": 250,
+        "delta": 0.387,
+        "bid": 6.3,
+        "ask": 7.6,
+        "mid": 6.95,
+        "costUsd": 695,
+        "spreadPctOfMid": 18.7,
+        "openInterest": 180
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 4,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 2,
+        "both": 0,
+        "passed": 2,
+        "medianSpreadPctOfMid": 18.9
+      },
+      "detail": "MTB: cheapest qualifying contract $695 (2026-12-18 250 call, delta 0.387)."
+    },
+    {
+      "symbol": "MU",
+      "spot": 975.26,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 1030,
+          "delta": 0.308,
+          "bid": 16.15,
+          "ask": 19.7,
+          "mid": 17.92,
+          "costUsd": 1792.5,
+          "spreadPctOfMid": 19.8,
+          "openInterest": 326
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 1065,
+          "delta": 0.309,
+          "bid": 24.7,
+          "ask": 27.95,
+          "mid": 26.33,
+          "costUsd": 2632.5,
+          "spreadPctOfMid": 12.3,
+          "openInterest": 79
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 1030,
+        "delta": 0.308,
+        "bid": 16.15,
+        "ask": 19.7,
+        "mid": 17.92,
+        "costUsd": 1792.5,
+        "spreadPctOfMid": 19.8,
+        "openInterest": 326
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 54,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 2,
+        "both": 2,
+        "passed": 50,
+        "medianSpreadPctOfMid": 7.9
+      },
+      "detail": "MU: cheapest qualifying contract $1793 (2026-09-25 1030 call, delta 0.308)."
+    },
+    {
+      "symbol": "NEE",
+      "spot": 82.31,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-10-02",
+          "kind": "put",
+          "strike": 82,
+          "delta": -0.418,
+          "bid": 1.19,
+          "ask": 1.44,
+          "mid": 1.32,
+          "costUsd": 131.5,
+          "spreadPctOfMid": 19,
+          "openInterest": 944
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-10-02",
+        "kind": "put",
+        "strike": 82,
+        "delta": -0.418,
+        "bid": 1.19,
+        "ask": 1.44,
+        "mid": 1.32,
+        "costUsd": 131.5,
+        "spreadPctOfMid": 19,
+        "openInterest": 944
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 9,
+        "unpriceable": 0,
+        "spread": 8,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 1,
+        "medianSpreadPctOfMid": 41
+      },
+      "detail": "NEE: cheapest qualifying contract $132 (2026-10-02 82 put, delta -0.418)."
+    },
+    {
+      "symbol": "NEM",
+      "spot": 126.81,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 131,
+          "delta": 0.365,
+          "bid": 2.19,
+          "ask": 2.58,
+          "mid": 2.38,
+          "costUsd": 238.5,
+          "spreadPctOfMid": 16.4,
+          "openInterest": 227
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 130,
+          "delta": 0.437,
+          "bid": 3.4,
+          "ask": 3.95,
+          "mid": 3.68,
+          "costUsd": 367.5,
+          "spreadPctOfMid": 15,
+          "openInterest": 1011
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 131,
+        "delta": 0.365,
+        "bid": 2.19,
+        "ask": 2.58,
+        "mid": 2.38,
+        "costUsd": 238.5,
+        "spreadPctOfMid": 16.4,
+        "openInterest": 227
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 23,
+        "unpriceable": 0,
+        "spread": 13,
+        "openInterest": 0,
+        "both": 5,
+        "passed": 5,
+        "medianSpreadPctOfMid": 36.1
+      },
+      "detail": "NEM: cheapest qualifying contract $239 (2026-09-25 131 call, delta 0.365)."
+    },
+    {
+      "symbol": "NOC",
+      "spot": 518.97,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-10-16",
+          "kind": "put",
+          "strike": 505,
+          "delta": -0.331,
+          "bid": 9.9,
+          "ask": 11.9,
+          "mid": 10.9,
+          "costUsd": 1090,
+          "spreadPctOfMid": 18.3,
+          "openInterest": 15
+        },
+        {
+          "expiry": "2026-11-20",
+          "kind": "call",
+          "strike": 560,
+          "delta": 0.335,
+          "bid": 12.1,
+          "ask": 13.7,
+          "mid": 12.9,
+          "costUsd": 1290,
+          "spreadPctOfMid": 12.4,
+          "openInterest": 206
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-10-16",
+        "kind": "put",
+        "strike": 505,
+        "delta": -0.331,
+        "bid": 9.9,
+        "ask": 11.9,
+        "mid": 10.9,
+        "costUsd": 1090,
+        "spreadPctOfMid": 18.3,
+        "openInterest": 15
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 24,
+        "unpriceable": 0,
+        "spread": 2,
+        "openInterest": 4,
+        "both": 7,
+        "passed": 11,
+        "medianSpreadPctOfMid": 22.8
+      },
+      "detail": "NOC: cheapest qualifying contract $1090 (2026-10-16 505 put, delta -0.331)."
+    },
+    {
+      "symbol": "NOW",
+      "spot": 132.53,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 140,
+          "delta": 0.313,
+          "bid": 2.46,
+          "ask": 2.6,
+          "mid": 2.53,
+          "costUsd": 253,
+          "spreadPctOfMid": 5.5,
+          "openInterest": 619
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 142,
+          "delta": 0.318,
+          "bid": 3.05,
+          "ask": 3.25,
+          "mid": 3.15,
+          "costUsd": 315,
+          "spreadPctOfMid": 6.3,
+          "openInterest": 371
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 140,
+        "delta": 0.313,
+        "bid": 2.46,
+        "ask": 2.6,
+        "mid": 2.53,
+        "costUsd": 253,
+        "spreadPctOfMid": 5.5,
+        "openInterest": 619
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 31,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 31,
+        "medianSpreadPctOfMid": 4.8
+      },
+      "detail": "NOW: cheapest qualifying contract $253 (2026-09-25 140 call, delta 0.313)."
+    },
+    {
+      "symbol": "NSC",
+      "spot": 320.27,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-10-16",
+          "kind": "put",
+          "strike": 320,
+          "delta": -0.424,
+          "bid": 6.1,
+          "ask": 7.8,
+          "mid": 6.95,
+          "costUsd": 695,
+          "spreadPctOfMid": 24.5,
+          "openInterest": 20
+        },
+        {
+          "expiry": "2026-12-18",
+          "kind": "call",
+          "strike": 340,
+          "delta": 0.32,
+          "bid": 6.3,
+          "ask": 7.4,
+          "mid": 6.85,
+          "costUsd": 685,
+          "spreadPctOfMid": 16.1,
+          "openInterest": 136
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-12-18",
+        "kind": "call",
+        "strike": 340,
+        "delta": 0.32,
+        "bid": 6.3,
+        "ask": 7.4,
+        "mid": 6.85,
+        "costUsd": 685,
+        "spreadPctOfMid": 16.1,
+        "openInterest": 136
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 6,
+        "unpriceable": 0,
+        "spread": 3,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 3,
+        "medianSpreadPctOfMid": 32.2
+      },
+      "detail": "NSC: cheapest qualifying contract $685 (2026-12-18 340 call, delta 0.32)."
+    },
+    {
+      "symbol": "NVDA",
+      "spot": 218.29,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 225,
+          "delta": 0.318,
+          "bid": 2.5,
+          "ask": 2.53,
+          "mid": 2.51,
+          "costUsd": 251.5,
+          "spreadPctOfMid": 1.2,
+          "openInterest": 11953
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 225,
+          "delta": 0.362,
+          "bid": 3.75,
+          "ask": 3.85,
+          "mid": 3.8,
+          "costUsd": 380,
+          "spreadPctOfMid": 2.6,
+          "openInterest": 5914
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 225,
+        "delta": 0.318,
+        "bid": 2.5,
+        "ask": 2.53,
+        "mid": 2.51,
+        "costUsd": 251.5,
+        "spreadPctOfMid": 1.2,
+        "openInterest": 11953
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 9,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 9,
+        "medianSpreadPctOfMid": 2.7
+      },
+      "detail": "NVDA: cheapest qualifying contract $252 (2026-09-25 225 call, delta 0.318)."
+    },
+    {
+      "symbol": "NVR",
+      "spot": null,
+      "cheapestByExpiry": [],
+      "cheapest": null,
+      "missReason": "no_chain",
+      "gates": {
+        "inBand": 0,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 0,
+        "medianSpreadPctOfMid": null
+      },
+      "detail": "NVR excluded: no option chain was returned, so affordability is unknown rather than false. Venue said: Tradier lists no option expirations for NVR."
+    },
+    {
+      "symbol": "ODFL",
+      "spot": 179.79,
+      "cheapestByExpiry": [],
+      "cheapest": null,
+      "missReason": "band_contracts_all_gated",
+      "gates": {
+        "inBand": 10,
+        "unpriceable": 0,
+        "spread": 7,
+        "openInterest": 0,
+        "both": 3,
+        "passed": 0,
+        "medianSpreadPctOfMid": 49.2
+      },
+      "detail": "ODFL excluded: 10 contracts sat in the delta band and all 10 failed a gate — 10 on the spread gate (median market 49.2% of mid against a 25% limit), 3 on open interest under 10. Quotable, not tradeable."
+    },
+    {
+      "symbol": "OKLO",
+      "spot": 36.22,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 38,
+          "delta": 0.392,
+          "bid": 1.12,
+          "ask": 1.3,
+          "mid": 1.21,
+          "costUsd": 121,
+          "spreadPctOfMid": 14.9,
+          "openInterest": 75
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 40,
+          "delta": 0.311,
+          "bid": 1.12,
+          "ask": 1.17,
+          "mid": 1.15,
+          "costUsd": 114.5,
+          "spreadPctOfMid": 4.4,
+          "openInterest": 233
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-10-02",
+        "kind": "call",
+        "strike": 40,
+        "delta": 0.311,
+        "bid": 1.12,
+        "ask": 1.17,
+        "mid": 1.15,
+        "costUsd": 114.5,
+        "spreadPctOfMid": 4.4,
+        "openInterest": 233
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 17,
+        "unpriceable": 0,
+        "spread": 1,
+        "openInterest": 4,
+        "both": 0,
+        "passed": 12,
+        "medianSpreadPctOfMid": 12.4
+      },
+      "detail": "OKLO: cheapest qualifying contract $115 (2026-10-02 40 call, delta 0.311)."
+    },
+    {
+      "symbol": "ORCL",
+      "spot": 150.28,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "put",
+          "strike": 144,
+          "delta": -0.3,
+          "bid": 2.93,
+          "ask": 3.1,
+          "mid": 3.02,
+          "costUsd": 301.5,
+          "spreadPctOfMid": 5.6,
+          "openInterest": 418
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "put",
+          "strike": 143,
+          "delta": -0.303,
+          "bid": 3.65,
+          "ask": 3.9,
+          "mid": 3.78,
+          "costUsd": 377.5,
+          "spreadPctOfMid": 6.6,
+          "openInterest": 92
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "put",
+        "strike": 144,
+        "delta": -0.3,
+        "bid": 2.93,
+        "ask": 3.1,
+        "mid": 3.02,
+        "costUsd": 301.5,
+        "spreadPctOfMid": 5.6,
+        "openInterest": 418
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 22,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 22,
+        "medianSpreadPctOfMid": 5.5
+      },
+      "detail": "ORCL: cheapest qualifying contract $302 (2026-09-25 144 put, delta -0.3)."
+    },
+    {
+      "symbol": "PANW",
+      "spot": 330.65,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "put",
+          "strike": 320,
+          "delta": -0.327,
+          "bid": 6.25,
+          "ask": 6.9,
+          "mid": 6.58,
+          "costUsd": 657.5,
+          "spreadPctOfMid": 9.9,
+          "openInterest": 354
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 340,
+          "delta": 0.43,
+          "bid": 9.35,
+          "ask": 12,
+          "mid": 10.68,
+          "costUsd": 1067.5,
+          "spreadPctOfMid": 24.8,
+          "openInterest": 42
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "put",
+        "strike": 320,
+        "delta": -0.327,
+        "bid": 6.25,
+        "ask": 6.9,
+        "mid": 6.58,
+        "costUsd": 657.5,
+        "spreadPctOfMid": 9.9,
+        "openInterest": 354
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 19,
+        "unpriceable": 0,
+        "spread": 4,
+        "openInterest": 3,
+        "both": 3,
+        "passed": 9,
+        "medianSpreadPctOfMid": 23.6
+      },
+      "detail": "PANW: cheapest qualifying contract $658 (2026-09-25 320 put, delta -0.327)."
+    },
+    {
+      "symbol": "PHM",
+      "spot": 118.26,
+      "cheapestByExpiry": [],
+      "cheapest": null,
+      "missReason": "band_contracts_all_gated",
+      "gates": {
+        "inBand": 17,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 0,
+        "both": 17,
+        "passed": 0,
+        "medianSpreadPctOfMid": 108.6
+      },
+      "detail": "PHM excluded: 17 contracts sat in the delta band and all 17 failed a gate — 17 on the spread gate (median market 108.6% of mid against a 25% limit), 17 on open interest under 10. Quotable, not tradeable. A median market this far past the limit is more consistent with a stale or one-sided quote feed than with the underlying's liquidity, so treat this exclusion as unconfirmed until the chain is read from a live venue."
+    },
+    {
+      "symbol": "PLTR",
+      "spot": 167.23,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 175,
+          "delta": 0.307,
+          "bid": 2.79,
+          "ask": 2.87,
+          "mid": 2.83,
+          "costUsd": 283,
+          "spreadPctOfMid": 2.8,
+          "openInterest": 1556
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 177.5,
+          "delta": 0.317,
+          "bid": 3.4,
+          "ask": 3.55,
+          "mid": 3.47,
+          "costUsd": 347.5,
+          "spreadPctOfMid": 4.3,
+          "openInterest": 1890
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 175,
+        "delta": 0.307,
+        "bid": 2.79,
+        "ask": 2.87,
+        "mid": 2.83,
+        "costUsd": 283,
+        "spreadPctOfMid": 2.8,
+        "openInterest": 1556
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 14,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 14,
+        "medianSpreadPctOfMid": 3.2
+      },
+      "detail": "PLTR: cheapest qualifying contract $283 (2026-09-25 175 call, delta 0.307)."
+    },
+    {
+      "symbol": "PUR",
+      "spot": null,
+      "cheapestByExpiry": [],
+      "cheapest": null,
+      "missReason": "no_chain",
+      "gates": {
+        "inBand": 0,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 0,
+        "medianSpreadPctOfMid": null
+      },
+      "detail": "PUR excluded: no option chain was returned, so affordability is unknown rather than false. Venue said: Tradier lists no option expirations for PUR."
+    },
+    {
+      "symbol": "PURR",
+      "spot": 11.61,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 13,
+          "delta": 0.321,
+          "bid": 0.4,
+          "ask": 0.5,
+          "mid": 0.45,
+          "costUsd": 45,
+          "spreadPctOfMid": 22.2,
+          "openInterest": 1393
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 12,
+          "delta": 0.499,
+          "bid": 0.8,
+          "ask": 1,
+          "mid": 0.9,
+          "costUsd": 90,
+          "spreadPctOfMid": 22.2,
+          "openInterest": 244
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 13,
+        "delta": 0.321,
+        "bid": 0.4,
+        "ask": 0.5,
+        "mid": 0.45,
+        "costUsd": 45,
+        "spreadPctOfMid": 22.2,
+        "openInterest": 1393
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 9,
+        "unpriceable": 0,
+        "spread": 5,
+        "openInterest": 0,
+        "both": 1,
+        "passed": 3,
+        "medianSpreadPctOfMid": 34.3
+      },
+      "detail": "PURR: cheapest qualifying contract $45 (2026-09-25 13 call, delta 0.321)."
+    },
+    {
+      "symbol": "QCOM",
+      "spot": 181.97,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 190,
+          "delta": 0.342,
+          "bid": 3.1,
+          "ask": 3.7,
+          "mid": 3.4,
+          "costUsd": 340,
+          "spreadPctOfMid": 17.6,
+          "openInterest": 525
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "put",
+          "strike": 175,
+          "delta": -0.319,
+          "bid": 4.05,
+          "ask": 4.95,
+          "mid": 4.5,
+          "costUsd": 450,
+          "spreadPctOfMid": 20,
+          "openInterest": 29
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 190,
+        "delta": 0.342,
+        "bid": 3.1,
+        "ask": 3.7,
+        "mid": 3.4,
+        "costUsd": 340,
+        "spreadPctOfMid": 17.6,
+        "openInterest": 525
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 10,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 1,
+        "both": 0,
+        "passed": 9,
+        "medianSpreadPctOfMid": 15.8
+      },
+      "detail": "QCOM: cheapest qualifying contract $340 (2026-09-25 190 call, delta 0.342)."
+    },
+    {
+      "symbol": "QQQ",
+      "spot": 714.88,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 727,
+          "delta": 0.302,
+          "bid": 3.66,
+          "ask": 3.75,
+          "mid": 3.71,
+          "costUsd": 370.5,
+          "spreadPctOfMid": 2.4,
+          "openInterest": 213
+        },
+        {
+          "expiry": "2026-09-30",
+          "kind": "call",
+          "strike": 728,
+          "delta": 0.31,
+          "bid": 4.73,
+          "ask": 4.85,
+          "mid": 4.79,
+          "costUsd": 479,
+          "spreadPctOfMid": 2.5,
+          "openInterest": 1273
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 727,
+        "delta": 0.302,
+        "bid": 3.66,
+        "ask": 3.75,
+        "mid": 3.71,
+        "costUsd": 370.5,
+        "spreadPctOfMid": 2.4,
+        "openInterest": 213
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 51,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 51,
+        "medianSpreadPctOfMid": 1.9
+      },
+      "detail": "QQQ: cheapest qualifying contract $371 (2026-09-25 727 call, delta 0.302)."
+    },
+    {
+      "symbol": "REGN",
+      "spot": 781.49,
+      "cheapestByExpiry": [],
+      "cheapest": null,
+      "missReason": "band_contracts_all_gated",
+      "gates": {
+        "inBand": 18,
+        "unpriceable": 0,
+        "spread": 1,
+        "openInterest": 0,
+        "both": 17,
+        "passed": 0,
+        "medianSpreadPctOfMid": 59.2
+      },
+      "detail": "REGN excluded: 18 contracts sat in the delta band and all 18 failed a gate — 18 on the spread gate (median market 59.2% of mid against a 25% limit), 17 on open interest under 10. Quotable, not tradeable. A median market this far past the limit is more consistent with a stale or one-sided quote feed than with the underlying's liquidity, so treat this exclusion as unconfirmed until the chain is read from a live venue."
+    },
+    {
+      "symbol": "RF",
+      "spot": 30.13,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-10-16",
+          "kind": "call",
+          "strike": 31,
+          "delta": 0.358,
+          "bid": 0.55,
+          "ask": 0.65,
+          "mid": 0.6,
+          "costUsd": 60,
+          "spreadPctOfMid": 16.7,
+          "openInterest": 78
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-10-16",
+        "kind": "call",
+        "strike": 31,
+        "delta": 0.358,
+        "bid": 0.55,
+        "ask": 0.65,
+        "mid": 0.6,
+        "costUsd": 60,
+        "spreadPctOfMid": 16.7,
+        "openInterest": 78
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 7,
+        "unpriceable": 0,
+        "spread": 4,
+        "openInterest": 1,
+        "both": 0,
+        "passed": 2,
+        "medianSpreadPctOfMid": 26.5
+      },
+      "detail": "RF: cheapest qualifying contract $60 (2026-10-16 31 call, delta 0.358)."
+    },
+    {
+      "symbol": "RIOT",
+      "spot": 21.47,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 23,
+          "delta": 0.356,
+          "bid": 0.63,
+          "ask": 0.71,
+          "mid": 0.67,
+          "costUsd": 67,
+          "spreadPctOfMid": 11.9,
+          "openInterest": 404
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "put",
+          "strike": 21,
+          "delta": -0.407,
+          "bid": 1.14,
+          "ask": 1.42,
+          "mid": 1.28,
+          "costUsd": 128,
+          "spreadPctOfMid": 21.9,
+          "openInterest": 138
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 23,
+        "delta": 0.356,
+        "bid": 0.63,
+        "ask": 0.71,
+        "mid": 0.67,
+        "costUsd": 67,
+        "spreadPctOfMid": 11.9,
+        "openInterest": 404
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 12,
+        "unpriceable": 0,
+        "spread": 5,
+        "openInterest": 1,
+        "both": 3,
+        "passed": 3,
+        "medianSpreadPctOfMid": 29.7
+      },
+      "detail": "RIOT: cheapest qualifying contract $67 (2026-09-25 23 call, delta 0.356)."
+    },
+    {
+      "symbol": "ROST",
+      "spot": 230.74,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 235,
+          "delta": 0.367,
+          "bid": 2.6,
+          "ask": 3,
+          "mid": 2.8,
+          "costUsd": 280,
+          "spreadPctOfMid": 14.3,
+          "openInterest": 29
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 235,
+        "delta": 0.367,
+        "bid": 2.6,
+        "ask": 3,
+        "mid": 2.8,
+        "costUsd": 280,
+        "spreadPctOfMid": 14.3,
+        "openInterest": 29
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 7,
+        "unpriceable": 0,
+        "spread": 3,
+        "openInterest": 0,
+        "both": 3,
+        "passed": 1,
+        "medianSpreadPctOfMid": 95.4
+      },
+      "detail": "ROST: cheapest qualifying contract $280 (2026-09-25 235 call, delta 0.367)."
+    },
+    {
+      "symbol": "RTX",
+      "spot": 197.68,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "put",
+          "strike": 195,
+          "delta": -0.348,
+          "bid": 1.98,
+          "ask": 2.45,
+          "mid": 2.22,
+          "costUsd": 221.5,
+          "spreadPctOfMid": 21.2,
+          "openInterest": 99
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "put",
+          "strike": 195,
+          "delta": -0.361,
+          "bid": 2.61,
+          "ask": 3.2,
+          "mid": 2.91,
+          "costUsd": 290.5,
+          "spreadPctOfMid": 20.3,
+          "openInterest": 23
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "put",
+        "strike": 195,
+        "delta": -0.348,
+        "bid": 1.98,
+        "ask": 2.45,
+        "mid": 2.22,
+        "costUsd": 221.5,
+        "spreadPctOfMid": 21.2,
+        "openInterest": 99
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 6,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 2,
+        "both": 0,
+        "passed": 4,
+        "medianSpreadPctOfMid": 18.3
+      },
+      "detail": "RTX: cheapest qualifying contract $222 (2026-09-25 195 put, delta -0.348)."
+    },
+    {
+      "symbol": "SBET",
+      "spot": 8.88,
+      "cheapestByExpiry": [],
+      "cheapest": null,
+      "missReason": "band_contracts_all_gated",
+      "gates": {
+        "inBand": 7,
+        "unpriceable": 0,
+        "spread": 6,
+        "openInterest": 0,
+        "both": 1,
+        "passed": 0,
+        "medianSpreadPctOfMid": 45
+      },
+      "detail": "SBET excluded: 7 contracts sat in the delta band and all 7 failed a gate — 7 on the spread gate (median market 45% of mid against a 25% limit), 1 on open interest under 10. Quotable, not tradeable."
+    },
+    {
+      "symbol": "SCCO",
+      "spot": 193.49,
+      "cheapestByExpiry": [],
+      "cheapest": null,
+      "missReason": "band_contracts_all_gated",
+      "gates": {
+        "inBand": 12,
+        "unpriceable": 0,
+        "spread": 4,
+        "openInterest": 1,
+        "both": 7,
+        "passed": 0,
+        "medianSpreadPctOfMid": 54.7
+      },
+      "detail": "SCCO excluded: 12 contracts sat in the delta band and all 12 failed a gate — 11 on the spread gate (median market 54.7% of mid against a 25% limit), 8 on open interest under 10. Quotable, not tradeable. A median market this far past the limit is more consistent with a stale or one-sided quote feed than with the underlying's liquidity, so treat this exclusion as unconfirmed until the chain is read from a live venue."
+    },
+    {
+      "symbol": "SCHW",
+      "spot": 107.25,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "put",
+          "strike": 105,
+          "delta": -0.316,
+          "bid": 0.93,
+          "ask": 1.12,
+          "mid": 1.03,
+          "costUsd": 102.5,
+          "spreadPctOfMid": 18.5,
+          "openInterest": 152
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "put",
+          "strike": 105,
+          "delta": -0.341,
+          "bid": 1.33,
+          "ask": 1.65,
+          "mid": 1.49,
+          "costUsd": 149,
+          "spreadPctOfMid": 21.5,
+          "openInterest": 76
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "put",
+        "strike": 105,
+        "delta": -0.316,
+        "bid": 0.93,
+        "ask": 1.12,
+        "mid": 1.03,
+        "costUsd": 102.5,
+        "spreadPctOfMid": 18.5,
+        "openInterest": 152
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 11,
+        "unpriceable": 0,
+        "spread": 2,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 9,
+        "medianSpreadPctOfMid": 19.5
+      },
+      "detail": "SCHW: cheapest qualifying contract $103 (2026-09-25 105 put, delta -0.316)."
+    },
+    {
+      "symbol": "SLB",
+      "spot": 56.06,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 58,
+          "delta": 0.305,
+          "bid": 0.65,
+          "ask": 0.82,
+          "mid": 0.74,
+          "costUsd": 73.5,
+          "spreadPctOfMid": 23.1,
+          "openInterest": 155
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "put",
+          "strike": 54,
+          "delta": -0.311,
+          "bid": 0.91,
+          "ask": 1.08,
+          "mid": 1,
+          "costUsd": 99.5,
+          "spreadPctOfMid": 17.1,
+          "openInterest": 30
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 58,
+        "delta": 0.305,
+        "bid": 0.65,
+        "ask": 0.82,
+        "mid": 0.74,
+        "costUsd": 73.5,
+        "spreadPctOfMid": 23.1,
+        "openInterest": 155
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 9,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 9,
+        "medianSpreadPctOfMid": 17.9
+      },
+      "detail": "SLB: cheapest qualifying contract $74 (2026-09-25 58 call, delta 0.305)."
+    },
+    {
+      "symbol": "SNOW",
+      "spot": 328.99,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 340,
+          "delta": 0.354,
+          "bid": 5.8,
+          "ask": 7.45,
+          "mid": 6.63,
+          "costUsd": 662.5,
+          "spreadPctOfMid": 24.9,
+          "openInterest": 74
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 345,
+          "delta": 0.34,
+          "bid": 6.7,
+          "ask": 8.25,
+          "mid": 7.48,
+          "costUsd": 747.5,
+          "spreadPctOfMid": 20.7,
+          "openInterest": 80
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 340,
+        "delta": 0.354,
+        "bid": 5.8,
+        "ask": 7.45,
+        "mid": 6.63,
+        "costUsd": 662.5,
+        "spreadPctOfMid": 24.9,
+        "openInterest": 74
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 19,
+        "unpriceable": 0,
+        "spread": 1,
+        "openInterest": 4,
+        "both": 0,
+        "passed": 14,
+        "medianSpreadPctOfMid": 20.1
+      },
+      "detail": "SNOW: cheapest qualifying contract $663 (2026-09-25 340 call, delta 0.354)."
+    },
+    {
+      "symbol": "SO",
+      "spot": 87.17,
+      "cheapestByExpiry": [],
+      "cheapest": null,
+      "missReason": "band_contracts_all_gated",
+      "gates": {
+        "inBand": 7,
+        "unpriceable": 0,
+        "spread": 5,
+        "openInterest": 0,
+        "both": 2,
+        "passed": 0,
+        "medianSpreadPctOfMid": 75
+      },
+      "detail": "SO excluded: 7 contracts sat in the delta band and all 7 failed a gate — 7 on the spread gate (median market 75% of mid against a 25% limit), 2 on open interest under 10. Quotable, not tradeable. A median market this far past the limit is more consistent with a stale or one-sided quote feed than with the underlying's liquidity, so treat this exclusion as unconfirmed until the chain is read from a live venue."
+    },
+    {
+      "symbol": "SOLT",
+      "spot": 57.63,
+      "cheapestByExpiry": [],
+      "cheapest": null,
+      "missReason": "band_contracts_all_gated",
+      "gates": {
+        "inBand": 52,
+        "unpriceable": 0,
+        "spread": 9,
+        "openInterest": 10,
+        "both": 33,
+        "passed": 0,
+        "medianSpreadPctOfMid": 36.3
+      },
+      "detail": "SOLT excluded: 52 contracts sat in the delta band and all 52 failed a gate — 42 on the spread gate (median market 36.3% of mid against a 25% limit), 43 on open interest under 10. Quotable, not tradeable."
+    },
+    {
+      "symbol": "SOLZ",
+      "spot": 10.16,
+      "cheapestByExpiry": [],
+      "cheapest": null,
+      "missReason": "band_contracts_all_gated",
+      "gates": {
+        "inBand": 6,
+        "unpriceable": 0,
+        "spread": 5,
+        "openInterest": 0,
+        "both": 1,
+        "passed": 0,
+        "medianSpreadPctOfMid": 89.1
+      },
+      "detail": "SOLZ excluded: 6 contracts sat in the delta band and all 6 failed a gate — 6 on the spread gate (median market 89.1% of mid against a 25% limit), 1 on open interest under 10. Quotable, not tradeable. A median market this far past the limit is more consistent with a stale or one-sided quote feed than with the underlying's liquidity, so treat this exclusion as unconfirmed until the chain is read from a live venue."
+    },
+    {
+      "symbol": "SPY",
+      "spot": 764.29,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 772,
+          "delta": 0.309,
+          "bid": 2.92,
+          "ask": 2.96,
+          "mid": 2.94,
+          "costUsd": 294,
+          "spreadPctOfMid": 1.4,
+          "openInterest": 2132
+        },
+        {
+          "expiry": "2026-09-30",
+          "kind": "call",
+          "strike": 773,
+          "delta": 0.313,
+          "bid": 3.62,
+          "ask": 3.66,
+          "mid": 3.64,
+          "costUsd": 364,
+          "spreadPctOfMid": 1.1,
+          "openInterest": 2381
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 772,
+        "delta": 0.309,
+        "bid": 2.92,
+        "ask": 2.96,
+        "mid": 2.94,
+        "costUsd": 294,
+        "spreadPctOfMid": 1.4,
+        "openInterest": 2132
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 38,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 38,
+        "medianSpreadPctOfMid": 0.9
+      },
+      "detail": "SPY: cheapest qualifying contract $294 (2026-09-25 772 call, delta 0.309)."
+    },
+    {
+      "symbol": "SYK",
+      "spot": 275.56,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-10-16",
+          "kind": "call",
+          "strike": 280,
+          "delta": 0.458,
+          "bid": 7.4,
+          "ask": 9.5,
+          "mid": 8.45,
+          "costUsd": 845,
+          "spreadPctOfMid": 24.9,
+          "openInterest": 111
+        },
+        {
+          "expiry": "2026-12-18",
+          "kind": "call",
+          "strike": 300,
+          "delta": 0.36,
+          "bid": 8.9,
+          "ask": 11.4,
+          "mid": 10.15,
+          "costUsd": 1015,
+          "spreadPctOfMid": 24.6,
+          "openInterest": 152
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-10-16",
+        "kind": "call",
+        "strike": 280,
+        "delta": 0.458,
+        "bid": 7.4,
+        "ask": 9.5,
+        "mid": 8.45,
+        "costUsd": 845,
+        "spreadPctOfMid": 24.9,
+        "openInterest": 111
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 8,
+        "unpriceable": 0,
+        "spread": 2,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 6,
+        "medianSpreadPctOfMid": 27.3
+      },
+      "detail": "SYK: cheapest qualifying contract $845 (2026-10-16 280 call, delta 0.458)."
+    },
+    {
+      "symbol": "TECK",
+      "spot": 66.44,
+      "cheapestByExpiry": [],
+      "cheapest": null,
+      "missReason": "band_contracts_all_gated",
+      "gates": {
+        "inBand": 15,
+        "unpriceable": 0,
+        "spread": 2,
+        "openInterest": 1,
+        "both": 12,
+        "passed": 0,
+        "medianSpreadPctOfMid": 43.7
+      },
+      "detail": "TECK excluded: 15 contracts sat in the delta band and all 15 failed a gate — 14 on the spread gate (median market 43.7% of mid against a 25% limit), 13 on open interest under 10. Quotable, not tradeable."
+    },
+    {
+      "symbol": "TFC",
+      "spot": 50.4,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-10-16",
+          "kind": "call",
+          "strike": 52.5,
+          "delta": 0.329,
+          "bid": 0.75,
+          "ask": 0.9,
+          "mid": 0.83,
+          "costUsd": 82.5,
+          "spreadPctOfMid": 18.2,
+          "openInterest": 1760
+        },
+        {
+          "expiry": "2026-11-20",
+          "kind": "call",
+          "strike": 52.5,
+          "delta": 0.37,
+          "bid": 1.2,
+          "ask": 1.45,
+          "mid": 1.33,
+          "costUsd": 132.5,
+          "spreadPctOfMid": 18.9,
+          "openInterest": 578
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-10-16",
+        "kind": "call",
+        "strike": 52.5,
+        "delta": 0.329,
+        "bid": 0.75,
+        "ask": 0.9,
+        "mid": 0.83,
+        "costUsd": 82.5,
+        "spreadPctOfMid": 18.2,
+        "openInterest": 1760
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 4,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 4,
+        "medianSpreadPctOfMid": 15.8
+      },
+      "detail": "TFC: cheapest qualifying contract $83 (2026-10-16 52.5 call, delta 0.329)."
+    },
+    {
+      "symbol": "TGT",
+      "spot": 155.83,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "put",
+          "strike": 152.5,
+          "delta": -0.336,
+          "bid": 1.77,
+          "ask": 2.16,
+          "mid": 1.97,
+          "costUsd": 196.5,
+          "spreadPctOfMid": 19.8,
+          "openInterest": 340
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 160,
+          "delta": 0.369,
+          "bid": 2.55,
+          "ask": 2.79,
+          "mid": 2.67,
+          "costUsd": 267,
+          "spreadPctOfMid": 9,
+          "openInterest": 166
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "put",
+        "strike": 152.5,
+        "delta": -0.336,
+        "bid": 1.77,
+        "ask": 2.16,
+        "mid": 1.97,
+        "costUsd": 196.5,
+        "spreadPctOfMid": 19.8,
+        "openInterest": 340
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 8,
+        "unpriceable": 0,
+        "spread": 1,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 7,
+        "medianSpreadPctOfMid": 15.9
+      },
+      "detail": "TGT: cheapest qualifying contract $197 (2026-09-25 152.5 put, delta -0.336)."
+    },
+    {
+      "symbol": "TJX",
+      "spot": 126.02,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "put",
+          "strike": 125,
+          "delta": -0.389,
+          "bid": 1.4,
+          "ask": 1.55,
+          "mid": 1.48,
+          "costUsd": 147.5,
+          "spreadPctOfMid": 10.2,
+          "openInterest": 215
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "put",
+          "strike": 125,
+          "delta": -0.4,
+          "bid": 1.7,
+          "ask": 2,
+          "mid": 1.85,
+          "costUsd": 185,
+          "spreadPctOfMid": 16.2,
+          "openInterest": 104
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "put",
+        "strike": 125,
+        "delta": -0.389,
+        "bid": 1.4,
+        "ask": 1.55,
+        "mid": 1.48,
+        "costUsd": 147.5,
+        "spreadPctOfMid": 10.2,
+        "openInterest": 215
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 8,
+        "unpriceable": 0,
+        "spread": 1,
+        "openInterest": 3,
+        "both": 2,
+        "passed": 2,
+        "medianSpreadPctOfMid": 22.7
+      },
+      "detail": "TJX: cheapest qualifying contract $148 (2026-09-25 125 put, delta -0.389)."
+    },
+    {
+      "symbol": "TSM",
+      "spot": 433.24,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 445,
+          "delta": 0.33,
+          "bid": 5.3,
+          "ask": 5.65,
+          "mid": 5.48,
+          "costUsd": 547.5,
+          "spreadPctOfMid": 6.4,
+          "openInterest": 249
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 450,
+          "delta": 0.314,
+          "bid": 6.05,
+          "ask": 6.5,
+          "mid": 6.28,
+          "costUsd": 627.5,
+          "spreadPctOfMid": 7.2,
+          "openInterest": 366
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 445,
+        "delta": 0.33,
+        "bid": 5.3,
+        "ask": 5.65,
+        "mid": 5.48,
+        "costUsd": 547.5,
+        "spreadPctOfMid": 6.4,
+        "openInterest": 249
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 17,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 5,
+        "both": 0,
+        "passed": 12,
+        "medianSpreadPctOfMid": 5.7
+      },
+      "detail": "TSM: cheapest qualifying contract $548 (2026-09-25 445 call, delta 0.33)."
+    },
+    {
+      "symbol": "TXN",
+      "spot": 268.7,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 275,
+          "delta": 0.387,
+          "bid": 4.4,
+          "ask": 5.5,
+          "mid": 4.95,
+          "costUsd": 495,
+          "spreadPctOfMid": 22.2,
+          "openInterest": 40
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 280,
+          "delta": 0.336,
+          "bid": 4.3,
+          "ask": 5.5,
+          "mid": 4.9,
+          "costUsd": 490,
+          "spreadPctOfMid": 24.5,
+          "openInterest": 11
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-10-02",
+        "kind": "call",
+        "strike": 280,
+        "delta": 0.336,
+        "bid": 4.3,
+        "ask": 5.5,
+        "mid": 4.9,
+        "costUsd": 490,
+        "spreadPctOfMid": 24.5,
+        "openInterest": 11
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 13,
+        "unpriceable": 0,
+        "spread": 4,
+        "openInterest": 1,
+        "both": 4,
+        "passed": 4,
+        "medianSpreadPctOfMid": 27.4
+      },
+      "detail": "TXN: cheapest qualifying contract $490 (2026-10-02 280 call, delta 0.336)."
+    },
+    {
+      "symbol": "UNP",
+      "spot": 284.4,
+      "cheapestByExpiry": [],
+      "cheapest": null,
+      "missReason": "band_contracts_all_gated",
+      "gates": {
+        "inBand": 8,
+        "unpriceable": 0,
+        "spread": 3,
+        "openInterest": 0,
+        "both": 5,
+        "passed": 0,
+        "medianSpreadPctOfMid": 80.4
+      },
+      "detail": "UNP excluded: 8 contracts sat in the delta band and all 8 failed a gate — 8 on the spread gate (median market 80.4% of mid against a 25% limit), 5 on open interest under 10. Quotable, not tradeable. A median market this far past the limit is more consistent with a stale or one-sided quote feed than with the underlying's liquidity, so treat this exclusion as unconfirmed until the chain is read from a live venue."
+    },
+    {
+      "symbol": "UPS",
+      "spot": 100.28,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 101,
+          "delta": 0.421,
+          "bid": 1.32,
+          "ask": 1.64,
+          "mid": 1.48,
+          "costUsd": 148,
+          "spreadPctOfMid": 21.6,
+          "openInterest": 44
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "put",
+          "strike": 99,
+          "delta": -0.411,
+          "bid": 1.47,
+          "ask": 1.8,
+          "mid": 1.64,
+          "costUsd": 163.5,
+          "spreadPctOfMid": 20.2,
+          "openInterest": 26
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 101,
+        "delta": 0.421,
+        "bid": 1.32,
+        "ask": 1.64,
+        "mid": 1.48,
+        "costUsd": 148,
+        "spreadPctOfMid": 21.6,
+        "openInterest": 44
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 11,
+        "unpriceable": 0,
+        "spread": 6,
+        "openInterest": 1,
+        "both": 0,
+        "passed": 4,
+        "medianSpreadPctOfMid": 25.7
+      },
+      "detail": "UPS: cheapest qualifying contract $148 (2026-09-25 101 call, delta 0.421)."
+    },
+    {
+      "symbol": "USB",
+      "spot": 62.84,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 63,
+          "delta": 0.468,
+          "bid": 0.98,
+          "ask": 1.22,
+          "mid": 1.1,
+          "costUsd": 110,
+          "spreadPctOfMid": 21.8,
+          "openInterest": 196
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-10-02",
+        "kind": "call",
+        "strike": 63,
+        "delta": 0.468,
+        "bid": 0.98,
+        "ask": 1.22,
+        "mid": 1.1,
+        "costUsd": 110,
+        "spreadPctOfMid": 21.8,
+        "openInterest": 196
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 6,
+        "unpriceable": 0,
+        "spread": 2,
+        "openInterest": 1,
+        "both": 2,
+        "passed": 1,
+        "medianSpreadPctOfMid": 26.4
+      },
+      "detail": "USB: cheapest qualifying contract $110 (2026-10-02 63 call, delta 0.468)."
+    },
+    {
+      "symbol": "VRTX",
+      "spot": 515.44,
+      "cheapestByExpiry": [],
+      "cheapest": null,
+      "missReason": "band_contracts_all_gated",
+      "gates": {
+        "inBand": 16,
+        "unpriceable": 0,
+        "spread": 6,
+        "openInterest": 0,
+        "both": 10,
+        "passed": 0,
+        "medianSpreadPctOfMid": 74.9
+      },
+      "detail": "VRTX excluded: 16 contracts sat in the delta band and all 16 failed a gate — 16 on the spread gate (median market 74.9% of mid against a 25% limit), 10 on open interest under 10. Quotable, not tradeable. A median market this far past the limit is more consistent with a stale or one-sided quote feed than with the underlying's liquidity, so treat this exclusion as unconfirmed until the chain is read from a live venue."
+    },
+    {
+      "symbol": "VST",
+      "spot": 148.38,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 155,
+          "delta": 0.32,
+          "bid": 2.36,
+          "ask": 2.81,
+          "mid": 2.59,
+          "costUsd": 258.5,
+          "spreadPctOfMid": 17.4,
+          "openInterest": 799
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 155,
+          "delta": 0.353,
+          "bid": 3.1,
+          "ask": 3.85,
+          "mid": 3.48,
+          "costUsd": 347.5,
+          "spreadPctOfMid": 21.6,
+          "openInterest": 144
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 155,
+        "delta": 0.32,
+        "bid": 2.36,
+        "ask": 2.81,
+        "mid": 2.59,
+        "costUsd": 258.5,
+        "spreadPctOfMid": 17.4,
+        "openInterest": 799
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 13,
+        "unpriceable": 0,
+        "spread": 1,
+        "openInterest": 6,
+        "both": 1,
+        "passed": 5,
+        "medianSpreadPctOfMid": 17.9
+      },
+      "detail": "VST: cheapest qualifying contract $259 (2026-09-25 155 call, delta 0.32)."
+    },
+    {
+      "symbol": "WMT",
+      "spot": 107.15,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "call",
+          "strike": 109,
+          "delta": 0.36,
+          "bid": 1.05,
+          "ask": 1.12,
+          "mid": 1.09,
+          "costUsd": 108.5,
+          "spreadPctOfMid": 6.5,
+          "openInterest": 957
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 110,
+          "delta": 0.333,
+          "bid": 1.13,
+          "ask": 1.21,
+          "mid": 1.17,
+          "costUsd": 117,
+          "spreadPctOfMid": 6.8,
+          "openInterest": 1270
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-09-25",
+        "kind": "call",
+        "strike": 109,
+        "delta": 0.36,
+        "bid": 1.05,
+        "ask": 1.12,
+        "mid": 1.09,
+        "costUsd": 108.5,
+        "spreadPctOfMid": 6.5,
+        "openInterest": 957
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 10,
+        "unpriceable": 0,
+        "spread": 0,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 10,
+        "medianSpreadPctOfMid": 9.2
+      },
+      "detail": "WMT: cheapest qualifying contract $109 (2026-09-25 109 call, delta 0.36)."
+    },
+    {
+      "symbol": "WPM",
+      "spot": 154.12,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-10-02",
+          "kind": "put",
+          "strike": 150,
+          "delta": -0.377,
+          "bid": 4.2,
+          "ask": 5.4,
+          "mid": 4.8,
+          "costUsd": 480,
+          "spreadPctOfMid": 25,
+          "openInterest": 26
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-10-02",
+        "kind": "put",
+        "strike": 150,
+        "delta": -0.377,
+        "bid": 4.2,
+        "ask": 5.4,
+        "mid": 4.8,
+        "costUsd": 480,
+        "spreadPctOfMid": 25,
+        "openInterest": 26
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 17,
+        "unpriceable": 0,
+        "spread": 7,
+        "openInterest": 1,
+        "both": 8,
+        "passed": 1,
+        "medianSpreadPctOfMid": 49.9
+      },
+      "detail": "WPM: cheapest qualifying contract $480 (2026-10-02 150 put, delta -0.377)."
+    },
+    {
+      "symbol": "WULF",
+      "spot": 16.74,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-09-25",
+          "kind": "put",
+          "strike": 16,
+          "delta": -0.352,
+          "bid": 0.63,
+          "ask": 0.68,
+          "mid": 0.66,
+          "costUsd": 65.5,
+          "spreadPctOfMid": 7.6,
+          "openInterest": 343
+        },
+        {
+          "expiry": "2026-10-02",
+          "kind": "call",
+          "strike": 18.5,
+          "delta": 0.342,
+          "bid": 0.58,
+          "ask": 0.71,
+          "mid": 0.65,
+          "costUsd": 64.5,
+          "spreadPctOfMid": 20.2,
+          "openInterest": 71
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-10-02",
+        "kind": "call",
+        "strike": 18.5,
+        "delta": 0.342,
+        "bid": 0.58,
+        "ask": 0.71,
+        "mid": 0.65,
+        "costUsd": 64.5,
+        "spreadPctOfMid": 20.2,
+        "openInterest": 71
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 12,
+        "unpriceable": 0,
+        "spread": 1,
+        "openInterest": 0,
+        "both": 0,
+        "passed": 11,
+        "medianSpreadPctOfMid": 17.9
+      },
+      "detail": "WULF: cheapest qualifying contract $65 (2026-10-02 18.5 call, delta 0.342)."
+    },
+    {
+      "symbol": "XXRP",
+      "spot": 30.96,
+      "cheapestByExpiry": [
+        {
+          "expiry": "2026-12-18",
+          "kind": "put",
+          "strike": 35,
+          "delta": -0.406,
+          "bid": 9.2,
+          "ask": 11.5,
+          "mid": 10.35,
+          "costUsd": 1035,
+          "spreadPctOfMid": 22.2,
+          "openInterest": 15
+        }
+      ],
+      "cheapest": {
+        "expiry": "2026-12-18",
+        "kind": "put",
+        "strike": 35,
+        "delta": -0.406,
+        "bid": 9.2,
+        "ask": 11.5,
+        "mid": 10.35,
+        "costUsd": 1035,
+        "spreadPctOfMid": 22.2,
+        "openInterest": 15
+      },
+      "missReason": null,
+      "gates": {
+        "inBand": 33,
+        "unpriceable": 0,
+        "spread": 4,
+        "openInterest": 7,
+        "both": 21,
+        "passed": 1,
+        "medianSpreadPctOfMid": 45.3
+      },
+      "detail": "XXRP: cheapest qualifying contract $1035 (2026-12-18 35 put, delta -0.406)."
+    }
+  ],
+  "coverage": [
+    {
+      "budgetUsd": 100,
+      "tradeable": 23,
+      "of": 124,
+      "symbols": [
+        "APLD",
+        "BITX",
+        "BMNR",
+        "BSX",
+        "BTDR",
+        "CIFR",
+        "CLSK",
+        "CONL",
+        "CORZ",
+        "GLXY",
+        "HAL",
+        "HBAN",
+        "IBIT",
+        "IONQ",
+        "KEY",
+        "MARA",
+        "MDT",
+        "PURR",
+        "RF",
+        "RIOT",
+        "SLB",
+        "TFC",
+        "WULF"
+      ]
+    },
+    {
+      "budgetUsd": 200,
+      "tradeable": 42,
+      "of": 124,
+      "symbols": [
+        "ABT",
+        "APLD",
+        "BITX",
+        "BMNR",
+        "BSX",
+        "BTDR",
+        "CIFR",
+        "CLSK",
+        "CONL",
+        "CORZ",
+        "D",
+        "ETHT",
+        "ETHU",
+        "FCX",
+        "FITB",
+        "GLXY",
+        "HAL",
+        "HBAN",
+        "IBIT",
+        "ICE",
+        "IONQ",
+        "IREN",
+        "IWM",
+        "KEY",
+        "LULU",
+        "MARA",
+        "MDT",
+        "MSTX",
+        "NEE",
+        "OKLO",
+        "PURR",
+        "RF",
+        "RIOT",
+        "SCHW",
+        "SLB",
+        "TFC",
+        "TGT",
+        "TJX",
+        "UPS",
+        "USB",
+        "WMT",
+        "WULF"
+      ]
+    },
+    {
+      "budgetUsd": 300,
+      "tradeable": 61,
+      "of": 124,
+      "symbols": [
+        "ABT",
+        "AEP",
+        "APLD",
+        "BA",
+        "BITX",
+        "BKR",
+        "BMNR",
+        "BSX",
+        "BTDR",
+        "CFG",
+        "CIFR",
+        "CLSK",
+        "CONL",
+        "CORZ",
+        "D",
+        "DIA",
+        "DUK",
+        "ETHT",
+        "ETHU",
+        "FCX",
+        "FITB",
+        "FTI",
+        "GLXY",
+        "HAL",
+        "HBAN",
+        "HOOD",
+        "IBIT",
+        "ICE",
+        "INTC",
+        "IONQ",
+        "IREN",
+        "IWM",
+        "KEY",
+        "LEN",
+        "LULU",
+        "MARA",
+        "MDT",
+        "MS",
+        "MSTX",
+        "NEE",
+        "NEM",
+        "NOW",
+        "NVDA",
+        "OKLO",
+        "PLTR",
+        "PURR",
+        "RF",
+        "RIOT",
+        "ROST",
+        "RTX",
+        "SCHW",
+        "SLB",
+        "SPY",
+        "TFC",
+        "TGT",
+        "TJX",
+        "UPS",
+        "USB",
+        "VST",
+        "WMT",
+        "WULF"
+      ]
+    },
+    {
+      "budgetUsd": 500,
+      "tradeable": 76,
+      "of": 124,
+      "symbols": [
+        "ABT",
+        "ADBE",
+        "AEP",
+        "AMGN",
+        "APLD",
+        "AU",
+        "AVGO",
+        "BA",
+        "BITX",
+        "BKR",
+        "BMNR",
+        "BSX",
+        "BTDR",
+        "CFG",
+        "CIFR",
+        "CLSK",
+        "CME",
+        "COIN",
+        "CONL",
+        "CORZ",
+        "CRM",
+        "D",
+        "DIA",
+        "DUK",
+        "ETHT",
+        "ETHU",
+        "FCX",
+        "FITB",
+        "FTI",
+        "GLXY",
+        "HAL",
+        "HBAN",
+        "HD",
+        "HOOD",
+        "HUT",
+        "IBIT",
+        "ICE",
+        "INTC",
+        "IONQ",
+        "IREN",
+        "IWM",
+        "KEY",
+        "LEN",
+        "LULU",
+        "MARA",
+        "MDT",
+        "MS",
+        "MSTR",
+        "MSTX",
+        "NEE",
+        "NEM",
+        "NOW",
+        "NVDA",
+        "OKLO",
+        "ORCL",
+        "PLTR",
+        "PURR",
+        "QCOM",
+        "QQQ",
+        "RF",
+        "RIOT",
+        "ROST",
+        "RTX",
+        "SCHW",
+        "SLB",
+        "SPY",
+        "TFC",
+        "TGT",
+        "TJX",
+        "TXN",
+        "UPS",
+        "USB",
+        "VST",
+        "WMT",
+        "WPM",
+        "WULF"
+      ]
+    },
+    {
+      "budgetUsd": 750,
+      "tradeable": 86,
+      "of": 124,
+      "symbols": [
+        "ABT",
+        "ADBE",
+        "AEM",
+        "AEP",
+        "AMGN",
+        "APLD",
+        "AU",
+        "AVGO",
+        "BA",
+        "BITX",
+        "BKR",
+        "BMNR",
+        "BSX",
+        "BTDR",
+        "CEG",
+        "CFG",
+        "CIFR",
+        "CLSK",
+        "CME",
+        "COIN",
+        "CONL",
+        "CORZ",
+        "CRM",
+        "D",
+        "DIA",
+        "DUK",
+        "ETHT",
+        "ETHU",
+        "FCX",
+        "FITB",
+        "FTI",
+        "GLXY",
+        "HAL",
+        "HBAN",
+        "HD",
+        "HOOD",
+        "HUT",
+        "IBIT",
+        "ICE",
+        "INTC",
+        "IONQ",
+        "IREN",
+        "IWM",
+        "KEY",
+        "KLAC",
+        "LEN",
+        "LRCX",
+        "LULU",
+        "MARA",
+        "MDT",
+        "MS",
+        "MSFT",
+        "MSTR",
+        "MSTX",
+        "MTB",
+        "NEE",
+        "NEM",
+        "NOW",
+        "NSC",
+        "NVDA",
+        "OKLO",
+        "ORCL",
+        "PANW",
+        "PLTR",
+        "PURR",
+        "QCOM",
+        "QQQ",
+        "RF",
+        "RIOT",
+        "ROST",
+        "RTX",
+        "SCHW",
+        "SLB",
+        "SNOW",
+        "SPY",
+        "TFC",
+        "TGT",
+        "TJX",
+        "TSM",
+        "TXN",
+        "UPS",
+        "USB",
+        "VST",
+        "WMT",
+        "WPM",
+        "WULF"
+      ]
+    },
+    {
+      "budgetUsd": 1000,
+      "tradeable": 91,
+      "of": 124,
+      "symbols": [
+        "ABT",
+        "ADBE",
+        "AEM",
+        "AEP",
+        "AMAT",
+        "AMD",
+        "AMGN",
+        "APLD",
+        "AU",
+        "AVGO",
+        "BA",
+        "BITX",
+        "BKR",
+        "BMNR",
+        "BSX",
+        "BTDR",
+        "CEG",
+        "CFG",
+        "CIFR",
+        "CLSK",
+        "CME",
+        "COIN",
+        "CONL",
+        "CORZ",
+        "COST",
+        "CRM",
+        "D",
+        "DIA",
+        "DUK",
+        "ETHT",
+        "ETHU",
+        "FCX",
+        "FDX",
+        "FITB",
+        "FTI",
+        "GLXY",
+        "HAL",
+        "HBAN",
+        "HD",
+        "HOOD",
+        "HUT",
+        "IBIT",
+        "ICE",
+        "INTC",
+        "IONQ",
+        "IREN",
+        "IWM",
+        "KEY",
+        "KLAC",
+        "LEN",
+        "LRCX",
+        "LULU",
+        "MARA",
+        "MDT",
+        "MS",
+        "MSFT",
+        "MSTR",
+        "MSTX",
+        "MTB",
+        "NEE",
+        "NEM",
+        "NOW",
+        "NSC",
+        "NVDA",
+        "OKLO",
+        "ORCL",
+        "PANW",
+        "PLTR",
+        "PURR",
+        "QCOM",
+        "QQQ",
+        "RF",
+        "RIOT",
+        "ROST",
+        "RTX",
+        "SCHW",
+        "SLB",
+        "SNOW",
+        "SPY",
+        "SYK",
+        "TFC",
+        "TGT",
+        "TJX",
+        "TSM",
+        "TXN",
+        "UPS",
+        "USB",
+        "VST",
+        "WMT",
+        "WPM",
+        "WULF"
+      ]
+    },
+    {
+      "budgetUsd": 2000,
+      "tradeable": 96,
+      "of": 124,
+      "symbols": [
+        "ABT",
+        "ADBE",
+        "AEM",
+        "AEP",
+        "AMAT",
+        "AMD",
+        "AMGN",
+        "APLD",
+        "AU",
+        "AVGO",
+        "BA",
+        "BITX",
+        "BKR",
+        "BLK",
+        "BMNR",
+        "BSX",
+        "BTDR",
+        "CEG",
+        "CFG",
+        "CIFR",
+        "CLSK",
+        "CME",
+        "COIN",
+        "CONL",
+        "CORZ",
+        "COST",
+        "CRM",
+        "D",
+        "DIA",
+        "DUK",
+        "ETHT",
+        "ETHU",
+        "FCX",
+        "FDX",
+        "FITB",
+        "FTI",
+        "GLXY",
+        "GS",
+        "HAL",
+        "HBAN",
+        "HD",
+        "HOOD",
+        "HUT",
+        "IBIT",
+        "ICE",
+        "INTC",
+        "IONQ",
+        "IREN",
+        "IWM",
+        "KEY",
+        "KLAC",
+        "LEN",
+        "LRCX",
+        "LULU",
+        "MARA",
+        "MDT",
+        "MS",
+        "MSFT",
+        "MSTR",
+        "MSTX",
+        "MTB",
+        "MU",
+        "NEE",
+        "NEM",
+        "NOC",
+        "NOW",
+        "NSC",
+        "NVDA",
+        "OKLO",
+        "ORCL",
+        "PANW",
+        "PLTR",
+        "PURR",
+        "QCOM",
+        "QQQ",
+        "RF",
+        "RIOT",
+        "ROST",
+        "RTX",
+        "SCHW",
+        "SLB",
+        "SNOW",
+        "SPY",
+        "SYK",
+        "TFC",
+        "TGT",
+        "TJX",
+        "TSM",
+        "TXN",
+        "UPS",
+        "USB",
+        "VST",
+        "WMT",
+        "WPM",
+        "WULF",
+        "XXRP"
+      ]
+    },
+    {
+      "budgetUsd": 5000,
+      "tradeable": 97,
+      "of": 124,
+      "symbols": [
+        "ABT",
+        "ADBE",
+        "AEM",
+        "AEP",
+        "AMAT",
+        "AMD",
+        "AMGN",
+        "APLD",
+        "ASML",
+        "AU",
+        "AVGO",
+        "BA",
+        "BITX",
+        "BKR",
+        "BLK",
+        "BMNR",
+        "BSX",
+        "BTDR",
+        "CEG",
+        "CFG",
+        "CIFR",
+        "CLSK",
+        "CME",
+        "COIN",
+        "CONL",
+        "CORZ",
+        "COST",
+        "CRM",
+        "D",
+        "DIA",
+        "DUK",
+        "ETHT",
+        "ETHU",
+        "FCX",
+        "FDX",
+        "FITB",
+        "FTI",
+        "GLXY",
+        "GS",
+        "HAL",
+        "HBAN",
+        "HD",
+        "HOOD",
+        "HUT",
+        "IBIT",
+        "ICE",
+        "INTC",
+        "IONQ",
+        "IREN",
+        "IWM",
+        "KEY",
+        "KLAC",
+        "LEN",
+        "LRCX",
+        "LULU",
+        "MARA",
+        "MDT",
+        "MS",
+        "MSFT",
+        "MSTR",
+        "MSTX",
+        "MTB",
+        "MU",
+        "NEE",
+        "NEM",
+        "NOC",
+        "NOW",
+        "NSC",
+        "NVDA",
+        "OKLO",
+        "ORCL",
+        "PANW",
+        "PLTR",
+        "PURR",
+        "QCOM",
+        "QQQ",
+        "RF",
+        "RIOT",
+        "ROST",
+        "RTX",
+        "SCHW",
+        "SLB",
+        "SNOW",
+        "SPY",
+        "SYK",
+        "TFC",
+        "TGT",
+        "TJX",
+        "TSM",
+        "TXN",
+        "UPS",
+        "USB",
+        "VST",
+        "WMT",
+        "WPM",
+        "WULF",
+        "XXRP"
+      ]
+    }
+  ]
+}
