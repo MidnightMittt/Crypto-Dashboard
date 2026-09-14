@@ -240,7 +240,7 @@ export function designOptionExit(input: OptionExitInput): OptionExitDesign | { e
       const cell = reachRateFor(distanceAtr, 0, input.snapshot, "zone");
       crosscheck = cell
         ? {
-            reach_pct: cell.reachRatePct,
+            reach_pct: Math.round(cell.reachRatePct * 10) / 10,
             attempts: cell.attempts,
             clock_sessions: REACH_HORIZON_SESSIONS,
             note:
