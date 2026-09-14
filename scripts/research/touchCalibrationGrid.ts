@@ -139,6 +139,8 @@ interface CellResult {
   in_window: Stat;
   antisymmetric_trailing_pp: number;
   resolves: boolean;
+  /** Family-wise verdict across all 16 cells. See the Holm block below. */
+  family: { p: number; p_holm: number; clears: boolean };
 }
 interface Stat {
   symmetric_pp: number;
@@ -285,8 +287,58 @@ for (const H of HORIZONS) {
        * before the serial-correlation charge does not resolve it.
        */
       resolves: trailing.mde_pp_adjusted <= EFFECT_SOUGHT_PP,
+      family: { p: 0, p_holm: 0, clears: false }, // filled after all cells exist
     });
   }
+}
+
+/*
+ * ── MULTIPLE-TESTING ACROSS THE FAMILY, Holm-Bonferroni at alpha 0.05 ──
+ *
+ * Sixteen cells produce roughly one |t|>=2 by chance, so a per-cell
+ * threshold answers "does this cell clear?" while the question that matters
+ * is "does anything clear the FAMILY?" — the Fibonacci study only became
+ * decisive because it carried invented control levels, and the
+ * harmonic-patterns study printed +4.6% on n=3. This grid does not get to
+ * be the next of those.
+ *
+ * The family is the 16 TRAILING t_adjusted statistics. Trailing sigma is
+ * the declared primary throughout (it is the only input knowable at entry);
+ * the in-window column is mechanically coupled to its own outcome — a path
+ * that touches tends to print higher realised vol — so it is a diagnostic
+ * and does not get a familywise verdict it could not honestly carry.
+ *
+ * Timing, on the record: this correction was added 2026-09-14, three weeks
+ * after the grid first ran. That is late, and it is also harmless HERE
+ * specifically because every degree of freedom the correction protects
+ * against was already fixed in the 2026-08-22 pre-declaration: the grid
+ * (4x4, these exact edges), the primary column, the block statistic, and
+ * the 5pp economic bar all predate the first run. Nothing was chosen after
+ * seeing results, so applying Holm retroactively cannot have been steered
+ * by them. Had any of those been picked post hoc, this block would be
+ * laundering, not correction.
+ *
+ * p-values are two-sided normal on t_adjusted — effective blocks exceed 100
+ * in every cell, where Student-t and normal differ past the third decimal.
+ */
+const FAMILY_ALPHA = 0.05;
+{
+  const pOf = (t: number) => Math.min(1, 2 * (1 - Phi(Math.abs(t))));
+  const order = cells
+    .map((c, i) => ({ i, p: pOf(c.trailing.t_adjusted) }))
+    .sort((a, b) => a.p - b.p);
+  let running = 0;
+  order.forEach((o, rank) => {
+    // Holm step-down: adjusted p is the running max of (m - rank) * p.
+    running = Math.max(running, Math.min(1, (cells.length - rank) * o.p));
+    // Three significant figures — tiny p-values stay legible without
+    // pretending to more precision than a normal tail carries out there.
+    cells[o.i].family = {
+      p: Number(o.p.toExponential(2)),
+      p_holm: Number(running.toExponential(2)),
+      clears: running <= FAMILY_ALPHA,
+    };
+  });
 }
 
 // ── Report ───────────────────────────────────────────────────────────
@@ -341,6 +393,20 @@ console.log("");
 console.log(`cells whose adjusted MDE resolves a ${EFFECT_SOUGHT_PP}pp effect: ${resolving.length} of ${cells.length}`);
 console.log(`cells where |t| >= 2 on TRAILING vol, after the serial-correlation charge:  ${clearing.length} of ${cells.length}`);
 console.log(`cells where |t| >= 2 on BOTH vol inputs: ${clearingBoth.length} of ${cells.length}`);
+const familyClearing = cells.filter((c) => c.family.clears);
+console.log(
+  `cells clearing the 16-cell FAMILY (Holm at ${FAMILY_ALPHA}): ${familyClearing.length} of ${cells.length}` +
+  (familyClearing.length > 0
+    ? ` — ${familyClearing.map((c) => `${c.horizon_sessions}d/${c.barrier_pct}% (p_holm ${c.family.p_holm})`).join(", ")}`
+    : "")
+);
+console.log(
+  `largest family-cleared |symmetric|: ` +
+  (familyClearing.length > 0
+    ? `${Math.max(...familyClearing.map((c) => Math.abs(c.trailing.symmetric_pp))).toFixed(2)}pp, ` +
+      `against the ${EFFECT_SOUGHT_PP}pp declared tradeable bar`
+    : "none")
+);
 if (wouldHaveCleared.length > 0) {
   console.log("");
   console.log(`${wouldHaveCleared.length} cells cleared on the UNCHARGED t and do not survive the charge:`);
@@ -382,6 +448,13 @@ fs.writeFileSync(
           "absorbed, so it is measured per cell (ar1) and charged to the SE by sqrt((1+r)/(1-r)); " +
           "mde_pp_adjusted is the figure that governs, and `resolves` is judged on it.",
         barrierConvention: "b_up = ln(1+m); b_down = -ln(1-m); drift sign flips on the down side",
+        familyCorrection:
+          "Holm-Bonferroni at alpha 0.05 across the 16 trailing t_adjusted statistics — the " +
+          "declared primary column. In-window sigma is mechanically coupled to its own outcome " +
+          "and carries no familywise verdict. The correction was added 2026-09-14, after the " +
+          "first run, but every degree of freedom it protects against (grid edges, primary " +
+          "column, block statistic, 5pp economic bar) was fixed in the 2026-08-22 " +
+          "pre-declaration, so its application could not be steered by results.",
         note:
           "PATH-SHAPE half of the reach-vs-implied symmetric component. The VOL-PREMIUM half needs live chains and is measured separately.",
       },

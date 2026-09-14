@@ -1,5 +1,5 @@
 {
- "generatedAt": 1789267985384,
+ "generatedAt": 1789347619440,
  "method": {
   "panel": "declared EQUITY_PANEL",
   "names": 95,
@@ -19,6 +19,7 @@
   "trailingVolSessions": 60,
   "statistic": "per-date mean of (outcome - GBM predicted), t over non-overlapping date blocks. Cross-sectional correlation between names is absorbed by construction — the date is the unit, so no rho needs estimating. Serial correlation BETWEEN blocks is not absorbed, so it is measured per cell (ar1) and charged to the SE by sqrt((1+r)/(1-r)); mde_pp_adjusted is the figure that governs, and `resolves` is judged on it.",
   "barrierConvention": "b_up = ln(1+m); b_down = -ln(1-m); drift sign flips on the down side",
+  "familyCorrection": "Holm-Bonferroni at alpha 0.05 across the 16 trailing t_adjusted statistics — the declared primary column. In-window sigma is mechanically coupled to its own outcome and carries no familywise verdict. The correction was added 2026-09-14, after the first run, but every degree of freedom it protects against (grid edges, primary column, block statistic, 5pp economic bar) was fixed in the 2026-08-22 pre-declaration, so its application could not be steered by results.",
   "note": "PATH-SHAPE half of the reach-vs-implied symmetric component. The VOL-PREMIUM half needs live chains and is measured separately."
  },
  "cells": [
@@ -50,7 +51,12 @@
     "effective_blocks": 1680
    },
    "antisymmetric_trailing_pp": 1.088,
-   "resolves": true
+   "resolves": true,
+   "family": {
+    "p": 4.44e-16,
+    "p_holm": 7.11e-15,
+    "clears": true
+   }
   },
   {
    "horizon_sessions": 5,
@@ -80,7 +86,12 @@
     "effective_blocks": 1680
    },
    "antisymmetric_trailing_pp": 0.159,
-   "resolves": true
+   "resolves": true,
+   "family": {
+    "p": 0.00318,
+    "p_holm": 0.0381,
+    "clears": true
+   }
   },
   {
    "horizon_sessions": 5,
@@ -110,7 +121,12 @@
     "effective_blocks": 1680
    },
    "antisymmetric_trailing_pp": 0.033,
-   "resolves": true
+   "resolves": true,
+   "family": {
+    "p": 0.849,
+    "p_holm": 0.849,
+    "clears": false
+   }
   },
   {
    "horizon_sessions": 5,
@@ -140,7 +156,12 @@
     "effective_blocks": 1680
    },
    "antisymmetric_trailing_pp": 0.02,
-   "resolves": true
+   "resolves": true,
+   "family": {
+    "p": 0.105,
+    "p_holm": 0.669,
+    "clears": false
+   }
   },
   {
    "horizon_sessions": 10,
@@ -170,7 +191,12 @@
     "effective_blocks": 840
    },
    "antisymmetric_trailing_pp": 3.091,
-   "resolves": true
+   "resolves": true,
+   "family": {
+    "p": 4.93e-9,
+    "p_holm": 7.4e-8,
+    "clears": true
+   }
   },
   {
    "horizon_sessions": 10,
@@ -200,7 +226,12 @@
     "effective_blocks": 840
    },
    "antisymmetric_trailing_pp": 0.786,
-   "resolves": true
+   "resolves": true,
+   "family": {
+    "p": 0.000502,
+    "p_holm": 0.00652,
+    "clears": true
+   }
   },
   {
    "horizon_sessions": 10,
@@ -230,7 +261,12 @@
     "effective_blocks": 793.2
    },
    "antisymmetric_trailing_pp": 0.004,
-   "resolves": true
+   "resolves": true,
+   "family": {
+    "p": 0.0836,
+    "p_holm": 0.669,
+    "clears": false
+   }
   },
   {
    "horizon_sessions": 10,
@@ -260,7 +296,12 @@
     "effective_blocks": 627.4
    },
    "antisymmetric_trailing_pp": -0.051,
-   "resolves": true
+   "resolves": true,
+   "family": {
+    "p": 0.211,
+    "p_holm": 0.816,
+    "clears": false
+   }
   },
   {
    "horizon_sessions": 21,
@@ -290,7 +331,12 @@
     "effective_blocks": 400
    },
    "antisymmetric_trailing_pp": 5.82,
-   "resolves": true
+   "resolves": true,
+   "family": {
+    "p": 0.000192,
+    "p_holm": 0.00268,
+    "clears": true
+   }
   },
   {
    "horizon_sessions": 21,
@@ -320,7 +366,12 @@
     "effective_blocks": 400
    },
    "antisymmetric_trailing_pp": 3.302,
-   "resolves": true
+   "resolves": true,
+   "family": {
+    "p": 0.00318,
+    "p_holm": 0.0381,
+    "clears": true
+   }
   },
   {
    "horizon_sessions": 21,
@@ -350,7 +401,12 @@
     "effective_blocks": 400
    },
    "antisymmetric_trailing_pp": 0.579,
-   "resolves": true
+   "resolves": true,
+   "family": {
+    "p": 0.0735,
+    "p_holm": 0.661,
+    "clears": false
+   }
   },
   {
    "horizon_sessions": 21,
@@ -380,7 +436,12 @@
     "effective_blocks": 387.9
    },
    "antisymmetric_trailing_pp": 0.016,
-   "resolves": true
+   "resolves": true,
+   "family": {
+    "p": 0.091,
+    "p_holm": 0.669,
+    "clears": false
+   }
   },
   {
    "horizon_sessions": 42,
@@ -410,7 +471,12 @@
     "effective_blocks": 200
    },
    "antisymmetric_trailing_pp": 8.172,
-   "resolves": true
+   "resolves": true,
+   "family": {
+    "p": 0.0324,
+    "p_holm": 0.324,
+    "clears": false
+   }
   },
   {
    "horizon_sessions": 42,
@@ -440,7 +506,12 @@
     "effective_blocks": 200
    },
    "antisymmetric_trailing_pp": 7.189,
-   "resolves": true
+   "resolves": true,
+   "family": {
+    "p": 0.204,
+    "p_holm": 0.816,
+    "clears": false
+   }
   },
   {
    "horizon_sessions": 42,
@@ -470,7 +541,12 @@
     "effective_blocks": 200
    },
    "antisymmetric_trailing_pp": 2.529,
-   "resolves": true
+   "resolves": true,
+   "family": {
+    "p": 0.121,
+    "p_holm": 0.669,
+    "clears": false
+   }
   },
   {
    "horizon_sessions": 42,
@@ -500,7 +576,12 @@
     "effective_blocks": 196.4
    },
    "antisymmetric_trailing_pp": 0.904,
-   "resolves": true
+   "resolves": true,
+   "family": {
+    "p": 0.28,
+    "p_holm": 0.816,
+    "clears": false
+   }
   }
  ]
 }

@@ -75,6 +75,15 @@ export interface CalibrationCell {
   antisymmetric_trailing_pp: number;
   /** True when the cell's own MDE can resolve the effect worth finding. */
   resolves: boolean;
+  /**
+   * Familywise verdict: Holm-Bonferroni at 0.05 across all 16 trailing
+   * t_adjusted statistics. A cell can clear its own |t|>=2 and still not
+   * clear the family — sixteen cells produce roughly one such clearance by
+   * chance. `clears` is the statistical claim; the 5pp economic bar in
+   * `resolves_effect_of_pp` is a separate, stricter question, and on this
+   * grid every family-cleared cell still sits under it.
+   */
+  family: { p: number; p_holm: number; clears: boolean };
 }
 
 interface CalibrationFile {
@@ -88,6 +97,7 @@ interface CalibrationFile {
     trailingVolSessions: number;
     statistic: string;
     barrierConvention: string;
+    familyCorrection: string;
     note: string;
   };
   cells: CalibrationCell[];
@@ -131,6 +141,8 @@ export interface ConversionReport {
   blocks: number;
   /** What `blocks` is worth once the series' own persistence is charged. */
   effective_blocks: number;
+  /** Familywise verdict for THIS cell — Holm across all 16 trailing statistics. */
+  family: { p_holm: number; clears: boolean };
   method: string;
 }
 
@@ -175,7 +187,15 @@ export function conversionReport(horizonSessions: number, barrierPct: number): C
    * own floor" — so this is the same refusal the module already claimed to
    * make, now applied to the number as well as the sentence.
    */
-  const offerBias = cell.resolves && detectable;
+  /*
+   * ...and the family gets a veto. Sixteen cells produce roughly one
+   * per-cell |t|>=2 by chance, and a caller free to ask any cell inherits
+   * that selection whether they meant to or not. Holm across the 16
+   * trailing statistics is the charge for it. Exactly one cell on the
+   * current grid clears its own floor and not the family — 42d/5%,
+   * t_adjusted -2.14 — and it now refuses instead of offering -1.04pp.
+   */
+  const offerBias = cell.resolves && detectable && cell.family.clears;
   /** "N blocks" overstated the sample; this is what N is worth. */
   const sample = `${cell.blocks} non-overlapping blocks worth ${t.effective_blocks} after their own serial correlation (ar1 ${t.ar1})`;
 
@@ -191,17 +211,26 @@ export function conversionReport(horizonSessions: number, barrierPct: number): C
     drift_component_pp: cell.antisymmetric_trailing_pp,
     blocks: cell.blocks,
     effective_blocks: t.effective_blocks,
+    family: { p_holm: cell.family.p_holm, clears: cell.family.clears },
+    /*
+     * The prose walks the SAME gate as the field, in the same order. A
+     * verdict that called something "measured" while bias_pp beside it was
+     * null — or the reverse — is the defect the one-condition rule exists
+     * to prevent.
+     */
     verdict: !cell.resolves
       ? `This cell cannot resolve a ${EFFECT_SOUGHT_PP}pp effect (its own floor is ${t.mde_pp_adjusted}pp), so no bias figure is offered.`
-      : material
-        ? `The vol-to-touch conversion is biased by ${t.symmetric_pp > 0 ? "+" : ""}${t.symmetric_pp}pp here — large enough to matter; correct for it before comparing a premium to a measured rate.`
-        : detectable
-          ? `The vol-to-touch conversion carries a measured bias of ${t.symmetric_pp > 0 ? "+" : ""}${t.symmetric_pp}pp (t=${t.t_adjusted} over ${sample}, floor ${t.mde_pp_adjusted}pp) — real but far below the ${EFFECT_SOUGHT_PP}pp that would be tradeable. Compare premiums to measured reach without a correction; do not read a few points of difference as an edge.`
-          : `No detectable bias in the vol-to-touch conversion here (${t.symmetric_pp > 0 ? "+" : ""}${t.symmetric_pp}pp, t=${t.t_adjusted} against a ${t.mde_pp_adjusted}pp floor over ${sample}). ${
-              Math.abs(t.t) >= 2
-                ? `It DID clear on the uncharged t (${t.t}); the blocks are not independent enough to support that reading, and the honest answer here is a null rather than a small measured bias.`
-                : `A well-powered null: the bridge between implied and measured is sound at this cell.`
-            }`,
+      : detectable && !cell.family.clears
+        ? `This cell clears its own floor (${t.symmetric_pp > 0 ? "+" : ""}${t.symmetric_pp}pp, t=${t.t_adjusted}) but not the sixteen-cell family (Holm p ${cell.family.p_holm}) — sixteen cells produce roughly one such clearance by chance, and this is the shape that chance takes. No bias figure is offered.`
+        : material && cell.family.clears
+          ? `The vol-to-touch conversion is biased by ${t.symmetric_pp > 0 ? "+" : ""}${t.symmetric_pp}pp here — large enough to matter; correct for it before comparing a premium to a measured rate.`
+          : detectable
+            ? `The vol-to-touch conversion carries a measured bias of ${t.symmetric_pp > 0 ? "+" : ""}${t.symmetric_pp}pp (t=${t.t_adjusted} over ${sample}, floor ${t.mde_pp_adjusted}pp, clears the 16-cell family at Holm p ${cell.family.p_holm}) — real but far below the ${EFFECT_SOUGHT_PP}pp that would be tradeable. Compare premiums to measured reach without a correction; do not read a few points of difference as an edge.`
+            : `No detectable bias in the vol-to-touch conversion here (${t.symmetric_pp > 0 ? "+" : ""}${t.symmetric_pp}pp, t=${t.t_adjusted} against a ${t.mde_pp_adjusted}pp floor over ${sample}). ${
+                Math.abs(t.t) >= 2
+                  ? `It DID clear on the uncharged t (${t.t}); the blocks are not independent enough to support that reading, and the honest answer here is a null rather than a small measured bias.`
+                  : `A well-powered null: the bridge between implied and measured is sound at this cell.`
+              }`,
     method:
       `Symmetric (volatility) component of measured-minus-implied touch probability, ` +
       `${file.method.panel}, ${sample}. Correlation BETWEEN NAMES is absorbed by the design — the ` +

@@ -46,6 +46,30 @@ describe("touchCalibration grid shape", () => {
   it.each(everyCell)("%i/%i%% judges `resolves` on the adjusted floor, not the raw one", (_h, _b, cell) => {
     expect(cell.resolves).toBe(cell.trailing.mde_pp_adjusted <= EFFECT_SOUGHT_PP);
   });
+
+  it.each(everyCell)("%i/%i%% carries a familywise verdict at least as strict as its own p", (_h, _b, cell) => {
+    /*
+     * Holm can only raise a p-value, never lower it, and `clears` must be
+     * read off the adjusted figure. A cell whose family verdict were more
+     * generous than its solo p would mean the correction ran backwards.
+     */
+    expect(cell.family.p_holm).toBeGreaterThanOrEqual(cell.family.p - 1e-12);
+    expect(cell.family.clears).toBe(cell.family.p_holm <= 0.05);
+  });
+
+  it("keeps every family-cleared cell under the declared economic bar", () => {
+    /*
+     * The grid's published verdict — statistically resolved, economically
+     * below the 5pp tradeable threshold — depends on this staying true. If
+     * a refresh ever produces a family-cleared cell OVER the bar, that is a
+     * finding, not a test failure to silence: the verdict text in
+     * conversionReport and the OUTBOX claim both need rewriting before this
+     * assertion is touched.
+     */
+    for (const c of cells.filter((c) => c.family.clears)) {
+      expect(Math.abs(c.trailing.symmetric_pp)).toBeLessThan(EFFECT_SOUGHT_PP);
+    }
+  });
 });
 
 describe("conversionReport", () => {
@@ -85,16 +109,34 @@ describe("conversionReport", () => {
    * A caller that reads `bias_pp` and never reads `verdict` must not be
    * handed a figure the verdict disowns.
    */
-  it("withholds bias_pp wherever the estimate does not clear its own floor", () => {
+  it("withholds bias_pp wherever the estimate does not clear its own floor AND the family", () => {
     for (const [h, b, cell] of everyCell) {
       const r = conversionReport(h, b)!;
-      const clears = Math.abs(cell.trailing.t_adjusted) >= 2;
+      // The full gate, all three conditions. The family term is what turned
+      // 42d/5% from a -1.04pp offer into a refusal: it clears its own floor
+      // (t_adjusted -2.14) and is exactly the one-in-sixteen shape chance
+      // produces, which Holm exists to charge for.
+      const clears = Math.abs(cell.trailing.t_adjusted) >= 2 && cell.family.clears;
       if (!clears || !cell.resolves) {
         expect(r.bias_pp, `${h}/${b}% offered a bias it cannot support`).toBeNull();
       } else {
         expect(r.bias_pp).toBe(cell.trailing.symmetric_pp);
       }
     }
+  });
+
+  it("has at least one cell where the family veto is the binding condition", () => {
+    /*
+     * Guards the guard. If a data refresh ever leaves no cell in the
+     * floor-clears-but-family-doesn't state, the previous test stops
+     * exercising the family term entirely and would keep passing if the
+     * veto were deleted. This test turns that silence into a failure —
+     * at which point either re-pin a synthetic cell or note the gap.
+     */
+    const vetoed = everyCell.filter(
+      ([, , c]) => c.resolves && Math.abs(c.trailing.t_adjusted) >= 2 && !c.family.clears
+    );
+    expect(vetoed.length).toBeGreaterThan(0);
   });
 
   it("never says 'no detectable bias' while also returning one", () => {
