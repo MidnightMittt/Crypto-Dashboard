@@ -78,6 +78,10 @@ describe("the declared equity panel", () => {
       "APLD", "CLSK", "CORZ", "IONQ", "OKLO", "RIOT",
       // crypto treasury / crypto financial
       "BMNR", "COIN", "GLXY", "HOOD", "MSTR", "PURR", "SBET",
+      // AI-power buildout, added 2026-09-13 with its SCANNED entry; a 2025
+      // IPO that cannot support the 12-1 lookback regardless of the
+      // concentration argument.
+      "FRMI",
     ].sort());
   });
 

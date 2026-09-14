@@ -197,6 +197,20 @@ export const TRACKED_OUTSIDE_PANEL: readonly string[] = [
    * the difference reported. Never a quiet promotion.
    */
   "BMNR", "COIN", "GLXY", "HOOD", "MSTR", "PURR", "SBET",
+  /*
+   * Fermi Inc, added 2026-09-13 alongside its SCANNED entry — the IBIT
+   * lesson applied on the same commit rather than three red runs later: a
+   * name enters the refresh and the classification together or the daily
+   * job dies at loadEquityPanel.
+   *
+   * A US-listed operating company, so it satisfies the inclusion rule by
+   * KIND — but it is held out here for a reason the six datacenter names
+   * above don't even need: it IPO'd in 2025 and cannot support a 12-1
+   * momentum lookback at all. It is also the same mechanism-cluster as
+   * APLD/OKLO (AI-power buildout), so the concentration argument applies
+   * on top. The exit remains a VERSIONED panel, never a quiet promotion.
+   */
+  "FRMI",
 ] as const;
 
 const PANEL_SET: ReadonlySet<string> = new Set(EQUITY_PANEL);

@@ -44,6 +44,16 @@ export const SCANNED = [
   "CIFR",
   "HUT",
   "BTDR",
+  /*
+   * Fermi Inc — nuclear-powered datacenter campuses. Added 2026-09-13 for the
+   * same honest reason IONQ and OKLO are here: traded, therefore measured.
+   * The account planned an option on it while the pre-trade auditor could
+   * only give a partial audit — no bars, no beta, no breakeven probability,
+   * no positioning row. A recent IPO, so history-dependent surfaces will
+   * refuse or run short until the record grows; that is the honest outcome,
+   * not a gap to fill.
+   */
+  "FRMI",
 ] as const;
 
 /**

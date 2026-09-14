@@ -14,6 +14,7 @@ import { parseHeldPositions } from "@/lib/pretrade/parseHeldPositions";
 import { measuredRoundTripBp } from "@/lib/execution/measuredSpread";
 import { BreakevenReach, runOptionOrderChecks } from "@/lib/pretrade/optionOrder";
 import { REQUEST_SHAPE, collectShapeDefects } from "@/lib/pretrade/requestShape";
+import { positioningUniverse } from "@/lib/markets/scannerUniverse";
 import { parseOptionLeg } from "@/lib/portfolio/buildPortfolio";
 import { reachAt } from "@/lib/research/exitDesign";
 
@@ -175,18 +176,32 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
    */
   const sp = panel.symbols[symbol];
   const covered = sp !== undefined;
+  /*
+   * Two different absences, named apart. A DECLARED name with no bars yet is
+   * in the window between joining the universe and the next nightly ingest —
+   * coverage is coming and nobody needs to act. An UNDECLARED name is either
+   * a typo or a name someone should ask to have added. Collapsing them would
+   * tell the caller to request an addition that is already done.
+   */
+  const declared = positioningUniverse().includes(symbol);
+  const partialNote =
+    `This audit is PARTIAL: checks needing only the order and account ran in full; ` +
+    `checks needing this name's history ` +
+    `(beta_exposure, ${isOptionOrder ? "breakeven reach probability" : "stop_survival, cost"}) ` +
+    `report unknown rather than a number. Supply live_price to recover the ` +
+    `price-dependent checks.`;
   const coverage = covered
     ? { bars: true as const }
     : {
         bars: false as const,
-        note:
-          `${symbol} has no committed daily bars — it is outside the ingest universe declared ` +
-          `in src/lib/markets/scannerUniverse.ts. This audit is PARTIAL: checks needing only ` +
-          `the order and account ran in full; checks needing this name's history ` +
-          `(beta_exposure, ${isOptionOrder ? "breakeven reach probability" : "stop_survival, cost"}) ` +
-          `report unknown rather than a number. Supply live_price to recover the ` +
-          `price-dependent checks. If you expected coverage, check the spelling; if the name ` +
-          `is newly traded, ask for it to be added to the universe.`,
+        note: declared
+          ? `${symbol} is declared in the universe but its daily bars have not been committed ` +
+            `yet — the nightly ingest populates them, so full coverage arrives with the next ` +
+            `data refresh. ${partialNote}`
+          : `${symbol} has no committed daily bars — it is outside the ingest universe declared ` +
+            `in src/lib/markets/scannerUniverse.ts. ${partialNote} If you expected coverage, ` +
+            `check the spelling; if the name is newly traded, ask for it to be added to the ` +
+            `universe.`,
       };
 
   /*
