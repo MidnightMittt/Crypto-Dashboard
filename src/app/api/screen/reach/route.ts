@@ -91,6 +91,22 @@ export function GET(req: NextRequest) {
     );
   }
 
+  /*
+   * Optional: the contract's own trailing sigma (annualised — 1.1 means
+   * 110%). The conversion bias is strongly sigma-dependent (3-6x larger
+   * above 0.8 than the pooled figure), so a caller pricing a specific name
+   * should pass it. Absent, the pooled answer carries the warning instead
+   * of silently understating.
+   */
+  const sigmaRaw = req.nextUrl.searchParams.get("sigma");
+  const sigma = sigmaRaw === null ? undefined : Number(sigmaRaw);
+  if (sigma !== undefined && (!Number.isFinite(sigma) || sigma <= 0 || sigma > 6)) {
+    return NextResponse.json(
+      { error: `sigma must be an annualised volatility in (0, 6], e.g. 1.1 for 110%, got ${sigmaRaw}.` },
+      { status: 400 }
+    );
+  }
+
   const rows = [];
   const unmeasurable: { symbol: string; reason: string }[] = [];
 
@@ -199,7 +215,7 @@ export function GET(req: NextRequest) {
      * how large the DRIFT term is at this cell before ranking anything by
      * an undecomposed difference.
      */
-    gbm_conversion: conversionReport(horizon, movePct),
+    gbm_conversion: conversionReport(horizon, movePct, sigma),
 
     /*
      * C2: the correct reach-vs-implied join is PER CONTRACT — a real

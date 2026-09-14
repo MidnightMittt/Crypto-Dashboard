@@ -101,6 +101,46 @@ interface CalibrationFile {
     note: string;
   };
   cells: CalibrationCell[];
+  sigma_bands: {
+    declaration: {
+      declared: string;
+      bandedOn: string;
+      edges: number[];
+      minNamesPerBlock: number;
+      minBlocksForStats: number;
+      primaryFamily: string;
+      secondaryFamily: string;
+      examinedBeforeDeclaring: string;
+    };
+    bands: BandCell[];
+    contrasts: ContrastCell[];
+  };
+}
+
+export interface BandCell {
+  horizon_sessions: number;
+  barrier_pct: number;
+  band: string;
+  blocks: number;
+  names_per_block: number | null;
+  trailing: CalibrationStat | null;
+  in_window: CalibrationStat | null;
+  antisymmetric_trailing_pp: number | null;
+  resolves: boolean;
+  insufficient: string | null;
+  blocks_needed_for_bar: number | null;
+  /** Present on the >0.8 band only — the declared secondary family. */
+  family?: { p: number; p_holm: number; clears: boolean };
+}
+
+export interface ContrastCell {
+  horizon_sessions: number;
+  barrier_pct: number;
+  blocks: number;
+  stat: CalibrationStat | null;
+  insufficient: string | null;
+  blocks_needed_for_bar: number | null;
+  family: { p: number; p_holm: number; clears: boolean };
 }
 
 const file = calibrationJson as unknown as CalibrationFile;
@@ -143,6 +183,18 @@ export interface ConversionReport {
   effective_blocks: number;
   /** Familywise verdict for THIS cell — Holm across all 16 trailing statistics. */
   family: { p_holm: number; clears: boolean };
+  /**
+   * Which population answered. `pooled` is a mixture average dominated by
+   * low-vol names (~67 of ~81 per block sit under trailing sigma 0.5);
+   * `band` means the caller supplied a sigma and the matching band cell
+   * answered. No single contract occupies the pooled mixture, which is why
+   * passing the contract's own trailing sigma is always the better question.
+   */
+  sigma_band: {
+    requested_sigma: number | null;
+    band: string | null;
+    source: "pooled" | "band";
+  };
   method: string;
 }
 
@@ -157,10 +209,32 @@ export interface ConversionReport {
  * distinguished from zero at the sample available is a refusal, not a
  * measurement, and that holds for the field as well as the sentence.
  */
-export function conversionReport(horizonSessions: number, barrierPct: number): ConversionReport | null {
+export function conversionReport(
+  horizonSessions: number,
+  barrierPct: number,
+  /**
+   * The contract's own trailing sigma (annualised, e.g. 1.1 for 110%).
+   * Omitting it gets the pooled answer — a mixture average that understates
+   * the bias by 3-6x for high-vol names, which is stated in the verdict
+   * rather than left for the caller to discover.
+   */
+  trailingSigma?: number
+): ConversionReport | null {
   const found = nearestCell(horizonSessions, barrierPct);
   if (!found) return null;
   const { cell, exact } = found;
+
+  const sigma =
+    trailingSigma !== undefined && Number.isFinite(trailingSigma) && trailingSigma > 0
+      ? trailingSigma
+      : null;
+  const edges = file.sigma_bands.declaration.edges;
+  const bandLabel =
+    sigma === null ? null : sigma <= edges[0] ? "<=0.5" : sigma <= edges[1] ? "0.5-0.8" : ">0.8";
+
+  if (bandLabel === ">0.8") return highBandReport(horizonSessions, barrierPct, sigma!);
+  if (bandLabel === "0.5-0.8") return midBandRefusal(horizonSessions, barrierPct, sigma!, cell, exact);
+
   const t = cell.trailing;
   /*
    * Both tests run on the CHARGED figures. Deciding detectability on the raw
@@ -199,6 +273,21 @@ export function conversionReport(horizonSessions: number, barrierPct: number): C
   /** "N blocks" overstated the sample; this is what N is worth. */
   const sample = `${cell.blocks} non-overlapping blocks worth ${t.effective_blocks} after their own serial correlation (ar1 ${t.ar1})`;
 
+  /*
+   * The pooled figure is served to two kinds of caller and owes each a
+   * different sentence. With no sigma, the caller must learn the figure is
+   * a mixture before applying it to any specific contract. At sigma <= 0.5
+   * the pooled figure approximately IS their band (low-vol names are ~67 of
+   * ~81 per block), and saying so prevents a spurious trip to the artifact.
+   */
+  const sigmaNote =
+    sigma === null
+      ? ` CAUTION: this is the pooled figure, and the bias is strongly sigma-dependent — above ` +
+        `trailing sigma 0.8 it measures -4.4 to -10.0pp and clears its own family. Pass the ` +
+        `contract's trailing sigma to get the banded answer; no single contract occupies the pooled mixture.`
+      : ` At trailing sigma ${sigma} the pooled figure approximately is this band's: low-vol names ` +
+        `dominate the pooled mean roughly eight to one.`;
+
   return {
     measured_at: {
       horizon_sessions: cell.horizon_sessions,
@@ -212,13 +301,18 @@ export function conversionReport(horizonSessions: number, barrierPct: number): C
     blocks: cell.blocks,
     effective_blocks: t.effective_blocks,
     family: { p_holm: cell.family.p_holm, clears: cell.family.clears },
+    sigma_band: {
+      requested_sigma: sigma,
+      band: bandLabel,
+      source: "pooled",
+    },
     /*
      * The prose walks the SAME gate as the field, in the same order. A
      * verdict that called something "measured" while bias_pp beside it was
      * null — or the reverse — is the defect the one-condition rule exists
      * to prevent.
      */
-    verdict: !cell.resolves
+    verdict: (!cell.resolves
       ? `This cell cannot resolve a ${EFFECT_SOUGHT_PP}pp effect (its own floor is ${t.mde_pp_adjusted}pp), so no bias figure is offered.`
       : detectable && !cell.family.clears
         ? `This cell clears its own floor (${t.symmetric_pp > 0 ? "+" : ""}${t.symmetric_pp}pp, t=${t.t_adjusted}) but not the sixteen-cell family (Holm p ${cell.family.p_holm}) — sixteen cells produce roughly one such clearance by chance, and this is the shape that chance takes. No bias figure is offered.`
@@ -230,7 +324,7 @@ export function conversionReport(horizonSessions: number, barrierPct: number): C
                 Math.abs(t.t) >= 2
                   ? `It DID clear on the uncharged t (${t.t}); the blocks are not independent enough to support that reading, and the honest answer here is a null rather than a small measured bias.`
                   : `A well-powered null: the bridge between implied and measured is sound at this cell.`
-              }`,
+              }`) + sigmaNote,
     method:
       `Symmetric (volatility) component of measured-minus-implied touch probability, ` +
       `${file.method.panel}, ${sample}. Correlation BETWEEN NAMES is absorbed by the design — the ` +
@@ -239,4 +333,155 @@ export function conversionReport(horizonSessions: number, barrierPct: number): C
       `The ANTISYMMETRIC component here is ${cell.antisymmetric_trailing_pp > 0 ? "+" : ""}${cell.antisymmetric_trailing_pp}pp — that is DRIFT, ` +
       `it grows with horizon, and ranking symbols by undecomposed "measured minus implied" ranks it rather than any mispricing.`,
   };
+}
+
+/** Nearest band cell by the same log-distance score `nearestCell` uses. */
+function nearestBandCell(
+  band: string,
+  horizonSessions: number,
+  barrierPct: number
+): { cell: BandCell; exact: boolean } | null {
+  const pool = file.sigma_bands.bands.filter((b) => b.band === band);
+  if (pool.length === 0) return null;
+  const score = (c: BandCell) =>
+    Math.abs(Math.log(c.horizon_sessions / horizonSessions)) +
+    Math.abs(Math.log(c.barrier_pct / barrierPct));
+  const cell = [...pool].sort((a, b) => score(a) - score(b))[0];
+  return {
+    cell,
+    exact: cell.horizon_sessions === horizonSessions && cell.barrier_pct === barrierPct,
+  };
+}
+
+/**
+ * The >0.8 band answers with its own cell, its own floor, and its own
+ * declared family — the same three-condition gate as the pooled path. This
+ * band is where every name the account trades lives, and it is where the
+ * pooled figure was most wrong: 3-6x smaller than the banded measurement.
+ */
+function highBandReport(
+  horizonSessions: number,
+  barrierPct: number,
+  sigma: number
+): ConversionReport | null {
+  const found = nearestBandCell(">0.8", horizonSessions, barrierPct);
+  if (!found) return null;
+  const { cell, exact } = found;
+  const t = cell.trailing;
+  if (t === null) {
+    return {
+      measured_at: {
+        horizon_sessions: cell.horizon_sessions,
+        barrier_pct: cell.barrier_pct,
+        exact_match: exact,
+      },
+      bias_pp: null,
+      noise_floor_pp: 0,
+      resolves_effect_of_pp: EFFECT_SOUGHT_PP,
+      drift_component_pp: cell.antisymmetric_trailing_pp ?? 0,
+      blocks: cell.blocks,
+      effective_blocks: 0,
+      family: { p_holm: 1, clears: false },
+      sigma_band: { requested_sigma: sigma, band: ">0.8", source: "band" },
+      verdict:
+        cell.insufficient ??
+        "The high-sigma band could not be measured at this cell; no bias figure is offered.",
+      method: bandMethod(cell, "insufficient blocks"),
+    };
+  }
+  const detectable = Math.abs(t.t_adjusted) >= 2;
+  const fam = cell.family ?? { p: 1, p_holm: 1, clears: false };
+  const offerBias = cell.resolves && detectable && fam.clears;
+  const sample =
+    `${cell.blocks} non-overlapping blocks of ~${cell.names_per_block} names above trailing ` +
+    `sigma 0.8, worth ${t.effective_blocks} after their own serial correlation (ar1 ${t.ar1})`;
+  return {
+    measured_at: {
+      horizon_sessions: cell.horizon_sessions,
+      barrier_pct: cell.barrier_pct,
+      exact_match: exact,
+    },
+    bias_pp: offerBias ? t.symmetric_pp : null,
+    noise_floor_pp: t.mde_pp_adjusted,
+    resolves_effect_of_pp: EFFECT_SOUGHT_PP,
+    drift_component_pp: cell.antisymmetric_trailing_pp ?? 0,
+    blocks: cell.blocks,
+    effective_blocks: t.effective_blocks,
+    family: { p_holm: fam.p_holm, clears: fam.clears },
+    sigma_band: { requested_sigma: sigma, band: ">0.8", source: "band" },
+    verdict: !offerBias
+      ? `At trailing sigma above 0.8 this cell offers no bias figure (` +
+        `${t.symmetric_pp > 0 ? "+" : ""}${t.symmetric_pp}pp, t=${t.t_adjusted}, ` +
+        `family ${fam.clears ? "clears" : `p ${fam.p_holm}`}) — the estimate does not clear ` +
+        `all three of its own floor, the ${EFFECT_SOUGHT_PP}pp resolution bar, and the 16-cell family.`
+      : `At trailing sigma above 0.8 the vol-to-touch conversion is biased by ` +
+        `${t.symmetric_pp > 0 ? "+" : ""}${t.symmetric_pp}pp at this cell (t=${t.t_adjusted} over ` +
+        `${sample}, Holm p ${fam.p_holm})` +
+        (Math.abs(t.symmetric_pp) >= EFFECT_SOUGHT_PP
+          ? ` — PAST the ${EFFECT_SOUGHT_PP}pp bar. A touch probability computed from this name's ` +
+            `trailing sigma overstates reality by roughly this much; correct for it, or better, ` +
+            `use a current implied vol rather than a trailing estimate, since the error is the ` +
+            `forecast and not the formula.`
+          : ` — real, and below the ${EFFECT_SOUGHT_PP}pp bar at this cell.`),
+    method: bandMethod(cell, sample),
+  };
+}
+
+/**
+ * The 0.5-0.8 band is measured — its levels run -1.6 to -7.6pp on the
+ * current artifact — but it carries NO pre-declared family, and handing out
+ * a per-cell figure from an uncharged 16-cell family is the exact move the
+ * Holm block exists to prevent. So the field refuses and the prose gives
+ * the RANGE as a characterisation, which is a warning rather than a number
+ * a caller could subtract. Falling back to the pooled figure is refused
+ * harder: the mixture understates this band.
+ */
+function midBandRefusal(
+  horizonSessions: number,
+  barrierPct: number,
+  sigma: number,
+  pooledCell: CalibrationCell,
+  exact: boolean
+): ConversionReport {
+  const mids = file.sigma_bands.bands.filter((b) => b.band === "0.5-0.8" && b.trailing !== null);
+  const syms = mids.map((b) => b.trailing!.symmetric_pp);
+  const range =
+    syms.length > 0
+      ? `${Math.min(...syms).toFixed(1)} to ${Math.max(...syms).toFixed(1)}pp across the grid`
+      : "unmeasured";
+  return {
+    measured_at: {
+      horizon_sessions: pooledCell.horizon_sessions,
+      barrier_pct: pooledCell.barrier_pct,
+      exact_match: exact,
+    },
+    bias_pp: null,
+    noise_floor_pp: pooledCell.trailing.mde_pp_adjusted,
+    resolves_effect_of_pp: EFFECT_SOUGHT_PP,
+    drift_component_pp: pooledCell.antisymmetric_trailing_pp,
+    blocks: pooledCell.blocks,
+    effective_blocks: pooledCell.trailing.effective_blocks,
+    family: { p_holm: 1, clears: false },
+    sigma_band: { requested_sigma: sigma, band: "0.5-0.8", source: "band" },
+    verdict:
+      `At trailing sigma ${sigma} no bias figure is offered. The 0.5-0.8 band is measured (levels ` +
+      `run ${range}) but carries no pre-declared familywise verdict, so quoting one of its sixteen ` +
+      `cells would be an uncharged selection. Do NOT fall back to the pooled figure — the mixture ` +
+      `understates this band. Treat the conversion here as biased downward by low single digits of ` +
+      `pp, direction known, magnitude unquoted.`,
+    method:
+      `Refusal path: the mid-sigma band has measured levels and no declared family. The band data ` +
+      `is in touchCalibration.json under sigma_bands.bands for inspection; a familywise verdict ` +
+      `for this band requires declaring it first, the same discipline the >0.8 band went through.`,
+  };
+}
+
+function bandMethod(cell: BandCell, sample: string): string {
+  return (
+    `Symmetric (volatility) component, ${file.method.panel} SLICED to names above trailing sigma ` +
+    `0.8 at entry, ${sample}. Banding is on the same entry-time sigma the GBM prediction consumes, ` +
+    `declared before the banded run (see sigma_bands.declaration). The ANTISYMMETRIC component ` +
+    `here is ${cell.antisymmetric_trailing_pp ?? 0}pp — DRIFT, which grows with horizon and is not ` +
+    `a mispricing.`
+  );
 }

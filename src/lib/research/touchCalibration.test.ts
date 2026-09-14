@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import calibrationJson from "@/data/touchCalibration.json";
-import { CalibrationCell, EFFECT_SOUGHT_PP, conversionReport, nearestCell } from "./touchCalibration";
+import {
+  BandCell,
+  CalibrationCell,
+  EFFECT_SOUGHT_PP,
+  conversionReport,
+  nearestCell,
+} from "./touchCalibration";
 
 /**
  * These are INVARIANT tests, not value tests.
@@ -180,6 +186,84 @@ describe("conversionReport", () => {
       expect(r.method).toMatch(/ANTISYMMETRIC/);
       expect(r.method).toMatch(/DRIFT/);
     }
+  });
+});
+
+describe("conversionReport — sigma bands", () => {
+  const bands = (calibrationJson as unknown as { sigma_bands: { bands: BandCell[] } }).sigma_bands
+    .bands;
+  const highBand = bands.filter((b) => b.band === ">0.8");
+
+  it("warns that the pooled figure is a mixture whenever no sigma is given", () => {
+    for (const [h, b] of everyCell) {
+      const r = conversionReport(h, b)!;
+      expect(r.sigma_band.source).toBe("pooled");
+      expect(r.sigma_band.requested_sigma).toBeNull();
+      expect(r.verdict).toContain("sigma-dependent");
+    }
+  });
+
+  it("answers a >0.8 caller from the band cell under the same three-condition gate", () => {
+    for (const cell of highBand) {
+      const r = conversionReport(cell.horizon_sessions, cell.barrier_pct, 1.1)!;
+      expect(r.sigma_band).toEqual({ requested_sigma: 1.1, band: ">0.8", source: "band" });
+      const t = cell.trailing;
+      const offer =
+        t !== null &&
+        cell.resolves &&
+        Math.abs(t.t_adjusted) >= 2 &&
+        (cell.family?.clears ?? false);
+      if (offer) {
+        expect(r.bias_pp).toBe(t!.symmetric_pp);
+        expect(r.blocks).toBe(cell.blocks);
+      } else {
+        expect(
+          r.bias_pp,
+          `${cell.horizon_sessions}/${cell.barrier_pct}% high band offered a bias its gate refuses`
+        ).toBeNull();
+      }
+    }
+  });
+
+  it("tells a high-sigma caller when the bias is PAST the bar, not merely real", () => {
+    /*
+     * The reason the band path exists. The pooled verdict at these cells
+     * says "compare premiums to measured reach without a correction" —
+     * words that are wrong by 3-6x for the names this account trades. At
+     * least one high-band cell must currently exceed the bar and say so;
+     * if a refresh ever empties this set, the OUTBOX claim needs rewriting
+     * alongside this test.
+     */
+    const past = highBand.filter(
+      (c) =>
+        c.trailing !== null &&
+        Math.abs(c.trailing.symmetric_pp) >= EFFECT_SOUGHT_PP &&
+        (c.family?.clears ?? false)
+    );
+    expect(past.length).toBeGreaterThan(0);
+    for (const cell of past) {
+      const r = conversionReport(cell.horizon_sessions, cell.barrier_pct, 1.1)!;
+      expect(r.verdict).toContain("PAST");
+      expect(r.verdict).not.toContain("without a correction");
+    }
+  });
+
+  it("refuses the mid band with the range as prose and null as the field", () => {
+    for (const [h, b] of everyCell) {
+      const r = conversionReport(h, b, 0.65)!;
+      expect(r.bias_pp).toBeNull();
+      expect(r.sigma_band).toEqual({ requested_sigma: 0.65, band: "0.5-0.8", source: "band" });
+      expect(r.verdict).toContain("no bias figure is offered");
+      expect(r.verdict).toContain("Do NOT fall back to the pooled figure");
+      expect(r.family.clears).toBe(false);
+    }
+  });
+
+  it("serves a low-sigma caller the pooled cell and says the two coincide", () => {
+    const r = conversionReport(21, 10, 0.3)!;
+    expect(r.sigma_band.source).toBe("pooled");
+    expect(r.sigma_band.band).toBe("<=0.5");
+    expect(r.verdict).toContain("approximately");
   });
 });
 
