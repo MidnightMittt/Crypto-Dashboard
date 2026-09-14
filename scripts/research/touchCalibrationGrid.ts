@@ -76,6 +76,57 @@ const BARRIERS = [5, 10, 20, 30];
 const EFFECT_SOUGHT_PP = 5;
 const TRAILING_VOL_SESSIONS = 60;
 
+/*
+ * ── SIGMA-BAND CONDITIONING, declared 2026-09-14 BEFORE the first run ──
+ *
+ * The pooled grid's stated weakness: the panel is thickest at sigma
+ * 0.2-0.5 while every name the account trades prints trailing sigma
+ * 0.8-1.25 (CLSK 0.88, WULF 0.82, RIOT 0.92, MARA 0.98, CIFR 1.06,
+ * FRMI 1.09, PURR 1.25). The question is binary: does the conversion bias
+ * hold, grow, or invert above sigma 0.8?
+ *
+ * Everything below was fixed before any banded outcome was computed. The
+ * only thing examined first was OCCUPANCY — names per band per block,
+ * which reveals feasibility and nothing about any bias direction (353 of
+ * 840 ten-session blocks carry >=3 names above 0.8).
+ *
+ *  - Bands on TRAILING sigma at entry — the same estimate the GBM
+ *    prediction consumes, knowable at entry. Banding on in-window sigma
+ *    would condition on the outcome. Edges 0.5 and 0.8, giving
+ *    <=0.5 / 0.5-0.8 / >0.8; membership is per (name, date), so a name
+ *    moves bands as its own vol does.
+ *  - A block contributes to a band when it has >= 3 names in that band.
+ *    The block mean is unbiased at any occupancy and its extra noise
+ *    flows into the block-series SD, where the SE over blocks charges it
+ *    automatically; the floor only prevents a single name from
+ *    masquerading as a cross-section. Occupancy is reported per cell.
+ *  - Band series are drawn only from blocks the pooled grid accepted
+ *    (>= 20 names total), so a band cell is always a slice of the
+ *    published measurement, never a different sample.
+ *  - PRIMARY: the 16 per-cell contrasts, high band MINUS low band,
+ *    computed PAIRED on blocks where both bands clear the occupancy
+ *    floor — the two bands share dates, and quadrature SEs on
+ *    date-sharing subsets have already produced a fake t of -4.09 in
+ *    this project (the paired bootstrap said -0.92). Holm at 0.05
+ *    across the 16, family size fixed; a contrast without enough blocks
+ *    enters at p = 1 rather than shrinking the family.
+ *  - SECONDARY: the 16 high-band levels, own floors, own ar1 charge,
+ *    Holm at 0.05, same p = 1 rule. Low and mid band levels are printed
+ *    as context and carry no familywise claim.
+ *  - A cell (band level or contrast) with fewer than 10 usable blocks
+ *    reports its stats as null with the block count — "insufficient" is
+ *    an answer, not a gap. Wherever the adjusted MDE exceeds the 5pp
+ *    bar, the cell also reports how many blocks WOULD resolve it at the
+ *    observed variance, so a data problem is distinguishable from a
+ *    permanent one.
+ *  - The 5pp economic bar and every other convention (barriers in log
+ *    space, drift sign flip, ar1 charge) are inherited unchanged.
+ */
+const SIGMA_BAND_EDGES = [0.5, 0.8] as const;
+const BAND_LABELS = ["<=0.5", "0.5-0.8", ">0.8"] as const;
+const MIN_NAMES_PER_BAND_BLOCK = 3;
+const MIN_BLOCKS_FOR_STATS = 10;
+
 // ── Normal CDF (Abramowitz-Stegun 7.1.26 via erf) ────────────────────
 function erf(x: number): number {
   const s = x < 0 ? -1 : 1;
@@ -140,6 +191,38 @@ interface CellResult {
   antisymmetric_trailing_pp: number;
   resolves: boolean;
   /** Family-wise verdict across all 16 cells. See the Holm block below. */
+  family: { p: number; p_holm: number; clears: boolean };
+}
+
+interface BandCell {
+  horizon_sessions: number;
+  barrier_pct: number;
+  band: string;
+  /** Blocks clearing the occupancy floor for this band. */
+  blocks: number;
+  names_per_block: number | null;
+  /** Null when blocks fall under MIN_BLOCKS_FOR_STATS — insufficient IS the answer. */
+  trailing: Stat | null;
+  in_window: Stat | null;
+  antisymmetric_trailing_pp: number | null;
+  resolves: boolean;
+  insufficient: string | null;
+  /** Blocks that WOULD resolve the 5pp bar at the observed variance. Null when it already does. */
+  blocks_needed_for_bar: number | null;
+  /** Present on the >0.8 band only — the declared secondary family. */
+  family?: { p: number; p_holm: number; clears: boolean };
+}
+
+interface ContrastCell {
+  horizon_sessions: number;
+  barrier_pct: number;
+  /** Blocks where BOTH the >0.8 and <=0.5 bands cleared the occupancy floor. */
+  blocks: number;
+  /** High minus low, paired per block. Null under MIN_BLOCKS_FOR_STATS. */
+  stat: Stat | null;
+  insufficient: string | null;
+  blocks_needed_for_bar: number | null;
+  /** The declared PRIMARY family: 16 contrasts, Holm at 0.05. */
   family: { p: number; p_holm: number; clears: boolean };
 }
 interface Stat {
@@ -212,6 +295,8 @@ function summarise(diffs: number[]): Stat {
 }
 
 const cells: CellResult[] = [];
+const bandCells: BandCell[] = [];
+const contrastCells: ContrastCell[] = [];
 
 for (const H of HORIZONS) {
   const T = H / 252;
@@ -224,9 +309,19 @@ for (const H of HORIZONS) {
     const antiTrail: number[] = [];
     let namesTotal = 0;
 
+    // Band series: [band][block]. Contrast is high minus low, paired per block.
+    const bandSymT: number[][] = [[], [], []];
+    const bandSymW: number[][] = [[], [], []];
+    const bandAnti: number[][] = [[], [], []];
+    const bandNames = [0, 0, 0];
+    const contrast: number[] = [];
+
     for (let g = TRAILING_VOL_SESSIONS; g + H < grid.length; g += H) {
       const t0 = grid[g];
       const dSymT: number[] = [], dSymW: number[] = [], dAntiT: number[] = [];
+      const dBandT: number[][] = [[], [], []];
+      const dBandW: number[][] = [[], [], []];
+      const dBandA: number[][] = [[], [], []];
 
       for (const { bars, byTime, logRet } of loaded) {
         const i = byTime.get(t0);
@@ -248,18 +343,24 @@ for (const H of HORIZONS) {
           if (yUp && yDn) break;
         }
 
-        for (const [sig, symArr, antiArr] of [
-          [sTrail, dSymT, dAntiT],
-          [sWin, dSymW, null],
-        ] as const) {
+        const errorsAt = (sig: number) => {
           const mu = -0.5 * sig * sig;
-          const pUp = pTouchUp(bUp, sig, T, mu);
-          const pDn = pTouchDown(bDn, sig, T, mu);
-          const eUp = yUp - pUp;
-          const eDn = yDn - pDn;
-          symArr.push((eUp + eDn) / 2);
-          if (antiArr) antiArr.push((eUp - eDn) / 2);
-        }
+          const eUp = yUp - pTouchUp(bUp, sig, T, mu);
+          const eDn = yDn - pTouchDown(bDn, sig, T, mu);
+          return { sym: (eUp + eDn) / 2, anti: (eUp - eDn) / 2 };
+        };
+        const eT = errorsAt(sTrail);
+        const eW = errorsAt(sWin);
+        dSymT.push(eT.sym);
+        dAntiT.push(eT.anti);
+        dSymW.push(eW.sym);
+
+        // Banded on TRAILING sigma — the entry-time estimate, per the
+        // declaration. Same numbers as the pooled series, sliced.
+        const band = sTrail <= SIGMA_BAND_EDGES[0] ? 0 : sTrail <= SIGMA_BAND_EDGES[1] ? 1 : 2;
+        dBandT[band].push(eT.sym);
+        dBandW[band].push(eW.sym);
+        dBandA[band].push(eT.anti);
       }
 
       if (dSymT.length < 20) continue;
@@ -267,6 +368,20 @@ for (const H of HORIZONS) {
       symTrail.push(dSymT.reduce((a, b) => a + b, 0) / dSymT.length);
       symWin.push(dSymW.reduce((a, b) => a + b, 0) / dSymW.length);
       antiTrail.push(dAntiT.reduce((a, b) => a + b, 0) / dAntiT.length);
+
+      const bandMeans: (number | null)[] = [null, null, null];
+      for (let k = 0; k < 3; k++) {
+        if (dBandT[k].length < MIN_NAMES_PER_BAND_BLOCK) continue;
+        bandMeans[k] = dBandT[k].reduce((a, b) => a + b, 0) / dBandT[k].length;
+        bandSymT[k].push(bandMeans[k]!);
+        bandSymW[k].push(dBandW[k].reduce((a, b) => a + b, 0) / dBandW[k].length);
+        bandAnti[k].push(dBandA[k].reduce((a, b) => a + b, 0) / dBandA[k].length);
+        bandNames[k] += dBandT[k].length;
+      }
+      // Paired: only blocks where BOTH ends of the contrast exist.
+      if (bandMeans[2] !== null && bandMeans[0] !== null) {
+        contrast.push(bandMeans[2] - bandMeans[0]);
+      }
     }
 
     if (symTrail.length < 10) continue;
@@ -289,6 +404,56 @@ for (const H of HORIZONS) {
       resolves: trailing.mde_pp_adjusted <= EFFECT_SOUGHT_PP,
       family: { p: 0, p_holm: 0, clears: false }, // filled after all cells exist
     });
+
+    for (let k = 0; k < 3; k++) {
+      const s = bandSymT[k];
+      const enough = s.length >= MIN_BLOCKS_FOR_STATS;
+      const st = enough ? summarise(s) : null;
+      bandCells.push({
+        horizon_sessions: H,
+        barrier_pct: MOVE,
+        band: BAND_LABELS[k],
+        blocks: s.length,
+        names_per_block: s.length > 0 ? Number((bandNames[k] / s.length).toFixed(1)) : null,
+        trailing: st,
+        in_window: enough ? summarise(bandSymW[k]) : null,
+        antisymmetric_trailing_pp:
+          s.length > 0
+            ? Number(((bandAnti[k].reduce((a, b) => a + b, 0) / bandAnti[k].length) * 100).toFixed(3))
+            : null,
+        resolves: st !== null && st.mde_pp_adjusted <= EFFECT_SOUGHT_PP,
+        insufficient: enough
+          ? null
+          : `${s.length} blocks carried >=${MIN_NAMES_PER_BAND_BLOCK} names in this band; ` +
+            `no statistic is computed below ${MIN_BLOCKS_FOR_STATS}. Insufficient is the answer.`,
+        // MDE scales as 1/sqrt(blocks), so the blocks needed grow with the
+        // square of the shortfall. At the observed variance, not a promise.
+        blocks_needed_for_bar:
+          st !== null && st.mde_pp_adjusted > EFFECT_SOUGHT_PP
+            ? Math.ceil(s.length * (st.mde_pp_adjusted / EFFECT_SOUGHT_PP) ** 2)
+            : null,
+      });
+    }
+
+    {
+      const enough = contrast.length >= MIN_BLOCKS_FOR_STATS;
+      const st = enough ? summarise(contrast) : null;
+      contrastCells.push({
+        horizon_sessions: H,
+        barrier_pct: MOVE,
+        blocks: contrast.length,
+        stat: st,
+        insufficient: enough
+          ? null
+          : `${contrast.length} blocks carried both bands at >=${MIN_NAMES_PER_BAND_BLOCK} names; ` +
+            `no statistic is computed below ${MIN_BLOCKS_FOR_STATS}. Insufficient is the answer.`,
+        blocks_needed_for_bar:
+          st !== null && st.mde_pp_adjusted > EFFECT_SOUGHT_PP
+            ? Math.ceil(contrast.length * (st.mde_pp_adjusted / EFFECT_SOUGHT_PP) ** 2)
+            : null,
+        family: { p: 1, p_holm: 1, clears: false }, // filled after all cells exist
+      });
+    }
   }
 }
 
@@ -322,24 +487,46 @@ for (const H of HORIZONS) {
  * in every cell, where Student-t and normal differ past the third decimal.
  */
 const FAMILY_ALPHA = 0.05;
-{
-  const pOf = (t: number) => Math.min(1, 2 * (1 - Phi(Math.abs(t))));
-  const order = cells
-    .map((c, i) => ({ i, p: pOf(c.trailing.t_adjusted) }))
-    .sort((a, b) => a.p - b.p);
+
+/**
+ * Holm step-down over a family of t statistics. A null t means "this member
+ * produced no usable statistic" and enters at p = 1 — the family size stays
+ * fixed at declaration rather than shrinking to whatever the data managed,
+ * which would quietly relax the threshold on the survivors.
+ */
+function holmVerdicts(ts: (number | null)[]): { p: number; p_holm: number; clears: boolean }[] {
+  const pOf = (t: number | null) => (t === null ? 1 : Math.min(1, 2 * (1 - Phi(Math.abs(t)))));
+  const order = ts.map((t, i) => ({ i, p: pOf(t) })).sort((a, b) => a.p - b.p);
+  const out: { p: number; p_holm: number; clears: boolean }[] = new Array(ts.length);
   let running = 0;
   order.forEach((o, rank) => {
-    // Holm step-down: adjusted p is the running max of (m - rank) * p.
-    running = Math.max(running, Math.min(1, (cells.length - rank) * o.p));
+    // Adjusted p is the running max of (m - rank) * p.
+    running = Math.max(running, Math.min(1, (ts.length - rank) * o.p));
     // Three significant figures — tiny p-values stay legible without
     // pretending to more precision than a normal tail carries out there.
-    cells[o.i].family = {
+    out[o.i] = {
       p: Number(o.p.toExponential(2)),
       p_holm: Number(running.toExponential(2)),
       clears: running <= FAMILY_ALPHA,
     };
   });
+  return out;
 }
+
+holmVerdicts(cells.map((c) => c.trailing.t_adjusted)).forEach((v, i) => {
+  cells[i].family = v;
+});
+
+// PRIMARY declared family: the 16 high-minus-low contrasts.
+holmVerdicts(contrastCells.map((c) => c.stat?.t_adjusted ?? null)).forEach((v, i) => {
+  contrastCells[i].family = v;
+});
+
+// SECONDARY declared family: the 16 high-band levels.
+const highCells = bandCells.filter((c) => c.band === ">0.8");
+holmVerdicts(highCells.map((c) => c.trailing?.t_adjusted ?? null)).forEach((v, i) => {
+  highCells[i].family = v;
+});
 
 // ── Report ───────────────────────────────────────────────────────────
 console.log(`panel: ${loaded.length} of ${EQUITY_PANEL.length} declared names loaded`);
@@ -429,6 +616,50 @@ if (clearing.length > 0) {
   }
 }
 
+// ── Sigma-band report ────────────────────────────────────────────────
+console.log("");
+console.log("SIGMA BANDS (trailing, at entry) — the pooled grid sliced where the book lives");
+for (const label of BAND_LABELS) {
+  const bc = bandCells.filter((c) => c.band === label);
+  console.log(`  band ${label}:`);
+  for (const c of bc) {
+    if (c.trailing === null) {
+      console.log(
+        `    ${String(c.horizon_sessions).padStart(3)}d ${String(c.barrier_pct).padStart(3)}%: ` +
+        `INSUFFICIENT (${c.blocks} blocks)`
+      );
+      continue;
+    }
+    console.log(
+      `    ${String(c.horizon_sessions).padStart(3)}d ${String(c.barrier_pct).padStart(3)}%: ` +
+      `sym ${c.trailing.symmetric_pp.toFixed(2).padStart(6)}pp t_adj ${c.trailing.t_adjusted.toFixed(2).padStart(6)} ` +
+      `MDE* ${c.trailing.mde_pp_adjusted.toFixed(2).padStart(5)} | ${c.blocks} blocks x ~${c.names_per_block} names | ` +
+      `in-window ${c.in_window!.symmetric_pp.toFixed(2).padStart(6)}pp` +
+      (c.family ? ` | family ${c.family.clears ? "CLEARS" : "-"} (p_holm ${c.family.p_holm})` : "") +
+      (c.blocks_needed_for_bar !== null ? ` | needs ${c.blocks_needed_for_bar} blocks for the 5pp bar` : "")
+    );
+  }
+}
+console.log("");
+console.log("CONTRASTS — >0.8 minus <=0.5, paired per block (the PRIMARY family)");
+for (const c of contrastCells) {
+  if (c.stat === null) {
+    console.log(`  ${c.horizon_sessions}d ${c.barrier_pct}%: INSUFFICIENT (${c.blocks} paired blocks)`);
+    continue;
+  }
+  console.log(
+    `  ${String(c.horizon_sessions).padStart(3)}d ${String(c.barrier_pct).padStart(3)}%: ` +
+    `${c.stat.symmetric_pp > 0 ? "+" : ""}${c.stat.symmetric_pp.toFixed(2)}pp t_adj ${c.stat.t_adjusted.toFixed(2)} ` +
+    `MDE* ${c.stat.mde_pp_adjusted.toFixed(2)} over ${c.blocks} paired blocks | ` +
+    `family ${c.family.clears ? "CLEARS" : "-"} (p_holm ${c.family.p_holm})`
+  );
+}
+const contrastsClearing = contrastCells.filter((c) => c.family.clears);
+const highClearing = highCells.filter((c) => c.family?.clears);
+console.log("");
+console.log(`contrasts clearing the family: ${contrastsClearing.length} of ${contrastCells.length}`);
+console.log(`high-band levels clearing their family: ${highClearing.length} of ${highCells.length}`);
+
 fs.writeFileSync(
   OUT,
   JSON.stringify(
@@ -459,6 +690,26 @@ fs.writeFileSync(
           "PATH-SHAPE half of the reach-vs-implied symmetric component. The VOL-PREMIUM half needs live chains and is measured separately.",
       },
       cells,
+      sigma_bands: {
+        declaration: {
+          declared: "2026-09-14, before the first banded run",
+          bandedOn: `trailing ${TRAILING_VOL_SESSIONS}-session sigma at entry — the same estimate the GBM prediction consumes`,
+          edges: SIGMA_BAND_EDGES,
+          minNamesPerBlock: MIN_NAMES_PER_BAND_BLOCK,
+          minBlocksForStats: MIN_BLOCKS_FOR_STATS,
+          primaryFamily:
+            "the 16 per-cell (>0.8 minus <=0.5) contrasts, paired on blocks where both bands " +
+            "clear the occupancy floor, Holm at 0.05 with family size fixed at 16 — a member " +
+            "without a usable statistic enters at p=1 rather than shrinking the family",
+          secondaryFamily: "the 16 >0.8-band levels, same rules",
+          examinedBeforeDeclaring:
+            "band OCCUPANCY only (names per band per block), which determines feasibility and " +
+            "cannot reveal any bias direction. No banded outcome was computed before the " +
+            "declaration was committed.",
+        },
+        bands: bandCells,
+        contrasts: contrastCells,
+      },
     },
     null,
     1
