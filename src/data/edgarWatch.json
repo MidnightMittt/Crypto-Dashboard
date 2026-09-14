@@ -1,0 +1,390 @@
+{
+ "generatedAt": 1789356697445,
+ "cik": "0002071778",
+ "registrant": "Fermi Inc.",
+ "source": "SEC submissions API, https://data.sec.gov/submissions/CIK0002071778.json",
+ "watch": {
+  "event": "any of DEF 14A/DEFC14A/DEFM14A/DEFN14A/DEFR14A filed after 2026-08-31 (the 8-K announcing the 2026-10-30 meeting)",
+  "tell": "any of PRE 14A/PREC14A/PREN14A/PRER14A/PRRN14A/PREM14A after the same anchor",
+  "anchor_reason": "Fermi ran a full contested proxy cycle May-July 2026 (DEFC14A 06-10/06-12, 47 dissident DFAN14A filings); those belong to the previous fight. A PX14A6G exempt solicitation on 2026-09-11 says the contest is alive going into this meeting, so the definitive proxy may well arrive as DEFC14A rather than DEF 14A — the watch must not be pinned to one species."
+ },
+ "found": null,
+ "tells": [],
+ "solicitingSinceAnchor": [
+  {
+   "form": "PX14A6G",
+   "filingDate": "2026-09-11",
+   "accessionNumber": "0001213900-26-099255",
+   "primaryDocument": "ea0305276-px14a6g_toby.htm"
+  }
+ ],
+ "fourteenA": [
+  {
+   "form": "PX14A6G",
+   "filingDate": "2026-09-11",
+   "accessionNumber": "0001213900-26-099255",
+   "primaryDocument": "ea0305276-px14a6g_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-07-08",
+   "accessionNumber": "0001213900-26-076168",
+   "primaryDocument": "ea0297342-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-07-06",
+   "accessionNumber": "0001213900-26-075471",
+   "primaryDocument": "ea0297065-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-07-01",
+   "accessionNumber": "0001213900-26-074411",
+   "primaryDocument": "ea0296795-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-07-01",
+   "accessionNumber": "0001213900-26-073999",
+   "primaryDocument": "ea0296670-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-06-30",
+   "accessionNumber": "0001213900-26-073660",
+   "primaryDocument": "ea0296532-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-06-30",
+   "accessionNumber": "0001213900-26-073338",
+   "primaryDocument": "ea0296426-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-06-29",
+   "accessionNumber": "0001213900-26-073115",
+   "primaryDocument": "ea0296368-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-06-29",
+   "accessionNumber": "0001213900-26-072822",
+   "primaryDocument": "ea0296218-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-06-26",
+   "accessionNumber": "0001213900-26-072594",
+   "primaryDocument": "ea0296145-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-06-25",
+   "accessionNumber": "0001213900-26-072051",
+   "primaryDocument": "ea0295951-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-06-25",
+   "accessionNumber": "0001213900-26-071716",
+   "primaryDocument": "ea0295905-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-06-23",
+   "accessionNumber": "0001213900-26-070838",
+   "primaryDocument": "ea0295608-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-06-22",
+   "accessionNumber": "0001213900-26-070602",
+   "primaryDocument": "ea0295514-dfan14a_toby.htm"
+  },
+  {
+   "form": "DEFA14A",
+   "filingDate": "2026-06-22",
+   "accessionNumber": "0001213900-26-070601",
+   "primaryDocument": "ea0295478-defa14a_fermi.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-06-18",
+   "accessionNumber": "0001213900-26-070121",
+   "primaryDocument": "ea0295327-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-06-18",
+   "accessionNumber": "0001213900-26-070088",
+   "primaryDocument": "ea0295332-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-06-18",
+   "accessionNumber": "0001213900-26-070084",
+   "primaryDocument": "ea0295335-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-06-17",
+   "accessionNumber": "0001213900-26-069710",
+   "primaryDocument": "ea0295175-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-06-17",
+   "accessionNumber": "0001213900-26-069451",
+   "primaryDocument": "ea0295082-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-06-15",
+   "accessionNumber": "0001213900-26-068883",
+   "primaryDocument": "ea0294866-dfan14a_toby.htm"
+  },
+  {
+   "form": "DEFA14A",
+   "filingDate": "2026-06-15",
+   "accessionNumber": "0001213900-26-068505",
+   "primaryDocument": "ea0294731-defa14a_fermi.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-06-12",
+   "accessionNumber": "0001213900-26-068387",
+   "primaryDocument": "ea0294697-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-06-12",
+   "accessionNumber": "0001213900-26-068250",
+   "primaryDocument": "ea0294673-dfan14a_toby.htm"
+  },
+  {
+   "form": "DEFC14A",
+   "filingDate": "2026-06-12",
+   "accessionNumber": "0001213900-26-067954",
+   "primaryDocument": "ea0291106-07.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-06-11",
+   "accessionNumber": "0001213900-26-067892",
+   "primaryDocument": "ea0294531-dfan14a_toby.htm"
+  },
+  {
+   "form": "DEFC14A",
+   "filingDate": "2026-06-10",
+   "accessionNumber": "0001213900-26-067352",
+   "primaryDocument": "ea0294314-defc14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-06-10",
+   "accessionNumber": "0001213900-26-067309",
+   "primaryDocument": "ea0294383-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-06-09",
+   "accessionNumber": "0001213900-26-066781",
+   "primaryDocument": "ea0294194-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-06-09",
+   "accessionNumber": "0001213900-26-066514",
+   "primaryDocument": "ea0294073-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-06-08",
+   "accessionNumber": "0001213900-26-066271",
+   "primaryDocument": "ea0293994-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-06-05",
+   "accessionNumber": "0001213900-26-065787",
+   "primaryDocument": "ea0293820-dfan14a_toby.htm"
+  },
+  {
+   "form": "PRRN14A",
+   "filingDate": "2026-06-05",
+   "accessionNumber": "0001213900-26-065470",
+   "primaryDocument": "ea0293592-prrn14aa3_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-06-04",
+   "accessionNumber": "0001213900-26-065352",
+   "primaryDocument": "ea0293705-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-06-03",
+   "accessionNumber": "0001213900-26-064859",
+   "primaryDocument": "ea0293539-dfan14a_toby.htm"
+  },
+  {
+   "form": "PRER14A",
+   "filingDate": "2026-06-03",
+   "accessionNumber": "0001213900-26-064825",
+   "primaryDocument": "ea0291106-03.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-06-03",
+   "accessionNumber": "0001213900-26-064401",
+   "primaryDocument": "ea0293399-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-06-02",
+   "accessionNumber": "0001213900-26-063752",
+   "primaryDocument": "ea0293180-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-06-01",
+   "accessionNumber": "0001213900-26-063116",
+   "primaryDocument": "ea0292901-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-05-29",
+   "accessionNumber": "0001213900-26-062393",
+   "primaryDocument": "ea0292714-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-05-28",
+   "accessionNumber": "0001213900-26-062090",
+   "primaryDocument": "ea0292414-dfan14a_toby.htm"
+  },
+  {
+   "form": "PRRN14A",
+   "filingDate": "2026-05-26",
+   "accessionNumber": "0001213900-26-061096",
+   "primaryDocument": "ea0292049-prrn14aa2_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-05-26",
+   "accessionNumber": "0001213900-26-060732",
+   "primaryDocument": "ea0292126-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-05-22",
+   "accessionNumber": "0001213900-26-060309",
+   "primaryDocument": "ea0291932-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-05-20",
+   "accessionNumber": "0001213900-26-059522",
+   "primaryDocument": "ea0291755-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-05-20",
+   "accessionNumber": "0001213900-26-059222",
+   "primaryDocument": "ea0291643-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-05-19",
+   "accessionNumber": "0001213900-26-058982",
+   "primaryDocument": "ea0291508-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-05-19",
+   "accessionNumber": "0001213900-26-058981",
+   "primaryDocument": "ea0291576-dfan14a_toby.htm"
+  },
+  {
+   "form": "DEFA14A",
+   "filingDate": "2026-05-18",
+   "accessionNumber": "0001213900-26-058538",
+   "primaryDocument": "ea0291399-defa14a_fermi.htm"
+  },
+  {
+   "form": "PREC14A",
+   "filingDate": "2026-05-15",
+   "accessionNumber": "0001213900-26-057963",
+   "primaryDocument": "ea0291106-01.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-05-14",
+   "accessionNumber": "0001213900-26-056859",
+   "primaryDocument": "ea0290967-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-05-14",
+   "accessionNumber": "0001213900-26-056857",
+   "primaryDocument": "ea0290966-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-05-13",
+   "accessionNumber": "0001213900-26-055765",
+   "primaryDocument": "ea0290585-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-05-13",
+   "accessionNumber": "0001213900-26-055764",
+   "primaryDocument": "ea0290581-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-05-08",
+   "accessionNumber": "0001213900-26-053850",
+   "primaryDocument": "ea028989502-dfan14a_toby.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-05-08",
+   "accessionNumber": "0001213900-26-053848",
+   "primaryDocument": "ea028989501-dfan14a_toby.htm"
+  },
+  {
+   "form": "PRRN14A",
+   "filingDate": "2026-05-07",
+   "accessionNumber": "0001213900-26-053434",
+   "primaryDocument": "ea0289608-prrn14aa1_toby.htm"
+  },
+  {
+   "form": "DEFA14A",
+   "filingDate": "2026-05-06",
+   "accessionNumber": "0001213900-26-052550",
+   "primaryDocument": "ea0289365-8k_fermi.htm"
+  },
+  {
+   "form": "DFAN14A",
+   "filingDate": "2026-05-05",
+   "accessionNumber": "0001213900-26-052294",
+   "primaryDocument": "ea0289296-dfan14a_toby.htm"
+  },
+  {
+   "form": "PREN14A",
+   "filingDate": "2026-05-05",
+   "accessionNumber": "0001213900-26-051939",
+   "primaryDocument": "ea028836002-pren14a_fermi.htm"
+  },
+  {
+   "form": "PREC14A",
+   "filingDate": "2026-05-05",
+   "accessionNumber": "0001213900-26-051937",
+   "primaryDocument": "ea0288360-prec14a_fermi.htm"
+  }
+ ],
+ "recentFilingsSeen": 155
+}

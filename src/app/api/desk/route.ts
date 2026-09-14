@@ -3,6 +3,8 @@ import deskTriggersJson from "@/data/deskTriggers.json";
 import earningsJson from "@/data/earningsCalendar.json";
 import ivRvJson from "@/data/ivRvHistory.json";
 import asymmetryJson from "@/data/asymmetryForward.json";
+import edgarJson from "@/data/edgarWatch.json";
+import lpSwapJson from "@/data/lpSwapVolume.json";
 import barsPanelJson from "@/data/barsPanel.json";
 import { BarsPanel } from "@/lib/research/barsPanel";
 import { DeclaredTrigger, TriggerReading, evaluateTrigger } from "@/lib/desk/triggers";
@@ -65,6 +67,25 @@ const ivRv = ivRvJson as unknown as {
 const asymmetry = asymmetryJson as unknown as {
   generatedAt: number;
   observations: Parameters<typeof evaluateAsymmetryScreen>[0]["observations"];
+};
+const lpSwaps = lpSwapJson as unknown as {
+  generatedAt: number;
+  lpShare: number;
+  dailyReadings: {
+    date: string;
+    yieldPctPerDay: number | null;
+    complete: boolean;
+    swaps: number;
+    wethVolume: number;
+  }[];
+  method: string;
+};
+const edgar = edgarJson as unknown as {
+  generatedAt: number;
+  source: string;
+  found: { form: string; filingDate: string } | null;
+  tells: { form: string; filingDate: string }[];
+  solicitingSinceAnchor: { form: string; filingDate: string }[];
 };
 
 export async function GET() {
@@ -142,8 +163,8 @@ export async function GET() {
   });
 
   /*
-   * §2 LP ORACLE. Position state read live where one eth_call covers it;
-   * fee yield still refused pending the Swap-log build, counting nothing.
+   * §2 LP ORACLE. Position state live from one eth_call; fee yield counted
+   * from the nightly Swap-log scan on the falsifier's declared cadence.
    */
   const [lowerTick, upperTick] = ROBINHOOD_CHAIN.positionTicks;
   const falsifier = store.triggers.find((t) => t.id === "lp-fee-yield-falsifier") ?? null;
@@ -176,15 +197,48 @@ export async function GET() {
         }
       : { failed: `eth_call against ${rpcUrl}: ${poolError}` },
     falsifier: falsifier
-      ? {
-          rule: falsifier.on_breach,
-          level: falsifier.level,
-          unit: falsifier.unit,
-          consecutive_readings_required: falsifier.consecutive_readings ?? null,
-          readings_recorded: 0,
-          consecutive_under: 0,
-          status: "declared, not counting: " + falsifier.source_required,
-        }
+      ? (() => {
+          /*
+           * Counting on the DECLARED cadence: complete daily readings only
+           * (>= 20 of 24 hours scanned). Partial days are visible in the
+           * artifact and never counted — an intraday sample that catches a
+           * liquidity air-pocket is exactly what the three-consecutive rule
+           * was declared to exclude.
+           */
+          const complete = lpSwaps.dailyReadings.filter(
+            (d) => d.complete && d.yieldPctPerDay !== null
+          );
+          let consecutiveUnder = 0;
+          for (let i = complete.length - 1; i >= 0; i--) {
+            if (complete[i].yieldPctPerDay! < falsifier.level) consecutiveUnder++;
+            else break;
+          }
+          const latest = complete[complete.length - 1] ?? null;
+          return {
+            rule: falsifier.on_breach,
+            level: falsifier.level,
+            unit: falsifier.unit,
+            consecutive_readings_required: falsifier.consecutive_readings ?? null,
+            readings_recorded: complete.length,
+            consecutive_under: consecutiveUnder,
+            fired:
+              consecutiveUnder >= (falsifier.consecutive_readings ?? 3)
+                ? true
+                : false,
+            latest_reading: latest
+              ? {
+                  date: latest.date,
+                  yield_pct_per_day: latest.yieldPctPerDay,
+                  swaps: latest.swaps,
+                  weth_volume: latest.wethVolume,
+                }
+              : null,
+            lp_share_of_fees: lpSwaps.lpShare,
+            source: "lpSwapVolume.json — incremental Swap-log scan, per-swap liquidity denominator",
+            age_seconds: ageSeconds(lpSwaps.generatedAt),
+            method: lpSwaps.method,
+          };
+        })()
       : null,
   };
 
@@ -206,6 +260,25 @@ export async function GET() {
     .map((e) => ({
       ...e,
       days_until: Math.ceil((Date.parse(`${e.date}T00:00:00Z`) - now) / 86_400_000),
+      /*
+       * The proxy deadline's watchable is the filing, so its live status
+       * comes from the nightly EDGAR poll rather than the calendar. The
+       * first poll rewrote the watch itself: Fermi is in a live proxy
+       * CONTEST (spring DEFC14A cycle, dissident material as recent as
+       * 09-11), so the event is any definitive species after the
+       * meeting's 8-K, not "DEF 14A" by name.
+       */
+      ...(e.id === "frmi-proxy-statement"
+        ? {
+            filing_status: edgar.found
+              ? `FILED ${edgar.found.filingDate} as ${edgar.found.form} — the deadline event has occurred.`
+              : `not yet filed; ${edgar.tells.length} preliminary tell(s), ` +
+                `${edgar.solicitingSinceAnchor.length} piece(s) of soliciting material since the ` +
+                "meeting's 8-K. The contest is live — expect DEFC14A as easily as DEF 14A.",
+            filing_source: edgar.source,
+            filing_age_seconds: ageSeconds(edgar.generatedAt),
+          }
+        : {}),
     }))
     .sort((a, b) => a.date.localeCompare(b.date));
 
@@ -265,10 +338,10 @@ export async function GET() {
     triggers: evaluated,
     lp_oracle: lpOracle,
     calendar,
-    blocked_on: [
-      "Fee-yield readings: the Swap-log scan against active liquidity is unbuilt. The public " +
-        "RPC's 10,000-log cap forces windowed scans; a DESK_RPC_URL with higher limits makes it " +
-        "simpler. Until then the falsifier holds its declaration and counts nothing.",
-    ],
+    blocked_on: [],
+    blocked_on_note:
+      "Empty. The Swap-log scan is live (nightly, incremental, windowed under the public RPC's " +
+      "10k-log cap) and the falsifier counts complete daily readings. DESK_RPC_URL remains an " +
+      "optional upgrade for rate-limit headroom, not a blocker.",
   });
 }
