@@ -3,6 +3,13 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { EQUITY_PANEL } from "../../src/lib/markets/equityPanel";
 import { Bar } from "../../src/lib/research/types";
+import {
+  Phi,
+  TRAILING_VOL_SESSIONS,
+  pTouchDown,
+  pTouchUp,
+  sigmaOfLogReturns,
+} from "../../src/lib/research/gbmTouch";
 
 /**
  * C3 — DOES THE SYMMETRIC (VOLATILITY) COMPONENT CLEAR ITS NOISE FLOOR
@@ -74,7 +81,6 @@ const HORIZONS = [5, 10, 21, 42];
 const BARRIERS = [5, 10, 20, 30];
 /** The effect worth finding: a volatility edge smaller than this is not tradeable after costs. */
 const EFFECT_SOUGHT_PP = 5;
-const TRAILING_VOL_SESSIONS = 60;
 
 /*
  * ── SIGMA-BAND CONDITIONING, declared 2026-09-14 BEFORE the first run ──
@@ -127,26 +133,12 @@ const BAND_LABELS = ["<=0.5", "0.5-0.8", ">0.8"] as const;
 const MIN_NAMES_PER_BAND_BLOCK = 3;
 const MIN_BLOCKS_FOR_STATS = 10;
 
-// ── Normal CDF (Abramowitz-Stegun 7.1.26 via erf) ────────────────────
-function erf(x: number): number {
-  const s = x < 0 ? -1 : 1;
-  x = Math.abs(x);
-  const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741;
-  const a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
-  const t = 1 / (1 + p * x);
-  return s * (1 - ((((a5 * t + a4) * t + a3) * t + a2) * t + a1) * t * Math.exp(-x * x));
-}
-const Phi = (x: number) => 0.5 * (1 + erf(x / Math.SQRT2));
-
-/** P(max of log-price with drift mu, vol sigma, over T, reaches +b). b > 0. */
-function pTouchUp(b: number, sigma: number, T: number, mu: number): number {
-  const sT = sigma * Math.sqrt(T);
-  if (!(sT > 0)) return 0;
-  const v = Phi((mu * T - b) / sT) + Math.exp((2 * mu * b) / (sigma * sigma)) * Phi((-b - mu * T) / sT);
-  return Math.min(1, Math.max(0, v));
-}
-/** P(min reaches -b). Reflection X -> -X, which FLIPS the drift. */
-const pTouchDown = (b: number, sigma: number, T: number, mu: number) => pTouchUp(b, sigma, T, -mu);
+/*
+ * The touch formulas and the sigma estimator live in src/lib/research/
+ * gbmTouch.ts and are IMPORTED, not copied. This study measures the bias of
+ * exactly the code production consumes; a local copy would let the two
+ * drift and leave the artifact describing a formula nobody runs.
+ */
 
 interface Loaded { symbol: string; bars: Bar[]; byTime: Map<number, number>; logRet: number[] }
 
@@ -167,19 +159,7 @@ for (const symbol of EQUITY_PANEL) {
 const spy = JSON.parse(fs.readFileSync(path.join(DATA_DIR, "SPY.US.json"), "utf8")).bars as Bar[];
 const grid = spy.map((b) => b.t);
 
-/** Annualised sigma from a slice of log returns. Null when degenerate. */
-function sigmaOf(logRet: number[], from: number, to: number): number | null {
-  const n = to - from;
-  if (n < 5) return null;
-  let s = 0;
-  for (let i = from; i < to; i++) s += logRet[i];
-  const m = s / n;
-  let v = 0;
-  for (let i = from; i < to; i++) v += (logRet[i] - m) ** 2;
-  const sd = Math.sqrt(v / (n - 1));
-  const ann = sd * Math.sqrt(252);
-  return ann > 0.01 && ann < 6 ? ann : null;
-}
+const sigmaOf = sigmaOfLogReturns;
 
 interface CellResult {
   horizon_sessions: number;
