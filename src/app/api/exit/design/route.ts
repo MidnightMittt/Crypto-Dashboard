@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import barsPanelJson from "@/data/barsPanel.json";
+import equityExecutionJson from "@/data/equityExecutionStats.json";
 import { BarsPanel, SymbolPanel } from "@/lib/research/barsPanel";
 import { Bar } from "@/lib/research/types";
+import { EquityExecutionSnapshot } from "@/lib/dossier/equityExpectations";
+import { designOptionExit } from "@/lib/research/optionExitDesign";
 import {
   DEFAULT_WIDTHS_PCT,
   stopGrid,
@@ -193,6 +196,49 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   const ladder = rungs.length > 0 ? ladderOutcome(bars, holdSessions, rungs, stopPct) : null;
   const hold = rungs.length > 0 ? ladderOutcome(bars, holdSessions, [], stopPct) : null;
 
+  /*
+   * THE OPTION HALF. Everything above is about the underlying; the return
+   * this account actually banked was made selling CONTRACT rungs (CLSK:
+   * three exits at premium multiples were the larger share of +241%), and
+   * until now this endpoint had nothing to say about them. The shape
+   * matches the pretrade auditor's option_order so the two endpoints speak
+   * one dialect. Long single-leg only, same as the auditor.
+   */
+  let optionExit: ReturnType<typeof designOptionExit> | null = null;
+  if (body.option_order !== undefined && body.option_order !== null) {
+    const oo = body.option_order as Record<string, unknown>;
+    const right = String(oo.right ?? "").toLowerCase();
+    const strike = Number(oo.strike);
+    const expiry = String(oo.expiry ?? "");
+    const premium = Number(oo.premium);
+    if (right !== "call" && right !== "put") {
+      optionExit = { error: 'option_order.right must be "call" or "put".' };
+    } else if (!Number.isFinite(strike) || !Number.isFinite(premium)) {
+      optionExit = { error: "option_order needs numeric strike and premium (per-share: 0.86, not 86)." };
+    } else if (!/^\d{4}-\d{2}-\d{2}$/.test(expiry)) {
+      optionExit = { error: "option_order.expiry must be YYYY-MM-DD." };
+    } else {
+      const spot = bars.length > 0 ? bars[bars.length - 1].close : NaN;
+      const multiples = Array.isArray(oo.multiples)
+        ? (oo.multiples as unknown[]).map(Number).filter((m) => Number.isFinite(m) && m > 1)
+        : undefined;
+      optionExit = designOptionExit({
+        right,
+        strike,
+        expiry,
+        premium,
+        // The request's own day: tenor is counted from now, not from the
+        // panel's last close — a weekend request should not gain sessions.
+        today: new Date().toISOString().slice(0, 10),
+        spot,
+        bars,
+        multiples,
+        stopPct,
+        snapshot: equityExecutionJson as unknown as EquityExecutionSnapshot,
+      });
+    }
+  }
+
   return NextResponse.json({
     symbol,
     hold_sessions: holdSessions,
@@ -239,5 +285,21 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
             comparison: compareToHold(ladder, hold),
           }
         : { reason: "Supply `rungs` as [{target_pct,size}] to compare a ladder against holding." },
+
+    /*
+     * Present only when the caller sent an option_order (the pretrade
+     * auditor's shape: right/strike/expiry/premium, premium per-share).
+     * Everything above stays about the underlying; this block is about the
+     * contract — rungs at premium multiples with the measured probability
+     * of the underlying making each one true, on the contract's own clock.
+     */
+    option_exit:
+      optionExit ??
+      {
+        reason:
+          "Supply `option_order` {right, strike, expiry, premium} for contract rungs — " +
+          "underlying levels where each premium multiple is guaranteed by intrinsic value, " +
+          "with the measured touch probability at the contract's own tenor beside each.",
+      },
   });
 }
