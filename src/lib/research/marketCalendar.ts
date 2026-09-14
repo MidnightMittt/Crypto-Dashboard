@@ -121,6 +121,35 @@ export function isSessionDate(date: string): boolean {
   return !HOLIDAY_SET.has(date);
 }
 
+/**
+ * Sessions strictly after `from`, up to and including `to`. Zero if `to` is at
+ * or before `from`, so a past date reads as no sessions rather than negative.
+ *
+ * ── Why this is not `sessionsBetween` in lib/asset/priceStaleness ─────
+ *
+ * That one counts WEEKDAYS and deliberately does not model holidays, because
+ * it measures how stale a price is and over-reporting staleness is the safe
+ * error: the consequence is a consumer declining to trust a good price.
+ *
+ * Here the error runs the other way. This count decides whether a contract
+ * lives through the window a probability was calibrated over, so treating
+ * Thanksgiving as a session would let a nine-session contract borrow a
+ * ten-session rate. Same phrase, opposite safe direction — which is why they
+ * are two functions with different names rather than one shared helper.
+ */
+export function tradingSessionsBetween(from: string, to: string): number {
+  const a = parseIso(from);
+  const b = parseIso(to);
+  if (Number.isNaN(a) || Number.isNaN(b) || b <= a) return 0;
+  let count = 0;
+  // Bounded for the same reason the staleness counter is: a gap past a couple
+  // of years is a broken input, not a long-dated option.
+  for (let ms = a + DAY_MS, guard = 0; ms <= b && guard < 800; ms += DAY_MS, guard++) {
+    if (isSessionDate(toIso(ms))) count++;
+  }
+  return count;
+}
+
 export interface Projection {
   /** The projected date, or null when the table cannot reach it. */
   date: string | null;

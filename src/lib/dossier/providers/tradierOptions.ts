@@ -177,14 +177,32 @@ function toRow(o: TradierOption): TradierOptionRow | null {
 }
 
 /**
+ * Chooses which expirations to pull, given every one the venue lists (sorted)
+ * and the day the request is made. Pure, so a caller's rule is testable
+ * without a network.
+ */
+export type ExpirySelector = (expirations: readonly string[], now: number) => string[];
+
+/**
  * Several expirations in one call set.
  *
  * `wanted` expirations are picked by the caller's rule rather than "the
  * first N": a front week and a ~monthly are different instruments answering
  * different questions, and grabbing whatever happened to be listed first
  * would make the monthly figures depend on the day of the week.
+ *
+ * `selectExpiries` exists because "which expiries" is a property of the
+ * QUESTION, not of the venue. The default below answers the dossier's
+ * question — nearest, near-dated, monthly. An affordability sweep asks a
+ * different one and passes its own rule rather than filtering these three
+ * after the fact, which would silently make its answer depend on a selection
+ * made for another purpose.
  */
-export async function fetchTradierChains(symbol: string, maxExpiries = 3): Promise<TradierChainsResult> {
+export async function fetchTradierChains(
+  symbol: string,
+  maxExpiries = 3,
+  selectExpiries?: ExpirySelector
+): Promise<TradierChainsResult> {
   const apiKey = process.env.TRADIER_API_KEY?.trim();
   if (!apiKey) {
     return {
@@ -225,11 +243,17 @@ export async function fetchTradierChains(symbol: string, maxExpiries = 3): Promi
      * names working; the Set collapses the duplicates that produces.
      */
     const now = Date.now();
-    const daysOut = (d: string) => (Date.parse(`${d}T00:00:00Z`) - now) / 86_400_000;
-    const last = expirations[expirations.length - 1];
-    const nearTerm = expirations.find((d) => daysOut(d) >= 2) ?? last;
-    const monthly = expirations.find((d) => daysOut(d) >= 21) ?? last;
-    const wanted = [...new Set([expirations[0], nearTerm, monthly])].slice(0, maxExpiries);
+    const wanted = (
+      selectExpiries
+        ? selectExpiries(expirations, now)
+        : (() => {
+            const daysOut = (d: string) => (Date.parse(`${d}T00:00:00Z`) - now) / 86_400_000;
+            const last = expirations[expirations.length - 1];
+            const nearTerm = expirations.find((d) => daysOut(d) >= 2) ?? last;
+            const monthly = expirations.find((d) => daysOut(d) >= 21) ?? last;
+            return [...new Set([expirations[0], nearTerm, monthly])];
+          })()
+    ).slice(0, maxExpiries);
 
     const chains: TradierExpiryChain[] = [];
     for (const expiry of wanted) {

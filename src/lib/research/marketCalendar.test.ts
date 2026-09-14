@@ -4,7 +4,9 @@ import {
   US_MARKET_HOLIDAYS,
   isSessionDate,
   projectSessionsForward,
+  tradingSessionsBetween,
 } from "./marketCalendar";
+import { sessionsBetween as weekdayCountForStaleness } from "@/lib/asset/priceStaleness";
 import panelJson from "@/data/barsPanel.json";
 
 const panel = panelJson as { sessions: string[] };
@@ -163,5 +165,46 @@ describe("projectSessionsForward", () => {
   it("refuses a negative or fractional count instead of guessing", () => {
     expect(projectSessionsForward("2026-09-10", -1).date).toBeNull();
     expect(projectSessionsForward("2026-09-10", 1.5).date).toBeNull();
+  });
+});
+
+describe("tradingSessionsBetween", () => {
+  it("counts sessions strictly after the start, through the end date", () => {
+    // 2026-09-11 is a Friday; the 12th and 13th are the weekend.
+    expect(tradingSessionsBetween("2026-09-11", "2026-09-14")).toBe(1);
+    expect(tradingSessionsBetween("2026-09-11", "2026-09-18")).toBe(5);
+  });
+
+  it("returns zero at or before the start rather than a negative count", () => {
+    expect(tradingSessionsBetween("2026-09-11", "2026-09-11")).toBe(0);
+    expect(tradingSessionsBetween("2026-09-11", "2026-09-01")).toBe(0);
+  });
+
+  /**
+   * THE REASON THIS IS NOT THE STALENESS COUNTER.
+   *
+   * `priceStaleness.sessionsBetween` counts weekdays and deliberately ignores
+   * holidays, because over-reporting staleness is its safe error. This counter
+   * decides whether an option lives through a calibrated window, where the
+   * safe error runs the other way. The two therefore disagree across a
+   * holiday, and that disagreement is the point rather than a bug in either.
+   */
+  it("disagrees with the weekday counter across a declared holiday, in the safe direction", () => {
+    const thanksgiving = "2026-11-26";
+    expect(US_MARKET_HOLIDAYS).toContain(thanksgiving);
+    const from = "2026-11-20";
+    const to = "2026-12-04";
+    const sessions = tradingSessionsBetween(from, to);
+    const weekdays = weekdayCountForStaleness(from, to);
+    expect(weekdays - sessions).toBe(1);
+    // Understating the window is what protects a nine-session contract from
+    // borrowing a ten-session probability.
+    expect(sessions).toBeLessThan(weekdays);
+  });
+
+  it("agrees with the weekday counter over a span with no holiday in it", () => {
+    expect(tradingSessionsBetween("2026-09-11", "2026-10-16")).toBe(
+      weekdayCountForStaleness("2026-09-11", "2026-10-16")
+    );
   });
 });
