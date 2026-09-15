@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1789172447701,
+  "generatedAt": 1789432835287,
   "entries": [
     {
       "symbol": "LEN",
@@ -19,7 +19,7 @@
     }
   ],
   "sweep": {
-    "throughDate": "2026-10-09",
+    "throughDate": "2026-10-12",
     "universe": [
       "ABT",
       "ADBE",
@@ -68,6 +68,7 @@
       "FCX",
       "FDX",
       "FITB",
+      "FRMI",
       "FTI",
       "GBPUSD",
       "GD",
