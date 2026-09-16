@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1789432835287,
+  "generatedAt": 1789518090180,
   "entries": [
     {
       "symbol": "LEN",
@@ -16,10 +16,18 @@
     {
       "symbol": "APLD",
       "date": "2026-10-08"
+    },
+    {
+      "symbol": "GS",
+      "date": "2026-10-13"
+    },
+    {
+      "symbol": "BLK",
+      "date": "2026-10-13"
     }
   ],
   "sweep": {
-    "throughDate": "2026-10-12",
+    "throughDate": "2026-10-13",
     "universe": [
       "ABT",
       "ADBE",

@@ -1,5 +1,5 @@
 {
- "generatedAt": 1789433010299,
+ "generatedAt": 1789518261755,
  "source": "SEC submissions API, one request per CIK; FILED BY from ranged header fetches",
  "lookbackDays": 45,
  "species": {
@@ -159,7 +159,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1002
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "AMGN",
@@ -481,7 +481,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1007
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "CORZ",
@@ -520,7 +520,7 @@
    "cik": "0000909832",
    "registrant": "COSTCO WHOLESALE CORP /NEW",
    "hits": [],
-   "recentFilingsSeen": 1012
+   "recentFilingsSeen": 1003
   },
   {
    "symbol": "CRM",
@@ -591,14 +591,23 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1009
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "DHI",
    "cik": "0000882184",
    "registrant": "HORTON D R INC /DE/",
-   "hits": [],
-   "recentFilingsSeen": 1000
+   "hits": [
+    {
+     "form": "8-K",
+     "filingDate": "2026-09-15",
+     "accessionNumber": "0000882184-26-000108",
+     "primaryDocument": "dhi-20260915.htm",
+     "filer": "HORTON D R INC /DE/",
+     "filer_basis": "registrant (self-filed species)"
+    }
+   ],
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "DHR",
@@ -749,7 +758,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1010
+   "recentFilingsSeen": 1011
   },
   {
    "symbol": "FITB",
@@ -781,7 +790,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "FRMI",
@@ -876,7 +885,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1003
   },
   {
    "symbol": "GLXY",
@@ -916,7 +925,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 692
+   "recentFilingsSeen": 693
   },
   {
    "symbol": "GS",
@@ -1068,7 +1077,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 16180
+   "recentFilingsSeen": 16220
   },
   {
    "symbol": "HAL",
@@ -1328,7 +1337,7 @@
    "cik": "0001035267",
    "registrant": "INTUITIVE SURGICAL INC",
    "hits": [],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "KEY",
@@ -1375,7 +1384,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "LEN",
@@ -1542,14 +1551,14 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1024
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "MS",
    "cik": "0000895421",
    "registrant": "MORGAN STANLEY",
    "hits": [],
-   "recentFilingsSeen": 19864
+   "recentFilingsSeen": 19907
   },
   {
    "symbol": "MSFT",
@@ -1573,7 +1582,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1003
   },
   {
    "symbol": "MSTR",
@@ -1645,7 +1654,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "MTB",
@@ -1661,7 +1670,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1002
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "MU",
@@ -1717,7 +1726,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1014
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "NEM",
@@ -1771,7 +1780,7 @@
    "cik": "0000702165",
    "registrant": "NORFOLK SOUTHERN CORP",
    "hits": [],
-   "recentFilingsSeen": 1005
+   "recentFilingsSeen": 1006
   },
   {
    "symbol": "NVDA",
@@ -1850,7 +1859,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 456
+   "recentFilingsSeen": 460
   },
   {
    "symbol": "ORCL",
@@ -1898,7 +1907,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1006
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "PHM",
@@ -1937,6 +1946,22 @@
    "cik": "0002078856",
    "registrant": "Hyperliquid Strategies Inc",
    "hits": [
+    {
+     "form": "PRE 14A",
+     "filingDate": "2026-09-15",
+     "accessionNumber": "0001193125-26-392149",
+     "primaryDocument": "d290166dpre14a.htm",
+     "filer": "Hyperliquid Strategies Inc",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "8-K",
+     "filingDate": "2026-09-15",
+     "accessionNumber": "0001193125-26-391090",
+     "primaryDocument": "purr-20260914.htm",
+     "filer": "Hyperliquid Strategies Inc",
+     "filer_basis": "registrant (self-filed species)"
+    },
     {
      "form": "8-K",
      "filingDate": "2026-09-14",
@@ -1978,7 +2003,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 87
+   "recentFilingsSeen": 90
   },
   {
    "symbol": "QCOM",
@@ -2025,7 +2050,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1016
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "RIOT",
@@ -2065,14 +2090,23 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1005
+   "recentFilingsSeen": 1008
   },
   {
    "symbol": "RTX",
    "cik": "0000101829",
    "registrant": "RTX Corp",
-   "hits": [],
-   "recentFilingsSeen": 1002
+   "hits": [
+    {
+     "form": "8-K",
+     "filingDate": "2026-09-15",
+     "accessionNumber": "0001140361-26-036662",
+     "primaryDocument": "ef20082011_8k.htm",
+     "filer": "RTX Corp",
+     "filer_basis": "registrant (self-filed species)"
+    }
+   ],
+   "recentFilingsSeen": 1003
   },
   {
    "symbol": "SBET",
@@ -2218,8 +2252,17 @@
    "symbol": "TFC",
    "cik": "0000092230",
    "registrant": "TRUIST FINANCIAL CORP",
-   "hits": [],
-   "recentFilingsSeen": 1000
+   "hits": [
+    {
+     "form": "8-K",
+     "filingDate": "2026-09-15",
+     "accessionNumber": "0000092230-26-000105",
+     "primaryDocument": "tfc-20260915.htm",
+     "filer": "TRUIST FINANCIAL CORP",
+     "filer_basis": "registrant (self-filed species)"
+    }
+   ],
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "TGT",
@@ -2688,7 +2731,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "WMT",

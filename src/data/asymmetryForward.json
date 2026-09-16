@@ -1,11 +1,1014 @@
 {
- "generatedAt": 1789432951439,
+ "generatedAt": 1789518211787,
  "declaration": {
   "id": "asymmetry-excursion-screen",
   "declaredOn": "2026-09-14",
   "horizonSessions": 10
  },
- "sessions": [],
- "observations": [],
+ "sessions": [
+  "2026-09-14"
+ ],
+ "observations": [
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "ABT",
+   "ratio": 0.77,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "ADBE",
+   "ratio": 0.67,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "AEM",
+   "ratio": 1.76,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "AEP",
+   "ratio": 1.27,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "AMAT",
+   "ratio": 1.4,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "AMD",
+   "ratio": 1.44,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "AMGN",
+   "ratio": 1.29,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "APLD",
+   "ratio": 1.14,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "ASML",
+   "ratio": 1.23,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "AU",
+   "ratio": 1.69,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "AVGO",
+   "ratio": 1.11,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "BA",
+   "ratio": 1.05,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "BIIB",
+   "ratio": 1.71,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "BITU",
+   "ratio": 0.85,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "BITX",
+   "ratio": 0.85,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "BKR",
+   "ratio": 1.67,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "BLK",
+   "ratio": 1.13,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "BMNR",
+   "ratio": 0.94,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "BSX",
+   "ratio": 0.6,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "BTDR",
+   "ratio": 1.37,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "CEG",
+   "ratio": 1.06,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "CFG",
+   "ratio": 1.75,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "CIFR",
+   "ratio": 1.4,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "CLSK",
+   "ratio": 1.08,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "CME",
+   "ratio": 1.19,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "COIN",
+   "ratio": 0.92,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "CONL",
+   "ratio": 0.89,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "CORZ",
+   "ratio": 1.15,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "COST",
+   "ratio": 0.96,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "CRM",
+   "ratio": 0.82,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "CSX",
+   "ratio": 1.95,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "D",
+   "ratio": 1.08,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "DHI",
+   "ratio": 1,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "DHR",
+   "ratio": 0.95,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "DIA",
+   "ratio": 1.58,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "DUK",
+   "ratio": 1.2,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "ETHT",
+   "ratio": 0.99,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "ETHU",
+   "ratio": 0.99,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "FCX",
+   "ratio": 1.71,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "FDX",
+   "ratio": 1.69,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "FITB",
+   "ratio": 1.3,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "FRMI",
+   "ratio": 0.71,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "FTI",
+   "ratio": 2.25,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "GD",
+   "ratio": 1.13,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "GILD",
+   "ratio": 1.26,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "GLXY",
+   "ratio": 1.2,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "GOLD",
+   "ratio": 1.65,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "GS",
+   "ratio": 1.41,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "HAL",
+   "ratio": 1.48,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "HBAN",
+   "ratio": 1.09,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "HD",
+   "ratio": 0.84,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "HOOD",
+   "ratio": 1.05,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "HUT",
+   "ratio": 1.31,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "IBIT",
+   "ratio": 0.98,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "ICE",
+   "ratio": 0.8,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "INTC",
+   "ratio": 1.55,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "IONQ",
+   "ratio": 0.82,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "IREN",
+   "ratio": 1.46,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "ISRG",
+   "ratio": 0.63,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "IWM",
+   "ratio": 1.3,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "KEY",
+   "ratio": 1.22,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "KGC",
+   "ratio": 1.66,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "KLAC",
+   "ratio": 1.55,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "LEN",
+   "ratio": 0.9,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "LHX",
+   "ratio": 1.16,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "LMT",
+   "ratio": 1.52,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "LOW",
+   "ratio": 0.86,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "LRCX",
+   "ratio": 1.61,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "LULU",
+   "ratio": 0.7,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "MARA",
+   "ratio": 0.89,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "MDT",
+   "ratio": 1.12,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "MS",
+   "ratio": 1.48,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "MSFT",
+   "ratio": 0.91,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "MSTR",
+   "ratio": 0.68,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "MSTU",
+   "ratio": 0.64,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "MSTX",
+   "ratio": 0.63,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "MTB",
+   "ratio": 1.25,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "MU",
+   "ratio": 2.61,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "NEE",
+   "ratio": 1.28,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "NEM",
+   "ratio": 2.22,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "NOC",
+   "ratio": 0.97,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "NOW",
+   "ratio": 0.77,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "NSC",
+   "ratio": 1.47,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "NVDA",
+   "ratio": 1.06,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "NVR",
+   "ratio": 0.97,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "ODFL",
+   "ratio": 1.34,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "OKLO",
+   "ratio": 0.84,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "ORCL",
+   "ratio": 0.78,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "PANW",
+   "ratio": 1.32,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "PHM",
+   "ratio": 1.07,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "PLTR",
+   "ratio": 1.06,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "PUR",
+   "ratio": 2.73,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "PURR",
+   "ratio": 1.76,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "QCOM",
+   "ratio": 0.96,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "QQQ",
+   "ratio": 1,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "REGN",
+   "ratio": 1.39,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "RF",
+   "ratio": 1.46,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "RIOT",
+   "ratio": 1.19,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "ROST",
+   "ratio": 2.26,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "RTX",
+   "ratio": 1.52,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "SBET",
+   "ratio": 0.91,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "SCCO",
+   "ratio": 1.98,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "SCHW",
+   "ratio": 1.38,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "SLB",
+   "ratio": 1.58,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "SNOW",
+   "ratio": 1.05,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "SO",
+   "ratio": 1.1,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "SOLT",
+   "ratio": 0.97,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "SOLZ",
+   "ratio": 0.99,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "SPY",
+   "ratio": 1.07,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "SYK",
+   "ratio": 0.78,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "TECK",
+   "ratio": 1.37,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "TFC",
+   "ratio": 1.26,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "TGT",
+   "ratio": 1.47,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "TJX",
+   "ratio": 1.45,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "TSM",
+   "ratio": 1.56,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "TXN",
+   "ratio": 0.91,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "UNP",
+   "ratio": 1.6,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "UPS",
+   "ratio": 1.28,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "USB",
+   "ratio": 1.43,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "VRTX",
+   "ratio": 1.24,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "VST",
+   "ratio": 0.79,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "WMT",
+   "ratio": 1.24,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "WPM",
+   "ratio": 1.7,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "WULF",
+   "ratio": 1.35,
+   "outcome": null,
+   "status": "pending"
+  },
+  {
+   "session": "2026-09-14",
+   "sessionIndex": 299,
+   "symbol": "XXRP",
+   "ratio": 0.65,
+   "outcome": null,
+   "status": "pending"
+  }
+ ],
  "excludedInterpolatedBySession": {}
 }
