@@ -1,5 +1,5 @@
 {
- "generatedAt": 1789518261755,
+ "generatedAt": 1789605387872,
  "source": "SEC submissions API, one request per CIK; FILED BY from ranged header fetches",
  "lookbackDays": 45,
  "species": {
@@ -73,7 +73,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "AEM",
@@ -159,7 +159,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "AMGN",
@@ -378,7 +378,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 279
+   "recentFilingsSeen": 280
   },
   {
    "symbol": "CEG",
@@ -465,7 +465,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1017
+   "recentFilingsSeen": 1018
   },
   {
    "symbol": "COIN",
@@ -513,7 +513,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 665
+   "recentFilingsSeen": 666
   },
   {
    "symbol": "COST",
@@ -552,7 +552,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1003
   },
   {
    "symbol": "CSX",
@@ -607,7 +607,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "DHR",
@@ -885,7 +885,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1003
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "GLXY",
@@ -925,7 +925,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 693
+   "recentFilingsSeen": 694
   },
   {
    "symbol": "GS",
@@ -1077,20 +1077,37 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 16220
+   "recentFilingsSeen": 16244
   },
   {
    "symbol": "HAL",
    "cik": "0000045012",
    "registrant": "HALLIBURTON CO",
-   "hits": [],
-   "recentFilingsSeen": 1007
+   "hits": [
+    {
+     "form": "8-K",
+     "filingDate": "2026-09-16",
+     "accessionNumber": "0000045012-26-000064",
+     "primaryDocument": "hal-20260915.htm",
+     "filer": "HALLIBURTON CO",
+     "filer_basis": "registrant (self-filed species)"
+    }
+   ],
+   "recentFilingsSeen": 1008
   },
   {
    "symbol": "HBAN",
    "cik": "0000049196",
    "registrant": "HUNTINGTON BANCSHARES INC /MD/",
    "hits": [
+    {
+     "form": "8-K",
+     "filingDate": "2026-09-16",
+     "accessionNumber": "0000049196-26-000077",
+     "primaryDocument": "hban-20260916.htm",
+     "filer": "HUNTINGTON BANCSHARES INC /MD/",
+     "filer_basis": "registrant (self-filed species)"
+    },
     {
      "form": "8-K",
      "filingDate": "2026-09-10",
@@ -1100,7 +1117,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "HD",
@@ -1139,7 +1156,7 @@
    "cik": "0001783879",
    "registrant": "Robinhood Markets, Inc.",
    "hits": [],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "HUT",
@@ -1210,7 +1227,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1004
+   "recentFilingsSeen": 1005
   },
   {
    "symbol": "INTC",
@@ -1290,7 +1307,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 621
+   "recentFilingsSeen": 624
   },
   {
    "symbol": "IREN",
@@ -1337,7 +1354,7 @@
    "cik": "0001035267",
    "registrant": "INTUITIVE SURGICAL INC",
    "hits": [],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "KEY",
@@ -1390,8 +1407,17 @@
    "symbol": "LEN",
    "cik": "0000920760",
    "registrant": "LENNAR CORP /NEW/",
-   "hits": [],
-   "recentFilingsSeen": 1001
+   "hits": [
+    {
+     "form": "8-K",
+     "filingDate": "2026-09-16",
+     "accessionNumber": "0001628280-26-062287",
+     "primaryDocument": "len-20260916.htm",
+     "filer": "LENNAR CORP /NEW/",
+     "filer_basis": "registrant (self-filed species)"
+    }
+   ],
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "LHX",
@@ -1447,7 +1473,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1002
+   "recentFilingsSeen": 1006
   },
   {
    "symbol": "LRCX",
@@ -1551,14 +1577,14 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1004
   },
   {
    "symbol": "MS",
    "cik": "0000895421",
    "registrant": "MORGAN STANLEY",
    "hits": [],
-   "recentFilingsSeen": 19907
+   "recentFilingsSeen": 19923
   },
   {
    "symbol": "MSFT",
@@ -1582,7 +1608,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1003
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "MSTR",
@@ -1670,7 +1696,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "MU",
@@ -1726,7 +1752,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1004
   },
   {
    "symbol": "NEM",
@@ -1859,7 +1885,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 460
+   "recentFilingsSeen": 461
   },
   {
    "symbol": "ORCL",
@@ -1883,7 +1909,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "PANW",
@@ -1907,7 +1933,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1003
   },
   {
    "symbol": "PHM",
@@ -2090,7 +2116,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1008
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "RTX",
@@ -2129,7 +2155,7 @@
    "cik": "0001001838",
    "registrant": "SOUTHERN COPPER CORP/",
    "hits": [],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "SCHW",
@@ -2193,7 +2219,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1004
+   "recentFilingsSeen": 1009
   },
   {
    "symbol": "SO",
@@ -2262,7 +2288,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "TGT",
@@ -2683,7 +2709,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1008
+   "recentFilingsSeen": 1010
   },
   {
    "symbol": "VRTX",
@@ -2747,7 +2773,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "WPM",
