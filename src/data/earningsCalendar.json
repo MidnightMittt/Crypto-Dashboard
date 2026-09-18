@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1789605210424,
+  "generatedAt": 1789690731939,
   "entries": [
     {
       "symbol": "COST",
@@ -28,10 +28,26 @@
     {
       "symbol": "MS",
       "date": "2026-10-14"
+    },
+    {
+      "symbol": "TSM",
+      "date": "2026-10-15"
+    },
+    {
+      "symbol": "SCHW",
+      "date": "2026-10-15"
+    },
+    {
+      "symbol": "USB",
+      "date": "2026-10-15"
+    },
+    {
+      "symbol": "CSX",
+      "date": "2026-10-15"
     }
   ],
   "sweep": {
-    "throughDate": "2026-10-14",
+    "throughDate": "2026-10-15",
     "universe": [
       "ABT",
       "ADBE",
