@@ -99,6 +99,8 @@ export interface OptionOrderInputs {
   livePrice: LivePrice | null;
   /** Null = no stored close exists for this symbol; see PretradeInputs. */
   priceAgeSessions: number | null;
+  /** Non-null = reach claims refused by declaration; see PretradeInputs. */
+  statisticalRefusal: string | null;
   nowMs: number;
 }
 
@@ -191,6 +193,24 @@ function optionReachabilityCheck(i: OptionOrderInputs, buyingPower: number): Pre
 }
 
 function breakevenReachCheck(i: OptionOrderInputs): PretradeCheck {
+  /*
+   * A declared refusal outranks a measurement. The breakeven DISTANCE is
+   * arithmetic and still shown when a spot exists; the touch PROBABILITY is
+   * the statistical claim being refused, and the refusal names its
+   * declaration rather than impersonating thin history.
+   */
+  if (i.statisticalRefusal) {
+    const movePct = i.spot && i.breakeven ? Number(i.breakeven.movePct.toFixed(2)) : null;
+    return {
+      name: "breakeven_reach",
+      status: "unknown",
+      detail:
+        (movePct !== null
+          ? `Breakeven needs a ${movePct}% move within ~${i.sessionsToExpiry} sessions — the distance is arithmetic and stands. `
+          : "") + `The touch probability is refused by declaration: ${i.statisticalRefusal}`,
+      data: { breakeven_move_pct: movePct, reach_pct: null },
+    };
+  }
   if (!i.spot || !i.breakeven) {
     return {
       name: "breakeven_reach",

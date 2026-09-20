@@ -54,7 +54,41 @@ export const SCANNED = [
    * not a gap to fill.
    */
   "FRMI",
+  /*
+   * Forgent Power Solutions. Added 2026-09-20 for the FPS option trigger (T1)
+   * — traded, therefore measured. Broker-verified by the trading session the
+   * same day: active, SIP close $39.50 on 2026-09-18. See STRUCTURE_ONLY
+   * below for the statistical restriction that travels with it.
+   */
+  "FPS",
 ] as const;
+
+/**
+ * NAMES WHOSE HISTORY CANNOT SUPPORT A STATISTICAL CLAIM.
+ *
+ * FPS supports only ~7 independent 21-session windows against the ~30 floor
+ * every reach and survival figure on this site is held to. The trading
+ * session's own register calls it "a structure-and-liquidity trade, never a
+ * statistical one" — and the instruction that came with the ticker was
+ * explicit: if a surface wants to publish reach cells for it, REFUSE them
+ * instead.
+ *
+ * The refusal must be declared here rather than left to MIN_ENTRIES, because
+ * MIN_ENTRIES counts OVERLAPPING windows: ~147 sessions yield ~126 overlapping
+ * 21-session windows and sail past a 30-window floor while carrying ~7
+ * independent observations. The existing gate would publish; this list is what
+ * says no. Consumers: the reach screen and the pre-trade reach/survival
+ * checks, each naming this declaration when they refuse.
+ *
+ * A name leaves this list by ACCRUING HISTORY, not by anyone deciding the
+ * trade matters more than the floor.
+ */
+export const STRUCTURE_ONLY = ["FPS"] as const;
+
+/** True when reach/survival/expectancy claims are refused for this symbol by declaration. */
+export function isStructureOnly(symbol: string): boolean {
+  return (STRUCTURE_ONLY as readonly string[]).includes(symbol);
+}
 
 /**
  * CRYPTO-TREASURY AND CRYPTO-FINANCIAL OPERATING COMPANIES.

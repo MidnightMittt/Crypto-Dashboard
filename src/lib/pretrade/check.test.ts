@@ -21,6 +21,7 @@ const clean = (over: Partial<PretradeInputs> = {}): PretradeInputs => ({
   earnings: { date: null, status: "none" },
   cost: { roundTripBp: 8.7, edgeBp: 29.3 },
   priceAgeSessions: 0,
+  statisticalRefusal: null,
   today: "2026-08-21",
   livePrice: null,
   buyingPowerUsd: null,
@@ -165,6 +166,22 @@ describe("runPretradeChecks", () => {
       clean({ earnings: { date: "2026-11-20", status: "confirmed" }, holdSessions: 5 })
     );
     expect(check(beyond, "earnings_window").status).toBe("pass");
+  });
+
+  /*
+   * A DECLARED refusal names its declaration. FPS-class names have too few
+   * independent windows for a survival claim, and the check must cite the
+   * STRUCTURE_ONLY declaration rather than reading like thin data.
+   */
+  it("refuses survival by declaration and names the declaration", () => {
+    const r = runPretradeChecks(
+      clean({ statisticalRefusal: "FPS is declared STRUCTURE_ONLY (scannerUniverse.ts) — too few independent windows." })
+    );
+    const c = check(r, "stop_survival");
+    expect(c.status).toBe("unknown");
+    expect(c.detail).toContain("refused by declaration");
+    expect(c.detail).toContain("STRUCTURE_ONLY");
+    expect(r.verdict).toBe("incomplete");
   });
 
   /* A failed lookup clears nothing — the three-state contract, enforced here. */

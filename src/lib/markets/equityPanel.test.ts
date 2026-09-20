@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { SCANNER_UNIVERSE, STRUCTURE_ONLY, isStructureOnly } from "./scannerUniverse";
 import {
   EQUITY_PANEL,
   EXCLUDED_FUNDS,
@@ -82,6 +83,9 @@ describe("the declared equity panel", () => {
       // IPO that cannot support the 12-1 lookback regardless of the
       // concentration argument.
       "FRMI",
+      // Forgent Power Solutions, added 2026-09-20 with its SCANNED entry and
+      // a STRUCTURE_ONLY declaration — ~7 independent 21-session windows.
+      "FPS",
     ].sort());
   });
 
@@ -109,6 +113,20 @@ describe("the declared equity panel", () => {
   it("reports unclassified symbols rather than assuming a side", () => {
     expect(unclassified(["NVDA", "SPY", "BTC-USD"])).toEqual([]);
     expect(unclassified(["NVDA", "NEWCO", "AAA"])).toEqual(["AAA", "NEWCO"]);
+  });
+
+  /*
+   * The STRUCTURE_ONLY declaration travels with FPS: every member must be a
+   * name the scanner covers, and FPS must be in it — remove either half and
+   * reach cells on ~7 independent windows start publishing again.
+   */
+  it("keeps the structure-only declaration attached to the names it covers", () => {
+    expect(isStructureOnly("FPS")).toBe(true);
+    expect(isStructureOnly("FRMI")).toBe(false); // thin history, but not declared structure-only
+    for (const s of STRUCTURE_ONLY) {
+      expect(SCANNER_UNIVERSE.includes(s), `${s} is declared structure-only but not scanned`).toBe(true);
+      expect(isClassified(s), `${s} must still be classified`).toBe(true);
+    }
   });
 
   it("is large enough for a decile to mean anything", () => {

@@ -340,6 +340,8 @@ export const DECLARED_PRICE_EVENTS: DeclaredPriceEvent[] = [
  * 164 series, 1,147,481 sessions, zero undeclared steps remaining.
  * FRMI swept separately the same day on entering the universe — its whole
  * 238-session history (IPO 2025-10-01 to 2026-09-11), zero breaks found.
+ * FPS swept 2026-09-20 on entering the universe — its whole 156-session
+ * history (IPO 2026-02-05 to 2026-09-18), zero breaks found.
  *
  * Crypto spot pseudo-symbols are included: they cannot have corporate
  * actions, but they go through the same guard, and leaving them out would
@@ -351,7 +353,7 @@ export const CORPORATE_ACTION_AUDITED_SYMBOLS: readonly string[] = [
   "ABT","ADBE","AEM","AEP","AMAT","AMD","AMGN","APLD","ASML","AU","AVGO","BA","BIIB","BITU",
   "BITX","BKR","BLK","BMNR","BNB-USD.SPOT","BSX","BTC-USD.SPOT","BTDR","CEG","CFG","CIFR",
   "CLSK","CME","COIN","CONL","COPX","CORZ","COST","CRM","CSX","D","DBA","DHI","DHR","DIA",
-  "DUK","ETHT","ETHU","FCX","FDX","FITB","FRMI","FTI","GD","GDX","GILD","GLD","GLXY","GOLD","GS",
+  "DUK","ETHT","ETHU","FCX","FDX","FITB","FPS","FRMI","FTI","GD","GDX","GILD","GLD","GLXY","GOLD","GS",
   "HAL","HBAN","HD","HOOD","HUT","HYG","IBIT","ICE","IEF","IGV","IHI","INTC","IONQ","IREN",
   "ISRG","ITA","ITB","IWM","IYT","KCE","KEY","KGC","KLAC","KRE","LEN","LHX","LMT","LOW","LQD",
   "LRCX","LULU","MARA","MDT","MS","MSFT","MSTR","MSTU","MSTX","MTB","MU","NEE","NEM","NOC",

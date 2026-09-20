@@ -116,6 +116,13 @@ export interface PretradeInputs {
    * not be dressed up as one.
    */
   priceAgeSessions: number | null;
+  /**
+   * Non-null when statistical claims (survival, reach) are REFUSED for this
+   * symbol by declaration — see STRUCTURE_ONLY in scannerUniverse.ts. The
+   * string is the reason, shown verbatim: a declared refusal must name its
+   * declaration, not impersonate "too little history".
+   */
+  statisticalRefusal: string | null;
   /** Today, ISO date, for the earnings window. */
   today: string;
   /**
@@ -180,6 +187,14 @@ const usd = (v: number) => `$${v.toFixed(2)}`;
 
 function stopSurvivalCheck(i: PretradeInputs): PretradeCheck {
   const widthPct = i.entry > 0 ? ((i.entry - i.stop) / i.entry) * 100 : 0;
+  if (i.statisticalRefusal) {
+    return {
+      name: "stop_survival",
+      status: "unknown",
+      detail: `Survival probability refused by declaration: ${i.statisticalRefusal}`,
+      data: { width_pct: Number(widthPct.toFixed(2)), survival: null },
+    };
+  }
   if (!i.stopSurvival) {
     return {
       name: "stop_survival",

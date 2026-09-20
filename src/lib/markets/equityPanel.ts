@@ -211,6 +211,16 @@ export const TRACKED_OUTSIDE_PANEL: readonly string[] = [
    * on top. The exit remains a VERSIONED panel, never a quiet promotion.
    */
   "FRMI",
+  /*
+   * Forgent Power Solutions, added 2026-09-20 with its SCANNED entry — the
+   * same one-commit discipline as FRMI. US-listed operating company,
+   * broker-verified active by the trading session. Held out for the
+   * strongest version of FRMI's reason: ~7 independent 21-session windows
+   * of history, so it cannot support the 12-1 lookback OR any ranking
+   * claim. It is also declared STRUCTURE_ONLY in scannerUniverse.ts —
+   * reach and survival surfaces refuse it by name.
+   */
+  "FPS",
 ] as const;
 
 const PANEL_SET: ReadonlySet<string> = new Set(EQUITY_PANEL);

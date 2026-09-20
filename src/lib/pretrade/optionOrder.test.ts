@@ -38,6 +38,7 @@ const clean = (over: Partial<OptionOrderInputs> = {}): OptionOrderInputs => ({
   sessionsToExpiry: 19,
   livePrice: null,
   priceAgeSessions: 0,
+  statisticalRefusal: null,
   nowMs: NOW,
   ...over,
 });
@@ -199,5 +200,20 @@ describe("runOptionOrderChecks — the defined-risk order audit", () => {
     expect(c.status).toBe("pass");
     expect(c.detail).toContain('"broker_mid"');
     expect(c.detail).toContain("30s old");
+  });
+});
+
+describe("breakeven_reach under a declared statistical refusal", () => {
+  it("shows the arithmetic distance but refuses the probability, naming the declaration", () => {
+    const i = clean({
+      statisticalRefusal:
+        "FPS is declared STRUCTURE_ONLY (scannerUniverse.ts) — too few independent windows.",
+    });
+    const r = runOptionOrderChecks(i);
+    const c = r.checks.find((x) => x.name === "breakeven_reach")!;
+    expect(c.status).toBe("unknown");
+    expect(c.detail).toContain("refused by declaration");
+    expect(c.detail).toContain("STRUCTURE_ONLY");
+    expect(c.data!.reach_pct).toBeNull();
   });
 });

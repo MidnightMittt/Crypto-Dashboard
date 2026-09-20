@@ -6,6 +6,7 @@ import { survivalAt } from "@/lib/research/stopViability";
 import { excursionStats, reachAt } from "@/lib/research/exitDesign";
 import { conversionReport } from "@/lib/research/touchCalibration";
 import { ReturnSeries, effectiveBreadth, logReturns } from "@/lib/research/effectiveBreadth";
+import { isStructureOnly } from "@/lib/markets/scannerUniverse";
 
 /**
  * GET /api/screen/reach — the universe ranked by how far each name actually
@@ -111,6 +112,25 @@ export function GET(req: NextRequest) {
   const unmeasurable: { symbol: string; reason: string }[] = [];
 
   for (const symbol of Object.keys(panel.symbols).sort()) {
+    /*
+     * DECLARED REFUSAL, before any measurement. MIN_ENTRIES counts
+     * OVERLAPPING windows, so a short-history name can pass it while carrying
+     * a handful of independent observations — FPS has ~126 overlapping
+     * 21-session windows and ~7 independent ones. Reach cells published on
+     * that would be thin data wearing a percentage. The list of names this
+     * applies to is declared in scannerUniverse.ts (STRUCTURE_ONLY), and the
+     * refusal names it rather than hiding the row.
+     */
+    if (isStructureOnly(symbol)) {
+      unmeasurable.push({
+        symbol,
+        reason:
+          "declared STRUCTURE_ONLY (scannerUniverse.ts): too few independent windows for a " +
+          "reach claim — a structure-and-liquidity name, never a statistical one",
+      });
+      continue;
+    }
+
     const bars = realBars(panel.sessions, panel.symbols[symbol]);
     const up = reachAt(bars, movePct, horizon);
     const down = survivalAt(bars, movePct, horizon);

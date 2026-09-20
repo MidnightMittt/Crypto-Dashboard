@@ -14,7 +14,7 @@ import { parseHeldPositions } from "@/lib/pretrade/parseHeldPositions";
 import { measuredRoundTripBp } from "@/lib/execution/measuredSpread";
 import { BreakevenReach, runOptionOrderChecks } from "@/lib/pretrade/optionOrder";
 import { REQUEST_SHAPE, collectShapeDefects } from "@/lib/pretrade/requestShape";
-import { positioningUniverse } from "@/lib/markets/scannerUniverse";
+import { isStructureOnly, positioningUniverse } from "@/lib/markets/scannerUniverse";
 import { parseOptionLeg } from "@/lib/portfolio/buildPortfolio";
 import { reachAt } from "@/lib/research/exitDesign";
 
@@ -176,6 +176,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
    */
   const sp = panel.symbols[symbol];
   const covered = sp !== undefined;
+  /*
+   * Reach and survival claims refused by declaration for structure-only
+   * names — thin independent history, stated in scannerUniverse.ts. The
+   * refusal reason travels into the engines so the check names it.
+   */
+  const statisticalRefusal = isStructureOnly(symbol)
+    ? `${symbol} is declared STRUCTURE_ONLY (scannerUniverse.ts) — too few independent windows ` +
+      `for a reach or survival claim; a structure-and-liquidity name, never a statistical one.`
+    : null;
   /*
    * Two different absences, named apart. A DECLARED name with no bars yet is
    * in the window between joining the universe and the next nightly ingest —
@@ -389,6 +398,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       sessionsToExpiry,
       livePrice,
       priceAgeSessions,
+      statisticalRefusal,
       nowMs,
     });
 
@@ -461,6 +471,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     earnings: earningsFor(symbol, today),
     cost,
     priceAgeSessions,
+    statisticalRefusal,
     today,
     livePrice,
     buyingPowerUsd,
