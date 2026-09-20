@@ -140,6 +140,12 @@ export const THRESHOLDS = {
   cadenceHours: 6,
   /** Posted (un-chain-readable) balances shown STALE past this age. */
   postedStaleHours: 48,
+  /**
+   * A posted option IV older than this is STALE and the T1 card says so
+   * rather than evaluating on it — "~1 session" per the agreed post contract:
+   * a session plus the overnight, not a calendar convenience.
+   */
+  t1PostMaxAgeHours: 30,
 } as const;
 
 /** ISO-ish provenance stamp shape carried by every number this tree emits. */
