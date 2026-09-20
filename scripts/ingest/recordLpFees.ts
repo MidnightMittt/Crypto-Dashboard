@@ -4,7 +4,7 @@ import { fileURLToPath } from "url";
 import { getPositionCard } from "../../src/lib/chain/lpPosition";
 import { EventWindow, FeeSeriesRow, nextRow, parseSeries, serializeRow } from "../../src/lib/chain/feeSeries";
 import { evaluateLpAlerts } from "../../src/lib/chain/lpAlerts";
-import { sweepPositionEvents, swapVolumeWeth } from "../../src/lib/chain/lpEvents";
+import { poolTickSigma, sweepPositionEvents, swapVolumeWeth } from "../../src/lib/chain/lpEvents";
 import { CHAIN } from "../../src/lib/chain/config";
 import { sendDiscord } from "../../src/lib/alerts/channels/discord";
 
@@ -79,7 +79,23 @@ async function main(): Promise<void> {
   if (row.note) console.log(`      ${row.note}`);
   for (const n of card.notes) console.log(`      NOTE: ${n}`);
 
-  const alerts = evaluateLpAlerts(card, row, prior);
+  /*
+   * Sigma for the LVR alert — the swap-tick method (hourly buckets from the
+   * pool's own Swap ticks, 48h window), the trading session's specification.
+   * A failed sweep degrades to the row-based fallback inside evaluateLpAlerts.
+   */
+  let sigmaInput = null;
+  try {
+    const sig = await poolTickSigma(BigInt(card.block), Date.parse(card.observedAt), 48, CHAIN.blocksPerSecond);
+    if (sig) {
+      sigmaInput = { sigmaDaily: sig.sigmaDaily, windowHours: sig.windowHours, buckets: sig.buckets, source: "pool swap ticks" };
+      console.log(`[lp] PONS sigma ${(sig.sigmaDaily * 100).toFixed(2)}%/day (${(sig.sigmaDaily * Math.sqrt(365) * 100).toFixed(0)}% ann. on 365) from ${sig.buckets} hourly buckets / ${sig.windowHours.toFixed(0)}h`);
+    }
+  } catch (err) {
+    console.log(`[lp] tick-sigma sweep failed (${err instanceof Error ? err.message : err}) — row-based fallback in effect`);
+  }
+
+  const alerts = evaluateLpAlerts(card, row, prior, sigmaInput);
   for (const a of alerts) {
     console.log(`  ALERT [${a.severity}] ${a.key}: ${a.message}`);
     const delivered = await sendDiscord(`🟡 ${a.message}`);

@@ -115,6 +115,69 @@ export function sumSwapVolumeWeth(logs: readonly RawLog[]): number {
   return Number(raw) / 1e18;
 }
 
+/**
+ * PONS daily sigma from the pool's OWN tick series — the trading session's
+ * specified method, verbatim: hourly buckets from the Swap event's tick field
+ * (last tick per hour), log-return = -(dTick) × ln(1.0001), stdev, × sqrt(24)
+ * for daily. Using the pool's ticks rather than an external PONS price avoids
+ * importing a venue we do not trade on.
+ *
+ * Pure. `headTsMs`/`headBlock`/`blocksPerSecond` date each log by block
+ * distance from head — an approximation stated in the window, good to minutes
+ * over 48h, which hourly buckets absorb. Refuses below `minBuckets` hourly
+ * observations rather than reporting a thin sigma.
+ */
+export function sigmaFromSwapTicks(
+  logs: readonly RawLog[],
+  headBlock: bigint,
+  headTsMs: number,
+  blocksPerSecond: number,
+  minBuckets = 24
+): { sigmaDaily: number; buckets: number; windowHours: number } | null {
+  if (logs.length === 0) return null;
+  // Last tick per hour bucket. Swap data word 4 is the tick (int256).
+  const byHour = new Map<number, { block: number; tick: number }>();
+  for (const log of logs) {
+    const block = Number(BigInt(log.blockNumber));
+    const tsMs = headTsMs - ((Number(headBlock) - block) / blocksPerSecond) * 1000;
+    const hour = Math.floor(tsMs / 3_600_000);
+    const tick = Number(BigInt.asIntN(256, wordAt(log.data, 4)));
+    const cur = byHour.get(hour);
+    if (!cur || block > cur.block) byHour.set(hour, { block, tick });
+  }
+  const hours = [...byHour.keys()].sort((a, b) => a - b);
+  if (hours.length < minBuckets) return null;
+
+  const ln10001 = Math.log(1.0001);
+  const rets: number[] = [];
+  for (let i = 1; i < hours.length; i++) {
+    const dTick = byHour.get(hours[i])!.tick - byHour.get(hours[i - 1])!.tick;
+    rets.push(-dTick * ln10001);
+  }
+  const mean = rets.reduce((s, x) => s + x, 0) / rets.length;
+  const variance = rets.reduce((s, x) => s + (x - mean) ** 2, 0) / (rets.length - 1);
+  const sigmaDaily = Math.sqrt(variance) * Math.sqrt(24);
+  return { sigmaDaily, buckets: hours.length, windowHours: hours[hours.length - 1] - hours[0] };
+}
+
+/** Sweep 48h of Swap logs and compute the tick sigma. The LVR alert's input. */
+export async function poolTickSigma(
+  headBlock: bigint,
+  headTsMs: number,
+  hours: number,
+  blocksPerSecond: number
+): Promise<{ sigmaDaily: number; buckets: number; windowHours: number } | null> {
+  const span = BigInt(Math.round(hours * 3600 * blocksPerSecond));
+  const from = headBlock > span ? headBlock - span : 0n;
+  const logs = await getLogs({
+    address: POOL.address,
+    topics: [TOPICS.swap],
+    fromBlock: from,
+    toBlock: headBlock,
+  });
+  return sigmaFromSwapTicks(logs, headBlock, headTsMs, blocksPerSecond);
+}
+
 /** The pool's swap volume over the trailing `hours`, in WETH terms. */
 export async function swapVolumeWeth(headBlock: bigint, hours: number, blocksPerSecond: number): Promise<number> {
   const span = BigInt(Math.round(hours * 3600 * blocksPerSecond));

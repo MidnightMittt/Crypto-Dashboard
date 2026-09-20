@@ -67,14 +67,29 @@ export function ponsDailySigmaFromTicks(
   return { sigma, windowRows: samples.length, windowHours };
 }
 
+/** An externally computed sigma (the swap-tick method) with its provenance. */
+export interface SigmaInput {
+  sigmaDaily: number;
+  windowHours: number;
+  buckets: number;
+  source: string;
+}
+
 /**
  * Evaluate the LP alerts for the row about to be written, against the previous
  * row and the series behind it. `newRow` is the row nextRow() produced.
+ *
+ * `externalSigma` is the PREFERRED volatility input: hourly buckets from the
+ * Swap events' own tick field (the trading session's specified method — dense
+ * enough to be usable from day one, and from the venue we actually hold).
+ * The 6h-row-based sigma below survives as the fallback when the log sweep
+ * fails; whichever is used, the window travels with the number.
  */
 export function evaluateLpAlerts(
   card: PositionCard,
   newRow: FeeSeriesRow,
-  priorRows: readonly FeeSeriesRow[]
+  priorRows: readonly FeeSeriesRow[],
+  externalSigma?: SigmaInput | null
 ): LpAlert[] {
   const alerts: LpAlert[] = [];
   const prev = [...priorRows].reverse().find((r) => r.kind === "sample");
@@ -107,12 +122,17 @@ export function evaluateLpAlerts(
   }
 
   // 3. LVR coverage < 1.0 — fees not paying for the volatility's implied IL.
-  //    Uses PONS sigma from the pool's own tick series; refuses below MIN rows.
-  const sig = ponsDailySigmaFromTicks([...priorRows, newRow]);
-  if (sig && newRow.fee_rate_usd_per_day !== null && card.usdValue !== null) {
+  //    Sigma: swap-tick hourly buckets preferred, 6h-row series as fallback.
+  const rowSig = externalSigma ? null : ponsDailySigmaFromTicks([...priorRows, newRow]);
+  const sigma = externalSigma
+    ? { value: externalSigma.sigmaDaily, window: `${externalSigma.buckets} hourly ticks over ${externalSigma.windowHours.toFixed(0)}h (${externalSigma.source})` }
+    : rowSig
+      ? { value: rowSig.sigma, window: `${rowSig.windowRows} series rows over ${rowSig.windowHours.toFixed(0)}h (6h fee-series ticks, fallback)` }
+      : null;
+  if (sigma && newRow.fee_rate_usd_per_day !== null && card.usdValue !== null) {
     const cov = lvrCoverage({
       feeRateUsdPerDay: newRow.fee_rate_usd_per_day,
-      dailySigma: sig.sigma,
+      dailySigma: sigma.value,
       positionValueUsd: card.usdValue,
     });
     if (cov && cov.coverage < 1) {
@@ -122,8 +142,7 @@ export function evaluateLpAlerts(
         message:
           `LP fees not covering LVR: rate $${newRow.fee_rate_usd_per_day.toFixed(2)}/day vs ` +
           `LVR $${cov.lvrUsdPerDay.toFixed(2)}/day (coverage ${cov.coverage.toFixed(2)}). ` +
-          `PONS σ ${(sig.sigma * 100).toFixed(1)}%/day from ${sig.windowRows} ticks over ` +
-          `${sig.windowHours.toFixed(0)}h; LVR = σ²/8 × value.`,
+          `PONS σ ${(sigma.value * 100).toFixed(1)}%/day from ${sigma.window}; LVR = σ²/8 × value.`,
       });
     }
   }
