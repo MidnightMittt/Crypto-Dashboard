@@ -104,13 +104,65 @@ export async function blockHeader(block: string): Promise<{ number: bigint; time
   return { number: BigInt(obj.number), timestampMs: Number(BigInt(obj.timestamp)) * 1000 };
 }
 
-/** Like rpc() but returns the object result (for block headers, receipts). */
-async function rpcObject(method: string, params: unknown[]): Promise<unknown> {
-  const res = await fetch(CHAIN.rpcUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "User-Agent": CHAIN.userAgent },
-    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
-  });
+/** One raw log as eth_getLogs returns it. */
+export interface RawLog {
+  address: string;
+  topics: string[];
+  data: string;
+  blockNumber: string;
+}
+
+/**
+ * eth_getLogs over an arbitrary span, in 20k-block chunks.
+ *
+ * The RPC 429s near ~100k-block spans (measured by the trading session), so
+ * the span is split and each chunk rides rpc()'s own backoff. Chunks are
+ * sequential, not parallel — the 429 is a rate limit, and racing a rate limit
+ * just moves the failure around. ~860k blocks (24h) sweeps in ~75s.
+ */
+export async function getLogs(params: {
+  address: string;
+  topics: (string | null)[];
+  fromBlock: bigint;
+  toBlock: bigint;
+}): Promise<RawLog[]> {
+  const CHUNK = 20_000n;
+  const out: RawLog[] = [];
+  for (let from = params.fromBlock; from <= params.toBlock; from += CHUNK) {
+    const to = from + CHUNK - 1n < params.toBlock ? from + CHUNK - 1n : params.toBlock;
+    const chunk = (await rpcObject("eth_getLogs", [
+      {
+        address: params.address,
+        topics: params.topics,
+        fromBlock: "0x" + from.toString(16),
+        toBlock: "0x" + to.toString(16),
+      },
+    ])) as RawLog[];
+    out.push(...chunk);
+  }
+  return out;
+}
+
+/** Like rpc() but returns the object result (logs, block headers). Same backoff. */
+async function rpcObject(method: string, params: unknown[], attempt = 0): Promise<unknown> {
+  let res: Response;
+  try {
+    res = await fetch(CHAIN.rpcUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "User-Agent": CHAIN.userAgent },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+    });
+  } catch (err) {
+    if (attempt < 3) {
+      await sleep(backoffMs(attempt));
+      return rpcObject(method, params, attempt + 1);
+    }
+    throw new RpcError(`${method} network error: ${err instanceof Error ? err.message : String(err)}`, null);
+  }
+  if (res.status === 429 && attempt < 4) {
+    await sleep(backoffMs(attempt));
+    return rpcObject(method, params, attempt + 1);
+  }
   if (!res.ok) throw new RpcError(`${method} HTTP ${res.status}`, null);
   const body = (await res.json()) as { result?: unknown; error?: { code: number; message: string } };
   if (body.error) throw new RpcError(`${method}: ${body.error.message}`, body.error.code);

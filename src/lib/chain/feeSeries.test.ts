@@ -82,6 +82,65 @@ describe("nextRow", () => {
   });
 });
 
+describe("nextRow with an event sweep", () => {
+  const prior = () => [
+    nextRow(card({ observedAt: iso(0), feesSinceCollect: { weth: 0, pons: 0, usd: 1.58 } }), []),
+  ];
+
+  it("breaks on a Collect EVENT even when fees have not visibly collapsed", () => {
+    // A collect right before the read can leave small re-accrued fees — the
+    // state heuristic would miss it; the event must not.
+    const row = nextRow(
+      card({ observedAt: iso(6), feesSinceCollect: { weth: 0, pons: 0, usd: 1.2 } }),
+      prior(),
+      { swept: true, collects: 1, netLiquidityDelta: 0n }
+    );
+    expect(row.kind).toBe("break");
+    expect(row.note).toContain("Collect event");
+  });
+
+  it("labels a compound when the window also shows net +L", () => {
+    const row = nextRow(
+      card({ observedAt: iso(6), feesSinceCollect: { weth: 0, pons: 0, usd: 0.01 } }),
+      prior(),
+      { swept: true, collects: 1, netLiquidityDelta: 1534987224755938629n }
+    );
+    expect(row.kind).toBe("break");
+    expect(row.note).toContain("compound");
+  });
+
+  it("flags the CONTRADICTION when fees fell but the swept window has no Collect", () => {
+    const row = nextRow(
+      card({ observedAt: iso(6), feesSinceCollect: { weth: 0, pons: 0, usd: 0.01 } }),
+      prior(),
+      { swept: true, collects: 0, netLiquidityDelta: 0n }
+    );
+    expect(row.kind).toBe("break");
+    expect(row.fee_rate_usd_per_day).toBeNull();
+    expect(row.note).toContain("contradiction");
+  });
+
+  it("falls back to the state heuristic when the sweep failed", () => {
+    const row = nextRow(
+      card({ observedAt: iso(6), feesSinceCollect: { weth: 0, pons: 0, usd: 0.01 } }),
+      prior(),
+      { swept: false, collects: 0, netLiquidityDelta: 0n }
+    );
+    expect(row.kind).toBe("break");
+    expect(row.note).toContain("state heuristic");
+  });
+
+  it("computes a normal rate when the sweep is clean and fees grew", () => {
+    const row = nextRow(
+      card({ observedAt: iso(6), feesSinceCollect: { weth: 0, pons: 0, usd: 2.08 } }),
+      prior(),
+      { swept: true, collects: 0, netLiquidityDelta: 0n }
+    );
+    expect(row.kind).toBe("sample");
+    expect(row.fee_rate_usd_per_day).toBeCloseTo(2.0, 6);
+  });
+});
+
 describe("serialize / parse round-trip", () => {
   it("survives JSONL round-trip and skips blank lines", () => {
     const rows = [

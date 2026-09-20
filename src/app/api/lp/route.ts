@@ -63,15 +63,10 @@ export async function GET(): Promise<NextResponse> {
         series_gap_alert_hours: THRESHOLDS.seriesGapAlertHours,
       },
     },
-    /*
-     * vol_2h is null on every row until the log-sweep phase: it needs the Swap
-     * event topic computed from the canonical signature and checked against a
-     * real log on this chain, and a guessed topic would silently match nothing.
-     * Stated here so an empty column reads as deferred, not broken.
-     */
     notes: [
-      "vol_2h is deferred to the log-sweep phase (needs the verified Swap topic).",
+      "vol_2h is the pool's trailing 2h swap volume in USD, priced on the WETH side; null means the log sweep failed on that run, never zero volume.",
       "The series is forward-only: this RPC keeps no historical state, so it cannot be backfilled.",
+      "Fee-clock resets are detected from Collect events on our tokenId (primary) with a state heuristic as fallback; break rows carry which one fired.",
     ],
   });
 }

@@ -2,8 +2,10 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { getPositionCard } from "../../src/lib/chain/lpPosition";
-import { FeeSeriesRow, nextRow, parseSeries, serializeRow } from "../../src/lib/chain/feeSeries";
+import { EventWindow, FeeSeriesRow, nextRow, parseSeries, serializeRow } from "../../src/lib/chain/feeSeries";
 import { evaluateLpAlerts } from "../../src/lib/chain/lpAlerts";
+import { sweepPositionEvents, swapVolumeWeth } from "../../src/lib/chain/lpEvents";
+import { CHAIN } from "../../src/lib/chain/config";
 import { sendDiscord } from "../../src/lib/alerts/channels/discord";
 
 /**
@@ -31,7 +33,39 @@ async function main(): Promise<void> {
   const prior: FeeSeriesRow[] = fs.existsSync(OUT) ? parseSeries(fs.readFileSync(OUT, "utf8")) : [];
 
   const card = await getPositionCard();
-  const row = nextRow(card, prior);
+
+  /*
+   * EVENT SWEEP — the primary reset signal. From the previous row's block to
+   * now; a failure downgrades to the state heuristic rather than aborting the
+   * run, and says so (swept:false is "the sweep failed", never "no events").
+   */
+  const prevRow = prior[prior.length - 1];
+  let events: EventWindow | undefined;
+  if (prevRow) {
+    try {
+      const evs = await sweepPositionEvents(BigInt(prevRow.block) + 1n, BigInt(card.block));
+      events = {
+        swept: true,
+        collects: evs.filter((e) => e.kind === "collect").length,
+        netLiquidityDelta: evs.reduce((s, e) => s + e.liquidityDelta, 0n),
+      };
+      if (evs.length) console.log(`[lp] ${evs.length} position event(s) in window:`, evs.map((e) => `${e.kind}@${e.block}`).join(" "));
+    } catch (err) {
+      events = { swept: false, collects: 0, netLiquidityDelta: 0n };
+      console.log(`[lp] event sweep FAILED (${err instanceof Error ? err.message : err}) — state heuristic in effect`);
+    }
+  }
+
+  const row = nextRow(card, prior, events);
+
+  // vol_2h: the pool's trailing 2h swap volume, priced on the WETH side.
+  // Best-effort — a failed sweep leaves it null (an absence, never a zero).
+  try {
+    const wethVol = await swapVolumeWeth(BigInt(card.block), 2, CHAIN.blocksPerSecond);
+    row.vol_2h = card.ethUsd ? Number((wethVol * card.ethUsd.value).toFixed(2)) : null;
+  } catch (err) {
+    console.log(`[lp] vol_2h sweep failed (${err instanceof Error ? err.message : err}) — recorded null`);
+  }
 
   // APPEND FIRST. A delivery failure below must not cost the observation.
   fs.appendFileSync(OUT, serializeRow(row) + "\n");

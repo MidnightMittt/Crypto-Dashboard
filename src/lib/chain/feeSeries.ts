@@ -50,13 +50,33 @@ export interface FeeSeriesRow {
 const RESET_DROP_FRACTION = 0.5;
 
 /**
+ * What the log sweep saw between the previous row and this one.
+ *
+ * `swept: false` means the sweep FAILED (RPC error) — not that nothing
+ * happened. The distinction is the whole reason the state heuristic survives:
+ * events are the primary reset signal because they are explicit and carry
+ * amounts, but a failed sweep must not read as "no collect", so the caller
+ * passes swept:false and the fees-collapsed heuristic takes over.
+ */
+export interface EventWindow {
+  swept: boolean;
+  collects: number;
+  /** Net liquidity change from Increase/Decrease events in the window. */
+  netLiquidityDelta: bigint;
+}
+
+/**
  * Build the next series row from the current card and the rows already stored.
  *
- * Pure: no I/O, no clock — everything it needs is on the card and in the prior
- * rows, so the reset logic and the rate arithmetic are unit-testable. The
- * caller appends the returned row.
+ * Pure: no I/O, no clock — everything it needs is on the card, in the prior
+ * rows and in the sweep summary, so the reset logic and the rate arithmetic
+ * are unit-testable. The caller appends the returned row.
  */
-export function nextRow(card: PositionCard, priorRows: readonly FeeSeriesRow[]): FeeSeriesRow {
+export function nextRow(
+  card: PositionCard,
+  priorRows: readonly FeeSeriesRow[],
+  events?: EventWindow
+): FeeSeriesRow {
   const nowMs = Date.parse(card.observedAt);
   const feesUsd = card.feesSinceCollect.usd;
   const base: FeeSeriesRow = {
@@ -80,20 +100,51 @@ export function nextRow(card: PositionCard, priorRows: readonly FeeSeriesRow[]):
   const prevMs = Date.parse(prev.ts);
   base.gap_hours = (nowMs - prevMs) / 3_600_000;
 
-  // A fee-clock RESET: cumulative fees fell markedly. Could be a plain collect
-  // or a compound (collect + re-add, which also raises L). Either way it is a
-  // break, not a negative rate.
+  /*
+   * FEE-CLOCK RESET DETECTION — events first, state second.
+   *
+   * PRIMARY: a Collect event on our tokenId inside the window. Explicit,
+   * carries the collected amounts, and cannot be confused with a price move.
+   * FALLBACK: cumulative fees fell markedly (state heuristic) — used when the
+   * sweep failed, and kept as a tripwire even when it succeeded: fees falling
+   * WITHOUT a Collect event is a contradiction worth surfacing loudly, not a
+   * negative rate worth publishing.
+   */
   const dropped =
     feesUsd !== null && prev.fees_usd !== null && feesUsd < prev.fees_usd * RESET_DROP_FRACTION;
-  if (dropped) {
+
+  if (events?.swept && events.collects > 0) {
+    const compounded = events.netLiquidityDelta > 0n;
+    return {
+      ...base,
+      kind: "break",
+      fee_rate_usd_per_day: null,
+      note: compounded
+        ? `fee clock reset — ${events.collects} Collect event(s) and net +L (compound: collect + re-add)`
+        : `fee clock reset — ${events.collects} Collect event(s); rate measured fresh from here`,
+    };
+  }
+
+  if (events?.swept && dropped) {
+    return {
+      ...base,
+      kind: "break",
+      fee_rate_usd_per_day: null,
+      note:
+        "fees decreased with NO Collect event in the swept window — a contradiction: " +
+        "either the sweep window missed the event or the fee computation disagrees with the chain. Investigate.",
+    };
+  }
+
+  if (!events?.swept && dropped) {
     const lRose = BigInt(card.liquidity) > BigInt(prev.liquidity);
     return {
       ...base,
       kind: "break",
       fee_rate_usd_per_day: null,
       note: lRose
-        ? "fee clock reset — fees fell while liquidity rose (compound: collect + re-add)"
-        : "fee clock reset — fees collected; rate measured fresh from here",
+        ? "fee clock reset (state heuristic; sweep unavailable) — fees fell while liquidity rose (compound)"
+        : "fee clock reset (state heuristic; sweep unavailable) — fees collected; rate measured fresh from here",
     };
   }
 

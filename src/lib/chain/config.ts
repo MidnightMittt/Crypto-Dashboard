@@ -84,22 +84,35 @@ export const SELECTORS = {
 } as const;
 
 /**
- * Event topics are DELIBERATELY ABSENT here.
+ * EVENT TOPICS — absent in P0 (given only as prefixes then), now present and
+ * VERIFIED AGAINST REAL LOGS ON THIS CHAIN, 2026-09-20:
  *
- * The build order gave them as prefixes only (Swap 0xc42079f9…ca67, Collect
- * 0x40d0efd1…, Mint 0x7a53080b…, IncreaseLiquidity 0x3067048b…). A 32-byte
- * topic hash written from a prefix is a guess, and a guessed constant is
- * exactly what this file's "verified, not assumed" rule exists to keep out —
- * a wrong topic silently matches nothing and the log sweep looks empty rather
- * than broken.
+ *  - Collect and IncreaseLiquidity: fetched at the trading session's fixture
+ *    blocks 66,527,317 / 66,527,788 filtered by our tokenId; the decoded
+ *    amounts reconcile to the wei (0.002926302071638665 WETH +
+ *    11.632329911972367 PONS collected; +1,534,987,224,755,938,629 L added,
+ *    implying L_before 19,174,394,115,016,096,486 — matching the
+ *    independently recorded pre-compound 1.9174e19).
+ *  - Swap: 247 logs in a 20k-block window on our pool, 5 data words as the ABI
+ *    says, amount0/amount1 opposite-signed int256, tick agreeing with slot0.
  *
- * P0 does not need them: the fee-clock RESET (collect/compound) is detected
- * from STATE — fees drop to ~0 while L rises — which the build order allows as
- * the alternative to watching the Collect event. Log-based detection and the
- * Swap-volume series (vol_2h, P2) arrive with the topics COMPUTED from the
- * canonical signatures and checked against a known log on this chain, not
- * before.
+ * A CORRECTION CAUGHT DURING THAT VERIFICATION: the trading session's brief
+ * gave the tokenId filter as 0x…0010ef3e, which decodes to 1109822 — the wrong
+ * position. 1109566 is 0x10EE3E. Encode the DECIMAL id (encodeUint256), never
+ * paste a pre-encoded topic; the pasted constant returned zero events and
+ * looked like an empty history.
+ *
+ * Swap amount0/amount1 are int256 two's complement — abs() each before summing
+ * volume, or buys and sells net to ~zero.
  */
+export const TOPICS = {
+  /** Pool: Swap(sender idx, recipient idx, amount0, amount1, sqrtPriceX96, liquidity, tick) */
+  swap: "0xc42079f94a6350d7e6235f29174924f928cc2ac818eb64fed8004e115fbcca67",
+  /** NPM, all carrying tokenId as topics[1]: */
+  collect: "0x40d0efd1a53d60ecbf40971b9daf7dc90178c3aadc7aab1765632738fa8b8f01",
+  increaseLiquidity: "0x3067048beee31b25b2f1681f88dac838c8bba36af25bfb2b7cf7473a5847e35f",
+  decreaseLiquidity: "0x26f6a048ee9138f2c0ce266f322cb99228e8d619ae2bff30c67f8dcf9d2377b4",
+} as const;
 
 /**
  * ALL TUNABLE THRESHOLDS. The list the trading session named, plus the alert
