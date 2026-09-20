@@ -1,0 +1,91 @@
+# THE LP FEE-SERIES CLOCK — every 6h, INCLUDING WEEKENDS.
+#
+# This is deliberately its own workflow and not a step in daily-intelligence,
+# for one measured reason: daily-intelligence is weekdays-only, and crypto is
+# not. PONS round-tripped -15.5% inside a single weekend day (2026-09-19); a
+# weekday-only cadence would have recorded neither the move nor the fees earned
+# through it. The fee series is the evidence behind a pre-registered LP verdict
+# landing 2026-10-02, so a weekend hole in it is a hole in the evidence.
+#
+# ── Why the RPC forces forward-only sampling ──────────────────────────
+#
+# Robinhood Chain's public RPC keeps no historical state: eth_call at a block
+# more than minutes old returns "historical state not available". A fee number
+# not read and persisted on the day is gone — it cannot be backfilled by
+# re-reading the block. So the store is append-only and the cadence matters:
+# a missed run is a permanently missing observation, not a delayed one. The
+# >12h series-gap alert (in lpAlerts.ts) is the watcher that catches it.
+#
+# ── Cadence via overlapping starts, like the watchdog ─────────────────
+#
+# GitHub's scheduler drifts by tens of minutes to hours here (measured on the
+# other crons), so four evenly-spaced starts do not guarantee four evenly-
+# spaced reads. Four starts a day at 6h spacing, EVERY day, gives the >=6h
+# floor with margin: if one is late, the next still lands inside the window,
+# and duplicate reads a few minutes apart are harmless — they just compute a
+# short-window rate and carry their own small gap_hours.
+name: record-lp-fees
+
+on:
+  schedule:
+    - cron: "5 0 * * *"
+    - cron: "5 6 * * *"
+    - cron: "5 12 * * *"
+    - cron: "5 18 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  # Two runs appending to the same JSONL would race the commit. Queue rather
+  # than cancel: a dropped run is a permanently lost observation.
+  group: record-lp-fees
+  cancel-in-progress: false
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      - name: Read the LP position and append one fee-series row
+        # DISCORD_WEBHOOK_URL is optional: without it the row is still appended
+        # (alerts just fail to deliver and say so). The observation never
+        # depends on the notification.
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: npx tsx scripts/ingest/recordLpFees.ts
+
+      - name: Commit the row
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # ONLY the store. A blanket stage would sweep up another agent's
+          # in-progress edits under a message describing an LP row.
+          git add src/data/lpFeeSeries.jsonl
+
+          if git diff --cached --quiet; then
+            echo "::warning::No new LP row to commit — the chain read failed. See the step log."
+            exit 0
+          fi
+
+          rows=$(wc -l < src/data/lpFeeSeries.jsonl | tr -d ' ')
+          git commit -m "data: LP fee series — ${rows} rows"
+
+          # Append-only store, overlapping starts after drift: rebase onto
+          # whatever landed first rather than failing a run whose row is valid.
+          for attempt in 1 2 3; do
+            git pull --rebase --autostash origin main && break
+            echo "rebase attempt ${attempt} failed, retrying"
+            sleep 5
+          done
+          git push origin HEAD:main
