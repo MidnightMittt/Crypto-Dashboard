@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1790038410532,
+  "generatedAt": 1790123632228,
   "entries": [
     {
       "symbol": "COST",
@@ -68,10 +68,46 @@
     {
       "symbol": "FITB",
       "date": "2026-10-19"
+    },
+    {
+      "symbol": "RTX",
+      "date": "2026-10-20"
+    },
+    {
+      "symbol": "TXN",
+      "date": "2026-10-20"
+    },
+    {
+      "symbol": "DHR",
+      "date": "2026-10-20"
+    },
+    {
+      "symbol": "ISRG",
+      "date": "2026-10-20"
+    },
+    {
+      "symbol": "LMT",
+      "date": "2026-10-20"
+    },
+    {
+      "symbol": "NOC",
+      "date": "2026-10-20"
+    },
+    {
+      "symbol": "HAL",
+      "date": "2026-10-20"
+    },
+    {
+      "symbol": "KEY",
+      "date": "2026-10-20"
+    },
+    {
+      "symbol": "GLXY",
+      "date": "2026-10-20"
     }
   ],
   "sweep": {
-    "throughDate": "2026-10-19",
+    "throughDate": "2026-10-20",
     "universe": [
       "ABT",
       "ADBE",

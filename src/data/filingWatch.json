@@ -1,5 +1,5 @@
 {
- "generatedAt": 1790038607064,
+ "generatedAt": 1790123858948,
  "source": "SEC submissions API, one request per CIK; FILED BY from ranged header fetches",
  "lookbackDays": 45,
  "species": {
@@ -73,7 +73,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1006
+   "recentFilingsSeen": 1007
   },
   {
    "symbol": "AEM",
@@ -179,7 +179,7 @@
    "cik": "0001973832",
    "registrant": "AngloGold Ashanti PLC",
    "hits": [],
-   "recentFilingsSeen": 208
+   "recentFilingsSeen": 209
   },
   {
    "symbol": "AVGO",
@@ -454,7 +454,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1002
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "CORZ",
@@ -525,7 +525,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "CSX",
@@ -846,7 +846,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 698
+   "recentFilingsSeen": 699
   },
   {
    "symbol": "GS",
@@ -1014,7 +1014,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 16251
+   "recentFilingsSeen": 16265
   },
   {
    "symbol": "HAL",
@@ -1094,14 +1094,14 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1006
   },
   {
    "symbol": "HOOD",
    "cik": "0001783879",
    "registrant": "Robinhood Markets, Inc.",
    "hits": [],
-   "recentFilingsSeen": 1002
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "HUT",
@@ -1287,8 +1287,25 @@
    "symbol": "KLAC",
    "cik": "0000319201",
    "registrant": "KLA CORP",
-   "hits": [],
-   "recentFilingsSeen": 1001
+   "hits": [
+    {
+     "form": "DEFA14A",
+     "filingDate": "2026-09-22",
+     "accessionNumber": "0001193125-26-397940",
+     "primaryDocument": "d108333ddefa14a.htm",
+     "filer": "KLA CORP",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "DEF 14A",
+     "filingDate": "2026-09-22",
+     "accessionNumber": "0001193125-26-397898",
+     "primaryDocument": "d83268ddef14a.htm",
+     "filer": "KLA CORP",
+     "filer_basis": "registrant (self-filed species)"
+    }
+   ],
+   "recentFilingsSeen": 1004
   },
   {
    "symbol": "LEN",
@@ -1304,7 +1321,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1002
+   "recentFilingsSeen": 1004
   },
   {
    "symbol": "LHX",
@@ -1455,14 +1472,14 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1003
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "MS",
    "cik": "0000895421",
    "registrant": "MORGAN STANLEY",
    "hits": [],
-   "recentFilingsSeen": 19893
+   "recentFilingsSeen": 19921
   },
   {
    "symbol": "MSFT",
@@ -1558,13 +1575,29 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1002
+   "recentFilingsSeen": 1004
   },
   {
    "symbol": "MTB",
    "cik": "0000036270",
    "registrant": "M&T BANK CORP",
    "hits": [
+    {
+     "form": "8-K",
+     "filingDate": "2026-09-22",
+     "accessionNumber": "0001193125-26-398138",
+     "primaryDocument": "d181022d8k.htm",
+     "filer": "M&T BANK CORP",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "424B5",
+     "filingDate": "2026-09-22",
+     "accessionNumber": "0001193125-26-398042",
+     "primaryDocument": "d178853d424b5.htm",
+     "filer": "M&T BANK CORP",
+     "filer_basis": "registrant (self-filed species)"
+    },
     {
      "form": "8-K",
      "filingDate": "2026-09-14",
@@ -1574,7 +1607,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1004
   },
   {
    "symbol": "MU",
@@ -1716,7 +1749,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "NVR",
@@ -1732,6 +1765,14 @@
    "hits": [
     {
      "form": "8-K",
+     "filingDate": "2026-09-22",
+     "accessionNumber": "0000878927-26-000027",
+     "primaryDocument": "odfl-20260922.htm",
+     "filer": "OLD DOMINION FREIGHT LINE, INC.",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "8-K",
      "filingDate": "2026-09-03",
      "accessionNumber": "0000878927-26-000025",
      "primaryDocument": "odfl-20260903.htm",
@@ -1739,7 +1780,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "OKLO",
@@ -1787,7 +1828,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "PANW",
@@ -1811,7 +1852,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1003
+   "recentFilingsSeen": 1004
   },
   {
    "symbol": "PHM",
@@ -1914,7 +1955,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "REGN",
@@ -2088,7 +2129,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1008
   },
   {
    "symbol": "SO",
@@ -2560,7 +2601,7 @@
    "cik": "0001083301",
    "registrant": "TERAWULF INC.",
    "hits": [],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "FRMI",
