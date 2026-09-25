@@ -1,6 +1,6 @@
 {
  "version": 1,
- "generatedAt": 1790123834253,
+ "generatedAt": 1790296760320,
  "pool": "0xEd50bDeeA8aDC232f159486192a4157281D722ff",
  "rpc": "https://rpc.mainnet.chain.robinhood.com",
  "feeTier": 0.003,
@@ -9,7 +9,7 @@
   77640,
   87000
  ],
- "lastScannedBlock": 70089312,
+ "lastScannedBlock": 71805323,
  "windows": [
   {
    "fromBlock": 61593329,
@@ -4780,6 +4780,966 @@
    "wethVolume": 105.6928,
    "feePerUnitL": 6.00889173795971e-7,
    "lastTick": 82803
+  },
+  {
+   "fromBlock": 70089313,
+   "toBlock": 70107312,
+   "fromTs": "2026-09-23T00:36:08.000Z",
+   "toTs": "2026-09-23T01:06:25.000Z",
+   "swaps": 505,
+   "wethVolume": 185.2464,
+   "feePerUnitL": 0.000001053408052876467,
+   "lastTick": 82786
+  },
+  {
+   "fromBlock": 70107313,
+   "toBlock": 70125312,
+   "fromTs": "2026-09-23T01:06:25.000Z",
+   "toTs": "2026-09-23T01:36:35.000Z",
+   "swaps": 250,
+   "wethVolume": 71.7917,
+   "feePerUnitL": 3.939921179901108e-7,
+   "lastTick": 82732
+  },
+  {
+   "fromBlock": 70125313,
+   "toBlock": 70143312,
+   "fromTs": "2026-09-23T01:36:35.000Z",
+   "toTs": "2026-09-23T02:06:45.000Z",
+   "swaps": 305,
+   "wethVolume": 123.5925,
+   "feePerUnitL": 6.698459229133134e-7,
+   "lastTick": 82903
+  },
+  {
+   "fromBlock": 70143313,
+   "toBlock": 70161312,
+   "fromTs": "2026-09-23T02:06:45.000Z",
+   "toTs": "2026-09-23T02:36:59.000Z",
+   "swaps": 580,
+   "wethVolume": 215.846,
+   "feePerUnitL": 0.0000012408902227914093,
+   "lastTick": 82449
+  },
+  {
+   "fromBlock": 70161313,
+   "toBlock": 70179312,
+   "fromTs": "2026-09-23T02:36:59.000Z",
+   "toTs": "2026-09-23T03:07:10.000Z",
+   "swaps": 609,
+   "wethVolume": 193.4633,
+   "feePerUnitL": 0.0000011529363396795978,
+   "lastTick": 82468
+  },
+  {
+   "fromBlock": 70179313,
+   "toBlock": 70197312,
+   "fromTs": "2026-09-23T03:07:10.000Z",
+   "toTs": "2026-09-23T03:37:18.000Z",
+   "swaps": 460,
+   "wethVolume": 164.6131,
+   "feePerUnitL": 9.76511791197722e-7,
+   "lastTick": 82638
+  },
+  {
+   "fromBlock": 70197313,
+   "toBlock": 70215312,
+   "fromTs": "2026-09-23T03:37:18.000Z",
+   "toTs": "2026-09-23T04:07:29.000Z",
+   "swaps": 380,
+   "wethVolume": 139.6507,
+   "feePerUnitL": 8.241084813986532e-7,
+   "lastTick": 82623
+  },
+  {
+   "fromBlock": 70215313,
+   "toBlock": 70233312,
+   "fromTs": "2026-09-23T04:07:29.000Z",
+   "toTs": "2026-09-23T04:37:40.000Z",
+   "swaps": 264,
+   "wethVolume": 74.9045,
+   "feePerUnitL": 4.38571293560309e-7,
+   "lastTick": 82758
+  },
+  {
+   "fromBlock": 70233313,
+   "toBlock": 70251312,
+   "fromTs": "2026-09-23T04:37:40.000Z",
+   "toTs": "2026-09-23T05:07:56.000Z",
+   "swaps": 206,
+   "wethVolume": 74.4833,
+   "feePerUnitL": 4.0425008746588997e-7,
+   "lastTick": 82871
+  },
+  {
+   "fromBlock": 70251313,
+   "toBlock": 70269312,
+   "fromTs": "2026-09-23T05:07:56.000Z",
+   "toTs": "2026-09-23T05:38:14.000Z",
+   "swaps": 282,
+   "wethVolume": 92.1563,
+   "feePerUnitL": 5.179981472611889e-7,
+   "lastTick": 82705
+  },
+  {
+   "fromBlock": 70269313,
+   "toBlock": 70287312,
+   "fromTs": "2026-09-23T05:38:15.000Z",
+   "toTs": "2026-09-23T06:08:30.000Z",
+   "swaps": 238,
+   "wethVolume": 63.5224,
+   "feePerUnitL": 3.623466366771899e-7,
+   "lastTick": 82812
+  },
+  {
+   "fromBlock": 70287313,
+   "toBlock": 70305312,
+   "fromTs": "2026-09-23T06:08:30.000Z",
+   "toTs": "2026-09-23T06:38:43.000Z",
+   "swaps": 460,
+   "wethVolume": 510.4475,
+   "feePerUnitL": 0.000003014552847481029,
+   "lastTick": 83056
+  },
+  {
+   "fromBlock": 70305313,
+   "toBlock": 70323312,
+   "fromTs": "2026-09-23T06:38:43.000Z",
+   "toTs": "2026-09-23T07:09:00.000Z",
+   "swaps": 173,
+   "wethVolume": 144.5807,
+   "feePerUnitL": 9.833039761322642e-7,
+   "lastTick": 83129
+  },
+  {
+   "fromBlock": 70323313,
+   "toBlock": 70341312,
+   "fromTs": "2026-09-23T07:09:00.000Z",
+   "toTs": "2026-09-23T07:39:15.000Z",
+   "swaps": 174,
+   "wethVolume": 141.4536,
+   "feePerUnitL": 9.068578767601246e-7,
+   "lastTick": 83220
+  },
+  {
+   "fromBlock": 70341313,
+   "toBlock": 70359312,
+   "fromTs": "2026-09-23T07:39:15.000Z",
+   "toTs": "2026-09-23T08:09:34.000Z",
+   "swaps": 237,
+   "wethVolume": 84.7695,
+   "feePerUnitL": 5.587603362526465e-7,
+   "lastTick": 83172
+  },
+  {
+   "fromBlock": 70359313,
+   "toBlock": 70377312,
+   "fromTs": "2026-09-23T08:09:34.000Z",
+   "toTs": "2026-09-23T08:39:52.000Z",
+   "swaps": 99,
+   "wethVolume": 31.1881,
+   "feePerUnitL": 1.9229542008068926e-7,
+   "lastTick": 83152
+  },
+  {
+   "fromBlock": 70377313,
+   "toBlock": 70395312,
+   "fromTs": "2026-09-23T08:39:52.000Z",
+   "toTs": "2026-09-23T09:10:07.000Z",
+   "swaps": 387,
+   "wethVolume": 141.2691,
+   "feePerUnitL": 8.180597333849431e-7,
+   "lastTick": 83032
+  },
+  {
+   "fromBlock": 70395313,
+   "toBlock": 70413312,
+   "fromTs": "2026-09-23T09:10:07.000Z",
+   "toTs": "2026-09-23T09:40:25.000Z",
+   "swaps": 65,
+   "wethVolume": 49.3439,
+   "feePerUnitL": 2.836106474448627e-7,
+   "lastTick": 83109
+  },
+  {
+   "fromBlock": 70413313,
+   "toBlock": 70431312,
+   "fromTs": "2026-09-23T09:40:25.000Z",
+   "toTs": "2026-09-23T10:10:45.000Z",
+   "swaps": 153,
+   "wethVolume": 36.034,
+   "feePerUnitL": 2.2260425095536463e-7,
+   "lastTick": 83076
+  },
+  {
+   "fromBlock": 70431313,
+   "toBlock": 70449312,
+   "fromTs": "2026-09-23T10:10:45.000Z",
+   "toTs": "2026-09-23T10:41:05.000Z",
+   "swaps": 153,
+   "wethVolume": 130.5812,
+   "feePerUnitL": 6.827927772728059e-7,
+   "lastTick": 82946
+  },
+  {
+   "fromBlock": 70449313,
+   "toBlock": 70467312,
+   "fromTs": "2026-09-23T10:41:05.000Z",
+   "toTs": "2026-09-23T11:11:26.000Z",
+   "swaps": 401,
+   "wethVolume": 159.8674,
+   "feePerUnitL": 8.73689891385556e-7,
+   "lastTick": 82660
+  },
+  {
+   "fromBlock": 70467313,
+   "toBlock": 70485312,
+   "fromTs": "2026-09-23T11:11:26.000Z",
+   "toTs": "2026-09-23T11:41:41.000Z",
+   "swaps": 286,
+   "wethVolume": 98.3321,
+   "feePerUnitL": 5.679425347640026e-7,
+   "lastTick": 82716
+  },
+  {
+   "fromBlock": 70485313,
+   "toBlock": 70503312,
+   "fromTs": "2026-09-23T11:41:41.000Z",
+   "toTs": "2026-09-23T12:11:56.000Z",
+   "swaps": 319,
+   "wethVolume": 111.7511,
+   "feePerUnitL": 6.904787889443369e-7,
+   "lastTick": 82727
+  },
+  {
+   "fromBlock": 70503313,
+   "toBlock": 70521312,
+   "fromTs": "2026-09-23T12:11:56.000Z",
+   "toTs": "2026-09-23T12:42:11.000Z",
+   "swaps": 132,
+   "wethVolume": 46.9098,
+   "feePerUnitL": 2.587850657421379e-7,
+   "lastTick": 82699
+  },
+  {
+   "fromBlock": 70521313,
+   "toBlock": 70539312,
+   "fromTs": "2026-09-23T12:42:11.000Z",
+   "toTs": "2026-09-23T13:12:20.000Z",
+   "swaps": 307,
+   "wethVolume": 94.6339,
+   "feePerUnitL": 5.265257715556922e-7,
+   "lastTick": 82873
+  },
+  {
+   "fromBlock": 70539313,
+   "toBlock": 70557312,
+   "fromTs": "2026-09-23T13:12:20.000Z",
+   "toTs": "2026-09-23T13:42:33.000Z",
+   "swaps": 195,
+   "wethVolume": 59.8628,
+   "feePerUnitL": 3.189314768639088e-7,
+   "lastTick": 82770
+  },
+  {
+   "fromBlock": 70557313,
+   "toBlock": 70575312,
+   "fromTs": "2026-09-23T13:42:33.000Z",
+   "toTs": "2026-09-23T14:12:44.000Z",
+   "swaps": 473,
+   "wethVolume": 230.8831,
+   "feePerUnitL": 0.0000012745940141860213,
+   "lastTick": 82909
+  },
+  {
+   "fromBlock": 70575313,
+   "toBlock": 70593312,
+   "fromTs": "2026-09-23T14:12:44.000Z",
+   "toTs": "2026-09-23T14:42:52.000Z",
+   "swaps": 987,
+   "wethVolume": 353.3034,
+   "feePerUnitL": 0.0000019516922824673416,
+   "lastTick": 82909
+  },
+  {
+   "fromBlock": 70593313,
+   "toBlock": 70611312,
+   "fromTs": "2026-09-23T14:42:52.000Z",
+   "toTs": "2026-09-23T15:13:03.000Z",
+   "swaps": 253,
+   "wethVolume": 76.918,
+   "feePerUnitL": 3.9855328488479736e-7,
+   "lastTick": 82816
+  },
+  {
+   "fromBlock": 70611313,
+   "toBlock": 70629312,
+   "fromTs": "2026-09-23T15:13:03.000Z",
+   "toTs": "2026-09-23T15:43:13.000Z",
+   "swaps": 277,
+   "wethVolume": 92.3489,
+   "feePerUnitL": 4.897171014940909e-7,
+   "lastTick": 82843
+  },
+  {
+   "fromBlock": 70629313,
+   "toBlock": 70647312,
+   "fromTs": "2026-09-23T15:43:13.000Z",
+   "toTs": "2026-09-23T16:13:21.000Z",
+   "swaps": 631,
+   "wethVolume": 393.3942,
+   "feePerUnitL": 0.0000020318618616431297,
+   "lastTick": 82913
+  },
+  {
+   "fromBlock": 70647313,
+   "toBlock": 70665312,
+   "fromTs": "2026-09-23T16:13:21.000Z",
+   "toTs": "2026-09-23T16:43:27.000Z",
+   "swaps": 379,
+   "wethVolume": 105.8594,
+   "feePerUnitL": 5.971225212640834e-7,
+   "lastTick": 83089
+  },
+  {
+   "fromBlock": 70665313,
+   "toBlock": 70683312,
+   "fromTs": "2026-09-23T16:43:27.000Z",
+   "toTs": "2026-09-23T17:13:33.000Z",
+   "swaps": 255,
+   "wethVolume": 70.3368,
+   "feePerUnitL": 3.9336147068957927e-7,
+   "lastTick": 83004
+  },
+  {
+   "fromBlock": 70683313,
+   "toBlock": 70701312,
+   "fromTs": "2026-09-23T17:13:33.000Z",
+   "toTs": "2026-09-23T17:43:38.000Z",
+   "swaps": 258,
+   "wethVolume": 43.1226,
+   "feePerUnitL": 2.3312579347748053e-7,
+   "lastTick": 82950
+  },
+  {
+   "fromBlock": 70701313,
+   "toBlock": 70719312,
+   "fromTs": "2026-09-23T17:43:38.000Z",
+   "toTs": "2026-09-23T18:13:45.000Z",
+   "swaps": 234,
+   "wethVolume": 78.5148,
+   "feePerUnitL": 4.1971212215684526e-7,
+   "lastTick": 82939
+  },
+  {
+   "fromBlock": 70719313,
+   "toBlock": 70737312,
+   "fromTs": "2026-09-23T18:13:45.000Z",
+   "toTs": "2026-09-23T18:43:57.000Z",
+   "swaps": 108,
+   "wethVolume": 30.9063,
+   "feePerUnitL": 1.6511071722891156e-7,
+   "lastTick": 83005
+  },
+  {
+   "fromBlock": 70737313,
+   "toBlock": 70755312,
+   "fromTs": "2026-09-23T18:43:57.000Z",
+   "toTs": "2026-09-23T19:14:08.000Z",
+   "swaps": 226,
+   "wethVolume": 79.4026,
+   "feePerUnitL": 4.4014687212188763e-7,
+   "lastTick": 83034
+  },
+  {
+   "fromBlock": 70755313,
+   "toBlock": 70773312,
+   "fromTs": "2026-09-23T19:14:08.000Z",
+   "toTs": "2026-09-23T19:44:16.000Z",
+   "swaps": 119,
+   "wethVolume": 40.1674,
+   "feePerUnitL": 2.1563840924666702e-7,
+   "lastTick": 83036
+  },
+  {
+   "fromBlock": 70773313,
+   "toBlock": 70791312,
+   "fromTs": "2026-09-23T19:44:16.000Z",
+   "toTs": "2026-09-23T20:14:24.000Z",
+   "swaps": 171,
+   "wethVolume": 55.3124,
+   "feePerUnitL": 2.9965481758155685e-7,
+   "lastTick": 83042
+  },
+  {
+   "fromBlock": 70791313,
+   "toBlock": 70809312,
+   "fromTs": "2026-09-23T20:14:24.000Z",
+   "toTs": "2026-09-23T20:44:33.000Z",
+   "swaps": 325,
+   "wethVolume": 162.0755,
+   "feePerUnitL": 9.783649424952757e-7,
+   "lastTick": 83343
+  },
+  {
+   "fromBlock": 70809313,
+   "toBlock": 70827312,
+   "fromTs": "2026-09-23T20:44:33.000Z",
+   "toTs": "2026-09-23T21:14:46.000Z",
+   "swaps": 278,
+   "wethVolume": 103.8694,
+   "feePerUnitL": 6.183612661038192e-7,
+   "lastTick": 83403
+  },
+  {
+   "fromBlock": 70827313,
+   "toBlock": 70845312,
+   "fromTs": "2026-09-23T21:14:46.000Z",
+   "toTs": "2026-09-23T21:45:03.000Z",
+   "swaps": 113,
+   "wethVolume": 41.2525,
+   "feePerUnitL": 2.7960678533336256e-7,
+   "lastTick": 83455
+  },
+  {
+   "fromBlock": 70845313,
+   "toBlock": 70863312,
+   "fromTs": "2026-09-23T21:45:03.000Z",
+   "toTs": "2026-09-23T22:15:16.000Z",
+   "swaps": 86,
+   "wethVolume": 20.9852,
+   "feePerUnitL": 1.405665869933595e-7,
+   "lastTick": 83402
+  },
+  {
+   "fromBlock": 70863313,
+   "toBlock": 70881312,
+   "fromTs": "2026-09-23T22:15:16.000Z",
+   "toTs": "2026-09-23T22:45:34.000Z",
+   "swaps": 193,
+   "wethVolume": 36.2053,
+   "feePerUnitL": 2.6821592704456833e-7,
+   "lastTick": 83532
+  },
+  {
+   "fromBlock": 70881313,
+   "toBlock": 70899312,
+   "fromTs": "2026-09-23T22:45:34.000Z",
+   "toTs": "2026-09-23T23:15:50.000Z",
+   "swaps": 171,
+   "wethVolume": 53.3501,
+   "feePerUnitL": 4.054608874235021e-7,
+   "lastTick": 83428
+  },
+  {
+   "fromBlock": 70899313,
+   "toBlock": 70917312,
+   "fromTs": "2026-09-23T23:15:51.000Z",
+   "toTs": "2026-09-23T23:46:07.000Z",
+   "swaps": 127,
+   "wethVolume": 57.8547,
+   "feePerUnitL": 4.252440824335945e-7,
+   "lastTick": 83565
+  },
+  {
+   "fromBlock": 70917313,
+   "toBlock": 70935312,
+   "fromTs": "2026-09-23T23:46:07.000Z",
+   "toTs": "2026-09-24T00:16:26.000Z",
+   "swaps": 228,
+   "wethVolume": 87.4409,
+   "feePerUnitL": 5.692411187742308e-7,
+   "lastTick": 83380
+  },
+  {
+   "fromBlock": 70935313,
+   "toBlock": 70953312,
+   "fromTs": "2026-09-24T00:16:26.000Z",
+   "toTs": "2026-09-24T00:46:40.000Z",
+   "swaps": 193,
+   "wethVolume": 51.5463,
+   "feePerUnitL": 3.413025168073431e-7,
+   "lastTick": 83433
+  },
+  {
+   "fromBlock": 70953313,
+   "toBlock": 70971312,
+   "fromTs": "2026-09-24T00:46:40.000Z",
+   "toTs": "2026-09-24T01:16:54.000Z",
+   "swaps": 107,
+   "wethVolume": 29.3066,
+   "feePerUnitL": 2.2506203540296147e-7,
+   "lastTick": 83419
+  },
+  {
+   "fromBlock": 70971313,
+   "toBlock": 70989312,
+   "fromTs": "2026-09-24T01:16:54.000Z",
+   "toTs": "2026-09-24T01:47:11.000Z",
+   "swaps": 96,
+   "wethVolume": 26.6973,
+   "feePerUnitL": 1.9697861120284186e-7,
+   "lastTick": 83501
+  },
+  {
+   "fromBlock": 70989313,
+   "toBlock": 71007312,
+   "fromTs": "2026-09-24T01:47:11.000Z",
+   "toTs": "2026-09-24T02:17:28.000Z",
+   "swaps": 231,
+   "wethVolume": 84.7746,
+   "feePerUnitL": 5.547922092348031e-7,
+   "lastTick": 83507
+  },
+  {
+   "fromBlock": 71007313,
+   "toBlock": 71025312,
+   "fromTs": "2026-09-24T02:17:29.000Z",
+   "toTs": "2026-09-24T02:47:44.000Z",
+   "swaps": 197,
+   "wethVolume": 46.7598,
+   "feePerUnitL": 3.137024015578932e-7,
+   "lastTick": 83349
+  },
+  {
+   "fromBlock": 71025313,
+   "toBlock": 71043312,
+   "fromTs": "2026-09-24T02:47:44.000Z",
+   "toTs": "2026-09-24T03:18:11.000Z",
+   "swaps": 74,
+   "wethVolume": 15.6575,
+   "feePerUnitL": 8.137758477564148e-8,
+   "lastTick": 83353
+  },
+  {
+   "fromBlock": 71043313,
+   "toBlock": 71061312,
+   "fromTs": "2026-09-24T03:18:11.000Z",
+   "toTs": "2026-09-24T03:48:32.000Z",
+   "swaps": 234,
+   "wethVolume": 82.0783,
+   "feePerUnitL": 5.856490678890527e-7,
+   "lastTick": 83538
+  },
+  {
+   "fromBlock": 71061313,
+   "toBlock": 71079312,
+   "fromTs": "2026-09-24T03:48:32.000Z",
+   "toTs": "2026-09-24T04:19:00.000Z",
+   "swaps": 228,
+   "wethVolume": 64.5284,
+   "feePerUnitL": 4.2514840208033265e-7,
+   "lastTick": 83673
+  },
+  {
+   "fromBlock": 71079313,
+   "toBlock": 71097312,
+   "fromTs": "2026-09-24T04:19:00.000Z",
+   "toTs": "2026-09-24T04:49:31.000Z",
+   "swaps": 125,
+   "wethVolume": 52.6942,
+   "feePerUnitL": 3.361312405825678e-7,
+   "lastTick": 83665
+  },
+  {
+   "fromBlock": 71097313,
+   "toBlock": 71115312,
+   "fromTs": "2026-09-24T04:49:31.000Z",
+   "toTs": "2026-09-24T05:19:53.000Z",
+   "swaps": 210,
+   "wethVolume": 67.6256,
+   "feePerUnitL": 3.968413466771358e-7,
+   "lastTick": 83485
+  },
+  {
+   "fromBlock": 71115313,
+   "toBlock": 71133312,
+   "fromTs": "2026-09-24T05:19:53.000Z",
+   "toTs": "2026-09-24T05:50:26.000Z",
+   "swaps": 111,
+   "wethVolume": 26.9814,
+   "feePerUnitL": 1.603828827651037e-7,
+   "lastTick": 83551
+  },
+  {
+   "fromBlock": 71133313,
+   "toBlock": 71151312,
+   "fromTs": "2026-09-24T05:50:26.000Z",
+   "toTs": "2026-09-24T06:20:42.000Z",
+   "swaps": 229,
+   "wethVolume": 51.9708,
+   "feePerUnitL": 3.192300653150888e-7,
+   "lastTick": 83711
+  },
+  {
+   "fromBlock": 71151313,
+   "toBlock": 71169312,
+   "fromTs": "2026-09-24T06:20:43.000Z",
+   "toTs": "2026-09-24T06:51:10.000Z",
+   "swaps": 101,
+   "wethVolume": 27.4153,
+   "feePerUnitL": 1.838121655285617e-7,
+   "lastTick": 83658
+  },
+  {
+   "fromBlock": 71169313,
+   "toBlock": 71187312,
+   "fromTs": "2026-09-24T06:51:11.000Z",
+   "toTs": "2026-09-24T07:21:32.000Z",
+   "swaps": 187,
+   "wethVolume": 47.0798,
+   "feePerUnitL": 2.7374994040961827e-7,
+   "lastTick": 83588
+  },
+  {
+   "fromBlock": 71187313,
+   "toBlock": 71205312,
+   "fromTs": "2026-09-24T07:21:32.000Z",
+   "toTs": "2026-09-24T07:51:54.000Z",
+   "swaps": 236,
+   "wethVolume": 64.8131,
+   "feePerUnitL": 3.733050743699263e-7,
+   "lastTick": 83511
+  },
+  {
+   "fromBlock": 71205313,
+   "toBlock": 71223312,
+   "fromTs": "2026-09-24T07:51:54.000Z",
+   "toTs": "2026-09-24T08:22:07.000Z",
+   "swaps": 72,
+   "wethVolume": 24.5528,
+   "feePerUnitL": 1.5234295388275007e-7,
+   "lastTick": 83530
+  },
+  {
+   "fromBlock": 71223313,
+   "toBlock": 71241312,
+   "fromTs": "2026-09-24T08:22:07.000Z",
+   "toTs": "2026-09-24T08:52:23.000Z",
+   "swaps": 277,
+   "wethVolume": 97.2977,
+   "feePerUnitL": 6.001271257945168e-7,
+   "lastTick": 83676
+  },
+  {
+   "fromBlock": 71241313,
+   "toBlock": 71259312,
+   "fromTs": "2026-09-24T08:52:23.000Z",
+   "toTs": "2026-09-24T09:22:40.000Z",
+   "swaps": 178,
+   "wethVolume": 32.9093,
+   "feePerUnitL": 2.3100366924786133e-7,
+   "lastTick": 83765
+  },
+  {
+   "fromBlock": 71259313,
+   "toBlock": 71277312,
+   "fromTs": "2026-09-24T09:22:40.000Z",
+   "toTs": "2026-09-24T09:52:57.000Z",
+   "swaps": 137,
+   "wethVolume": 40.2776,
+   "feePerUnitL": 2.6582412178090636e-7,
+   "lastTick": 83736
+  },
+  {
+   "fromBlock": 71277313,
+   "toBlock": 71295312,
+   "fromTs": "2026-09-24T09:52:57.000Z",
+   "toTs": "2026-09-24T10:23:19.000Z",
+   "swaps": 103,
+   "wethVolume": 37.9436,
+   "feePerUnitL": 2.594661345445034e-7,
+   "lastTick": 83693
+  },
+  {
+   "fromBlock": 71295313,
+   "toBlock": 71313312,
+   "fromTs": "2026-09-24T10:23:19.000Z",
+   "toTs": "2026-09-24T10:53:43.000Z",
+   "swaps": 109,
+   "wethVolume": 73.4943,
+   "feePerUnitL": 4.942110694183258e-7,
+   "lastTick": 83743
+  },
+  {
+   "fromBlock": 71313313,
+   "toBlock": 71331312,
+   "fromTs": "2026-09-24T10:53:43.000Z",
+   "toTs": "2026-09-24T11:24:03.000Z",
+   "swaps": 122,
+   "wethVolume": 41.2971,
+   "feePerUnitL": 2.8945344567545535e-7,
+   "lastTick": 83753
+  },
+  {
+   "fromBlock": 71331313,
+   "toBlock": 71349312,
+   "fromTs": "2026-09-24T11:24:03.000Z",
+   "toTs": "2026-09-24T11:54:14.000Z",
+   "swaps": 141,
+   "wethVolume": 39.5992,
+   "feePerUnitL": 2.8145939188343784e-7,
+   "lastTick": 83790
+  },
+  {
+   "fromBlock": 71349313,
+   "toBlock": 71367312,
+   "fromTs": "2026-09-24T11:54:14.000Z",
+   "toTs": "2026-09-24T12:24:29.000Z",
+   "swaps": 67,
+   "wethVolume": 25.9315,
+   "feePerUnitL": 1.7337499523094953e-7,
+   "lastTick": 83762
+  },
+  {
+   "fromBlock": 71367313,
+   "toBlock": 71385312,
+   "fromTs": "2026-09-24T12:24:29.000Z",
+   "toTs": "2026-09-24T12:54:45.000Z",
+   "swaps": 94,
+   "wethVolume": 38.3471,
+   "feePerUnitL": 2.781444778761072e-7,
+   "lastTick": 83788
+  },
+  {
+   "fromBlock": 71385313,
+   "toBlock": 71403312,
+   "fromTs": "2026-09-24T12:54:45.000Z",
+   "toTs": "2026-09-24T13:24:57.000Z",
+   "swaps": 177,
+   "wethVolume": 46.8827,
+   "feePerUnitL": 3.5242245906059584e-7,
+   "lastTick": 83654
+  },
+  {
+   "fromBlock": 71403313,
+   "toBlock": 71421312,
+   "fromTs": "2026-09-24T13:24:57.000Z",
+   "toTs": "2026-09-24T13:55:06.000Z",
+   "swaps": 309,
+   "wethVolume": 82.1334,
+   "feePerUnitL": 4.62980628707017e-7,
+   "lastTick": 83555
+  },
+  {
+   "fromBlock": 71421313,
+   "toBlock": 71439312,
+   "fromTs": "2026-09-24T13:55:06.000Z",
+   "toTs": "2026-09-24T14:25:15.000Z",
+   "swaps": 93,
+   "wethVolume": 18.56,
+   "feePerUnitL": 1.0250366679452446e-7,
+   "lastTick": 83552
+  },
+  {
+   "fromBlock": 71439313,
+   "toBlock": 71457312,
+   "fromTs": "2026-09-24T14:25:15.000Z",
+   "toTs": "2026-09-24T14:55:24.000Z",
+   "swaps": 328,
+   "wethVolume": 57.3413,
+   "feePerUnitL": 3.395430361633645e-7,
+   "lastTick": 83706
+  },
+  {
+   "fromBlock": 71457313,
+   "toBlock": 71475312,
+   "fromTs": "2026-09-24T14:55:24.000Z",
+   "toTs": "2026-09-24T15:25:33.000Z",
+   "swaps": 176,
+   "wethVolume": 22.5929,
+   "feePerUnitL": 1.5445886992657074e-7,
+   "lastTick": 83673
+  },
+  {
+   "fromBlock": 71475313,
+   "toBlock": 71493312,
+   "fromTs": "2026-09-24T15:25:33.000Z",
+   "toTs": "2026-09-24T15:55:46.000Z",
+   "swaps": 244,
+   "wethVolume": 79.4228,
+   "feePerUnitL": 4.521291017749344e-7,
+   "lastTick": 83533
+  },
+  {
+   "fromBlock": 71493313,
+   "toBlock": 71511312,
+   "fromTs": "2026-09-24T15:55:46.000Z",
+   "toTs": "2026-09-24T16:25:54.000Z",
+   "swaps": 543,
+   "wethVolume": 76.9738,
+   "feePerUnitL": 4.0786300263627584e-7,
+   "lastTick": 83592
+  },
+  {
+   "fromBlock": 71511313,
+   "toBlock": 71529312,
+   "fromTs": "2026-09-24T16:25:54.000Z",
+   "toTs": "2026-09-24T16:56:02.000Z",
+   "swaps": 326,
+   "wethVolume": 68.0668,
+   "feePerUnitL": 4.090093205255033e-7,
+   "lastTick": 83537
+  },
+  {
+   "fromBlock": 71529313,
+   "toBlock": 71547312,
+   "fromTs": "2026-09-24T16:56:02.000Z",
+   "toTs": "2026-09-24T17:26:15.000Z",
+   "swaps": 100,
+   "wethVolume": 54.221,
+   "feePerUnitL": 3.166695851972419e-7,
+   "lastTick": 83567
+  },
+  {
+   "fromBlock": 71547313,
+   "toBlock": 71565312,
+   "fromTs": "2026-09-24T17:26:15.000Z",
+   "toTs": "2026-09-24T17:56:25.000Z",
+   "swaps": 85,
+   "wethVolume": 25.7537,
+   "feePerUnitL": 1.650830617263798e-7,
+   "lastTick": 83619
+  },
+  {
+   "fromBlock": 71565313,
+   "toBlock": 71583312,
+   "fromTs": "2026-09-24T17:56:25.000Z",
+   "toTs": "2026-09-24T18:26:32.000Z",
+   "swaps": 181,
+   "wethVolume": 27.0531,
+   "feePerUnitL": 1.748405729046919e-7,
+   "lastTick": 83649
+  },
+  {
+   "fromBlock": 71583313,
+   "toBlock": 71601312,
+   "fromTs": "2026-09-24T18:26:33.000Z",
+   "toTs": "2026-09-24T18:56:40.000Z",
+   "swaps": 83,
+   "wethVolume": 16.8691,
+   "feePerUnitL": 9.950365639967943e-8,
+   "lastTick": 83671
+  },
+  {
+   "fromBlock": 71601313,
+   "toBlock": 71619312,
+   "fromTs": "2026-09-24T18:56:40.000Z",
+   "toTs": "2026-09-24T19:26:43.000Z",
+   "swaps": 144,
+   "wethVolume": 23.9689,
+   "feePerUnitL": 1.5510531267205582e-7,
+   "lastTick": 83612
+  },
+  {
+   "fromBlock": 71619313,
+   "toBlock": 71637312,
+   "fromTs": "2026-09-24T19:26:43.000Z",
+   "toTs": "2026-09-24T19:56:48.000Z",
+   "swaps": 102,
+   "wethVolume": 14.9625,
+   "feePerUnitL": 8.566491493243249e-8,
+   "lastTick": 83599
+  },
+  {
+   "fromBlock": 71637313,
+   "toBlock": 71655312,
+   "fromTs": "2026-09-24T19:56:48.000Z",
+   "toTs": "2026-09-24T20:26:55.000Z",
+   "swaps": 105,
+   "wethVolume": 32.0063,
+   "feePerUnitL": 2.0758032745870183e-7,
+   "lastTick": 83681
+  },
+  {
+   "fromBlock": 71655313,
+   "toBlock": 71673312,
+   "fromTs": "2026-09-24T20:26:55.000Z",
+   "toTs": "2026-09-24T20:57:06.000Z",
+   "swaps": 180,
+   "wethVolume": 59.0077,
+   "feePerUnitL": 3.4851732721728385e-7,
+   "lastTick": 83723
+  },
+  {
+   "fromBlock": 71673313,
+   "toBlock": 71691312,
+   "fromTs": "2026-09-24T20:57:06.000Z",
+   "toTs": "2026-09-24T21:27:15.000Z",
+   "swaps": 119,
+   "wethVolume": 40.1176,
+   "feePerUnitL": 2.531361287868212e-7,
+   "lastTick": 83752
+  },
+  {
+   "fromBlock": 71691313,
+   "toBlock": 71709312,
+   "fromTs": "2026-09-24T21:27:15.000Z",
+   "toTs": "2026-09-24T21:57:25.000Z",
+   "swaps": 71,
+   "wethVolume": 15.7431,
+   "feePerUnitL": 1.0151754701735262e-7,
+   "lastTick": 83781
+  },
+  {
+   "fromBlock": 71709313,
+   "toBlock": 71727312,
+   "fromTs": "2026-09-24T21:57:26.000Z",
+   "toTs": "2026-09-24T22:27:35.000Z",
+   "swaps": 95,
+   "wethVolume": 23.0108,
+   "feePerUnitL": 1.5777257214955113e-7,
+   "lastTick": 83857
+  },
+  {
+   "fromBlock": 71727313,
+   "toBlock": 71745312,
+   "fromTs": "2026-09-24T22:27:35.000Z",
+   "toTs": "2026-09-24T22:57:44.000Z",
+   "swaps": 40,
+   "wethVolume": 16.8386,
+   "feePerUnitL": 1.147974573452381e-7,
+   "lastTick": 83849
+  },
+  {
+   "fromBlock": 71745313,
+   "toBlock": 71763312,
+   "fromTs": "2026-09-24T22:57:44.000Z",
+   "toTs": "2026-09-24T23:28:00.000Z",
+   "swaps": 52,
+   "wethVolume": 9.8263,
+   "feePerUnitL": 6.565531794635119e-8,
+   "lastTick": 83863
+  },
+  {
+   "fromBlock": 71763313,
+   "toBlock": 71781312,
+   "fromTs": "2026-09-24T23:28:00.000Z",
+   "toTs": "2026-09-24T23:58:16.000Z",
+   "swaps": 59,
+   "wethVolume": 17.5987,
+   "feePerUnitL": 1.133246642774538e-7,
+   "lastTick": 83843
+  },
+  {
+   "fromBlock": 71781313,
+   "toBlock": 71799312,
+   "fromTs": "2026-09-24T23:58:16.000Z",
+   "toTs": "2026-09-25T00:28:29.000Z",
+   "swaps": 150,
+   "wethVolume": 34.9451,
+   "feePerUnitL": 2.4199775713499073e-7,
+   "lastTick": 83840
+  },
+  {
+   "fromBlock": 71799313,
+   "toBlock": 71805323,
+   "fromTs": "2026-09-25T00:28:29.000Z",
+   "toTs": "2026-09-25T00:38:32.000Z",
+   "swaps": 13,
+   "wethVolume": 7.697,
+   "feePerUnitL": 4.5235046597302054e-8,
+   "lastTick": 83863
   }
  ],
  "dailyReadings": [
@@ -4885,13 +5845,33 @@
   },
   {
    "date": "2026-09-23",
+   "yieldPctPerDay": 0.5053,
+   "feePerUnitL": 0.000032083804728306965,
+   "valuePerL": 0.006348922068749251,
+   "hoursCovered": 24.2,
+   "complete": true,
+   "swaps": 14255,
+   "wethVolume": 5563.9671
+  },
+  {
+   "date": "2026-09-24",
+   "yieldPctPerDay": 0.2148,
+   "feePerUnitL": 0.00001340219258032794,
+   "valuePerL": 0.00623825653091031,
+   "hoursCovered": 24.2,
+   "complete": true,
+   "swaps": 7699,
+   "wethVolume": 2107.9712
+  },
+  {
+   "date": "2026-09-25",
    "yieldPctPerDay": null,
-   "feePerUnitL": 0.0000011236424932048655,
-   "valuePerL": 0.006636964321004782,
-   "hoursCovered": 1,
+   "feePerUnitL": 2.8723280373229277e-7,
+   "valuePerL": 0.00623018798331832,
+   "hoursCovered": 0.7,
    "complete": false,
-   "swaps": 971,
-   "wethVolume": 197.6096
+   "swaps": 163,
+   "wethVolume": 42.6421
   }
  ],
  "method": "Incremental Swap-log scan; fee_per_unit_L summed PER SWAP against each swap's own active liquidity; daily reading = day's fee_per_unit_L / value of one unit of L on the position's range at the day's last scanned tick; a day counts only at >= 20 of 24 hours covered. lpShare uses the worse protocol-fee nibble. Falsifier cadence: three consecutive COMPLETE daily readings under the declared 0.25%/day."
