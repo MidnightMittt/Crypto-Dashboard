@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1790296553724,
+  "generatedAt": 1790383173281,
   "entries": [
     {
       "symbol": "MU",
@@ -70,10 +70,6 @@
       "date": "2026-10-20"
     },
     {
-      "symbol": "DHR",
-      "date": "2026-10-20"
-    },
-    {
       "symbol": "ISRG",
       "date": "2026-10-20"
     },
@@ -99,6 +95,10 @@
     },
     {
       "symbol": "ABT",
+      "date": "2026-10-21"
+    },
+    {
+      "symbol": "DHR",
       "date": "2026-10-21"
     },
     {
@@ -140,10 +140,18 @@
     {
       "symbol": "PHM",
       "date": "2026-10-22"
+    },
+    {
+      "symbol": "GD",
+      "date": "2026-10-23"
+    },
+    {
+      "symbol": "CORZ",
+      "date": "2026-10-23"
     }
   ],
   "sweep": {
-    "throughDate": "2026-10-22",
+    "throughDate": "2026-10-23",
     "universe": [
       "ABT",
       "ADBE",

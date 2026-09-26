@@ -1,5 +1,5 @@
 {
- "generatedAt": 1790296783787,
+ "generatedAt": 1790383315336,
  "source": "SEC submissions API, one request per CIK; FILED BY from ranged header fetches",
  "lookbackDays": 45,
  "species": {
@@ -49,7 +49,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "ADBE",
@@ -164,8 +164,25 @@
    "symbol": "APLD",
    "cik": "0001144879",
    "registrant": "Applied Digital Corp.",
-   "hits": [],
-   "recentFilingsSeen": 813
+   "hits": [
+    {
+     "form": "DEFA14A",
+     "filingDate": "2026-09-25",
+     "accessionNumber": "0001493152-26-044328",
+     "primaryDocument": "formdefa14a.htm",
+     "filer": "Applied Digital Corp.",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "DEF 14A",
+     "filingDate": "2026-09-25",
+     "accessionNumber": "0001493152-26-044325",
+     "primaryDocument": "formdef14a.htm",
+     "filer": "Applied Digital Corp.",
+     "filer_basis": "registrant (self-filed species)"
+    }
+   ],
+   "recentFilingsSeen": 817
   },
   {
    "symbol": "ASML",
@@ -179,7 +196,7 @@
    "cik": "0001973832",
    "registrant": "AngloGold Ashanti PLC",
    "hits": [],
-   "recentFilingsSeen": 209
+   "recentFilingsSeen": 212
   },
   {
    "symbol": "AVGO",
@@ -203,7 +220,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 997
+   "recentFilingsSeen": 998
   },
   {
    "symbol": "BA",
@@ -380,14 +397,31 @@
    "symbol": "CIFR",
    "cik": "0001819989",
    "registrant": "Cipher Digital Inc.",
-   "hits": [],
-   "recentFilingsSeen": 609
+   "hits": [
+    {
+     "form": "8-K",
+     "filingDate": "2026-09-25",
+     "accessionNumber": "0001819989-26-000043",
+     "primaryDocument": "cifr-20260924.htm",
+     "filer": "Cipher Digital Inc.",
+     "filer_basis": "registrant (self-filed species)"
+    }
+   ],
+   "recentFilingsSeen": 610
   },
   {
    "symbol": "CLSK",
    "cik": "0000827876",
    "registrant": "CLEANSPARK, INC.",
    "hits": [
+    {
+     "form": "8-K",
+     "filingDate": "2026-09-25",
+     "accessionNumber": "0001193125-26-402944",
+     "primaryDocument": "clsk-20260925.htm",
+     "filer": "CLEANSPARK, INC.",
+     "filer_basis": "registrant (self-filed species)"
+    },
     {
      "form": "8-K",
      "filingDate": "2026-09-18",
@@ -405,7 +439,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 776
+   "recentFilingsSeen": 777
   },
   {
    "symbol": "CME",
@@ -414,22 +448,22 @@
    "hits": [
     {
      "form": "8-K",
-     "filingDate": "2026-09-09",
-     "accessionNumber": "0001193125-26-386091",
-     "primaryDocument": "d157844d8k.htm",
+     "filingDate": "2026-09-25",
+     "accessionNumber": "0001156375-26-000060",
+     "primaryDocument": "cme-20260924.htm",
      "filer": "CME GROUP INC.",
      "filer_basis": "registrant (self-filed species)"
     },
     {
      "form": "8-K",
-     "filingDate": "2026-08-11",
-     "accessionNumber": "0001156375-26-000051",
-     "primaryDocument": "cme-20260811.htm",
+     "filingDate": "2026-09-09",
+     "accessionNumber": "0001193125-26-386091",
+     "primaryDocument": "d157844d8k.htm",
      "filer": "CME GROUP INC.",
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "COIN",
@@ -611,6 +645,14 @@
    "hits": [
     {
      "form": "8-K",
+     "filingDate": "2026-09-25",
+     "accessionNumber": "0001104659-26-110588",
+     "primaryDocument": "tm2626114d1_8k.htm",
+     "filer": "Duke Energy CORP",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "8-K",
      "filingDate": "2026-08-13",
      "accessionNumber": "0001104659-26-095903",
      "primaryDocument": "tm2623082d1_8k.htm",
@@ -626,7 +668,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1004
+   "recentFilingsSeen": 1005
   },
   {
    "symbol": "FCX",
@@ -642,7 +684,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "FDX",
@@ -706,7 +748,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1011
+   "recentFilingsSeen": 1012
   },
   {
    "symbol": "FITB",
@@ -808,7 +850,7 @@
    "cik": "0000040533",
    "registrant": "GENERAL DYNAMICS CORP",
    "hits": [],
-   "recentFilingsSeen": 1002
+   "recentFilingsSeen": 1003
   },
   {
    "symbol": "GILD",
@@ -870,6 +912,14 @@
    "cik": "0000886982",
    "registrant": "GOLDMAN SACHS GROUP INC",
    "hits": [
+    {
+     "form": "424B3",
+     "filingDate": "2026-09-25",
+     "accessionNumber": "0001193125-26-402972",
+     "primaryDocument": "blackrock_addendum_sept2.htm",
+     "filer": "GOLDMAN SACHS GROUP INC",
+     "filer_basis": "registrant (self-filed species)"
+    },
     {
      "form": "424B3",
      "filingDate": "2026-09-24",
@@ -1061,17 +1111,9 @@
      "primaryDocument": "dp251410_424b3-spar4v6.htm",
      "filer": "GOLDMAN SACHS GROUP INC",
      "filer_basis": "registrant (self-filed species)"
-    },
-    {
-     "form": "8-K",
-     "filingDate": "2026-08-11",
-     "accessionNumber": "0001193125-26-344912",
-     "primaryDocument": "d179572d8k.htm",
-     "filer": "GOLDMAN SACHS GROUP INC",
-     "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 16270
+   "recentFilingsSeen": 16287
   },
   {
    "symbol": "HAL",
@@ -1127,7 +1169,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "HD",
@@ -1215,14 +1257,6 @@
      "form": "424B5",
      "filingDate": "2026-08-13",
      "accessionNumber": "0001193125-26-349174",
-     "primaryDocument": "d949580d424b5.htm",
-     "filer": "Intercontinental Exchange, Inc.",
-     "filer_basis": "registrant (self-filed species)"
-    },
-    {
-     "form": "424B5",
-     "filingDate": "2026-08-11",
-     "accessionNumber": "0001193125-26-343522",
      "primaryDocument": "d949580d424b5.htm",
      "filer": "Intercontinental Exchange, Inc.",
      "filer_basis": "registrant (self-filed species)"
@@ -1316,6 +1350,14 @@
    "hits": [
     {
      "form": "8-K",
+     "filingDate": "2026-09-25",
+     "accessionNumber": "0001628280-26-063618",
+     "primaryDocument": "key-20260925.htm",
+     "filer": "KEYCORP /NEW/",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "8-K",
      "filingDate": "2026-09-14",
      "accessionNumber": "0001628280-26-061680",
      "primaryDocument": "key-20260914.htm",
@@ -1331,14 +1373,14 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1012
+   "recentFilingsSeen": 1013
   },
   {
    "symbol": "KGC",
    "cik": "0000701818",
    "registrant": "KINROSS GOLD CORP",
    "hits": [],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "KLAC",
@@ -1378,7 +1420,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1004
+   "recentFilingsSeen": 1005
   },
   {
    "symbol": "LHX",
@@ -1466,7 +1508,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1007
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "LULU",
@@ -1504,8 +1546,17 @@
    "symbol": "MARA",
    "cik": "0001507605",
    "registrant": "MARA Holdings, Inc.",
-   "hits": [],
-   "recentFilingsSeen": 1000
+   "hits": [
+    {
+     "form": "8-K",
+     "filingDate": "2026-09-25",
+     "accessionNumber": "0000950142-26-002607",
+     "primaryDocument": "eh260835247_8k.htm",
+     "filer": "MARA Holdings, Inc.",
+     "filer_basis": "registrant (self-filed species)"
+    }
+   ],
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "MDT",
@@ -1545,14 +1596,14 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "MS",
    "cik": "0000895421",
    "registrant": "MORGAN STANLEY",
    "hits": [],
-   "recentFilingsSeen": 19878
+   "recentFilingsSeen": 19906
   },
   {
    "symbol": "MSFT",
@@ -1583,6 +1634,38 @@
    "cik": "0001050446",
    "registrant": "Strategy Inc",
    "hits": [
+    {
+     "form": "DEFA14A",
+     "filingDate": "2026-09-25",
+     "accessionNumber": "0001193125-26-402937",
+     "primaryDocument": "mstr-20260925.htm",
+     "filer": "Strategy Inc",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "DEFA14A",
+     "filingDate": "2026-09-25",
+     "accessionNumber": "0001193125-26-402802",
+     "primaryDocument": "mstr-20260925.htm",
+     "filer": "Strategy Inc",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "8-K",
+     "filingDate": "2026-09-25",
+     "accessionNumber": "0001193125-26-401636",
+     "primaryDocument": "mstr-20260924.htm",
+     "filer": "Strategy Inc",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "PRE 14A",
+     "filingDate": "2026-09-25",
+     "accessionNumber": "0001193125-26-401630",
+     "primaryDocument": "d503578dpre14a.htm",
+     "filer": "Strategy Inc",
+     "filer_basis": "registrant (self-filed species)"
+    },
     {
      "form": "8-K",
      "filingDate": "2026-09-21",
@@ -1640,7 +1723,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1004
   },
   {
    "symbol": "MTB",
@@ -1718,17 +1801,9 @@
      "primaryDocument": "tm2623831d1_8k.htm",
      "filer": "NEXTERA ENERGY INC",
      "filer_basis": "registrant (self-filed species)"
-    },
-    {
-     "form": "8-K",
-     "filingDate": "2026-08-11",
-     "accessionNumber": "0000753308-26-000065",
-     "primaryDocument": "nee-20260810.htm",
-     "filer": "NEXTERA ENERGY INC",
-     "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1005
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "NEM",
@@ -1877,6 +1952,22 @@
    "registrant": "ORACLE CORP",
    "hits": [
     {
+     "form": "DEFA14A",
+     "filingDate": "2026-09-25",
+     "accessionNumber": "0001193125-26-402831",
+     "primaryDocument": "orcl-defa14a-2026_notice.htm",
+     "filer": "ORACLE CORP",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "DEF 14A",
+     "filingDate": "2026-09-25",
+     "accessionNumber": "0001193125-26-402816",
+     "primaryDocument": "orcl-20260925.htm",
+     "filer": "ORACLE CORP",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
      "form": "8-K",
      "filingDate": "2026-09-14",
      "accessionNumber": "0001193125-26-389753",
@@ -1893,7 +1984,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "PANW",
@@ -2028,7 +2119,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "REGN",
@@ -2041,16 +2132,7 @@
    "symbol": "RF",
    "cik": "0001281761",
    "registrant": "REGIONS FINANCIAL CORP",
-   "hits": [
-    {
-     "form": "8-K",
-     "filingDate": "2026-08-11",
-     "accessionNumber": "0001281761-26-000060",
-     "primaryDocument": "rf-20260811.htm",
-     "filer": "REGIONS FINANCIAL CORP",
-     "filer_basis": "registrant (self-filed species)"
-    }
-   ],
+   "hits": [],
    "recentFilingsSeen": 1000
   },
   {
@@ -2060,6 +2142,14 @@
    "hits": [
     {
      "form": "8-K",
+     "filingDate": "2026-09-25",
+     "accessionNumber": "0001104659-26-111003",
+     "primaryDocument": "riot-20260921x8k.htm",
+     "filer": "Riot Platforms, Inc.",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "8-K",
      "filingDate": "2026-08-14",
      "accessionNumber": "0001104659-26-097330",
      "primaryDocument": "riot-20260810x8k.htm",
@@ -2067,7 +2157,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1005
+   "recentFilingsSeen": 1006
   },
   {
    "symbol": "ROST",
@@ -2121,7 +2211,7 @@
    "cik": "0001001838",
    "registrant": "SOUTHERN COPPER CORP/",
    "hits": [],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "SCHW",
@@ -2145,7 +2235,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "SLB",
@@ -2177,7 +2267,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1002
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "SO",
@@ -2276,7 +2366,7 @@
    "cik": "0001046179",
    "registrant": "TAIWAN SEMICONDUCTOR MANUFACTURING CO LTD",
    "hits": [],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "TXN",
@@ -2343,14 +2433,6 @@
      "filingDate": "2026-08-12",
      "accessionNumber": "0001104659-26-094502",
      "primaryDocument": "tm2622353d5_8k.htm",
-     "filer": "UNITED PARCEL SERVICE INC",
-     "filer_basis": "registrant (self-filed species)"
-    },
-    {
-     "form": "424B5",
-     "filingDate": "2026-08-11",
-     "accessionNumber": "0001104659-26-094081",
-     "primaryDocument": "tm2622353d2_424b5.htm",
      "filer": "UNITED PARCEL SERVICE INC",
      "filer_basis": "registrant (self-filed species)"
     }
@@ -2619,7 +2701,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "WMT",
@@ -2649,7 +2731,7 @@
    "cik": "0001083301",
    "registrant": "TERAWULF INC.",
    "hits": [],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "FRMI",
