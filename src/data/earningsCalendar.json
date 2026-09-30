@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1790383173281,
+  "generatedAt": 1790731263056,
   "entries": [
     {
       "symbol": "MU",
@@ -62,11 +62,11 @@
       "date": "2026-10-19"
     },
     {
-      "symbol": "RTX",
+      "symbol": "TXN",
       "date": "2026-10-20"
     },
     {
-      "symbol": "TXN",
+      "symbol": "RTX",
       "date": "2026-10-20"
     },
     {
@@ -130,10 +130,6 @@
       "date": "2026-10-22"
     },
     {
-      "symbol": "BKR",
-      "date": "2026-10-22"
-    },
-    {
       "symbol": "HBAN",
       "date": "2026-10-22"
     },
@@ -148,10 +144,26 @@
     {
       "symbol": "CORZ",
       "date": "2026-10-23"
+    },
+    {
+      "symbol": "SCCO",
+      "date": "2026-10-27"
+    },
+    {
+      "symbol": "NEE",
+      "date": "2026-10-27"
+    },
+    {
+      "symbol": "UPS",
+      "date": "2026-10-27"
+    },
+    {
+      "symbol": "BKR",
+      "date": "2026-10-27"
     }
   ],
   "sweep": {
-    "throughDate": "2026-10-23",
+    "throughDate": "2026-10-27",
     "universe": [
       "ABT",
       "ADBE",
