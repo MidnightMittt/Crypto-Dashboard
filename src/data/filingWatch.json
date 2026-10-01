@@ -1,5 +1,5 @@
 {
- "generatedAt": 1790731474608,
+ "generatedAt": 1790817820593,
  "source": "SEC submissions API, one request per CIK; FILED BY from ranged header fetches",
  "lookbackDays": 45,
  "species": {
@@ -86,8 +86,17 @@
    "symbol": "AEP",
    "cik": "0000004904",
    "registrant": "AMERICAN ELECTRIC POWER CO INC",
-   "hits": [],
-   "recentFilingsSeen": 1007
+   "hits": [
+    {
+     "form": "8-K",
+     "filingDate": "2026-09-30",
+     "accessionNumber": "0000004904-26-000063",
+     "primaryDocument": "aep-20260929.htm",
+     "filer": "AMERICAN ELECTRIC POWER CO INC",
+     "filer_basis": "registrant (self-filed species)"
+    }
+   ],
+   "recentFilingsSeen": 1008
   },
   {
    "symbol": "AMAT",
@@ -267,6 +276,14 @@
    "hits": [
     {
      "form": "8-K",
+     "filingDate": "2026-09-30",
+     "accessionNumber": "0001493152-26-045035",
+     "primaryDocument": "form8-k.htm",
+     "filer": "BITMINE IMMERSION TECHNOLOGIES, INC.",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "8-K",
      "filingDate": "2026-09-28",
      "accessionNumber": "0001493152-26-044459",
      "primaryDocument": "form8-k.htm",
@@ -322,7 +339,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 343
+   "recentFilingsSeen": 344
   },
   {
    "symbol": "BSX",
@@ -391,7 +408,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 610
+   "recentFilingsSeen": 611
   },
   {
    "symbol": "CLSK",
@@ -487,7 +504,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 668
+   "recentFilingsSeen": 669
   },
   {
    "symbol": "COST",
@@ -503,7 +520,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1009
+   "recentFilingsSeen": 1012
   },
   {
    "symbol": "CRM",
@@ -582,7 +599,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "DHI",
@@ -605,7 +622,7 @@
    "cik": "0000313616",
    "registrant": "DANAHER CORP /DE/",
    "hits": [],
-   "recentFilingsSeen": 1007
+   "recentFilingsSeen": 1008
   },
   {
    "symbol": "DIA",
@@ -636,7 +653,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1007
+   "recentFilingsSeen": 1008
   },
   {
    "symbol": "FCX",
@@ -833,7 +850,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 280
+   "recentFilingsSeen": 281
   },
   {
    "symbol": "GOLD",
@@ -1073,7 +1090,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 16403
+   "recentFilingsSeen": 16379
   },
   {
    "symbol": "HAL",
@@ -1089,7 +1106,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1009
+   "recentFilingsSeen": 1010
   },
   {
    "symbol": "HBAN",
@@ -1246,7 +1263,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 624
+   "recentFilingsSeen": 625
   },
   {
    "symbol": "IREN",
@@ -1262,7 +1279,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 317
+   "recentFilingsSeen": 318
   },
   {
    "symbol": "ISRG",
@@ -1340,7 +1357,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1005
+   "recentFilingsSeen": 1006
   },
   {
    "symbol": "LHX",
@@ -1515,7 +1532,7 @@
    "cik": "0000895421",
    "registrant": "MORGAN STANLEY",
    "hits": [],
-   "recentFilingsSeen": 19982
+   "recentFilingsSeen": 19953
   },
   {
    "symbol": "MSFT",
@@ -1546,6 +1563,14 @@
    "cik": "0001050446",
    "registrant": "Strategy Inc",
    "hits": [
+    {
+     "form": "DEFA14A",
+     "filingDate": "2026-09-30",
+     "accessionNumber": "0001193125-26-409242",
+     "primaryDocument": "mstr-20260930.htm",
+     "filer": "Strategy Inc",
+     "filer_basis": "registrant (self-filed species)"
+    },
     {
      "form": "DEFA14A",
      "filingDate": "2026-09-29",
@@ -1716,6 +1741,14 @@
    "hits": [
     {
      "form": "8-K",
+     "filingDate": "2026-09-30",
+     "accessionNumber": "0000723125-26-000018",
+     "primaryDocument": "mu-20260930.htm",
+     "filer": "MICRON TECHNOLOGY INC",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "8-K",
      "filingDate": "2026-08-26",
      "accessionNumber": "0001104659-26-101067",
      "primaryDocument": "tm2624017d1_8k.htm",
@@ -1723,7 +1756,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "NEE",
@@ -1755,7 +1788,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1002
+   "recentFilingsSeen": 1004
   },
   {
    "symbol": "NEM",
@@ -2038,7 +2071,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 95
+   "recentFilingsSeen": 98
   },
   {
    "symbol": "QCOM",
@@ -2054,14 +2087,23 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1003
   },
   {
    "symbol": "REGN",
    "cik": "0000872589",
    "registrant": "REGENERON PHARMACEUTICALS, INC.",
-   "hits": [],
-   "recentFilingsSeen": 1000
+   "hits": [
+    {
+     "form": "8-K",
+     "filingDate": "2026-09-30",
+     "accessionNumber": "0001104659-26-112340",
+     "primaryDocument": "tm2626090d1_8k.htm",
+     "filer": "REGENERON PHARMACEUTICALS, INC.",
+     "filer_basis": "registrant (self-filed species)"
+    }
+   ],
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "RF",
@@ -2609,7 +2651,7 @@
    "cik": "0001083301",
    "registrant": "TERAWULF INC.",
    "hits": [],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "FRMI",

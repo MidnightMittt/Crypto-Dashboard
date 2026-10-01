@@ -1,13 +1,9 @@
 {
-  "generatedAt": 1790731263056,
+  "generatedAt": 1790817658729,
   "entries": [
     {
-      "symbol": "MU",
-      "date": "2026-09-30"
-    },
-    {
       "symbol": "APLD",
-      "date": "2026-10-08"
+      "date": "2026-10-07"
     },
     {
       "symbol": "GS",
@@ -36,10 +32,6 @@
     {
       "symbol": "USB",
       "date": "2026-10-15"
-    },
-    {
-      "symbol": "SLB",
-      "date": "2026-10-16"
     },
     {
       "symbol": "TFC",
@@ -142,6 +134,10 @@
       "date": "2026-10-23"
     },
     {
+      "symbol": "SLB",
+      "date": "2026-10-23"
+    },
+    {
       "symbol": "CORZ",
       "date": "2026-10-23"
     },
@@ -160,10 +156,30 @@
     {
       "symbol": "BKR",
       "date": "2026-10-27"
+    },
+    {
+      "symbol": "LRCX",
+      "date": "2026-10-28"
+    },
+    {
+      "symbol": "AEM",
+      "date": "2026-10-28"
+    },
+    {
+      "symbol": "BSX",
+      "date": "2026-10-28"
+    },
+    {
+      "symbol": "BIIB",
+      "date": "2026-10-28"
+    },
+    {
+      "symbol": "NVR",
+      "date": "2026-10-28"
     }
   ],
   "sweep": {
-    "throughDate": "2026-10-27",
+    "throughDate": "2026-10-28",
     "universe": [
       "ABT",
       "ADBE",
