@@ -39,10 +39,10 @@ interface JsonRpcResponse {
   error?: { code: number; message: string };
 }
 
-async function rpc(method: string, params: unknown[], attempt = 0): Promise<string> {
+async function rpc(method: string, params: unknown[], attempt = 0, rpcUrl: string = CHAIN.rpcUrl): Promise<string> {
   let res: Response;
   try {
-    res = await fetch(CHAIN.rpcUrl, {
+    res = await fetch(rpcUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -55,7 +55,7 @@ async function rpc(method: string, params: unknown[], attempt = 0): Promise<stri
     // Network-level failure: retry with backoff before giving up.
     if (attempt < 3) {
       await sleep(backoffMs(attempt));
-      return rpc(method, params, attempt + 1);
+      return rpc(method, params, attempt + 1, rpcUrl);
     }
     throw new RpcError(`${method} network error: ${err instanceof Error ? err.message : String(err)}`, null);
   }
@@ -63,7 +63,7 @@ async function rpc(method: string, params: unknown[], attempt = 0): Promise<stri
   // 429 near large getLogs spans is documented; back off and retry.
   if (res.status === 429 && attempt < 4) {
     await sleep(backoffMs(attempt));
-    return rpc(method, params, attempt + 1);
+    return rpc(method, params, attempt + 1, rpcUrl);
   }
   if (!res.ok) {
     throw new RpcError(`${method} HTTP ${res.status}`, null);
@@ -87,6 +87,17 @@ const backoffMs = (attempt: number) => 500 * 2 ** attempt;
 /** eth_call at a block tag ("latest" or a 0x-hex block number). */
 export function ethCall(to: string, data: string, block: string = "latest"): Promise<string> {
   return rpc("eth_call", [{ to, data }, block]);
+}
+
+/**
+ * eth_call against an ARBITRARY endpoint — the five-venue book spans two
+ * chains (Robinhood Chain and Ethereum mainnet), and a client hardwired to
+ * one of them would quietly read the wrong chain for the other's positions.
+ * Same UA, same backoff; only the URL varies. Both endpoints 403 default
+ * library user agents (measured), so the shared UA handling is the point.
+ */
+export function ethCallAt(rpcUrl: string, to: string, data: string, block: string = "latest"): Promise<string> {
+  return rpc("eth_call", [{ to, data }, block], 0, rpcUrl);
 }
 
 /** The latest block number as a bigint. */

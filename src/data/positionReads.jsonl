@@ -1,0 +1,4 @@
+{"ts":"2026-10-02T23:18:38.951Z","id":"send-eth-lp","inRange":false,"metrics":{"coverage":0,"out_of_range_hours":0,"fee_yield_daily_pct":0}}
+{"ts":"2026-10-02T23:18:39.945Z","id":"priors-weth-lp","inRange":true,"metrics":{"coverage":2.814976306755231,"out_of_range_hours":0,"fee_yield_daily_pct":11.70510210038946}}
+{"ts":"2026-10-02T23:19:07.327Z","id":"send-eth-lp","inRange":false,"metrics":{"coverage":0,"out_of_range_hours":0.007882222222222223,"fee_yield_daily_pct":0}}
+{"ts":"2026-10-02T23:19:07.842Z","id":"priors-weth-lp","inRange":true,"metrics":{"coverage":2.814976306755231,"out_of_range_hours":0,"fee_yield_daily_pct":11.70510210038946}}
