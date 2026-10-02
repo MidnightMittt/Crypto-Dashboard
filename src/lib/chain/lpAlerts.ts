@@ -23,7 +23,7 @@ import { lvrCoverage } from "./uniV3Math";
  */
 
 export interface LpAlert {
-  key: "review_tick" | "range_exit" | "lvr_uncovered" | "series_gap";
+  key: "review_tick" | "range_exit" | "lvr_uncovered" | "series_gap" | "position_closed";
   severity: "review" | "warn";
   message: string;
 }
@@ -93,6 +93,33 @@ export function evaluateLpAlerts(
 ): LpAlert[] {
   const alerts: LpAlert[] = [];
   const prev = [...priorRows].reverse().find((r) => r.kind === "sample");
+
+  /*
+   * 0. POSITION CLOSED — first, and it short-circuits everything below.
+   *
+   * A withdrawn position reads zero on every metric, so each check below
+   * would either pass vacuously or divide by zero and stay silent. That is
+   * exactly how a monitor keeps reporting on a position that no longer
+   * exists. Fired on the transition (liquidity was non-zero on the previous
+   * row, is zero now) OR on the first row of a series that opens closed —
+   * because a monitor started AFTER the close must still say so rather than
+   * wait for a transition that already happened.
+   */
+  if (card.isClosed) {
+    const wasOpen = prev ? prev.liquidity !== "0" : null;
+    if (wasOpen === true || wasOpen === null) {
+      alerts.push({
+        key: "position_closed",
+        severity: "review",
+        message:
+          `LP POSITION CLOSED: liquidity is zero at block ${card.block} — fully withdrawn. ` +
+          `Every monitored figure is now zero because there is no position, not because the ` +
+          `market is quiet. The fee series stops here; the realized record of its life is ` +
+          `reconstructable from logs.`,
+      });
+    }
+    return alerts;
+  }
 
   // 1. Review tick crossed upward through 85596 (PONS ~$0.50, 85% through range).
   const nowAtReview = card.currentTick >= THRESHOLDS.reviewTick;

@@ -16,7 +16,7 @@ function row(over: Partial<FeeSeriesRow>): FeeSeriesRow {
 function card(over: Partial<PositionCard>): PositionCard {
   return {
     block: "100", observedAt: iso(6), chain: { chainId: 4663, rpc: "rpc" },
-    currentTick: 84000, inRange: true, pctThroughRange: 0.68, ponsUsd: 0.57,
+    currentTick: 84000, inRange: true, isClosed: false, pctThroughRange: 0.68, ponsUsd: 0.57,
     ethUsd: { value: 2568, stamp: { ts: iso(6), source: "kraken.ETHUSD.last" } },
     amounts: { weth: 0.04, pons: 375 }, usdValue: 328,
     feesSinceCollect: { weth: 0.0003, pons: 1.7, usd: 1.5 },
@@ -112,5 +112,51 @@ describe("lvr-uncovered alert", () => {
     const newRow = row({ tick: 84200, ts: iso(12), fee_rate_usd_per_day: 0.1 });
     const a = evaluateLpAlerts(card({}), newRow, prior);
     expect(a.map((x) => x.key)).not.toContain("lvr_uncovered");
+  });
+});
+
+describe("position_closed alert", () => {
+  it("fires on the transition from open to closed and suppresses the rest", () => {
+    const prior = [row({ tick: 84000, liquidity: "21515448659619772086" })];
+    const a = evaluateLpAlerts(
+      card({ isClosed: true, currentTick: 84350, usdValue: 0, liquidity: "0" }),
+      row({ tick: 84350, ts: iso(6), liquidity: "0" }),
+      prior
+    );
+    expect(a.map((x) => x.key)).toEqual(["position_closed"]);
+    expect(a[0].message).toContain("fully withdrawn");
+  });
+
+  /*
+   * A monitor STARTED after the close must still say so. Waiting for a
+   * transition that already happened is how a dashboard reports healthily on
+   * a position that no longer exists.
+   */
+  it("fires on the first row even with no prior history", () => {
+    const a = evaluateLpAlerts(
+      card({ isClosed: true, liquidity: "0", usdValue: 0 }),
+      row({ ts: iso(0), liquidity: "0" }),
+      []
+    );
+    expect(a.map((x) => x.key)).toContain("position_closed");
+  });
+
+  it("does not re-fire once the series already shows zero liquidity", () => {
+    const prior = [row({ tick: 84350, liquidity: "0" })];
+    const a = evaluateLpAlerts(
+      card({ isClosed: true, liquidity: "0", usdValue: 0 }),
+      row({ tick: 84350, ts: iso(6), liquidity: "0" }),
+      prior
+    );
+    expect(a).toEqual([]);
+  });
+
+  it("says nothing about buying or selling", () => {
+    const a = evaluateLpAlerts(
+      card({ isClosed: true, liquidity: "0", usdValue: 0 }),
+      row({ ts: iso(0), liquidity: "0" }),
+      []
+    );
+    expect(a[0].message.toLowerCase()).not.toMatch(/\b(buy|sell|re-?enter|add)\b/);
   });
 });

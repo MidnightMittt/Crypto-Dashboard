@@ -1,0 +1,227 @@
+{
+ "version": 1,
+ "generatedAt": 1790922283316,
+ "source": {
+  "chainId": 4663,
+  "rpc": "https://rpc.mainnet.chain.robinhood.com",
+  "pool": "0xEd50bDeeA8aDC232f159486192a4157281D722ff",
+  "npm": "0x73991a25c818bf1f1128deaab1492d45638de0d3",
+  "tokenId": "1109566",
+  "range": {
+   "tickLower": 77640,
+   "tickUpper": 87000
+  },
+  "method": "full-history eth_getLogs sweep of Collect/Increase/Decrease on the tokenId topic, plus a sampled Swap tick series. Realized receipts, not accruals. Logs are not pruned; state is, which is why this is reconstructable and the 6h series is not."
+ },
+ "record": {
+  "openedIso": "2026-09-10T02:29:08.000Z",
+  "closedIso": "2026-09-27T21:43:36.000Z",
+  "isClosed": true,
+  "finalLiquidity": "0",
+  "lifeDays": 17.801712962962963,
+  "deposited": {
+   "weth": 0.06903614632618542,
+   "pons": 291.30958149532387
+  },
+  "withdrawn": {
+   "weth": 0.04453434560890072,
+   "pons": 446.7122955931205
+  },
+  "fees": {
+   "weth": 0.006204309607472474,
+   "pons": 25.94474779899264
+  },
+  "intervals": [
+   {
+    "fromBlock": 59046910,
+    "toBlock": 60630656,
+    "fromIso": "2026-09-10T02:29:08.000Z",
+    "toIso": "2026-09-11T23:03:25.000Z",
+    "days": 1.8571412037037036,
+    "fee0Wei": "1367340943009270",
+    "fee1Wei": "5855779037723660784",
+    "liquidity": "13730574270183102919",
+    "avgTick": 83121.3125,
+    "sigmaDaily": 0.1451624280546634,
+    "lvrDaily": 0.002634016314840666,
+    "feeYieldDaily": 0.016876635288253127,
+    "coverage": 6.407187075177251,
+    "tickSamples": 16,
+    "feeWeth": 0.00136734094300927,
+    "feePons": 5.855779037723661,
+    "ponsPerDay": 3.1531145968036567
+   },
+   {
+    "fromBlock": 60630656,
+    "toBlock": 66527317,
+    "fromIso": "2026-09-11T23:03:25.000Z",
+    "toIso": "2026-09-18T20:56:00.000Z",
+    "days": 6.9115162037037035,
+    "fee0Wei": "2926302071638665",
+    "fee1Wei": "11632329911972367478",
+    "liquidity": "19174394115016096486",
+    "avgTick": 83056.94827586207,
+    "sigmaDaily": 0.11346430286766492,
+    "lvrDaily": 0.0016092685031556492,
+    "feeYieldDaily": 0.006690518978126978,
+    "coverage": 4.157490788521241,
+    "tickSamples": 58,
+    "feeWeth": 0.002926302071638665,
+    "feePons": 11.632329911972368,
+    "ponsPerDay": 1.6830359025620025
+   },
+   {
+    "fromBlock": 66527317,
+    "toBlock": 72528034,
+    "fromIso": "2026-09-18T20:56:00.000Z",
+    "toIso": "2026-09-25T20:53:01.000Z",
+    "days": 6.997928240740741,
+    "fee0Wei": "1667110878282820",
+    "fee1Wei": "7230714893276841874",
+    "liquidity": "19174394115016096486",
+    "avgTick": 83613.15254237287,
+    "sigmaDaily": 0.08593319204362672,
+    "lvrDaily": 0.0009230641868508538,
+    "feeYieldDaily": 0.003953448496629946,
+    "coverage": 4.282961632514006,
+    "tickSamples": 59,
+    "feeWeth": 0.00166711087828282,
+    "feePons": 7.230714893276842,
+    "ponsPerDay": 1.033265081396642
+   },
+   {
+    "fromBlock": 72528034,
+    "toBlock": 74266275,
+    "fromIso": "2026-09-25T20:53:01.000Z",
+    "toIso": "2026-09-27T21:37:59.000Z",
+    "days": 2.031226851851852,
+    "fee0Wei": "243554774279812",
+    "fee1Wei": "1225246750984689708",
+    "liquidity": "20709381339772035115",
+    "avgTick": 83664.26666666666,
+    "sigmaDaily": 0.0730164399629927,
+    "lvrDaily": 0.0006664250631086647,
+    "feeYieldDaily": 0.0019915448409422577,
+    "coverage": 2.9884002736216484,
+    "tickSamples": 15,
+    "feeWeth": 0.000243554774279812,
+    "feePons": 1.2252467509846896,
+    "ponsPerDay": 0.6032052746189539
+   },
+   {
+    "fromBlock": 74266275,
+    "toBlock": 74269617,
+    "fromIso": "2026-09-27T21:37:59.000Z",
+    "toIso": "2026-09-27T21:43:36.000Z",
+    "days": 0.0039004629629629628,
+    "fee0Wei": "940261907",
+    "fee1Wei": "677205035083281",
+    "liquidity": "10757724329809886043",
+    "avgTick": null,
+    "sigmaDaily": null,
+    "lvrDaily": null,
+    "feeYieldDaily": null,
+    "coverage": null,
+    "tickSamples": 0,
+    "feeWeth": 9.40261907e-10,
+    "feePons": 0.000677205035083281,
+    "ponsPerDay": 0.17362170632402218
+   }
+  ],
+  "inRangeFraction": 1,
+  "lifeCoverage": 4.064902071409352,
+  "lifeSigmaDaily": 0.1015765929870159,
+  "vsHodlPct": 6.995013291583363,
+  "closingTick": 84350
+ },
+ "events": [
+  {
+   "block": 59046910,
+   "iso": "2026-09-10T02:29:08.000Z",
+   "kind": "increase",
+   "weth": 0.043,
+   "pons": 189.85645301898805,
+   "liquidityDelta": "13730574270183102919"
+  },
+  {
+   "block": 60070559,
+   "iso": "2026-09-11T07:12:20.000Z",
+   "kind": "increase",
+   "weth": 0.019,
+   "pons": 67.85475889402629,
+   "liquidityDelta": "5443819844832993567"
+  },
+  {
+   "block": 60630656,
+   "iso": "2026-09-11T23:03:25.000Z",
+   "kind": "collect",
+   "weth": 0.00136734094300927,
+   "pons": 5.855779037723661,
+   "liquidityDelta": "0"
+  },
+  {
+   "block": 66527317,
+   "iso": "2026-09-18T20:56:00.000Z",
+   "kind": "collect",
+   "weth": 0.002926302071638665,
+   "pons": 11.632329911972368,
+   "liquidityDelta": "0"
+  },
+  {
+   "block": 66527788,
+   "iso": "2026-09-18T20:56:48.000Z",
+   "kind": "increase",
+   "weth": 0.005,
+   "pons": 20.48093922388276,
+   "liquidityDelta": "1534987224755938629"
+  },
+  {
+   "block": 72528034,
+   "iso": "2026-09-25T20:53:01.000Z",
+   "kind": "collect",
+   "weth": 0.00166711087828282,
+   "pons": 7.230714893276842,
+   "liquidityDelta": "0"
+  },
+  {
+   "block": 72528872,
+   "iso": "2026-09-25T20:54:25.000Z",
+   "kind": "increase",
+   "weth": 0.002036146326185422,
+   "pons": 13.11743035842677,
+   "liquidityDelta": "806067319847736971"
+  },
+  {
+   "block": 74266275,
+   "iso": "2026-09-27T21:37:59.000Z",
+   "kind": "collect",
+   "weth": 0.019437529701804793,
+   "pons": 211.47485480968524,
+   "liquidityDelta": "0"
+  },
+  {
+   "block": 74266275,
+   "iso": "2026-09-27T21:37:59.000Z",
+   "kind": "decrease",
+   "weth": 0.01919397492752498,
+   "pons": 210.24960805870057,
+   "liquidityDelta": "-10757724329809886043"
+  },
+  {
+   "block": 74269617,
+   "iso": "2026-09-27T21:43:36.000Z",
+   "kind": "collect",
+   "weth": 0.01913606201416517,
+   "pons": 210.51861694046238,
+   "liquidityDelta": "0"
+  },
+  {
+   "block": 74269617,
+   "iso": "2026-09-27T21:43:36.000Z",
+   "kind": "decrease",
+   "weth": 0.019136061073903265,
+   "pons": 210.5179397354273,
+   "liquidityDelta": "-10757724329809886043"
+  }
+ ]
+}

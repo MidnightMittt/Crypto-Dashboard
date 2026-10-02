@@ -103,6 +103,17 @@ export interface PositionCard {
   chain: { chainId: number; rpc: string };
   currentTick: number;
   inRange: boolean;
+  /**
+   * TRUE when the position holds no liquidity at all — fully withdrawn.
+   *
+   * This field exists because its absence was a real defect. A closed position
+   * reads L=0, which makes every derived figure legitimately zero: no amounts,
+   * no fees, no share. The card rendered a tidy page of zeros and no alert
+   * fired, so a monitor running against a position that had been closed four
+   * days earlier would have looked healthy. Zero-because-closed and
+   * zero-because-quiet are opposite facts and must not share a presentation.
+   */
+  isClosed: boolean;
   pctThroughRange: number;
   ponsUsd: number;
   ethUsd: { value: number; stamp: Stamp } | null;
@@ -120,8 +131,16 @@ export interface PositionCard {
 export function buildCard(snap: PositionSnapshot, eth: { value: number; stamp: Stamp } | null): PositionCard {
   const notes: string[] = [];
   const { currentTick } = snap;
+  const isClosed = snap.position.liquidity === 0n;
+  if (isClosed) {
+    notes.push(
+      "POSITION CLOSED: liquidity is zero — fully withdrawn. Every figure below is zero " +
+        "because there is no position, NOT because the market is quiet. Run " +
+        "scripts/research/reconstructLpHistory.ts for the realized record of its life."
+    );
+  }
   const inRange = currentTick >= POSITION.tickLower && currentTick < POSITION.tickUpper;
-  if (!inRange) notes.push(`OUT OF RANGE: tick ${currentTick} is outside ${POSITION.tickLower}..${POSITION.tickUpper} — the position earns no fees here.`);
+  if (!isClosed && !inRange) notes.push(`OUT OF RANGE: tick ${currentTick} is outside ${POSITION.tickLower}..${POSITION.tickUpper} — the position earns no fees here.`);
 
   const amounts = positionAmounts(snap.position.liquidity, currentTick, POSITION.tickLower, POSITION.tickUpper);
   const { raw0, raw1 } = feesOwed(snap.feeGrowth, currentTick, POSITION.tickLower, POSITION.tickUpper, snap.position.liquidity);
@@ -146,6 +165,7 @@ export function buildCard(snap: PositionSnapshot, eth: { value: number; stamp: S
     chain: { chainId: CHAIN.chainId, rpc: CHAIN.rpcUrl },
     currentTick,
     inRange,
+    isClosed,
     pctThroughRange: pctThroughRange(currentTick, POSITION.tickLower, POSITION.tickUpper),
     ponsUsd: eth ? pPons : NaN,
     ethUsd: eth,

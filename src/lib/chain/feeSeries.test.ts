@@ -9,6 +9,7 @@ function card(over: Partial<PositionCard> & { observedAt: string }): PositionCar
     chain: { chainId: 4663, rpc: "rpc" },
     currentTick: 84000,
     inRange: true,
+    isClosed: false,
     pctThroughRange: 0.68,
     ponsUsd: 0.57,
     ethUsd: { value: 2568, stamp: { ts: over.observedAt, source: "kraken.ETHUSD.last" } },

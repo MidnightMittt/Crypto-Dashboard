@@ -104,6 +104,13 @@ export async function blockHeader(block: string): Promise<{ number: bigint; time
   return { number: BigInt(obj.number), timestampMs: Number(BigInt(obj.timestamp)) * 1000 };
 }
 
+/**
+ * The node's hard cap on a single eth_getLogs span, measured not assumed:
+ * 10,000,001 is rejected, 10,000,000 is served. Use for sparse (indexed-topic)
+ * filters only — see getLogs' chunkBlocks.
+ */
+export const MAX_SPARSE_SPAN = 9_999_999n;
+
 /** One raw log as eth_getLogs returns it. */
 export interface RawLog {
   address: string;
@@ -125,8 +132,21 @@ export async function getLogs(params: {
   topics: (string | null)[];
   fromBlock: bigint;
   toBlock: bigint;
+  /**
+   * Blocks per query. Default 20k is the safe size for DENSE filters (the
+   * pool's Swap topic returns ~195 logs per 12k blocks, so a huge span would
+   * return six figures of logs and time out).
+   *
+   * For SPARSE filters — anything narrowed by an indexed topic such as our
+   * tokenId — the node allows up to 10,000,000 blocks per query and answers
+   * in about a second. Measured 2026-10-01: it rejects 10,000,001 with
+   * "query spans ... but only 10000000 are allowed", which is how the limit
+   * is known rather than guessed. Passing MAX_SPARSE_SPAN turns a
+   * full-history sweep from thousands of requests into eight.
+   */
+  chunkBlocks?: bigint;
 }): Promise<RawLog[]> {
-  const CHUNK = 20_000n;
+  const CHUNK = params.chunkBlocks ?? 20_000n;
   const out: RawLog[] = [];
   for (let from = params.fromBlock; from <= params.toBlock; from += CHUNK) {
     const to = from + CHUNK - 1n < params.toBlock ? from + CHUNK - 1n : params.toBlock;
