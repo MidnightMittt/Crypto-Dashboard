@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1790817658729,
+  "generatedAt": 1790905513584,
   "entries": [
     {
       "symbol": "APLD",
@@ -170,16 +170,60 @@
       "date": "2026-10-28"
     },
     {
+      "symbol": "ODFL",
+      "date": "2026-10-28"
+    },
+    {
       "symbol": "BIIB",
       "date": "2026-10-28"
     },
     {
       "symbol": "NVR",
       "date": "2026-10-28"
+    },
+    {
+      "symbol": "GILD",
+      "date": "2026-10-29"
+    },
+    {
+      "symbol": "SYK",
+      "date": "2026-10-29"
+    },
+    {
+      "symbol": "ICE",
+      "date": "2026-10-29"
+    },
+    {
+      "symbol": "MSTR",
+      "date": "2026-10-29"
+    },
+    {
+      "symbol": "COIN",
+      "date": "2026-10-29"
+    },
+    {
+      "symbol": "LHX",
+      "date": "2026-10-29"
+    },
+    {
+      "symbol": "DHI",
+      "date": "2026-10-29"
+    },
+    {
+      "symbol": "TECK",
+      "date": "2026-10-29"
+    },
+    {
+      "symbol": "FTI",
+      "date": "2026-10-29"
+    },
+    {
+      "symbol": "RIOT",
+      "date": "2026-10-29"
     }
   ],
   "sweep": {
-    "throughDate": "2026-10-28",
+    "throughDate": "2026-10-29",
     "universe": [
       "ABT",
       "ADBE",
