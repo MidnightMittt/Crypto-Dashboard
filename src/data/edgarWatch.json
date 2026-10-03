@@ -1,5 +1,5 @@
 {
- "generatedAt": 1790905667352,
+ "generatedAt": 1790990179848,
  "cik": "0002071778",
  "registrant": "Fermi Inc.",
  "source": "SEC submissions API, https://data.sec.gov/submissions/CIK0002071778.json",
@@ -8,7 +8,12 @@
   "tell": "any of PRE 14A/PREC14A/PREN14A/PRER14A/PRRN14A/PREM14A after the same anchor",
   "anchor_reason": "Fermi ran a full contested proxy cycle May-July 2026 (DEFC14A 06-10/06-12, 47 dissident DFAN14A filings); those belong to the previous fight. A PX14A6G exempt solicitation on 2026-09-11 says the contest is alive going into this meeting, so the definitive proxy may well arrive as DEFC14A rather than DEF 14A — the watch must not be pinned to one species."
  },
- "found": null,
+ "found": {
+  "form": "DEF 14A",
+  "filingDate": "2026-10-02",
+  "accessionNumber": "0001213900-26-106378",
+  "primaryDocument": "ea0307100-02.htm"
+ },
  "tells": [],
  "solicitingSinceAnchor": [
   {
@@ -19,6 +24,12 @@
   }
  ],
  "fourteenA": [
+  {
+   "form": "DEF 14A",
+   "filingDate": "2026-10-02",
+   "accessionNumber": "0001213900-26-106378",
+   "primaryDocument": "ea0307100-02.htm"
+  },
   {
    "form": "PX14A6G",
    "filingDate": "2026-09-11",
@@ -386,5 +397,5 @@
    "primaryDocument": "ea0288360-prec14a_fermi.htm"
   }
  ],
- "recentFilingsSeen": 155
+ "recentFilingsSeen": 157
 }
