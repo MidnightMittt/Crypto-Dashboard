@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1790990083417,
+  "generatedAt": 1791253268864,
   "entries": [
     {
       "symbol": "APLD",
@@ -158,6 +158,10 @@
       "date": "2026-10-27"
     },
     {
+      "symbol": "HOOD",
+      "date": "2026-10-27"
+    },
+    {
       "symbol": "UPS",
       "date": "2026-10-27"
     },
@@ -236,10 +240,22 @@
     {
       "symbol": "D",
       "date": "2026-10-30"
+    },
+    {
+      "symbol": "PLTR",
+      "date": "2026-11-02"
+    },
+    {
+      "symbol": "VRTX",
+      "date": "2026-11-02"
+    },
+    {
+      "symbol": "CIFR",
+      "date": "2026-11-02"
     }
   ],
   "sweep": {
-    "throughDate": "2026-10-30",
+    "throughDate": "2026-11-02",
     "universe": [
       "ABT",
       "ADBE",

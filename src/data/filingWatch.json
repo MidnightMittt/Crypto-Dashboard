@@ -1,5 +1,5 @@
 {
- "generatedAt": 1790990224943,
+ "generatedAt": 1791253820995,
  "source": "SEC submissions API, one request per CIK; FILED BY from ranged header fetches",
  "lookbackDays": 45,
  "species": {
@@ -39,17 +39,8 @@
    "symbol": "ABT",
    "cik": "0000001800",
    "registrant": "ABBOTT LABORATORIES",
-   "hits": [
-    {
-     "form": "8-K",
-     "filingDate": "2026-08-20",
-     "accessionNumber": "0001104659-26-099247",
-     "primaryDocument": "tm2623675d1_8k.htm",
-     "filer": "ABBOTT LABORATORIES",
-     "filer_basis": "registrant (self-filed species)"
-    }
-   ],
-   "recentFilingsSeen": 1005
+   "hits": [],
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "ADBE",
@@ -96,7 +87,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1019
+   "recentFilingsSeen": 1004
   },
   {
    "symbol": "AMAT",
@@ -112,7 +103,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "AMD",
@@ -124,14 +115,6 @@
      "filingDate": "2026-09-28",
      "accessionNumber": "0000002488-26-000182",
      "primaryDocument": "amd-20260926.htm",
-     "filer": "ADVANCED MICRO DEVICES INC",
-     "filer_basis": "registrant (self-filed species)"
-    },
-    {
-     "form": "8-K",
-     "filingDate": "2026-08-19",
-     "accessionNumber": "0000002488-26-000163",
-     "primaryDocument": "amd-20260817.htm",
      "filer": "ADVANCED MICRO DEVICES INC",
      "filer_basis": "registrant (self-filed species)"
     }
@@ -167,7 +150,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 817
+   "recentFilingsSeen": 818
   },
   {
    "symbol": "ASML",
@@ -219,14 +202,6 @@
      "primaryDocument": "ba-20260824.htm",
      "filer": "BOEING CO",
      "filer_basis": "registrant (self-filed species)"
-    },
-    {
-     "form": "8-K",
-     "filingDate": "2026-08-21",
-     "accessionNumber": "0001628280-26-058481",
-     "primaryDocument": "ba-20260819.htm",
-     "filer": "BOEING CO",
-     "filer_basis": "registrant (self-filed species)"
     }
    ],
    "recentFilingsSeen": 1006
@@ -236,7 +211,7 @@
    "cik": "0000875045",
    "registrant": "BIOGEN INC.",
    "hits": [],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "BKR",
@@ -259,13 +234,21 @@
    "cik": "0002012383",
    "registrant": "BlackRock, Inc.",
    "hits": [],
-   "recentFilingsSeen": 1773
+   "recentFilingsSeen": 1768
   },
   {
    "symbol": "BMNR",
    "cik": "0001829311",
    "registrant": "BITMINE IMMERSION TECHNOLOGIES, INC.",
    "hits": [
+    {
+     "form": "8-K",
+     "filingDate": "2026-10-05",
+     "accessionNumber": "0001493152-26-045699",
+     "primaryDocument": "form8-k.htm",
+     "filer": "BITMINE IMMERSION TECHNOLOGIES, INC.",
+     "filer_basis": "registrant (self-filed species)"
+    },
     {
      "form": "8-K",
      "filingDate": "2026-09-30",
@@ -323,7 +306,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 344
+   "recentFilingsSeen": 345
   },
   {
    "symbol": "BSX",
@@ -472,7 +455,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1002
+   "recentFilingsSeen": 1003
   },
   {
    "symbol": "CORZ",
@@ -496,7 +479,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 669
+   "recentFilingsSeen": 671
   },
   {
    "symbol": "COST",
@@ -551,7 +534,7 @@
    "cik": "0000277948",
    "registrant": "CSX CORP",
    "hits": [],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "D",
@@ -669,7 +652,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "FDX",
@@ -755,25 +738,9 @@
      "primaryDocument": "fitb-20260914.htm",
      "filer": "FIFTH THIRD BANCORP",
      "filer_basis": "registrant (self-filed species)"
-    },
-    {
-     "form": "8-K",
-     "filingDate": "2026-08-21",
-     "accessionNumber": "0000035527-26-000209",
-     "primaryDocument": "fitb-20260821.htm",
-     "filer": "FIFTH THIRD BANCORP",
-     "filer_basis": "registrant (self-filed species)"
-    },
-    {
-     "form": "424B3",
-     "filingDate": "2026-08-21",
-     "accessionNumber": "0001193125-26-359962",
-     "primaryDocument": "d134471d424b3.htm",
-     "filer": "FIFTH THIRD BANCORP",
-     "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1002
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "FRMI",
@@ -826,7 +793,7 @@
    "cik": "0000882095",
    "registrant": "GILEAD SCIENCES, INC.",
    "hits": [],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "GLXY",
@@ -842,7 +809,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 281
+   "recentFilingsSeen": 282
   },
   {
    "symbol": "GOLD",
@@ -897,6 +864,22 @@
    "cik": "0000886982",
    "registrant": "GOLDMAN SACHS GROUP INC",
    "hits": [
+    {
+     "form": "424B3",
+     "filingDate": "2026-10-05",
+     "accessionNumber": "0000950103-26-015175",
+     "primaryDocument": "dp254559_424b3-spar35v6.htm",
+     "filer": "GOLDMAN SACHS GROUP INC",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "424B3",
+     "filingDate": "2026-10-05",
+     "accessionNumber": "0000950103-26-015174",
+     "primaryDocument": "dp254554_424b3-spar4v6.htm",
+     "filer": "GOLDMAN SACHS GROUP INC",
+     "filer_basis": "registrant (self-filed species)"
+    },
     {
      "form": "DEFA14A",
      "filingDate": "2026-10-01",
@@ -1080,33 +1063,9 @@
      "primaryDocument": "mobu_addendum_august_202.htm",
      "filer": "GOLDMAN SACHS GROUP INC",
      "filer_basis": "registrant (self-filed species)"
-    },
-    {
-     "form": "424B3",
-     "filingDate": "2026-08-21",
-     "accessionNumber": "0000950103-26-012761",
-     "primaryDocument": "dp251413_424b3-spar4ve.htm",
-     "filer": "GOLDMAN SACHS GROUP INC",
-     "filer_basis": "registrant (self-filed species)"
-    },
-    {
-     "form": "424B3",
-     "filingDate": "2026-08-21",
-     "accessionNumber": "0000950103-26-012760",
-     "primaryDocument": "dp251416_424b3-spar4v4.htm",
-     "filer": "GOLDMAN SACHS GROUP INC",
-     "filer_basis": "registrant (self-filed species)"
-    },
-    {
-     "form": "424B3",
-     "filingDate": "2026-08-21",
-     "accessionNumber": "0000950103-26-012759",
-     "primaryDocument": "dp251410_424b3-spar4v6.htm",
-     "filer": "GOLDMAN SACHS GROUP INC",
-     "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 16491
+   "recentFilingsSeen": 16445
   },
   {
    "symbol": "HAL",
@@ -1162,22 +1121,13 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1025
   },
   {
    "symbol": "HD",
    "cik": "0000354950",
    "registrant": "HOME DEPOT, INC.",
-   "hits": [
-    {
-     "form": "8-K",
-     "filingDate": "2026-08-21",
-     "accessionNumber": "0000354950-26-000148",
-     "primaryDocument": "hd-20260820.htm",
-     "filer": "HOME DEPOT, INC.",
-     "filer_basis": "registrant (self-filed species)"
-    }
-   ],
+   "hits": [],
    "recentFilingsSeen": 1003
   },
   {
@@ -1185,7 +1135,7 @@
    "cik": "0001783879",
    "registrant": "Robinhood Markets, Inc.",
    "hits": [],
-   "recentFilingsSeen": 1012
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "HUT",
@@ -1222,22 +1172,6 @@
      "primaryDocument": "tm2624234d1_8k.htm",
      "filer": "Intercontinental Exchange, Inc.",
      "filer_basis": "registrant (self-filed species)"
-    },
-    {
-     "form": "8-K",
-     "filingDate": "2026-08-21",
-     "accessionNumber": "0001193125-26-359930",
-     "primaryDocument": "d369319d8k.htm",
-     "filer": "Intercontinental Exchange, Inc.",
-     "filer_basis": "registrant (self-filed species)"
-    },
-    {
-     "form": "8-K",
-     "filingDate": "2026-08-20",
-     "accessionNumber": "0001193125-26-359229",
-     "primaryDocument": "d124897d8k.htm",
-     "filer": "Intercontinental Exchange, Inc.",
-     "filer_basis": "registrant (self-filed species)"
     }
    ],
    "recentFilingsSeen": 1005
@@ -1247,7 +1181,7 @@
    "cik": "0000050863",
    "registrant": "INTEL CORP",
    "hits": [],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "IONQ",
@@ -1318,7 +1252,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1018
+   "recentFilingsSeen": 1004
   },
   {
    "symbol": "KGC",
@@ -1365,14 +1299,14 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1007
+   "recentFilingsSeen": 1008
   },
   {
    "symbol": "LHX",
    "cik": "0000202058",
    "registrant": "L3HARRIS TECHNOLOGIES, INC. /DE/",
    "hits": [],
-   "recentFilingsSeen": 1014
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "LMT",
@@ -1400,14 +1334,6 @@
      "filingDate": "2026-09-02",
      "accessionNumber": "0000060667-26-000119",
      "primaryDocument": "low-20260828.htm",
-     "filer": "LOWES COMPANIES INC",
-     "filer_basis": "registrant (self-filed species)"
-    },
-    {
-     "form": "8-K",
-     "filingDate": "2026-08-19",
-     "accessionNumber": "0000060667-26-000113",
-     "primaryDocument": "low-20260819.htm",
      "filer": "LOWES COMPANIES INC",
      "filer_basis": "registrant (self-filed species)"
     }
@@ -1484,7 +1410,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1003
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "MDT",
@@ -1508,14 +1434,14 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1003
+   "recentFilingsSeen": 1004
   },
   {
    "symbol": "MS",
    "cik": "0000895421",
    "registrant": "MORGAN STANLEY",
    "hits": [],
-   "recentFilingsSeen": 20126
+   "recentFilingsSeen": 19933
   },
   {
    "symbol": "MSFT",
@@ -1546,6 +1472,38 @@
    "cik": "0001050446",
    "registrant": "Strategy Inc",
    "hits": [
+    {
+     "form": "DEFA14A",
+     "filingDate": "2026-10-05",
+     "accessionNumber": "0001193125-26-414480",
+     "primaryDocument": "mstr-20261005.htm",
+     "filer": "Strategy Inc",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "DEFA14A",
+     "filingDate": "2026-10-05",
+     "accessionNumber": "0001193125-26-413171",
+     "primaryDocument": "mstr-20261005.htm",
+     "filer": "Strategy Inc",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "8-K",
+     "filingDate": "2026-10-05",
+     "accessionNumber": "0001193125-26-413164",
+     "primaryDocument": "mstr-20261005.htm",
+     "filer": "Strategy Inc",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "DEF 14A",
+     "filingDate": "2026-10-05",
+     "accessionNumber": "0001193125-26-413159",
+     "primaryDocument": "d503578ddef14a.htm",
+     "filer": "Strategy Inc",
+     "filer_basis": "registrant (self-filed species)"
+    },
     {
      "form": "DEFA14A",
      "filingDate": "2026-10-01",
@@ -1683,7 +1641,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1005
   },
   {
    "symbol": "MTB",
@@ -1747,7 +1705,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1003
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "NEE",
@@ -1779,38 +1737,20 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "NEM",
    "cik": "0001164727",
    "registrant": "NEWMONT Corp /DE/",
-   "hits": [
-    {
-     "form": "8-K",
-     "filingDate": "2026-08-20",
-     "accessionNumber": "0001104659-26-099237",
-     "primaryDocument": "tm2623668d1_8k.htm",
-     "filer": "NEWMONT Corp /DE/",
-     "filer_basis": "registrant (self-filed species)"
-    }
-   ],
-   "recentFilingsSeen": 1005
+   "hits": [],
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "NOC",
    "cik": "0001133421",
    "registrant": "NORTHROP GRUMMAN CORP /DE/",
-   "hits": [
-    {
-     "form": "8-K",
-     "filingDate": "2026-08-21",
-     "accessionNumber": "0001628280-26-058480",
-     "primaryDocument": "noc-20260819.htm",
-     "filer": "NORTHROP GRUMMAN CORP /DE/",
-     "filer_basis": "registrant (self-filed species)"
-    }
-   ],
+   "hits": [],
    "recentFilingsSeen": 1000
   },
   {
@@ -1825,7 +1765,7 @@
    "cik": "0000702165",
    "registrant": "NORFOLK SOUTHERN CORP",
    "hits": [],
-   "recentFilingsSeen": 1008
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "NVDA",
@@ -1904,7 +1844,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 468
+   "recentFilingsSeen": 472
   },
   {
    "symbol": "ORCL",
@@ -1958,17 +1898,9 @@
      "primaryDocument": "panw-20260901.htm",
      "filer": "Palo Alto Networks Inc",
      "filer_basis": "registrant (self-filed species)"
-    },
-    {
-     "form": "8-K",
-     "filingDate": "2026-08-21",
-     "accessionNumber": "0001193125-26-361122",
-     "primaryDocument": "d180372d8k.htm",
-     "filer": "Palo Alto Networks Inc",
-     "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "PHM",
@@ -1982,7 +1914,7 @@
    "cik": "0001321655",
    "registrant": "Palantir Technologies Inc.",
    "hits": [],
-   "recentFilingsSeen": 995
+   "recentFilingsSeen": 996
   },
   {
    "symbol": "PURR",
@@ -2086,7 +2018,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1006
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "REGN",
@@ -2139,17 +2071,9 @@
      "primaryDocument": "rost-20260911.htm",
      "filer": "ROSS STORES, INC.",
      "filer_basis": "registrant (self-filed species)"
-    },
-    {
-     "form": "8-K",
-     "filingDate": "2026-08-20",
-     "accessionNumber": "0000745732-26-000038",
-     "primaryDocument": "rost-20260820.htm",
-     "filer": "ROSS STORES, INC.",
-     "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1004
   },
   {
    "symbol": "RTX",
@@ -2165,7 +2089,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1003
+   "recentFilingsSeen": 1005
   },
   {
    "symbol": "SBET",
@@ -2186,7 +2110,7 @@
    "cik": "0000316709",
    "registrant": "SCHWAB CHARLES CORP",
    "hits": [],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1005
   },
   {
    "symbol": "SLB",
@@ -2226,14 +2150,14 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1005
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "SO",
    "cik": "0000092122",
    "registrant": "SOUTHERN CO",
    "hits": [],
-   "recentFilingsSeen": 1009
+   "recentFilingsSeen": 1020
   },
   {
    "symbol": "SPY",
@@ -2276,17 +2200,8 @@
    "symbol": "TGT",
    "cik": "0000027419",
    "registrant": "TARGET CORP",
-   "hits": [
-    {
-     "form": "8-K",
-     "filingDate": "2026-08-19",
-     "accessionNumber": "0000027419-26-000034",
-     "primaryDocument": "tgt-20260819.htm",
-     "filer": "TARGET CORP",
-     "filer_basis": "registrant (self-filed species)"
-    }
-   ],
-   "recentFilingsSeen": 1002
+   "hits": [],
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "TJX",
@@ -2298,14 +2213,6 @@
      "filingDate": "2026-09-17",
      "accessionNumber": "0000109198-26-000051",
      "primaryDocument": "tjx-20260916.htm",
-     "filer": "TJX COMPANIES INC /DE/",
-     "filer_basis": "registrant (self-filed species)"
-    },
-    {
-     "form": "8-K",
-     "filingDate": "2026-08-19",
-     "accessionNumber": "0000109198-26-000045",
-     "primaryDocument": "tjx-20260819.htm",
      "filer": "TJX COMPANIES INC /DE/",
      "filer_basis": "registrant (self-filed species)"
     }
@@ -2506,22 +2413,6 @@
      "primaryDocument": "form424b3.htm",
      "filer": "US BANCORP \\DE\\",
      "filer_basis": "registrant (self-filed species)"
-    },
-    {
-     "form": "424B3",
-     "filingDate": "2026-08-20",
-     "accessionNumber": "0001918704-26-024347",
-     "primaryDocument": "form424b3.htm",
-     "filer": "US BANCORP \\DE\\",
-     "filer_basis": "registrant (self-filed species)"
-    },
-    {
-     "form": "424B3",
-     "filingDate": "2026-08-20",
-     "accessionNumber": "0001918704-26-024342",
-     "primaryDocument": "form424b3.htm",
-     "filer": "US BANCORP \\DE\\",
-     "filer_basis": "registrant (self-filed species)"
     }
    ],
    "recentFilingsSeen": 1011
@@ -2549,6 +2440,14 @@
    "hits": [
     {
      "form": "8-K",
+     "filingDate": "2026-10-05",
+     "accessionNumber": "0001140361-26-038468",
+     "primaryDocument": "ef20083016_8k.htm",
+     "filer": "Vistra Corp.",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "8-K",
      "filingDate": "2026-09-24",
      "accessionNumber": "0001140361-26-037577",
      "primaryDocument": "ef20082680_8k.htm",
@@ -2564,23 +2463,14 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "WMT",
    "cik": "0000104169",
    "registrant": "Walmart Inc.",
-   "hits": [
-    {
-     "form": "8-K",
-     "filingDate": "2026-08-20",
-     "accessionNumber": "0000104169-26-000145",
-     "primaryDocument": "wmt-20260820.htm",
-     "filer": "Walmart Inc.",
-     "filer_basis": "registrant (self-filed species)"
-    }
-   ],
-   "recentFilingsSeen": 1010
+   "hits": [],
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "WPM",
@@ -2593,8 +2483,17 @@
    "symbol": "WULF",
    "cik": "0001083301",
    "registrant": "TERAWULF INC.",
-   "hits": [],
-   "recentFilingsSeen": 1003
+   "hits": [
+    {
+     "form": "8-K",
+     "filingDate": "2026-10-05",
+     "accessionNumber": "0001628280-26-064757",
+     "primaryDocument": "wulf-20261001.htm",
+     "filer": "TERAWULF INC.",
+     "filer_basis": "registrant (self-filed species)"
+    }
+   ],
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "FRMI",
