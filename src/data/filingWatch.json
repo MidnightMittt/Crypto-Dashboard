@@ -1,5 +1,5 @@
 {
- "generatedAt": 1791253820995,
+ "generatedAt": 1791337036823,
  "source": "SEC submissions API, one request per CIK; FILED BY from ranged header fetches",
  "lookbackDays": 45,
  "species": {
@@ -103,7 +103,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1002
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "AMD",
@@ -211,7 +211,7 @@
    "cik": "0000875045",
    "registrant": "BIOGEN INC.",
    "hits": [],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "BKR",
@@ -455,7 +455,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1003
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "CORZ",
@@ -534,7 +534,7 @@
    "cik": "0000277948",
    "registrant": "CSX CORP",
    "hits": [],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "D",
@@ -786,7 +786,7 @@
    "cik": "0000040533",
    "registrant": "GENERAL DYNAMICS CORP",
    "hits": [],
-   "recentFilingsSeen": 1003
+   "recentFilingsSeen": 1004
   },
   {
    "symbol": "GILD",
@@ -1065,7 +1065,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 16445
+   "recentFilingsSeen": 16484
   },
   {
    "symbol": "HAL",
@@ -1121,7 +1121,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1025
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "HD",
@@ -1135,7 +1135,7 @@
    "cik": "0001783879",
    "registrant": "Robinhood Markets, Inc.",
    "hits": [],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "HUT",
@@ -1259,7 +1259,7 @@
    "cik": "0000701818",
    "registrant": "KINROSS GOLD CORP",
    "hits": [],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "KLAC",
@@ -1299,7 +1299,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1008
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "LHX",
@@ -1434,14 +1434,14 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1004
+   "recentFilingsSeen": 1005
   },
   {
    "symbol": "MS",
    "cik": "0000895421",
    "registrant": "MORGAN STANLEY",
    "hits": [],
-   "recentFilingsSeen": 19933
+   "recentFilingsSeen": 19919
   },
   {
    "symbol": "MSFT",
@@ -1641,7 +1641,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1005
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "MTB",
@@ -1712,6 +1712,14 @@
    "cik": "0000753308",
    "registrant": "NEXTERA ENERGY INC",
    "hits": [
+    {
+     "form": "8-K",
+     "filingDate": "2026-10-06",
+     "accessionNumber": "0000753308-26-000074",
+     "primaryDocument": "nee-20260922.htm",
+     "filer": "NEXTERA ENERGY INC",
+     "filer_basis": "registrant (self-filed species)"
+    },
     {
      "form": "8-K",
      "filingDate": "2026-09-14",
@@ -1844,7 +1852,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 472
+   "recentFilingsSeen": 474
   },
   {
    "symbol": "ORCL",
@@ -1900,7 +1908,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "PHM",
@@ -2027,6 +2035,14 @@
    "hits": [
     {
      "form": "8-K",
+     "filingDate": "2026-10-06",
+     "accessionNumber": "0001104659-26-113895",
+     "primaryDocument": "tm2627077d1_8k.htm",
+     "filer": "REGENERON PHARMACEUTICALS, INC.",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "8-K",
      "filingDate": "2026-09-30",
      "accessionNumber": "0001104659-26-112340",
      "primaryDocument": "tm2626090d1_8k.htm",
@@ -2034,7 +2050,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "RF",
@@ -2073,7 +2089,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1004
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "RTX",
@@ -2089,7 +2105,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1005
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "SBET",
@@ -2110,13 +2126,21 @@
    "cik": "0000316709",
    "registrant": "SCHWAB CHARLES CORP",
    "hits": [],
-   "recentFilingsSeen": 1005
+   "recentFilingsSeen": 1004
   },
   {
    "symbol": "SLB",
    "cik": "0000087347",
    "registrant": "SLB LIMITED/NV",
    "hits": [
+    {
+     "form": "8-K",
+     "filingDate": "2026-10-06",
+     "accessionNumber": "0001193125-26-415617",
+     "primaryDocument": "d184262d8k.htm",
+     "filer": "SLB LIMITED/NV",
+     "filer_basis": "registrant (self-filed species)"
+    },
     {
      "form": "8-K",
      "filingDate": "2026-08-31",
@@ -2126,7 +2150,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1007
+   "recentFilingsSeen": 1008
   },
   {
    "symbol": "SNOW",
@@ -2157,7 +2181,7 @@
    "cik": "0000092122",
    "registrant": "SOUTHERN CO",
    "hits": [],
-   "recentFilingsSeen": 1020
+   "recentFilingsSeen": 1005
   },
   {
    "symbol": "SPY",
@@ -2170,8 +2194,17 @@
    "symbol": "SYK",
    "cik": "0000310764",
    "registrant": "STRYKER CORP",
-   "hits": [],
-   "recentFilingsSeen": 1014
+   "hits": [
+    {
+     "form": "8-K",
+     "filingDate": "2026-10-06",
+     "accessionNumber": "0001193125-26-414956",
+     "primaryDocument": "d84795d8k.htm",
+     "filer": "STRYKER CORP",
+     "filer_basis": "registrant (self-filed species)"
+    }
+   ],
+   "recentFilingsSeen": 1015
   },
   {
    "symbol": "TECK",
@@ -2463,7 +2496,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "WMT",
@@ -2493,7 +2526,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "FRMI",
