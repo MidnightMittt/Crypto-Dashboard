@@ -1,10 +1,6 @@
 {
-  "generatedAt": 1791336876431,
+  "generatedAt": 1791424665475,
   "entries": [
-    {
-      "symbol": "APLD",
-      "date": "2026-10-07"
-    },
     {
       "symbol": "GS",
       "date": "2026-10-13"
@@ -174,6 +170,10 @@
       "date": "2026-10-28"
     },
     {
+      "symbol": "FDX",
+      "date": "2026-10-28"
+    },
+    {
       "symbol": "AEP",
       "date": "2026-10-28"
     },
@@ -272,10 +272,30 @@
     {
       "symbol": "MARA",
       "date": "2026-11-03"
+    },
+    {
+      "symbol": "MSFT",
+      "date": "2026-11-04"
+    },
+    {
+      "symbol": "KLAC",
+      "date": "2026-11-04"
+    },
+    {
+      "symbol": "QCOM",
+      "date": "2026-11-04"
+    },
+    {
+      "symbol": "NOW",
+      "date": "2026-11-04"
+    },
+    {
+      "symbol": "IONQ",
+      "date": "2026-11-04"
     }
   ],
   "sweep": {
-    "throughDate": "2026-11-03",
+    "throughDate": "2026-11-04",
     "universe": [
       "ABT",
       "ADBE",
