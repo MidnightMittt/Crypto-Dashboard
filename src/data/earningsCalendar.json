@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1791424665475,
+  "generatedAt": 1791511869241,
   "entries": [
     {
       "symbol": "GS",
@@ -86,6 +86,10 @@
       "date": "2026-10-21"
     },
     {
+      "symbol": "NEE",
+      "date": "2026-10-21"
+    },
+    {
       "symbol": "DHR",
       "date": "2026-10-21"
     },
@@ -96,10 +100,6 @@
     {
       "symbol": "CSX",
       "date": "2026-10-21"
-    },
-    {
-      "symbol": "INTC",
-      "date": "2026-10-22"
     },
     {
       "symbol": "UNP",
@@ -142,10 +142,6 @@
       "date": "2026-10-27"
     },
     {
-      "symbol": "NEE",
-      "date": "2026-10-27"
-    },
-    {
       "symbol": "BA",
       "date": "2026-10-27"
     },
@@ -164,6 +160,10 @@
     {
       "symbol": "BKR",
       "date": "2026-10-27"
+    },
+    {
+      "symbol": "NOW",
+      "date": "2026-10-28"
     },
     {
       "symbol": "AEM",
@@ -190,8 +190,16 @@
       "date": "2026-10-28"
     },
     {
+      "symbol": "KGC",
+      "date": "2026-10-28"
+    },
+    {
       "symbol": "NVR",
       "date": "2026-10-28"
+    },
+    {
+      "symbol": "INTC",
+      "date": "2026-10-29"
     },
     {
       "symbol": "GILD",
@@ -262,10 +270,6 @@
       "date": "2026-11-03"
     },
     {
-      "symbol": "KGC",
-      "date": "2026-11-03"
-    },
-    {
       "symbol": "HUT",
       "date": "2026-11-03"
     },
@@ -286,16 +290,32 @@
       "date": "2026-11-04"
     },
     {
-      "symbol": "NOW",
+      "symbol": "IONQ",
       "date": "2026-11-04"
     },
     {
-      "symbol": "IONQ",
-      "date": "2026-11-04"
+      "symbol": "SO",
+      "date": "2026-11-05"
+    },
+    {
+      "symbol": "DUK",
+      "date": "2026-11-05"
+    },
+    {
+      "symbol": "WPM",
+      "date": "2026-11-05"
+    },
+    {
+      "symbol": "IREN",
+      "date": "2026-11-05"
+    },
+    {
+      "symbol": "GOLD",
+      "date": "2026-11-05"
     }
   ],
   "sweep": {
-    "throughDate": "2026-11-04",
+    "throughDate": "2026-11-05",
     "universe": [
       "ABT",
       "ADBE",
