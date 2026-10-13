@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1791511869241,
+  "generatedAt": 1791860802016,
   "entries": [
     {
       "symbol": "GS",
@@ -162,6 +162,10 @@
       "date": "2026-10-27"
     },
     {
+      "symbol": "MSFT",
+      "date": "2026-10-28"
+    },
+    {
       "symbol": "NOW",
       "date": "2026-10-28"
     },
@@ -270,16 +274,8 @@
       "date": "2026-11-03"
     },
     {
-      "symbol": "HUT",
-      "date": "2026-11-03"
-    },
-    {
       "symbol": "MARA",
       "date": "2026-11-03"
-    },
-    {
-      "symbol": "MSFT",
-      "date": "2026-11-04"
     },
     {
       "symbol": "KLAC",
@@ -291,6 +287,10 @@
     },
     {
       "symbol": "IONQ",
+      "date": "2026-11-04"
+    },
+    {
+      "symbol": "HUT",
       "date": "2026-11-04"
     },
     {
@@ -312,10 +312,30 @@
     {
       "symbol": "GOLD",
       "date": "2026-11-05"
+    },
+    {
+      "symbol": "CEG",
+      "date": "2026-11-06"
+    },
+    {
+      "symbol": "VST",
+      "date": "2026-11-06"
+    },
+    {
+      "symbol": "WULF",
+      "date": "2026-11-09"
+    },
+    {
+      "symbol": "BTDR",
+      "date": "2026-11-09"
+    },
+    {
+      "symbol": "FRMI",
+      "date": "2026-11-09"
     }
   ],
   "sweep": {
-    "throughDate": "2026-11-05",
+    "throughDate": "2026-11-09",
     "universe": [
       "ABT",
       "ADBE",
