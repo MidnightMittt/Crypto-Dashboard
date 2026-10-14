@@ -1,5 +1,5 @@
 {
- "generatedAt": 1791860995110,
+ "generatedAt": 1791940751765,
  "source": "SEC submissions API, one request per CIK; FILED BY from ranged header fetches",
  "lookbackDays": 45,
  "species": {
@@ -149,7 +149,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 820
+   "recentFilingsSeen": 822
   },
   {
    "symbol": "ASML",
@@ -233,6 +233,14 @@
    "hits": [
     {
      "form": "8-K",
+     "filingDate": "2026-10-13",
+     "accessionNumber": "0001493152-26-046744",
+     "primaryDocument": "form8-k.htm",
+     "filer": "BITMINE IMMERSION TECHNOLOGIES, INC.",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "8-K",
      "filingDate": "2026-10-07",
      "accessionNumber": "0001493152-26-046088",
      "primaryDocument": "form8-k.htm",
@@ -296,7 +304,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 346
+   "recentFilingsSeen": 347
   },
   {
    "symbol": "BSX",
@@ -367,6 +375,14 @@
    "hits": [
     {
      "form": "8-K",
+     "filingDate": "2026-10-13",
+     "accessionNumber": "0001193125-26-419743",
+     "primaryDocument": "d134900d8k.htm",
+     "filer": "Cipher Digital Inc.",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "8-K",
      "filingDate": "2026-09-25",
      "accessionNumber": "0001819989-26-000043",
      "primaryDocument": "cifr-20260924.htm",
@@ -374,7 +390,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 621
+   "recentFilingsSeen": 622
   },
   {
    "symbol": "CLSK",
@@ -470,7 +486,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 672
+   "recentFilingsSeen": 673
   },
   {
    "symbol": "COST",
@@ -486,7 +502,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "CRM",
@@ -516,8 +532,17 @@
    "symbol": "CSX",
    "cik": "0000277948",
    "registrant": "CSX CORP",
-   "hits": [],
-   "recentFilingsSeen": 1000
+   "hits": [
+    {
+     "form": "8-K",
+     "filingDate": "2026-10-13",
+     "accessionNumber": "0000277948-26-000034",
+     "primaryDocument": "csx-20261012.htm",
+     "filer": "CSX CORP",
+     "filer_basis": "registrant (self-filed species)"
+    }
+   ],
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "D",
@@ -571,8 +596,17 @@
    "symbol": "DHR",
    "cik": "0000313616",
    "registrant": "DANAHER CORP /DE/",
-   "hits": [],
-   "recentFilingsSeen": 1010
+   "hits": [
+    {
+     "form": "8-K",
+     "filingDate": "2026-10-13",
+     "accessionNumber": "0000313616-26-000193",
+     "primaryDocument": "dhr-20261009.htm",
+     "filer": "DANAHER CORP /DE/",
+     "filer_basis": "registrant (self-filed species)"
+    }
+   ],
+   "recentFilingsSeen": 1011
   },
   {
    "symbol": "DIA",
@@ -747,7 +781,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 157
+   "recentFilingsSeen": 158
   },
   {
    "symbol": "FTI",
@@ -841,13 +875,21 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 702
+   "recentFilingsSeen": 703
   },
   {
    "symbol": "GS",
    "cik": "0000886982",
    "registrant": "GOLDMAN SACHS GROUP INC",
    "hits": [
+    {
+     "form": "8-K",
+     "filingDate": "2026-10-13",
+     "accessionNumber": "0000886982-26-000529",
+     "primaryDocument": "gs-20261013.htm",
+     "filer": "GOLDMAN SACHS GROUP INC",
+     "filer_basis": "registrant (self-filed species)"
+    },
     {
      "form": "424B3",
      "filingDate": "2026-10-05",
@@ -985,7 +1027,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 16457
+   "recentFilingsSeen": 16506
   },
   {
    "symbol": "HAL",
@@ -1055,7 +1097,7 @@
    "cik": "0001783879",
    "registrant": "Robinhood Markets, Inc.",
    "hits": [],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "HUT",
@@ -1101,6 +1143,14 @@
    "hits": [
     {
      "form": "8-K",
+     "filingDate": "2026-10-13",
+     "accessionNumber": "0001193125-26-419609",
+     "primaryDocument": "ionq-20261009.htm",
+     "filer": "IonQ, Inc.",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "8-K",
      "filingDate": "2026-09-08",
      "accessionNumber": "0001193125-26-384388",
      "primaryDocument": "ionq-20260908.htm",
@@ -1108,21 +1158,38 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 625
+   "recentFilingsSeen": 626
   },
   {
    "symbol": "IREN",
    "cik": "0001878848",
    "registrant": "IREN Ltd",
-   "hits": [],
-   "recentFilingsSeen": 318
+   "hits": [
+    {
+     "form": "DEFA14A",
+     "filingDate": "2026-10-13",
+     "accessionNumber": "0001140361-26-039452",
+     "primaryDocument": "ny20078226x2_defa14a.htm",
+     "filer": "IREN Ltd",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "DEF 14A",
+     "filingDate": "2026-10-13",
+     "accessionNumber": "0001140361-26-039451",
+     "primaryDocument": "ny20078226x1_def14a.htm",
+     "filer": "IREN Ltd",
+     "filer_basis": "registrant (self-filed species)"
+    }
+   ],
+   "recentFilingsSeen": 321
   },
   {
    "symbol": "ISRG",
    "cik": "0001035267",
    "registrant": "INTUITIVE SURGICAL INC",
    "hits": [],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "KEY",
@@ -1193,7 +1260,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1007
+   "recentFilingsSeen": 1009
   },
   {
    "symbol": "LHX",
@@ -1279,7 +1346,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1002
+   "recentFilingsSeen": 1003
   },
   {
    "symbol": "MARA",
@@ -1319,14 +1386,14 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1004
+   "recentFilingsSeen": 1006
   },
   {
    "symbol": "MS",
    "cik": "0000895421",
    "registrant": "MORGAN STANLEY",
    "hits": [],
-   "recentFilingsSeen": 19771
+   "recentFilingsSeen": 19851
   },
   {
    "symbol": "MSFT",
@@ -1357,6 +1424,30 @@
    "cik": "0001050446",
    "registrant": "Strategy Inc",
    "hits": [
+    {
+     "form": "DEFA14A",
+     "filingDate": "2026-10-13",
+     "accessionNumber": "0001193125-26-420392",
+     "primaryDocument": "mstr-20261013.htm",
+     "filer": "Strategy Inc",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "DEFA14A",
+     "filingDate": "2026-10-13",
+     "accessionNumber": "0001193125-26-419759",
+     "primaryDocument": "mstr-20261013.htm",
+     "filer": "Strategy Inc",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "8-K",
+     "filingDate": "2026-10-13",
+     "accessionNumber": "0001193125-26-419726",
+     "primaryDocument": "mstr-20261012.htm",
+     "filer": "Strategy Inc",
+     "filer_basis": "registrant (self-filed species)"
+    },
     {
      "form": "DEFA14A",
      "filingDate": "2026-10-09",
@@ -1526,7 +1617,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1003
+   "recentFilingsSeen": 1007
   },
   {
    "symbol": "MTB",
@@ -1658,7 +1749,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "NVR",
@@ -1713,7 +1804,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 476
+   "recentFilingsSeen": 477
   },
   {
    "symbol": "ORCL",
@@ -1769,7 +1860,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "PHM",
@@ -1783,7 +1874,7 @@
    "cik": "0001321655",
    "registrant": "Palantir Technologies Inc.",
    "hits": [],
-   "recentFilingsSeen": 999
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "PURR",
@@ -1863,7 +1954,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "REGN",
@@ -1957,7 +2048,7 @@
    "cik": "0001981535",
    "registrant": "Sharplink, Inc.",
    "hits": [],
-   "recentFilingsSeen": 234
+   "recentFilingsSeen": 236
   },
   {
    "symbol": "SCCO",
@@ -1995,7 +2086,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1008
+   "recentFilingsSeen": 1009
   },
   {
    "symbol": "SNOW",
@@ -2379,7 +2470,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 157
+   "recentFilingsSeen": 158
   }
  ],
  "unwatched": [

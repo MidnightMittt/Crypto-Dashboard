@@ -1,10 +1,6 @@
 {
-  "generatedAt": 1791860802016,
+  "generatedAt": 1791940575776,
   "entries": [
-    {
-      "symbol": "GS",
-      "date": "2026-10-13"
-    },
     {
       "symbol": "ASML",
       "date": "2026-10-14"
@@ -126,10 +122,6 @@
       "date": "2026-10-22"
     },
     {
-      "symbol": "GD",
-      "date": "2026-10-23"
-    },
-    {
       "symbol": "SLB",
       "date": "2026-10-23"
     },
@@ -246,6 +238,10 @@
       "date": "2026-10-29"
     },
     {
+      "symbol": "GD",
+      "date": "2026-10-30"
+    },
+    {
       "symbol": "REGN",
       "date": "2026-10-30"
     },
@@ -323,7 +319,7 @@
     },
     {
       "symbol": "WULF",
-      "date": "2026-11-09"
+      "date": "2026-11-06"
     },
     {
       "symbol": "BTDR",
@@ -332,10 +328,18 @@
     {
       "symbol": "FRMI",
       "date": "2026-11-09"
+    },
+    {
+      "symbol": "AU",
+      "date": "2026-11-10"
+    },
+    {
+      "symbol": "OKLO",
+      "date": "2026-11-10"
     }
   ],
   "sweep": {
-    "throughDate": "2026-11-09",
+    "throughDate": "2026-11-10",
     "universe": [
       "ABT",
       "ADBE",
