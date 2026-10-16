@@ -1,30 +1,6 @@
 {
-  "generatedAt": 1791940575776,
+  "generatedAt": 1792110375299,
   "entries": [
-    {
-      "symbol": "ASML",
-      "date": "2026-10-14"
-    },
-    {
-      "symbol": "MS",
-      "date": "2026-10-14"
-    },
-    {
-      "symbol": "BLK",
-      "date": "2026-10-14"
-    },
-    {
-      "symbol": "TSM",
-      "date": "2026-10-15"
-    },
-    {
-      "symbol": "SCHW",
-      "date": "2026-10-15"
-    },
-    {
-      "symbol": "USB",
-      "date": "2026-10-15"
-    },
     {
       "symbol": "TFC",
       "date": "2026-10-16"
@@ -66,10 +42,6 @@
       "date": "2026-10-20"
     },
     {
-      "symbol": "GLXY",
-      "date": "2026-10-20"
-    },
-    {
       "symbol": "LRCX",
       "date": "2026-10-21"
     },
@@ -102,11 +74,11 @@
       "date": "2026-10-22"
     },
     {
-      "symbol": "NEM",
+      "symbol": "LMT",
       "date": "2026-10-22"
     },
     {
-      "symbol": "LMT",
+      "symbol": "NEM",
       "date": "2026-10-22"
     },
     {
@@ -151,6 +123,10 @@
     },
     {
       "symbol": "BKR",
+      "date": "2026-10-27"
+    },
+    {
+      "symbol": "GLXY",
       "date": "2026-10-27"
     },
     {
@@ -326,20 +302,28 @@
       "date": "2026-11-09"
     },
     {
-      "symbol": "FRMI",
-      "date": "2026-11-09"
-    },
-    {
       "symbol": "AU",
       "date": "2026-11-10"
     },
     {
       "symbol": "OKLO",
       "date": "2026-11-10"
+    },
+    {
+      "symbol": "SBET",
+      "date": "2026-11-11"
+    },
+    {
+      "symbol": "AMAT",
+      "date": "2026-11-12"
+    },
+    {
+      "symbol": "FRMI",
+      "date": "2026-11-12"
     }
   ],
   "sweep": {
-    "throughDate": "2026-11-10",
+    "throughDate": "2026-11-12",
     "universe": [
       "ABT",
       "ADBE",
