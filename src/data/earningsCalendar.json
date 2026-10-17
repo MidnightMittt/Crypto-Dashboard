@@ -1,22 +1,6 @@
 {
-  "generatedAt": 1792110375299,
+  "generatedAt": 1792197054666,
   "entries": [
-    {
-      "symbol": "TFC",
-      "date": "2026-10-16"
-    },
-    {
-      "symbol": "MTB",
-      "date": "2026-10-16"
-    },
-    {
-      "symbol": "CFG",
-      "date": "2026-10-16"
-    },
-    {
-      "symbol": "RF",
-      "date": "2026-10-16"
-    },
     {
       "symbol": "FITB",
       "date": "2026-10-19"
@@ -95,10 +79,6 @@
     },
     {
       "symbol": "SLB",
-      "date": "2026-10-23"
-    },
-    {
-      "symbol": "CORZ",
       "date": "2026-10-23"
     },
     {
@@ -282,6 +262,10 @@
       "date": "2026-11-05"
     },
     {
+      "symbol": "CORZ",
+      "date": "2026-11-05"
+    },
+    {
       "symbol": "GOLD",
       "date": "2026-11-05"
     },
@@ -323,7 +307,7 @@
     }
   ],
   "sweep": {
-    "throughDate": "2026-11-12",
+    "throughDate": "2026-11-13",
     "universe": [
       "ABT",
       "ADBE",

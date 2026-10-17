@@ -1,5 +1,5 @@
 {
- "generatedAt": 1792110576681,
+ "generatedAt": 1792197268783,
  "source": "SEC submissions API, one request per CIK; FILED BY from ranged header fetches",
  "lookbackDays": 45,
  "species": {
@@ -110,7 +110,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "AMGN",
@@ -360,6 +360,14 @@
    "hits": [
     {
      "form": "8-K",
+     "filingDate": "2026-10-16",
+     "accessionNumber": "0000759944-26-000206",
+     "primaryDocument": "cfg-20261016.htm",
+     "filer": "CITIZENS FINANCIAL GROUP INC/RI",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "8-K",
      "filingDate": "2026-10-08",
      "accessionNumber": "0000759944-26-000192",
      "primaryDocument": "cfg-20261006.htm",
@@ -367,13 +375,21 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "CIFR",
    "cik": "0001819989",
    "registrant": "Cipher Digital Inc.",
    "hits": [
+    {
+     "form": "8-K",
+     "filingDate": "2026-10-16",
+     "accessionNumber": "0001193125-26-424297",
+     "primaryDocument": "d313847d8k.htm",
+     "filer": "Cipher Digital Inc.",
+     "filer_basis": "registrant (self-filed species)"
+    },
     {
      "form": "8-K",
      "filingDate": "2026-10-14",
@@ -399,7 +415,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 624
+   "recentFilingsSeen": 625
   },
   {
    "symbol": "CLSK",
@@ -504,6 +520,14 @@
    "hits": [
     {
      "form": "8-K",
+     "filingDate": "2026-10-16",
+     "accessionNumber": "0000909832-26-000100",
+     "primaryDocument": "cost-20261013.htm",
+     "filer": "COSTCO WHOLESALE CORP /NEW",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "8-K",
      "filingDate": "2026-10-14",
      "accessionNumber": "0000909832-26-000096",
      "primaryDocument": "cost-20261014.htm",
@@ -519,7 +543,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "CRM",
@@ -623,7 +647,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "DIA",
@@ -775,6 +799,14 @@
    "hits": [
     {
      "form": "8-K",
+     "filingDate": "2026-10-16",
+     "accessionNumber": "0001213900-26-109980",
+     "primaryDocument": "ea0308831-8k_fermi.htm",
+     "filer": "Fermi Inc.",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "8-K",
      "filingDate": "2026-10-14",
      "accessionNumber": "0001213900-26-109227",
      "primaryDocument": "ea0308546-8k_fermi.htm",
@@ -798,7 +830,7 @@
      "filer_basis": "FILED BY header"
     }
    ],
-   "recentFilingsSeen": 161
+   "recentFilingsSeen": 162
   },
   {
    "symbol": "FTI",
@@ -1076,7 +1108,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 16545
+   "recentFilingsSeen": 16565
   },
   {
    "symbol": "HAL",
@@ -1154,7 +1186,7 @@
    "cik": "0001783879",
    "registrant": "Robinhood Markets, Inc.",
    "hits": [],
-   "recentFilingsSeen": 1003
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "HUT",
@@ -1199,6 +1231,14 @@
    "registrant": "IonQ, Inc.",
    "hits": [
     {
+     "form": "8-K",
+     "filingDate": "2026-10-16",
+     "accessionNumber": "0001193125-26-424230",
+     "primaryDocument": "ionq-20261014.htm",
+     "filer": "IonQ, Inc.",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
      "form": "424B5",
      "filingDate": "2026-10-14",
      "accessionNumber": "0001193125-26-421074",
@@ -1231,7 +1271,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 628
+   "recentFilingsSeen": 629
   },
   {
    "symbol": "IREN",
@@ -1349,7 +1389,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1002
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "LHX",
@@ -1465,17 +1505,9 @@
      "primaryDocument": "mdt-20260917.htm",
      "filer": "Medtronic plc",
      "filer_basis": "registrant (self-filed species)"
-    },
-    {
-     "form": "8-K",
-     "filingDate": "2026-09-01",
-     "accessionNumber": "0001628280-26-059697",
-     "primaryDocument": "mdt-20260901.htm",
-     "filer": "Medtronic plc",
-     "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1010
+   "recentFilingsSeen": 1014
   },
   {
    "symbol": "MS",
@@ -1491,7 +1523,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 19731
+   "recentFilingsSeen": 19641
   },
   {
    "symbol": "MSFT",
@@ -1515,13 +1547,37 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "MSTR",
    "cik": "0001050446",
    "registrant": "Strategy Inc",
    "hits": [
+    {
+     "form": "DEFA14A",
+     "filingDate": "2026-10-16",
+     "accessionNumber": "0001193125-26-424291",
+     "primaryDocument": "mstr-20261016.htm",
+     "filer": "Strategy Inc",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "DEFA14A",
+     "filingDate": "2026-10-16",
+     "accessionNumber": "0001193125-26-423429",
+     "primaryDocument": "mstr-20261016.htm",
+     "filer": "Strategy Inc",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "8-K",
+     "filingDate": "2026-10-16",
+     "accessionNumber": "0001193125-26-423400",
+     "primaryDocument": "mstr-20261015.htm",
+     "filer": "Strategy Inc",
+     "filer_basis": "registrant (self-filed species)"
+    },
     {
      "form": "DEFA14A",
      "filingDate": "2026-10-15",
@@ -1713,23 +1769,23 @@
      "primaryDocument": "mstr-20260831.htm",
      "filer": "Strategy Inc",
      "filer_basis": "registrant (self-filed species)"
-    },
-    {
-     "form": "8-K",
-     "filingDate": "2026-09-01",
-     "accessionNumber": "0001193125-26-377583",
-     "primaryDocument": "mstr-20260831.htm",
-     "filer": "Strategy Inc",
-     "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1002
+   "recentFilingsSeen": 1003
   },
   {
    "symbol": "MTB",
    "cik": "0000036270",
    "registrant": "M&T BANK CORP",
    "hits": [
+    {
+     "form": "8-K",
+     "filingDate": "2026-10-16",
+     "accessionNumber": "0000036270-26-000057",
+     "primaryDocument": "mbt-20261016.htm",
+     "filer": "M&T BANK CORP",
+     "filer_basis": "registrant (self-filed species)"
+    },
     {
      "form": "8-K",
      "filingDate": "2026-09-28",
@@ -1763,7 +1819,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1004
+   "recentFilingsSeen": 1006
   },
   {
    "symbol": "MU",
@@ -1779,7 +1835,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1019
+   "recentFilingsSeen": 1003
   },
   {
    "symbol": "NEE",
@@ -1956,16 +2012,7 @@
    "symbol": "PANW",
    "cik": "0001327567",
    "registrant": "Palo Alto Networks Inc",
-   "hits": [
-    {
-     "form": "8-K",
-     "filingDate": "2026-09-01",
-     "accessionNumber": "0001327567-26-000019",
-     "primaryDocument": "panw-20260901.htm",
-     "filer": "Palo Alto Networks Inc",
-     "filer_basis": "registrant (self-filed species)"
-    }
-   ],
+   "hits": [],
    "recentFilingsSeen": 1000
   },
   {
@@ -1980,7 +2027,7 @@
    "cik": "0001321655",
    "registrant": "Palantir Technologies Inc.",
    "hits": [],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "PURR",
@@ -2026,17 +2073,9 @@
      "primaryDocument": "purr-20260914.htm",
      "filer": "Hyperliquid Strategies Inc",
      "filer_basis": "registrant (self-filed species)"
-    },
-    {
-     "form": "8-K",
-     "filingDate": "2026-09-01",
-     "accessionNumber": "0001193125-26-378589",
-     "primaryDocument": "purr-20260901.htm",
-     "filer": "Hyperliquid Strategies Inc",
-     "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 100
+   "recentFilingsSeen": 104
   },
   {
    "symbol": "QCOM",
@@ -2060,7 +2099,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1007
   },
   {
    "symbol": "REGN",
@@ -2084,14 +2123,23 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "RF",
    "cik": "0001281761",
    "registrant": "REGIONS FINANCIAL CORP",
-   "hits": [],
-   "recentFilingsSeen": 1000
+   "hits": [
+    {
+     "form": "8-K",
+     "filingDate": "2026-10-16",
+     "accessionNumber": "0001281761-26-000063",
+     "primaryDocument": "rf-20261016.htm",
+     "filer": "REGIONS FINANCIAL CORP",
+     "filer_basis": "registrant (self-filed species)"
+    }
+   ],
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "RIOT",
@@ -2185,7 +2233,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1005
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "SLB",
@@ -2271,6 +2319,22 @@
    "hits": [
     {
      "form": "8-K",
+     "filingDate": "2026-10-16",
+     "accessionNumber": "0001193125-26-423384",
+     "primaryDocument": "d186531d8k.htm",
+     "filer": "TRUIST FINANCIAL CORP",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "8-K",
+     "filingDate": "2026-10-16",
+     "accessionNumber": "0000092230-26-000108",
+     "primaryDocument": "tfc-20261016.htm",
+     "filer": "TRUIST FINANCIAL CORP",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "8-K",
      "filingDate": "2026-09-15",
      "accessionNumber": "0000092230-26-000105",
      "primaryDocument": "tfc-20260915.htm",
@@ -2278,7 +2342,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "TGT",
@@ -2308,7 +2372,7 @@
    "cik": "0001046179",
    "registrant": "TAIWAN SEMICONDUCTOR MANUFACTURING CO LTD",
    "hits": [],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "TXN",
@@ -2330,8 +2394,17 @@
    "symbol": "UNP",
    "cik": "0000100885",
    "registrant": "UNION PACIFIC CORP",
-   "hits": [],
-   "recentFilingsSeen": 1008
+   "hits": [
+    {
+     "form": "8-K",
+     "filingDate": "2026-10-16",
+     "accessionNumber": "0000100885-26-000305",
+     "primaryDocument": "unp-20261016.htm",
+     "filer": "UNION PACIFIC CORP",
+     "filer_basis": "registrant (self-filed species)"
+    }
+   ],
+   "recentFilingsSeen": 1009
   },
   {
    "symbol": "UPS",
@@ -2345,6 +2418,30 @@
    "cik": "0000036104",
    "registrant": "US BANCORP \\DE\\",
    "hits": [
+    {
+     "form": "424B3",
+     "filingDate": "2026-10-16",
+     "accessionNumber": "0001918704-26-031686",
+     "primaryDocument": "form424b3.htm",
+     "filer": "US BANCORP \\DE\\",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "424B3",
+     "filingDate": "2026-10-16",
+     "accessionNumber": "0001918704-26-031677",
+     "primaryDocument": "form424b3.htm",
+     "filer": "US BANCORP \\DE\\",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "424B3",
+     "filingDate": "2026-10-16",
+     "accessionNumber": "0001918704-26-031673",
+     "primaryDocument": "form424b3.htm",
+     "filer": "US BANCORP \\DE\\",
+     "filer_basis": "registrant (self-filed species)"
+    },
     {
      "form": "8-K",
      "filingDate": "2026-10-15",
@@ -2408,56 +2505,15 @@
      "primaryDocument": "form424b3.htm",
      "filer": "US BANCORP \\DE\\",
      "filer_basis": "registrant (self-filed species)"
-    },
-    {
-     "form": "424B3",
-     "filingDate": "2026-09-01",
-     "accessionNumber": "0001918704-26-025895",
-     "primaryDocument": "form424b3.htm",
-     "filer": "US BANCORP \\DE\\",
-     "filer_basis": "registrant (self-filed species)"
-    },
-    {
-     "form": "424B3",
-     "filingDate": "2026-09-01",
-     "accessionNumber": "0001918704-26-025851",
-     "primaryDocument": "form424b3.htm",
-     "filer": "US BANCORP \\DE\\",
-     "filer_basis": "registrant (self-filed species)"
-    },
-    {
-     "form": "424B3",
-     "filingDate": "2026-09-01",
-     "accessionNumber": "0001918704-26-025843",
-     "primaryDocument": "form424b3.htm",
-     "filer": "US BANCORP \\DE\\",
-     "filer_basis": "registrant (self-filed species)"
-    },
-    {
-     "form": "424B3",
-     "filingDate": "2026-09-01",
-     "accessionNumber": "0001918704-26-025837",
-     "primaryDocument": "form424b3.htm",
-     "filer": "US BANCORP \\DE\\",
-     "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1012
+   "recentFilingsSeen": 1015
   },
   {
    "symbol": "VRTX",
    "cik": "0000875320",
    "registrant": "VERTEX PHARMACEUTICALS INC / MA",
-   "hits": [
-    {
-     "form": "8-K",
-     "filingDate": "2026-09-01",
-     "accessionNumber": "0000875320-26-000264",
-     "primaryDocument": "vrtx-20260827.htm",
-     "filer": "VERTEX PHARMACEUTICALS INC / MA",
-     "filer_basis": "registrant (self-filed species)"
-    }
-   ],
+   "hits": [],
    "recentFilingsSeen": 1003
   },
   {
@@ -2497,7 +2553,7 @@
    "cik": "0000104169",
    "registrant": "Walmart Inc.",
    "hits": [],
-   "recentFilingsSeen": 1005
+   "recentFilingsSeen": 1008
   },
   {
    "symbol": "WPM",
@@ -2529,6 +2585,14 @@
    "hits": [
     {
      "form": "8-K",
+     "filingDate": "2026-10-16",
+     "accessionNumber": "0001213900-26-109980",
+     "primaryDocument": "ea0308831-8k_fermi.htm",
+     "filer": "Fermi Inc.",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "8-K",
      "filingDate": "2026-10-14",
      "accessionNumber": "0001213900-26-109227",
      "primaryDocument": "ea0308546-8k_fermi.htm",
@@ -2552,7 +2616,7 @@
      "filer_basis": "FILED BY header"
     }
    ],
-   "recentFilingsSeen": 161
+   "recentFilingsSeen": 162
   }
  ],
  "unwatched": [
