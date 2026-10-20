@@ -1,10 +1,6 @@
 {
-  "generatedAt": 1792197054666,
+  "generatedAt": 1792458542587,
   "entries": [
-    {
-      "symbol": "FITB",
-      "date": "2026-10-19"
-    },
     {
       "symbol": "RTX",
       "date": "2026-10-20"
@@ -170,11 +166,11 @@
       "date": "2026-10-29"
     },
     {
-      "symbol": "COIN",
+      "symbol": "LHX",
       "date": "2026-10-29"
     },
     {
-      "symbol": "LHX",
+      "symbol": "COIN",
       "date": "2026-10-29"
     },
     {
@@ -307,7 +303,7 @@
     }
   ],
   "sweep": {
-    "throughDate": "2026-11-13",
+    "throughDate": "2026-11-16",
     "universe": [
       "ABT",
       "ADBE",
