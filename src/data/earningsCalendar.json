@@ -1,26 +1,6 @@
 {
-  "generatedAt": 1792458542587,
+  "generatedAt": 1792543247723,
   "entries": [
-    {
-      "symbol": "RTX",
-      "date": "2026-10-20"
-    },
-    {
-      "symbol": "ISRG",
-      "date": "2026-10-20"
-    },
-    {
-      "symbol": "NOC",
-      "date": "2026-10-20"
-    },
-    {
-      "symbol": "HAL",
-      "date": "2026-10-20"
-    },
-    {
-      "symbol": "KEY",
-      "date": "2026-10-20"
-    },
     {
       "symbol": "LRCX",
       "date": "2026-10-21"
@@ -300,10 +280,18 @@
     {
       "symbol": "FRMI",
       "date": "2026-11-12"
+    },
+    {
+      "symbol": "HD",
+      "date": "2026-11-17"
+    },
+    {
+      "symbol": "MDT",
+      "date": "2026-11-17"
     }
   ],
   "sweep": {
-    "throughDate": "2026-11-16",
+    "throughDate": "2026-11-17",
     "universe": [
       "ABT",
       "ADBE",
