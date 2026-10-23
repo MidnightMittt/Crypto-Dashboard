@@ -1,5 +1,5 @@
 {
- "generatedAt": 1792543388722,
+ "generatedAt": 1792716292514,
  "cik": "0002071778",
  "registrant": "Fermi Inc.",
  "source": "SEC submissions API, https://data.sec.gov/submissions/CIK0002071778.json",
@@ -397,5 +397,5 @@
    "primaryDocument": "ea0288360-prec14a_fermi.htm"
   }
  ],
- "recentFilingsSeen": 163
+ "recentFilingsSeen": 164
 }
