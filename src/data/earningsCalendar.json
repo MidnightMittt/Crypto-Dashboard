@@ -1,10 +1,6 @@
 {
-  "generatedAt": 1792716156431,
+  "generatedAt": 1792802608781,
   "entries": [
-    {
-      "symbol": "SLB",
-      "date": "2026-10-23"
-    },
     {
       "symbol": "BA",
       "date": "2026-10-27"
@@ -70,10 +66,6 @@
       "date": "2026-10-28"
     },
     {
-      "symbol": "NVR",
-      "date": "2026-10-28"
-    },
-    {
       "symbol": "INTC",
       "date": "2026-10-29"
     },
@@ -94,11 +86,11 @@
       "date": "2026-10-29"
     },
     {
-      "symbol": "COIN",
+      "symbol": "LHX",
       "date": "2026-10-29"
     },
     {
-      "symbol": "LHX",
+      "symbol": "COIN",
       "date": "2026-10-29"
     },
     {
@@ -263,7 +255,7 @@
     }
   ],
   "sweep": {
-    "throughDate": "2026-11-19",
+    "throughDate": "2026-11-20",
     "universe": [
       "ABT",
       "ADBE",
