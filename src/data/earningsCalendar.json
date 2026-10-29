@@ -1,46 +1,6 @@
 {
-  "generatedAt": 1793150488926,
+  "generatedAt": 1793238677536,
   "entries": [
-    {
-      "symbol": "MSFT",
-      "date": "2026-10-28"
-    },
-    {
-      "symbol": "KLAC",
-      "date": "2026-10-28"
-    },
-    {
-      "symbol": "NOW",
-      "date": "2026-10-28"
-    },
-    {
-      "symbol": "AEM",
-      "date": "2026-10-28"
-    },
-    {
-      "symbol": "FDX",
-      "date": "2026-10-28"
-    },
-    {
-      "symbol": "AEP",
-      "date": "2026-10-28"
-    },
-    {
-      "symbol": "BSX",
-      "date": "2026-10-28"
-    },
-    {
-      "symbol": "ODFL",
-      "date": "2026-10-28"
-    },
-    {
-      "symbol": "BIIB",
-      "date": "2026-10-28"
-    },
-    {
-      "symbol": "KGC",
-      "date": "2026-10-28"
-    },
     {
       "symbol": "INTC",
       "date": "2026-10-29"
@@ -182,12 +142,12 @@
       "date": "2026-11-09"
     },
     {
-      "symbol": "AU",
-      "date": "2026-11-10"
+      "symbol": "SBET",
+      "date": "2026-11-09"
     },
     {
-      "symbol": "SBET",
-      "date": "2026-11-11"
+      "symbol": "AU",
+      "date": "2026-11-10"
     },
     {
       "symbol": "AMAT",
@@ -239,7 +199,7 @@
     }
   ],
   "sweep": {
-    "throughDate": "2026-11-24",
+    "throughDate": "2026-11-25",
     "universe": [
       "ABT",
       "ADBE",
