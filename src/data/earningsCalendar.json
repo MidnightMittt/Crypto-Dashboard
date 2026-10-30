@@ -1,46 +1,6 @@
 {
-  "generatedAt": 1793238677536,
+  "generatedAt": 1793325639788,
   "entries": [
-    {
-      "symbol": "INTC",
-      "date": "2026-10-29"
-    },
-    {
-      "symbol": "GILD",
-      "date": "2026-10-29"
-    },
-    {
-      "symbol": "SYK",
-      "date": "2026-10-29"
-    },
-    {
-      "symbol": "ICE",
-      "date": "2026-10-29"
-    },
-    {
-      "symbol": "MSTR",
-      "date": "2026-10-29"
-    },
-    {
-      "symbol": "LHX",
-      "date": "2026-10-29"
-    },
-    {
-      "symbol": "COIN",
-      "date": "2026-10-29"
-    },
-    {
-      "symbol": "DHI",
-      "date": "2026-10-29"
-    },
-    {
-      "symbol": "TECK",
-      "date": "2026-10-29"
-    },
-    {
-      "symbol": "FTI",
-      "date": "2026-10-29"
-    },
     {
       "symbol": "GD",
       "date": "2026-10-30"
@@ -106,6 +66,10 @@
       "date": "2026-11-05"
     },
     {
+      "symbol": "AU",
+      "date": "2026-11-05"
+    },
+    {
       "symbol": "IONQ",
       "date": "2026-11-05"
     },
@@ -138,15 +102,11 @@
       "date": "2026-11-09"
     },
     {
-      "symbol": "BTDR",
-      "date": "2026-11-09"
-    },
-    {
       "symbol": "SBET",
       "date": "2026-11-09"
     },
     {
-      "symbol": "AU",
+      "symbol": "BTDR",
       "date": "2026-11-10"
     },
     {
@@ -199,7 +159,7 @@
     }
   ],
   "sweep": {
-    "throughDate": "2026-11-25",
+    "throughDate": "2026-11-26",
     "universe": [
       "ABT",
       "ADBE",
