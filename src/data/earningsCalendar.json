@@ -1,18 +1,6 @@
 {
-  "generatedAt": 1793325639788,
+  "generatedAt": 1793410742798,
   "entries": [
-    {
-      "symbol": "GD",
-      "date": "2026-10-30"
-    },
-    {
-      "symbol": "REGN",
-      "date": "2026-10-30"
-    },
-    {
-      "symbol": "D",
-      "date": "2026-10-30"
-    },
     {
       "symbol": "PLTR",
       "date": "2026-11-02"
@@ -118,16 +106,16 @@
       "date": "2026-11-12"
     },
     {
+      "symbol": "NVDA",
+      "date": "2026-11-17"
+    },
+    {
       "symbol": "HD",
       "date": "2026-11-17"
     },
     {
       "symbol": "MDT",
       "date": "2026-11-17"
-    },
-    {
-      "symbol": "NVDA",
-      "date": "2026-11-18"
     },
     {
       "symbol": "PANW",
@@ -159,7 +147,7 @@
     }
   ],
   "sweep": {
-    "throughDate": "2026-11-26",
+    "throughDate": "2026-11-27",
     "universe": [
       "ABT",
       "ADBE",
