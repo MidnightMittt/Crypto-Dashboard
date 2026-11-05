@@ -1,46 +1,6 @@
 {
-  "generatedAt": 1793410742798,
+  "generatedAt": 1793845708927,
   "entries": [
-    {
-      "symbol": "PLTR",
-      "date": "2026-11-02"
-    },
-    {
-      "symbol": "VRTX",
-      "date": "2026-11-02"
-    },
-    {
-      "symbol": "CIFR",
-      "date": "2026-11-02"
-    },
-    {
-      "symbol": "AMD",
-      "date": "2026-11-03"
-    },
-    {
-      "symbol": "AMGN",
-      "date": "2026-11-03"
-    },
-    {
-      "symbol": "MARA",
-      "date": "2026-11-03"
-    },
-    {
-      "symbol": "QCOM",
-      "date": "2026-11-04"
-    },
-    {
-      "symbol": "HUT",
-      "date": "2026-11-04"
-    },
-    {
-      "symbol": "RIOT",
-      "date": "2026-11-04"
-    },
-    {
-      "symbol": "GOLD",
-      "date": "2026-11-04"
-    },
     {
       "symbol": "SO",
       "date": "2026-11-05"
@@ -87,6 +47,10 @@
     },
     {
       "symbol": "CEG",
+      "date": "2026-11-09"
+    },
+    {
+      "symbol": "MARA",
       "date": "2026-11-09"
     },
     {
@@ -144,10 +108,18 @@
     {
       "symbol": "CLSK",
       "date": "2026-11-24"
+    },
+    {
+      "symbol": "CRM",
+      "date": "2026-12-02"
+    },
+    {
+      "symbol": "SNOW",
+      "date": "2026-12-02"
     }
   ],
   "sweep": {
-    "throughDate": "2026-11-27",
+    "throughDate": "2026-12-02",
     "universe": [
       "ABT",
       "ADBE",
