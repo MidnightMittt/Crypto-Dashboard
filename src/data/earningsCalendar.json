@@ -1,38 +1,6 @@
 {
-  "generatedAt": 1793845708927,
+  "generatedAt": 1793932099034,
   "entries": [
-    {
-      "symbol": "SO",
-      "date": "2026-11-05"
-    },
-    {
-      "symbol": "DUK",
-      "date": "2026-11-05"
-    },
-    {
-      "symbol": "WPM",
-      "date": "2026-11-05"
-    },
-    {
-      "symbol": "AU",
-      "date": "2026-11-05"
-    },
-    {
-      "symbol": "IONQ",
-      "date": "2026-11-05"
-    },
-    {
-      "symbol": "IREN",
-      "date": "2026-11-05"
-    },
-    {
-      "symbol": "CORZ",
-      "date": "2026-11-05"
-    },
-    {
-      "symbol": "PURR",
-      "date": "2026-11-05"
-    },
     {
       "symbol": "VST",
       "date": "2026-11-06"
@@ -119,7 +87,7 @@
     }
   ],
   "sweep": {
-    "throughDate": "2026-12-02",
+    "throughDate": "2026-12-03",
     "universe": [
       "ABT",
       "ADBE",
