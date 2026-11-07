@@ -1,18 +1,6 @@
 {
-  "generatedAt": 1793932099034,
+  "generatedAt": 1794016722408,
   "entries": [
-    {
-      "symbol": "VST",
-      "date": "2026-11-06"
-    },
-    {
-      "symbol": "WULF",
-      "date": "2026-11-06"
-    },
-    {
-      "symbol": "OKLO",
-      "date": "2026-11-06"
-    },
     {
       "symbol": "CEG",
       "date": "2026-11-09"
@@ -46,10 +34,6 @@
       "date": "2026-11-17"
     },
     {
-      "symbol": "MDT",
-      "date": "2026-11-17"
-    },
-    {
       "symbol": "PANW",
       "date": "2026-11-18"
     },
@@ -74,6 +58,10 @@
       "date": "2026-11-19"
     },
     {
+      "symbol": "MDT",
+      "date": "2026-11-24"
+    },
+    {
       "symbol": "CLSK",
       "date": "2026-11-24"
     },
@@ -87,7 +75,7 @@
     }
   ],
   "sweep": {
-    "throughDate": "2026-12-03",
+    "throughDate": "2026-12-04",
     "universe": [
       "ABT",
       "ADBE",
