@@ -1,18 +1,6 @@
 {
-  "generatedAt": 1794016722408,
+  "generatedAt": 1794283723327,
   "entries": [
-    {
-      "symbol": "CEG",
-      "date": "2026-11-09"
-    },
-    {
-      "symbol": "MARA",
-      "date": "2026-11-09"
-    },
-    {
-      "symbol": "SBET",
-      "date": "2026-11-09"
-    },
     {
       "symbol": "BTDR",
       "date": "2026-11-10"
@@ -75,7 +63,7 @@
     }
   ],
   "sweep": {
-    "throughDate": "2026-12-04",
+    "throughDate": "2026-12-07",
     "universe": [
       "ABT",
       "ADBE",
