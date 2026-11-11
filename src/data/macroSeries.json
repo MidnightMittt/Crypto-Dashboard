@@ -1,20 +1,20 @@
 {
-  "generatedAt": 1794283725477,
+  "generatedAt": 1794362314170,
   "source": "FRED fredgraph.csv (keyless)",
   "series": {
     "vix": "VIXCLS",
     "vix3m": "VXVCLS"
   },
   "volTermStructure": {
-    "ratio": 0.9594383775351014,
-    "percentile": 4.578869985297207,
-    "state": "backwardation",
-    "historyLength": 4761,
-    "asOf": "2026-11-06",
-    "sentence": "Volatility is BACKWARDATED — near-dated fear is priced above three-month (0.96× three-month over spot, 5th percentile of 4761 sessions). That is the shape of stress happening now rather than anticipated later, and it is historically rare. It says nothing about direction; it says the market is paying up for immediate protection."
+    "ratio": 1.0466867469879517,
+    "percentile": 22.15455690886182,
+    "state": "contango",
+    "historyLength": 4762,
+    "asOf": "2026-11-09",
+    "sentence": "Volatility is in CONTANGO — three-month is priced above spot (1.05× three-month over spot, 22th percentile of 4762 sessions), the normal state."
   },
   "legs": {
-    "vix": 9312,
-    "vix3m": 4762
+    "vix": 9313,
+    "vix3m": 4763
   }
 }

@@ -1,10 +1,6 @@
 {
-  "generatedAt": 1794283723327,
+  "generatedAt": 1794362311401,
   "entries": [
-    {
-      "symbol": "BTDR",
-      "date": "2026-11-10"
-    },
     {
       "symbol": "AMAT",
       "date": "2026-11-12"
@@ -63,7 +59,7 @@
     }
   ],
   "sweep": {
-    "throughDate": "2026-12-07",
+    "throughDate": "2026-12-08",
     "universe": [
       "ABT",
       "ADBE",

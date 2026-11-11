@@ -1,5 +1,5 @@
 {
- "generatedAt": 1794283884890,
+ "generatedAt": 1794362472719,
  "source": "SEC submissions API, one request per CIK; FILED BY from ranged header fetches",
  "lookbackDays": 45,
  "species": {
@@ -245,7 +245,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "BKR",
@@ -277,7 +277,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1745
+   "recentFilingsSeen": 1746
   },
   {
    "symbol": "BMNR",
@@ -365,7 +365,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 359
+   "recentFilingsSeen": 360
   },
   {
    "symbol": "BSX",
@@ -396,7 +396,7 @@
    "cik": "0001899123",
    "registrant": "Bitdeer Technologies Group",
    "hits": [],
-   "recentFilingsSeen": 286
+   "recentFilingsSeen": 287
   },
   {
    "symbol": "CEG",
@@ -507,7 +507,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1011
+   "recentFilingsSeen": 1012
   },
   {
    "symbol": "COIN",
@@ -556,6 +556,14 @@
    "hits": [
     {
      "form": "8-K",
+     "filingDate": "2026-11-10",
+     "accessionNumber": "0000909832-26-000134",
+     "primaryDocument": "cost-20261107.htm",
+     "filer": "COSTCO WHOLESALE CORP /NEW",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "8-K",
      "filingDate": "2026-10-16",
      "accessionNumber": "0000909832-26-000100",
      "primaryDocument": "cost-20261013.htm",
@@ -571,7 +579,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1010
+   "recentFilingsSeen": 1011
   },
   {
    "symbol": "CRM",
@@ -683,7 +691,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1003
+   "recentFilingsSeen": 1006
   },
   {
    "symbol": "DIA",
@@ -697,6 +705,14 @@
    "cik": "0001326160",
    "registrant": "Duke Energy CORP",
    "hits": [
+    {
+     "form": "8-K",
+     "filingDate": "2026-11-10",
+     "accessionNumber": "0001104659-26-124699",
+     "primaryDocument": "tm2629239d1_8k.htm",
+     "filer": "Duke Energy CORP",
+     "filer_basis": "registrant (self-filed species)"
+    },
     {
      "form": "8-K",
      "filingDate": "2026-11-05",
@@ -714,7 +730,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1003
   },
   {
    "symbol": "FCX",
@@ -794,7 +810,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1003
   },
   {
    "symbol": "FITB",
@@ -922,7 +938,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 290
+   "recentFilingsSeen": 291
   },
   {
    "symbol": "GOLD",
@@ -1106,7 +1122,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 16637
+   "recentFilingsSeen": 16711
   },
   {
    "symbol": "HAL",
@@ -1154,7 +1170,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1008
+   "recentFilingsSeen": 1009
   },
   {
    "symbol": "HD",
@@ -1320,7 +1336,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 324
+   "recentFilingsSeen": 325
   },
   {
    "symbol": "ISRG",
@@ -1344,7 +1360,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1011
+   "recentFilingsSeen": 1012
   },
   {
    "symbol": "KEY",
@@ -1415,7 +1431,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "LEN",
@@ -1495,7 +1511,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1008
+   "recentFilingsSeen": 1010
   },
   {
    "symbol": "LMT",
@@ -1598,7 +1614,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "MS",
@@ -1614,7 +1630,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 19262
+   "recentFilingsSeen": 19310
   },
   {
    "symbol": "MSFT",
@@ -1702,7 +1718,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1007
+   "recentFilingsSeen": 1008
   },
   {
    "symbol": "MSTR",
@@ -2006,7 +2022,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1003
+   "recentFilingsSeen": 1004
   },
   {
    "symbol": "MTB",
@@ -2030,7 +2046,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1009
+   "recentFilingsSeen": 1010
   },
   {
    "symbol": "MU",
@@ -2134,7 +2150,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1005
+   "recentFilingsSeen": 1011
   },
   {
    "symbol": "NSC",
@@ -2204,7 +2220,7 @@
    "cik": "0001849056",
    "registrant": "Oklo Inc.",
    "hits": [],
-   "recentFilingsSeen": 494
+   "recentFilingsSeen": 495
   },
   {
    "symbol": "ORCL",
@@ -2300,7 +2316,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "PURR",
@@ -2364,6 +2380,14 @@
    "registrant": "QUALCOMM INC/DE",
    "hits": [
     {
+     "form": "424B5",
+     "filingDate": "2026-11-10",
+     "accessionNumber": "0001104659-26-125254",
+     "primaryDocument": "tm2629187-2_424b5.htm",
+     "filer": "QUALCOMM INC/DE",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
      "form": "8-K",
      "filingDate": "2026-11-04",
      "accessionNumber": "0000804328-26-000127",
@@ -2380,7 +2404,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1011
+   "recentFilingsSeen": 1013
   },
   {
    "symbol": "REGN",
@@ -2547,7 +2571,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1002
+   "recentFilingsSeen": 1004
   },
   {
    "symbol": "SLB",
@@ -2587,7 +2611,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "SO",
@@ -2611,7 +2635,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1012
+   "recentFilingsSeen": 1013
   },
   {
    "symbol": "SPY",
@@ -2711,7 +2735,7 @@
    "cik": "0001046179",
    "registrant": "TAIWAN SEMICONDUCTOR MANUFACTURING CO LTD",
    "hits": [],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1033
   },
   {
    "symbol": "TXN",
@@ -2806,6 +2830,46 @@
    "cik": "0000036104",
    "registrant": "US BANCORP \\DE\\",
    "hits": [
+    {
+     "form": "424B3",
+     "filingDate": "2026-11-10",
+     "accessionNumber": "0001918704-26-035287",
+     "primaryDocument": "form424b3.htm",
+     "filer": "US BANCORP \\DE\\",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "424B3",
+     "filingDate": "2026-11-10",
+     "accessionNumber": "0001918704-26-035284",
+     "primaryDocument": "form424b3.htm",
+     "filer": "US BANCORP \\DE\\",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "424B3",
+     "filingDate": "2026-11-10",
+     "accessionNumber": "0001918704-26-035282",
+     "primaryDocument": "form424b3.htm",
+     "filer": "US BANCORP \\DE\\",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "424B3",
+     "filingDate": "2026-11-10",
+     "accessionNumber": "0001918704-26-035281",
+     "primaryDocument": "form424b3.htm",
+     "filer": "US BANCORP \\DE\\",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "424B3",
+     "filingDate": "2026-11-10",
+     "accessionNumber": "0001918704-26-035225",
+     "primaryDocument": "form424b3.htm",
+     "filer": "US BANCORP \\DE\\",
+     "filer_basis": "registrant (self-filed species)"
+    },
     {
      "form": "424B3",
      "filingDate": "2026-11-06",
@@ -3007,7 +3071,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1005
   },
   {
    "symbol": "VRTX",
@@ -3031,7 +3095,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1002
+   "recentFilingsSeen": 1003
   },
   {
    "symbol": "VST",
