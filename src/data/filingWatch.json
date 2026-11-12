@@ -1,5 +1,5 @@
 {
- "generatedAt": 1794362472719,
+ "generatedAt": 1794452669877,
  "source": "SEC submissions API, one request per CIK; FILED BY from ranged header fetches",
  "lookbackDays": 45,
  "species": {
@@ -95,7 +95,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1013
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "AMAT",
@@ -159,7 +159,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1004
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "APLD",
@@ -507,7 +507,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1012
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "COIN",
@@ -667,7 +667,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1004
+   "recentFilingsSeen": 1003
   },
   {
    "symbol": "DHR",
@@ -691,7 +691,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1006
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "DIA",
@@ -810,7 +810,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1003
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "FITB",
@@ -906,7 +906,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1003
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "GILD",
@@ -922,7 +922,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1005
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "GLXY",
@@ -1122,7 +1122,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 16711
+   "recentFilingsSeen": 16677
   },
   {
    "symbol": "HAL",
@@ -1240,7 +1240,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1004
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "INTC",
@@ -1511,7 +1511,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1010
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "LMT",
@@ -1558,7 +1558,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1009
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "LULU",
@@ -1598,7 +1598,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1008
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "MDT",
@@ -1630,7 +1630,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 19310
+   "recentFilingsSeen": 19218
   },
   {
    "symbol": "MSFT",
@@ -2022,7 +2022,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1004
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "MTB",
@@ -2150,7 +2150,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1011
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "NSC",
@@ -2404,7 +2404,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1013
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "REGN",
@@ -2674,7 +2674,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1002
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "TECK",
@@ -2735,7 +2735,7 @@
    "cik": "0001046179",
    "registrant": "TAIWAN SEMICONDUCTOR MANUFACTURING CO LTD",
    "hits": [],
-   "recentFilingsSeen": 1033
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "TXN",
@@ -2775,7 +2775,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1024
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "UNP",
@@ -3143,7 +3143,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1003
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "WMT",

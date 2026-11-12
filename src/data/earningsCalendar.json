@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1794362311401,
+  "generatedAt": 1794452409472,
   "entries": [
     {
       "symbol": "AMAT",
@@ -56,10 +56,22 @@
     {
       "symbol": "SNOW",
       "date": "2026-12-02"
+    },
+    {
+      "symbol": "AVGO",
+      "date": "2026-12-09"
+    },
+    {
+      "symbol": "ORCL",
+      "date": "2026-12-09"
+    },
+    {
+      "symbol": "ADBE",
+      "date": "2026-12-09"
     }
   ],
   "sweep": {
-    "throughDate": "2026-12-08",
+    "throughDate": "2026-12-09",
     "universe": [
       "ABT",
       "ADBE",
