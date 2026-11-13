@@ -1,14 +1,6 @@
 {
-  "generatedAt": 1794452409472,
+  "generatedAt": 1794537630154,
   "entries": [
-    {
-      "symbol": "AMAT",
-      "date": "2026-11-12"
-    },
-    {
-      "symbol": "FRMI",
-      "date": "2026-11-12"
-    },
     {
       "symbol": "NVDA",
       "date": "2026-11-17"
@@ -68,10 +60,18 @@
     {
       "symbol": "ADBE",
       "date": "2026-12-09"
+    },
+    {
+      "symbol": "COST",
+      "date": "2026-12-10"
+    },
+    {
+      "symbol": "LULU",
+      "date": "2026-12-10"
     }
   ],
   "sweep": {
-    "throughDate": "2026-12-09",
+    "throughDate": "2026-12-10",
     "universe": [
       "ABT",
       "ADBE",
