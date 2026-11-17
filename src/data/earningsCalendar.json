@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1794623310471,
+  "generatedAt": 1794889879476,
   "entries": [
     {
       "symbol": "NVDA",
@@ -71,7 +71,7 @@
     }
   ],
   "sweep": {
-    "throughDate": "2026-12-11",
+    "throughDate": "2026-12-14",
     "universe": [
       "ABT",
       "ADBE",
