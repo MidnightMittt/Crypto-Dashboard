@@ -1,14 +1,6 @@
 {
-  "generatedAt": 1794889879476,
+  "generatedAt": 1794973506756,
   "entries": [
-    {
-      "symbol": "NVDA",
-      "date": "2026-11-17"
-    },
-    {
-      "symbol": "HD",
-      "date": "2026-11-17"
-    },
     {
       "symbol": "PANW",
       "date": "2026-11-18"
@@ -68,10 +60,14 @@
     {
       "symbol": "LULU",
       "date": "2026-12-10"
+    },
+    {
+      "symbol": "LEN",
+      "date": "2026-12-15"
     }
   ],
   "sweep": {
-    "throughDate": "2026-12-14",
+    "throughDate": "2026-12-15",
     "universe": [
       "ABT",
       "ADBE",
