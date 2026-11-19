@@ -1,5 +1,5 @@
 {
- "generatedAt": 1794973660745,
+ "generatedAt": 1795058917373,
  "source": "SEC submissions API, one request per CIK; FILED BY from ranged header fetches",
  "lookbackDays": 45,
  "species": {
@@ -135,7 +135,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1017
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "AMGN",
@@ -229,7 +229,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "BIIB",
@@ -444,7 +444,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1014
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "CIFR",
@@ -484,7 +484,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 634
+   "recentFilingsSeen": 635
   },
   {
    "symbol": "CLSK",
@@ -507,7 +507,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1003
   },
   {
    "symbol": "COIN",
@@ -539,7 +539,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 685
+   "recentFilingsSeen": 686
   },
   {
    "symbol": "COST",
@@ -651,7 +651,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1004
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "DHI",
@@ -675,7 +675,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1004
+   "recentFilingsSeen": 1005
   },
   {
    "symbol": "DHR",
@@ -746,13 +746,21 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1004
+   "recentFilingsSeen": 1005
   },
   {
    "symbol": "FCX",
    "cik": "0000831259",
    "registrant": "FREEPORT-MCMORAN INC",
    "hits": [
+    {
+     "form": "8-K",
+     "filingDate": "2026-11-18",
+     "accessionNumber": "0000831259-26-000053",
+     "primaryDocument": "fcx-20261117.htm",
+     "filer": "FREEPORT-MCMORAN INC",
+     "filer_basis": "registrant (self-filed species)"
+    },
     {
      "form": "8-K",
      "filingDate": "2026-11-16",
@@ -778,7 +786,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1002
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "FDX",
@@ -930,7 +938,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1005
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "GLXY",
@@ -1122,7 +1130,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 16700
+   "recentFilingsSeen": 16677
   },
   {
    "symbol": "HAL",
@@ -1194,7 +1202,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1005
+   "recentFilingsSeen": 1006
   },
   {
    "symbol": "HOOD",
@@ -1210,7 +1218,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1003
+   "recentFilingsSeen": 1004
   },
   {
    "symbol": "HUT",
@@ -1370,7 +1378,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 326
+   "recentFilingsSeen": 327
   },
   {
    "symbol": "ISRG",
@@ -1394,7 +1402,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "KEY",
@@ -1505,7 +1513,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1002
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "LHX",
@@ -1578,6 +1586,14 @@
    "hits": [
     {
      "form": "8-K",
+     "filingDate": "2026-11-18",
+     "accessionNumber": "0000060667-26-000126",
+     "primaryDocument": "low-20261118.htm",
+     "filer": "LOWES COMPANIES INC",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "8-K",
      "filingDate": "2026-11-17",
      "accessionNumber": "0000060667-26-000122",
      "primaryDocument": "low-20261113.htm",
@@ -1585,7 +1601,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1002
+   "recentFilingsSeen": 1003
   },
   {
    "symbol": "LRCX",
@@ -1697,7 +1713,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 19204
+   "recentFilingsSeen": 19116
   },
   {
    "symbol": "MSFT",
@@ -2041,7 +2057,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "MTB",
@@ -2105,7 +2121,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1006
+   "recentFilingsSeen": 1007
   },
   {
    "symbol": "NEM",
@@ -2241,7 +2257,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1005
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "OKLO",
@@ -2257,7 +2273,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 512
+   "recentFilingsSeen": 513
   },
   {
    "symbol": "ORCL",
@@ -2305,6 +2321,14 @@
    "registrant": "Palo Alto Networks Inc",
    "hits": [
     {
+     "form": "8-K",
+     "filingDate": "2026-11-18",
+     "accessionNumber": "0001327567-26-000030",
+     "primaryDocument": "panw-20261117.htm",
+     "filer": "Palo Alto Networks Inc",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
      "form": "DEFA14A",
      "filingDate": "2026-10-27",
      "accessionNumber": "0001308179-26-000433",
@@ -2321,7 +2345,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "PHM",
@@ -2353,7 +2377,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1002
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "PURR",
@@ -2433,7 +2457,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1002
+   "recentFilingsSeen": 1003
   },
   {
    "symbol": "REGN",
@@ -2457,7 +2481,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1004
+   "recentFilingsSeen": 1003
   },
   {
    "symbol": "RF",
@@ -2513,7 +2537,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1002
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "ROST",
@@ -2608,7 +2632,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "SLB",
@@ -2639,7 +2663,7 @@
    "cik": "0001640147",
    "registrant": "Snowflake Inc.",
    "hits": [],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "SO",
@@ -2758,6 +2782,14 @@
    "hits": [
     {
      "form": "8-K",
+     "filingDate": "2026-11-18",
+     "accessionNumber": "0000027419-26-000051",
+     "primaryDocument": "tgt-20261118.htm",
+     "filer": "TARGET CORP",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "8-K",
      "filingDate": "2026-11-12",
      "accessionNumber": "0000027419-26-000049",
      "primaryDocument": "tgt-20261111.htm",
@@ -2765,13 +2797,21 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "TJX",
    "cik": "0000109198",
    "registrant": "TJX COMPANIES INC /DE/",
    "hits": [
+    {
+     "form": "8-K",
+     "filingDate": "2026-11-18",
+     "accessionNumber": "0000109198-26-000058",
+     "primaryDocument": "tjx-20261118.htm",
+     "filer": "TJX COMPANIES INC /DE/",
+     "filer_basis": "registrant (self-filed species)"
+    },
     {
      "form": "8-K",
      "filingDate": "2026-10-20",
@@ -2781,14 +2821,14 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "TSM",
    "cik": "0001046179",
    "registrant": "TAIWAN SEMICONDUCTOR MANUFACTURING CO LTD",
    "hits": [],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "TXN",
@@ -3140,7 +3180,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "VRTX",
@@ -3164,7 +3204,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1008
+   "recentFilingsSeen": 1010
   },
   {
    "symbol": "VST",
@@ -3276,7 +3316,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1003
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "WPM",
@@ -3323,7 +3363,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1005
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "FRMI",

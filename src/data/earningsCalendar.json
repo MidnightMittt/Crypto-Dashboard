@@ -1,22 +1,6 @@
 {
-  "generatedAt": 1794973506756,
+  "generatedAt": 1795058747413,
   "entries": [
-    {
-      "symbol": "PANW",
-      "date": "2026-11-18"
-    },
-    {
-      "symbol": "TJX",
-      "date": "2026-11-18"
-    },
-    {
-      "symbol": "LOW",
-      "date": "2026-11-18"
-    },
-    {
-      "symbol": "TGT",
-      "date": "2026-11-18"
-    },
     {
       "symbol": "WMT",
       "date": "2026-11-19"
@@ -64,10 +48,14 @@
     {
       "symbol": "LEN",
       "date": "2026-12-15"
+    },
+    {
+      "symbol": "MU",
+      "date": "2026-12-16"
     }
   ],
   "sweep": {
-    "throughDate": "2026-12-15",
+    "throughDate": "2026-12-16",
     "universe": [
       "ABT",
       "ADBE",
