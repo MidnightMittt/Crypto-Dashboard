@@ -1,14 +1,6 @@
 {
-  "generatedAt": 1795058747413,
+  "generatedAt": 1795144421964,
   "entries": [
-    {
-      "symbol": "WMT",
-      "date": "2026-11-19"
-    },
-    {
-      "symbol": "ROST",
-      "date": "2026-11-19"
-    },
     {
       "symbol": "MDT",
       "date": "2026-11-24"
@@ -55,7 +47,7 @@
     }
   ],
   "sweep": {
-    "throughDate": "2026-12-16",
+    "throughDate": "2026-12-17",
     "universe": [
       "ABT",
       "ADBE",

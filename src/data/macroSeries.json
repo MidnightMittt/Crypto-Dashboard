@@ -1,20 +1,20 @@
 {
-  "generatedAt": 1795058749941,
+  "generatedAt": 1795144424979,
   "source": "FRED fredgraph.csv (keyless)",
   "series": {
     "vix": "VIXCLS",
     "vix3m": "VXVCLS"
   },
   "volTermStructure": {
-    "ratio": 0.9811468970934799,
-    "percentile": 6.879194630872483,
+    "ratio": 0.9890065146579805,
+    "percentile": 8.156846299014468,
     "state": "flat",
-    "historyLength": 4768,
-    "asOf": "2026-11-17",
-    "sentence": "The volatility curve is nearly FLAT (0.98× three-month over spot, 7th percentile of 4768 sessions). The usual cushion between near-dated and three-month has compressed, which is the state that precedes inversion without being one."
+    "historyLength": 4769,
+    "asOf": "2026-11-18",
+    "sentence": "The volatility curve is nearly FLAT (0.99× three-month over spot, 8th percentile of 4769 sessions). The usual cushion between near-dated and three-month has compressed, which is the state that precedes inversion without being one."
   },
   "legs": {
-    "vix": 9319,
-    "vix3m": 4769
+    "vix": 9320,
+    "vix3m": 4770
   }
 }
