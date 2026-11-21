@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1795144421964,
+  "generatedAt": 1795230924559,
   "entries": [
     {
       "symbol": "MDT",
@@ -22,10 +22,6 @@
       "date": "2026-12-09"
     },
     {
-      "symbol": "ORCL",
-      "date": "2026-12-09"
-    },
-    {
       "symbol": "ADBE",
       "date": "2026-12-09"
     },
@@ -38,6 +34,10 @@
       "date": "2026-12-10"
     },
     {
+      "symbol": "ORCL",
+      "date": "2026-12-14"
+    },
+    {
       "symbol": "LEN",
       "date": "2026-12-15"
     },
@@ -47,7 +47,7 @@
     }
   ],
   "sweep": {
-    "throughDate": "2026-12-17",
+    "throughDate": "2026-12-18",
     "universe": [
       "ABT",
       "ADBE",

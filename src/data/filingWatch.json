@@ -1,5 +1,5 @@
 {
- "generatedAt": 1795144661575,
+ "generatedAt": 1795231071135,
  "source": "SEC submissions API, one request per CIK; FILED BY from ranged header fetches",
  "lookbackDays": 45,
  "species": {
@@ -128,6 +128,14 @@
    "hits": [
     {
      "form": "8-K",
+     "filingDate": "2026-11-20",
+     "accessionNumber": "0000002488-26-000218",
+     "primaryDocument": "amd-20261118.htm",
+     "filer": "ADVANCED MICRO DEVICES INC",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "8-K",
      "filingDate": "2026-11-03",
      "accessionNumber": "0000002488-26-000188",
      "primaryDocument": "amd-20261103.htm",
@@ -159,7 +167,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "APLD",
@@ -183,7 +191,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 832
+   "recentFilingsSeen": 834
   },
   {
    "symbol": "ASML",
@@ -229,7 +237,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "BIIB",
@@ -254,6 +262,14 @@
    "hits": [
     {
      "form": "8-K",
+     "filingDate": "2026-11-20",
+     "accessionNumber": "0001701605-26-000038",
+     "primaryDocument": "bkr-20261120.htm",
+     "filer": "Baker Hughes Co",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "8-K",
      "filingDate": "2026-10-27",
      "accessionNumber": "0001701605-26-000033",
      "primaryDocument": "bkr-20261027.htm",
@@ -261,7 +277,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 975
+   "recentFilingsSeen": 976
   },
   {
    "symbol": "BLK",
@@ -357,6 +373,14 @@
    "registrant": "BOSTON SCIENTIFIC CORP",
    "hits": [
     {
+     "form": "8-K",
+     "filingDate": "2026-11-20",
+     "accessionNumber": "0000885725-26-000076",
+     "primaryDocument": "bsx-20261119.htm",
+     "filer": "BOSTON SCIENTIFIC CORP",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
      "form": "424B5",
      "filingDate": "2026-11-19",
      "accessionNumber": "0001104659-26-129952",
@@ -397,14 +421,14 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1004
+   "recentFilingsSeen": 1005
   },
   {
    "symbol": "BTDR",
    "cik": "0001899123",
    "registrant": "Bitdeer Technologies Group",
    "hits": [],
-   "recentFilingsSeen": 291
+   "recentFilingsSeen": 293
   },
   {
    "symbol": "CEG",
@@ -420,7 +444,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 409
+   "recentFilingsSeen": 410
   },
   {
    "symbol": "CFG",
@@ -515,7 +539,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1005
+   "recentFilingsSeen": 1004
   },
   {
    "symbol": "COIN",
@@ -636,6 +660,14 @@
    "hits": [
     {
      "form": "8-K",
+     "filingDate": "2026-11-20",
+     "accessionNumber": "0001193125-26-469339",
+     "primaryDocument": "d173220d8k.htm",
+     "filer": "DOMINION ENERGY, INC",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "8-K",
      "filingDate": "2026-11-16",
      "accessionNumber": "0001193125-26-462496",
      "primaryDocument": "d157968d8k.htm",
@@ -659,7 +691,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "DHI",
@@ -762,7 +794,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1003
+   "recentFilingsSeen": 1000
   },
   {
    "symbol": "FCX",
@@ -970,7 +1002,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 293
+   "recentFilingsSeen": 296
   },
   {
    "symbol": "GOLD",
@@ -1162,7 +1194,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 16656
+   "recentFilingsSeen": 16674
   },
   {
    "symbol": "HAL",
@@ -1234,7 +1266,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1006
+   "recentFilingsSeen": 1009
   },
   {
    "symbol": "HOOD",
@@ -1434,7 +1466,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1002
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "KEY",
@@ -1738,6 +1770,14 @@
    "hits": [
     {
      "form": "8-K",
+     "filingDate": "2026-11-20",
+     "accessionNumber": "0000895421-26-000358",
+     "primaryDocument": "ms-20261120.htm",
+     "filer": "MORGAN STANLEY",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "8-K",
      "filingDate": "2026-10-14",
      "accessionNumber": "0000895421-26-000288",
      "primaryDocument": "ms-20261014.htm",
@@ -1745,7 +1785,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 19056
+   "recentFilingsSeen": 19032
   },
   {
    "symbol": "MSFT",
@@ -2111,17 +2151,9 @@
      "primaryDocument": "nee-20261021.htm",
      "filer": "NEXTERA ENERGY INC",
      "filer_basis": "registrant (self-filed species)"
-    },
-    {
-     "form": "8-K",
-     "filingDate": "2026-10-06",
-     "accessionNumber": "0000753308-26-000074",
-     "primaryDocument": "nee-20260922.htm",
-     "filer": "NEXTERA ENERGY INC",
-     "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "NEM",
@@ -2169,7 +2201,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1013
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "NSC",
@@ -2282,6 +2314,14 @@
    "hits": [
     {
      "form": "8-K",
+     "filingDate": "2026-11-20",
+     "accessionNumber": "0001193125-26-470351",
+     "primaryDocument": "orcl-20261118.htm",
+     "filer": "ORACLE CORP",
+     "filer_basis": "registrant (self-filed species)"
+    },
+    {
+     "form": "8-K",
      "filingDate": "2026-11-04",
      "accessionNumber": "0001193125-26-447507",
      "primaryDocument": "d131790d8k.htm",
@@ -2313,7 +2353,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "PANW",
@@ -2377,7 +2417,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1006
   },
   {
    "symbol": "PURR",
@@ -2469,14 +2509,6 @@
      "filingDate": "2026-10-30",
      "accessionNumber": "0000872589-26-000032",
      "primaryDocument": "regn-20261030.htm",
-     "filer": "REGENERON PHARMACEUTICALS, INC.",
-     "filer_basis": "registrant (self-filed species)"
-    },
-    {
-     "form": "8-K",
-     "filingDate": "2026-10-06",
-     "accessionNumber": "0001104659-26-113895",
-     "primaryDocument": "tm2627077d1_8k.htm",
      "filer": "REGENERON PHARMACEUTICALS, INC.",
      "filer_basis": "registrant (self-filed species)"
     }
@@ -2641,7 +2673,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1003
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "SLB",
@@ -2655,14 +2687,6 @@
      "primaryDocument": "d151271d8k.htm",
      "filer": "SLB LIMITED/NV",
      "filer_basis": "registrant (self-filed species)"
-    },
-    {
-     "form": "8-K",
-     "filingDate": "2026-10-06",
-     "accessionNumber": "0001193125-26-415617",
-     "primaryDocument": "d184262d8k.htm",
-     "filer": "SLB LIMITED/NV",
-     "filer_basis": "registrant (self-filed species)"
     }
    ],
    "recentFilingsSeen": 1002
@@ -2672,7 +2696,7 @@
    "cik": "0001640147",
    "registrant": "Snowflake Inc.",
    "hits": [],
-   "recentFilingsSeen": 1003
+   "recentFilingsSeen": 1004
   },
   {
    "symbol": "SO",
@@ -2741,17 +2765,9 @@
      "primaryDocument": "syk-20261029.htm",
      "filer": "STRYKER CORP",
      "filer_basis": "registrant (self-filed species)"
-    },
-    {
-     "form": "8-K",
-     "filingDate": "2026-10-06",
-     "accessionNumber": "0001193125-26-414956",
-     "primaryDocument": "d84795d8k.htm",
-     "filer": "STRYKER CORP",
-     "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "TECK",
@@ -3213,7 +3229,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1010
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "VST",

@@ -1,20 +1,20 @@
 {
-  "generatedAt": 1795144424979,
+  "generatedAt": 1795230927417,
   "source": "FRED fredgraph.csv (keyless)",
   "series": {
     "vix": "VIXCLS",
     "vix3m": "VXVCLS"
   },
   "volTermStructure": {
-    "ratio": 0.9890065146579805,
-    "percentile": 8.156846299014468,
-    "state": "flat",
-    "historyLength": 4769,
-    "asOf": "2026-11-18",
-    "sentence": "The volatility curve is nearly FLAT (0.99× three-month over spot, 8th percentile of 4769 sessions). The usual cushion between near-dated and three-month has compressed, which is the state that precedes inversion without being one."
+    "ratio": 0.95042194092827,
+    "percentile": 3.815513626834382,
+    "state": "backwardation",
+    "historyLength": 4770,
+    "asOf": "2026-11-19",
+    "sentence": "Volatility is BACKWARDATED — near-dated fear is priced above three-month (0.95× three-month over spot, 4th percentile of 4770 sessions). That is the shape of stress happening now rather than anticipated later, and it is historically rare. It says nothing about direction; it says the market is paying up for immediate protection."
   },
   "legs": {
-    "vix": 9320,
-    "vix3m": 4770
+    "vix": 9321,
+    "vix3m": 4771
   }
 }
