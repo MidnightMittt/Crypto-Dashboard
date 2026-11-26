@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1795582660354,
+  "generatedAt": 1795666272859,
   "entries": [
     {
       "symbol": "CRM",
@@ -8,6 +8,10 @@
     {
       "symbol": "SNOW",
       "date": "2026-12-02"
+    },
+    {
+      "symbol": "LULU",
+      "date": "2026-12-08"
     },
     {
       "symbol": "AVGO",
@@ -19,10 +23,6 @@
     },
     {
       "symbol": "COST",
-      "date": "2026-12-10"
-    },
-    {
-      "symbol": "LULU",
       "date": "2026-12-10"
     },
     {
@@ -39,7 +39,7 @@
     }
   ],
   "sweep": {
-    "throughDate": "2026-12-22",
+    "throughDate": "2026-12-23",
     "universe": [
       "ABT",
       "ADBE",

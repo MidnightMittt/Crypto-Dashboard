@@ -1,5 +1,5 @@
 {
- "generatedAt": 1795582813421,
+ "generatedAt": 1795666445173,
  "source": "SEC submissions API, one request per CIK; FILED BY from ranged header fetches",
  "lookbackDays": 45,
  "species": {
@@ -175,7 +175,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1002
+   "recentFilingsSeen": 1003
   },
   {
    "symbol": "APLD",
@@ -213,7 +213,7 @@
    "cik": "0001973832",
    "registrant": "AngloGold Ashanti PLC",
    "hits": [],
-   "recentFilingsSeen": 219
+   "recentFilingsSeen": 222
   },
   {
    "symbol": "AVGO",
@@ -301,13 +301,21 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1743
+   "recentFilingsSeen": 1744
   },
   {
    "symbol": "BMNR",
    "cik": "0001829311",
    "registrant": "BITMINE IMMERSION TECHNOLOGIES, INC.",
    "hits": [
+    {
+     "form": "8-K",
+     "filingDate": "2026-11-25",
+     "accessionNumber": "0001493152-26-054131",
+     "primaryDocument": "form8-k.htm",
+     "filer": "BITMINE IMMERSION TECHNOLOGIES, INC.",
+     "filer_basis": "registrant (self-filed species)"
+    },
     {
      "form": "8-K",
      "filingDate": "2026-11-23",
@@ -373,7 +381,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 362
+   "recentFilingsSeen": 363
   },
   {
    "symbol": "BSX",
@@ -556,7 +564,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1006
+   "recentFilingsSeen": 1007
   },
   {
    "symbol": "CORZ",
@@ -572,7 +580,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 686
+   "recentFilingsSeen": 687
   },
   {
    "symbol": "COST",
@@ -740,7 +748,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1004
+   "recentFilingsSeen": 1006
   },
   {
    "symbol": "DIA",
@@ -795,7 +803,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "FCX",
@@ -1019,7 +1027,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 296
+   "recentFilingsSeen": 299
   },
   {
    "symbol": "GOLD",
@@ -1043,7 +1051,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 716
+   "recentFilingsSeen": 718
   },
   {
    "symbol": "GS",
@@ -1267,7 +1275,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 16713
+   "recentFilingsSeen": 16785
   },
   {
    "symbol": "HAL",
@@ -1339,7 +1347,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1003
   },
   {
    "symbol": "HOOD",
@@ -1746,7 +1754,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1000
+   "recentFilingsSeen": 1001
   },
   {
    "symbol": "LRCX",
@@ -1866,13 +1874,21 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 18928
+   "recentFilingsSeen": 18946
   },
   {
    "symbol": "MSFT",
    "cik": "0000789019",
    "registrant": "MICROSOFT CORP",
    "hits": [
+    {
+     "form": "PX14A6G",
+     "filingDate": "2026-11-25",
+     "accessionNumber": "0001214659-26-014752",
+     "primaryDocument": "w1125263px14a6g.htm",
+     "filer": "AZZAD ASSET MANAGEMENT INC /ADV",
+     "filer_basis": "FILED BY header"
+    },
     {
      "form": "DEFA14A",
      "filingDate": "2026-11-09",
@@ -1954,7 +1970,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1010
+   "recentFilingsSeen": 1011
   },
   {
    "symbol": "MSTR",
@@ -2690,7 +2706,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "RTX",
@@ -2786,7 +2802,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "SLB",
@@ -2856,7 +2872,7 @@
    "cik": "0000884394",
    "registrant": "SPDR S&P 500 ETF TRUST",
    "hits": [],
-   "recentFilingsSeen": 275
+   "recentFilingsSeen": 276
   },
   {
    "symbol": "SYK",
@@ -2880,7 +2896,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1003
   },
   {
    "symbol": "TECK",
@@ -2935,7 +2951,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1003
   },
   {
    "symbol": "TJX",
@@ -2966,7 +2982,7 @@
    "cik": "0001046179",
    "registrant": "TAIWAN SEMICONDUCTOR MANUFACTURING CO LTD",
    "hits": [],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1003
   },
   {
    "symbol": "TXN",
@@ -3318,7 +3334,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1007
   },
   {
    "symbol": "VRTX",
@@ -3342,7 +3358,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1001
+   "recentFilingsSeen": 1002
   },
   {
    "symbol": "VST",
@@ -3390,7 +3406,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1002
+   "recentFilingsSeen": 1003
   },
   {
    "symbol": "WMT",
@@ -3454,7 +3470,7 @@
      "filer_basis": "registrant (self-filed species)"
     }
    ],
-   "recentFilingsSeen": 1003
+   "recentFilingsSeen": 1004
   },
   {
    "symbol": "WPM",
