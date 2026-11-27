@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1795666272859,
+  "generatedAt": 1795753036024,
   "entries": [
     {
       "symbol": "CRM",
@@ -39,7 +39,7 @@
     }
   ],
   "sweep": {
-    "throughDate": "2026-12-23",
+    "throughDate": "2026-12-24",
     "universe": [
       "ABT",
       "ADBE",
