@@ -113,6 +113,15 @@ export interface SwingOpportunity {
   sizing: PositionSizing | null;
   /** Set when a risk rule forbids this trade. */
   riskRefusal: string | null;
+  /**
+   * Set when the opposite direction on the SAME asset is also confirmed.
+   *
+   * Price sitting between a confirmed long level and a confirmed short level
+   * is not two opportunities — it is an ambiguous market, and presenting both
+   * as actionable is incoherent advice. The risk layer already refuses to hold
+   * both; this surfaces it BEFORE the button is pressed rather than after.
+   */
+  conflictsWith: string | null;
   builtAt: number;
 }
 
@@ -142,6 +151,16 @@ export interface RiskConfig {
   feeRate: number;
   /** Assumed adverse slippage per fill, as a fraction. */
   slippageRate: number;
+  /**
+   * When true, the scanner opens PAPER positions by itself for confirmed,
+   * risk-passing, non-conflicted setups.
+   *
+   * DEFAULT FALSE. Manual approval is the default mode by instruction, and an
+   * auto-trader that is on unless you turn it off is the kind that runs when
+   * you did not mean it to. This flag only ever opens PAPER positions — there
+   * is no brokerage code path anywhere under lib/swing/ for it to reach.
+   */
+  autoPaper: boolean;
 }
 
 export const DEFAULT_RISK_CONFIG: RiskConfig = {
@@ -156,6 +175,7 @@ export const DEFAULT_RISK_CONFIG: RiskConfig = {
   scaleOut: [0.4, 0.35, 0.25],
   feeRate: 0.0005,               // 5bp
   slippageRate: 0.0005,          // 5bp
+  autoPaper: false,              // manual approval until deliberately enabled
 };
 
 export interface PositionSizing {

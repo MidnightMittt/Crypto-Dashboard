@@ -186,8 +186,30 @@ export function scanAsset(input: ScanInput): SwingOpportunity[] {
       asset, direction, state, price, plan, targets, trigger, quality,
       zone: candidate, confluence, trend, fib, distanceAtr,
       sizing, riskRefusal,
+      conflictsWith: null,
       builtAt: daily[daily.length - 1].t,
     });
+  }
+
+  /*
+   * BOTH SIDES CONFIRMED IS A NO-TRADE, NOT TWO TRADES.
+   *
+   * Seen live on XRP the day this shipped: a confirmed short at 0.98-1.03 and
+   * a confirmed long at 0.89-0.94 with price at 0.95, both rendered as
+   * actionable. The engine would have refused the second entry, but only
+   * after a click — the UI had already presented contradictory advice.
+   */
+  const confirmed = out.filter((o) => o.state === "ENTRY_CONFIRMED");
+  if (confirmed.length > 1) {
+    for (const o of confirmed) {
+      const other = confirmed.find((x) => x.direction !== o.direction);
+      if (!other) continue;
+      o.conflictsWith = other.direction;
+      o.quality.missing = [
+        `the opposite (${other.direction}) setup is ALSO confirmed on ${asset} — price sits between two levels and the direction is genuinely unclear`,
+        ...o.quality.missing,
+      ];
+    }
   }
 
   return out;

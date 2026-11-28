@@ -39,6 +39,7 @@ interface Opportunity {
   distanceAtr: number;
   sizing: { quantity: number; notional: number; riskAmount: number; stopDistancePct: number; explanation: string } | null;
   riskRefusal: string | null;
+  conflictsWith: string | null;
 }
 
 interface Position {
@@ -54,7 +55,7 @@ interface Payload {
   generatedAt: number; backend: string; persistenceHealthy: boolean; assetsScanned: number; failures: string[];
   opportunities: Opportunity[]; positions: Position[]; watchlist: string[];
   notifications: Array<{ t: number; message: string }>;
-  config: Record<string, number | number[]>;
+  config: Record<string, number | number[] | boolean>;
   openCount: number;
   performance: {
     paper: {
@@ -218,7 +219,30 @@ export function SwingDesk() {
 
       {tab === "journal" && <Journal data={data!} closed={closed} />}
 
-      <div className="mt-6 text-[10px] leading-relaxed text-white/35">
+      <div className="mt-5 rounded-lg border border-hairline bg-panel p-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-xs font-semibold">Automatic paper trading</div>
+            <div className="mt-0.5 text-[11px] leading-snug text-white/45">
+              {data?.config.autoPaper
+                ? "ON — confirmed, risk-passing, non-conflicted setups open by themselves. Paper only."
+                : "OFF — you approve each trade. Paper only either way; no brokerage exists."}
+            </div>
+          </div>
+          <button
+            onClick={() => act({ action: "config", config: { autoPaper: !data?.config.autoPaper } }, "auto")}
+            disabled={busy !== null}
+            className={`min-h-[44px] shrink-0 rounded border px-4 text-xs font-bold disabled:opacity-40 ${
+              data?.config.autoPaper
+                ? "border-success/40 bg-success/15 text-success"
+                : "border-hairline bg-panel-hi text-white/60"
+            }`}>
+            {data?.config.autoPaper ? "ON" : "OFF"}
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-4 text-[10px] leading-relaxed text-white/35">
         PAPER TRADING ONLY — no brokerage integration exists in this workflow.
         State persisted via <span className="font-mono">{data?.backend}</span>.
         {data && !data.persistenceHealthy && (
@@ -241,7 +265,7 @@ function OppCard({ o, open, onToggle, watched, onWatch, onApprove, busy }: {
   o: Opportunity; open: boolean; onToggle: () => void; watched: boolean;
   onWatch: () => void; onApprove: () => void; busy: string | null;
 }) {
-  const canApprove = o.state === "ENTRY_CONFIRMED" && !o.riskRefusal && !!o.sizing;
+  const canApprove = o.state === "ENTRY_CONFIRMED" && !o.riskRefusal && !!o.sizing && !o.conflictsWith;
   return (
     <div className="rounded-lg border border-hairline bg-panel">
       <button onClick={onToggle} className="flex w-full items-start gap-3 p-3 text-left">
@@ -250,7 +274,12 @@ function OppCard({ o, open, onToggle, watched, onWatch, onApprove, busy }: {
             <span className="text-sm font-bold">{o.asset}</span>
             <Side d={o.direction} />
             <Badge state={o.state} />
-            {o.quality.htfAligned && <span className="text-[10px] uppercase tracking-wider text-cyan">HTF aligned</span>}
+            {o.zone && <span className="text-[10px] uppercase tracking-wider text-white/40">{o.zone.timeframe}</span>}
+            {o.conflictsWith && (
+              <span className="rounded border border-amber/40 bg-amber/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber">
+                conflicted
+              </span>
+            )}
           </div>
           <div className="mt-1.5 font-mono text-xs text-white/60">
             {money(o.price)} · entry {money(o.plan.entryLow)}–{money(o.plan.entryHigh)} · stop {money(o.plan.stopPrice)} · {o.plan.riskRewardRatio.toFixed(1)}R
@@ -304,6 +333,12 @@ function OppCard({ o, open, onToggle, watched, onWatch, onApprove, busy }: {
             <Section title="Risk">
               <p className="text-white/70">{o.sizing.explanation}</p>
             </Section>
+          )}
+          {o.conflictsWith && (
+            <div className="rounded border border-amber/40 bg-amber/10 px-2 py-1.5 text-amber">
+              The {o.conflictsWith} setup on {o.asset} is ALSO confirmed. Price sits between two levels and the
+              direction is genuinely unclear — this is a no-trade, not two trades.
+            </div>
           )}
           {o.riskRefusal && (
             <div className="rounded border border-danger/40 bg-danger/10 px-2 py-1.5 text-danger">{o.riskRefusal}</div>

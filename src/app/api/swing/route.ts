@@ -4,9 +4,9 @@ import { AssetSymbol } from "@/types/market";
 import { fetchOkxDailyCandles, fetchOkx4hCandles } from "@/lib/providers/okxCandles";
 import { fetchDeepDailyCandles } from "@/lib/providers/okxDeepHistory";
 import { scanAsset, rankOpportunities } from "@/lib/swing/scanner";
-import { stepPaperPosition, unrealisedPnl, remainingRisk } from "@/lib/swing/paper";
+import { stepPaperPosition, unrealisedPnl, remainingRisk, openPaperPosition } from "@/lib/swing/paper";
 import { describeTransition } from "@/lib/swing/lifecycle";
-import { loadState, saveState, noteTransition, updatePosition, storeBackend, persistenceHealthy } from "@/lib/swing/store";
+import { loadState, saveState, noteTransition, updatePosition, storeBackend, persistenceHealthy, addPosition } from "@/lib/swing/store";
 import { computePerformance, performanceBreakdowns } from "@/lib/swing/journal";
 import { SwingOpportunity } from "@/lib/swing/types";
 
@@ -106,6 +106,34 @@ export async function GET(request: Request) {
         const prev = state.lastStates[o.id] ?? null;
         const msg = describeTransition(prev, o.state, o.asset, o.direction);
         state = noteTransition(state, o.id, o.state, msg).state;
+
+        /*
+         * AUTOMATIC PAPER MODE — off unless explicitly enabled.
+         *
+         * Every gate the manual path applies is applied here: confirmed state,
+         * no risk refusal, no opposing-direction conflict, and addPosition's
+         * own duplicate guard. The only difference is that no human pressed
+         * the button. PAPER ONLY — openPaperPosition touches no brokerage.
+         */
+        if (
+          state.config.autoPaper &&
+          o.state === "ENTRY_CONFIRMED" &&
+          !o.riskRefusal &&
+          !o.conflictsWith &&
+          o.sizing
+        ) {
+          const pos = openPaperPosition({ opportunity: o, bar, config: state.config });
+          if (pos) {
+            const res = addPosition(state, pos);
+            if (res.added) {
+              state = res.state;
+              state = noteTransition(
+                state, `${o.id}:auto`, "ACTIVE",
+                `${o.asset}: AUTO-PAPER opened ${o.direction} at ${pos.entryPrice.toFixed(2)}.`
+              ).state;
+            }
+          }
+        }
       }
       opportunities.push(...found);
     } catch (err) {
