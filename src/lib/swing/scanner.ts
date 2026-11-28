@@ -65,7 +65,24 @@ function rankScore(parts: {
 }): number {
   let s = 0;
   s += Math.min(parts.familyCount, 5) * 10;              // up to 50 — independent evidence
-  if (parts.htfAligned) s += 12;                          // weekly/monthly agreement
+  /*
+   * THE higherTimeframe TERM WAS REMOVED 2026-11-28, by pre-registered rule.
+   *
+   * It awarded +12. A BTC-only, post-hoc diagnostic suggested the factor was
+   * strongly HARMFUL (11.1% win aligned vs 31.6% unaligned). A confirmatory
+   * out-of-sample test on the 8 assets that generated no part of that claim —
+   * BTC deliberately held out — did NOT replicate it:
+   *
+   *     aligned    n=117  win 20.5%
+   *     unaligned  n=160  win 22.5%     gap 2.0pp, gate required 10pp
+   *     3 of 8 assets agreed, gate required 6
+   *
+   * 277 deduplicated events, so this is a measured NO EFFECT rather than an
+   * underpowered one. PREREG_htf_alignment.md's rule for that case: remove
+   * the term, because a factor with no measured effect must not move a
+   * ranking. It is removed rather than inverted — inverting it would be
+   * acting on the BTC result the holdout just failed to confirm.
+   */
   if (parts.trendAgrees) s += 10;                         // MA context not fighting the trade
   if (parts.triggerSatisfied) s += 15;                    // price has actually DONE something
   if (Number.isFinite(parts.distanceAtr)) s += Math.max(0, 8 - parts.distanceAtr * 2); // actionability
