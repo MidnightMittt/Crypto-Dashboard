@@ -6,11 +6,22 @@ import { fetchDeepDailyCandles } from "@/lib/providers/okxDeepHistory";
 import { scanAsset, rankOpportunities } from "@/lib/swing/scanner";
 import { stepPaperPosition, unrealisedPnl, remainingRisk } from "@/lib/swing/paper";
 import { describeTransition } from "@/lib/swing/lifecycle";
-import { loadState, saveState, noteTransition, updatePosition, storeBackend } from "@/lib/swing/store";
+import { loadState, saveState, noteTransition, updatePosition, storeBackend, persistenceHealthy } from "@/lib/swing/store";
 import { computePerformance, performanceBreakdowns } from "@/lib/swing/journal";
 import { SwingOpportunity } from "@/lib/swing/types";
 
 export const dynamic = "force-dynamic";
+/*
+ * A cold scan fetches 7 years of daily history per asset — measured at 201s
+ * for 6 assets with nothing cached. The platform default (~10s) would kill it
+ * outright. 60 is the ceiling this repo's other heavy routes already use.
+ *
+ * This is a BACKSTOP, not the plan. With KV configured, swr's L2 is shared
+ * across serverless instances so deep history is fetched once and every later
+ * request reads it in ~50ms. Without KV every cold start re-fetches and will
+ * exceed even 60s — see the warning in store.ts.
+ */
+export const maxDuration = 60;
 
 /**
  * GET /api/swing — the whole dashboard payload in one call.
@@ -38,7 +49,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const limit = Math.min(Number(url.searchParams.get("assets") ?? 6), ALL_ASSETS.length);
+  const limit = Math.min(Number(url.searchParams.get("assets") ?? 4), ALL_ASSETS.length);
   const assets = ALL_ASSETS.slice(0, limit) as AssetSymbol[];
 
   let state = await loadState();
@@ -99,6 +110,8 @@ export async function GET(request: Request) {
   return NextResponse.json({
     generatedAt: Date.now(),
     backend: storeBackend(),
+    // False means positions will NOT survive — surfaced, never silent.
+    persistenceHealthy: persistenceHealthy(),
     assetsScanned: assets.length,
     failures,
     config: state.config,

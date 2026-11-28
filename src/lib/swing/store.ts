@@ -70,7 +70,38 @@ function writeFile(state: SwingState): void {
   }
 }
 
+/**
+ * THE FILE FALLBACK DOES NOT WORK ON SERVERLESS.
+ *
+ * Vercel's filesystem is ephemeral — anything written during one invocation is
+ * gone by the next. Locally the file IS the ledger; on Vercel it is a scratch
+ * pad that forgets. So a KV-less serverless deploy would silently lose every
+ * paper position, which is worse than refusing to run.
+ *
+ * Warned loudly rather than failed, because the READ path still works for the
+ * scanner and the dashboard is still useful read-only. `persistenceHealthy()`
+ * lets callers surface it instead of discovering it when a position vanishes.
+ */
+function onServerless(): boolean {
+  return !!process.env.VERCEL || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
+}
+
+export function persistenceHealthy(): boolean {
+  return kvConfigured() || !onServerless();
+}
+
+let warned = false;
+
 export async function loadState(): Promise<SwingState> {
+  if (!persistenceHealthy() && !warned) {
+    warned = true;
+    console.error(
+      "[swing-store] RUNNING ON SERVERLESS WITHOUT KV. The local-file fallback " +
+        "cannot persist here — the filesystem is ephemeral, so paper positions " +
+        "WILL be lost between requests. Configure KV_REST_API_URL and " +
+        "KV_REST_API_TOKEN (or the UPSTASH_* equivalents)."
+    );
+  }
   if (kvConfigured()) {
     const s = await kvGet<SwingState>(KEY);
     if (s) return { ...EMPTY_STATE, ...s };

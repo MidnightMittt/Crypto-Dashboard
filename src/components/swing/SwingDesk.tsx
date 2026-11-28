@@ -51,7 +51,7 @@ interface Position {
 }
 
 interface Payload {
-  generatedAt: number; backend: string; assetsScanned: number; failures: string[];
+  generatedAt: number; backend: string; persistenceHealthy: boolean; assetsScanned: number; failures: string[];
   opportunities: Opportunity[]; positions: Position[]; watchlist: string[];
   notifications: Array<{ t: number; message: string }>;
   config: Record<string, number | number[]>;
@@ -221,6 +221,11 @@ export function SwingDesk() {
       <div className="mt-6 text-[10px] leading-relaxed text-white/35">
         PAPER TRADING ONLY — no brokerage integration exists in this workflow.
         State persisted via <span className="font-mono">{data?.backend}</span>.
+        {data && !data.persistenceHealthy && (
+          <span className="ml-1 font-semibold text-danger">
+            PERSISTENCE BROKEN — serverless without KV; positions will not survive. Configure KV_REST_API_URL / KV_REST_API_TOKEN.
+          </span>
+        )}
         Scanned {data?.assetsScanned} assets{data?.failures.length ? `, ${data.failures.length} failed` : ""}.
         {data && !data.equitiesAvailable && " Equities unavailable — no live candle path."}
       </div>

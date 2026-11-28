@@ -8,6 +8,17 @@ import { loadState, saveState, addPosition, toggleWatch } from "@/lib/swing/stor
 import { DEFAULT_RISK_CONFIG, RiskConfig } from "@/lib/swing/types";
 
 export const dynamic = "force-dynamic";
+/*
+ * A cold scan fetches 7 years of daily history per asset — measured at 201s
+ * for 6 assets with nothing cached. The platform default (~10s) would kill it
+ * outright. 60 is the ceiling this repo's other heavy routes already use.
+ *
+ * This is a BACKSTOP, not the plan. With KV configured, swr's L2 is shared
+ * across serverless instances so deep history is fetched once and every later
+ * request reads it in ~50ms. Without KV every cold start re-fetches and will
+ * exceed even 60s — see the warning in store.ts.
+ */
+export const maxDuration = 60;
 
 /**
  * POST /api/swing/action — the only mutating surface a user can trigger.
