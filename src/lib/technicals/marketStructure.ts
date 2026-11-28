@@ -124,8 +124,12 @@ export type ConfluenceTag = "swing-cluster" | "volume-poc" | "value-area-edge" |
  * independently produced an overlapping zone — the strongest confirmation
  * available here, since the two are computed from different bar sets rather
  * than one being a resample of the other.
+ *
+ * `"1W"` and `"1M"` were added 2026-11-28 for higher-timeframe structure.
+ * `"both"` keeps its original daily+4H meaning exactly, so every existing
+ * caller and label behaves as before.
  */
-export type ZoneTimeframe = "1D" | "4H" | "both";
+export type ZoneTimeframe = "1D" | "4H" | "both" | "1W" | "1M";
 export type ZoneStatus = "approaching" | "testing" | "rejecting" | "reclaiming" | "breaking" | "inactive";
 
 export interface SupportResistanceZone {
@@ -604,4 +608,146 @@ export function nearestWatchLevels(zones: SupportResistanceZone[], price: number
 /** The price a zone is first reached at, given the side approaching it. */
 export function watchEdge(zone: SupportResistanceZone, direction: "long" | "short"): number {
   return direction === "long" ? zone.priceHigh : zone.priceLow;
+}
+
+/* ────────────────────────────────────────────────────────────────────────
+ * HIGHER-TIMEFRAME STRUCTURE — added 2026-11-28
+ *
+ * Everything above is unchanged. Weekly and monthly structure is built by
+ * calling the EXISTING buildSupportResistanceZones with weekly/monthly
+ * candles, which is why no clustering, strength or width logic is duplicated
+ * here: that function already derives its tolerance and width cap from the
+ * ATR of whatever series it is handed, so weekly bars yield weekly-scaled
+ * zones automatically.
+ *
+ * STRUCTURE_WINDOW_BARS DELIBERATELY UNCHANGED. Its 300-bar window exists
+ * because the clustering tolerance is a fraction of CURRENT ATR, which is
+ * meaningless against prices from a different era — the SPY-since-1993 case
+ * documented in buildSupportResistanceZones. That hazard is per-series, so
+ * the right fix for "only 14 months of structure" was never to widen the
+ * window; it was to hand the function a series whose bars are weeks or
+ * months. 300 weekly bars is 5.75 years; 300 monthly is 25.
+ * ──────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Structural significance, derived from the timeframe that produced a zone.
+ * Not all levels are equally important and the engine must be able to say
+ * which is which: a monthly level is a different object from a 4H one even
+ * when they sit at the same price.
+ */
+export type ZoneTier = "major" | "intermediate" | "minor";
+
+export function zoneTier(timeframe: ZoneTimeframe): ZoneTier {
+  if (timeframe === "1M") return "major";
+  if (timeframe === "1W") return "intermediate";
+  return "minor"; // 1D, 4H, both
+}
+
+/** Do two zones share any price? */
+function zonesOverlap(a: { priceLow: number; priceHigh: number }, b: { priceLow: number; priceHigh: number }): boolean {
+  return a.priceLow <= b.priceHigh && b.priceLow <= a.priceHigh;
+}
+
+/**
+ * Mark base-timeframe zones that coincide with higher-timeframe structure,
+ * WITHOUT merging them.
+ *
+ * ── WHY TAG RATHER THAN MERGE ───────────────────────────────────────────
+ * A weekly zone is legitimately wider than a daily one because it is built
+ * from weekly ATR. Folding the two together would either widen the daily
+ * zone past the point where a stop can be placed beyond it, or — if the
+ * width cap declined the merge — silently drop the relationship entirely.
+ * Tagging keeps each zone at its own honest width while still recording that
+ * two independent timeframes point at the same price.
+ *
+ * ── WHY THE TAG IS ADDED AT MOST ONCE ───────────────────────────────────
+ * ConfluenceTag feeds scoreZoneStrength, which counts DISTINCT methods
+ * agreeing. A daily zone overlapped by both a weekly and a monthly zone has
+ * found one kind of agreement, not two, and adding "multi-timeframe" twice
+ * would inflate its strength for what is substantially the same observation.
+ * This is the "do not count the same underlying price information multiple
+ * times as separate confirmations" requirement, enforced here rather than
+ * left to callers.
+ */
+export function tagHigherTimeframeConfluence(
+  baseZones: SupportResistanceZone[],
+  higherZones: SupportResistanceZone[]
+): SupportResistanceZone[] {
+  if (!higherZones.length) return baseZones;
+  return baseZones.map((z) => {
+    if (z.confluence.includes("multi-timeframe")) return z;
+    const coincides = higherZones.some((h) => h.kind === z.kind && zonesOverlap(z, h));
+    if (!coincides) return z;
+    const withTag: SupportResistanceZone = { ...z, confluence: [...z.confluence, "multi-timeframe"] };
+    withTag.strength = scoreZoneStrength(withTag);
+    return withTag;
+  });
+}
+
+export interface MultiTimeframeStructure {
+  /** Every zone across all timeframes, tagged by origin, sorted by price. */
+  zones: SupportResistanceZone[];
+  /** Counts per timeframe, so a caller can see which series were thin or absent. */
+  counts: Record<string, number>;
+}
+
+/**
+ * Build the full structural picture from pre-resampled series.
+ *
+ * Callers pass only what they have — a monthly series needs years of daily
+ * history to exist at all, and an asset listed recently will not have one.
+ * Missing series are skipped rather than approximated.
+ *
+ * Status for higher-timeframe zones is classified against the DAILY candles,
+ * because "is price testing this level right now" is a question about current
+ * price action regardless of which chart drew the line. Width and clustering
+ * stay on their own timeframe's ATR; only the status read is shared.
+ */
+export function buildMultiTimeframeStructure(input: {
+  daily: Candle[];
+  fourH?: Candle[];
+  weekly?: Candle[];
+  monthly?: Candle[];
+}): MultiTimeframeStructure {
+  const { daily, fourH, weekly, monthly } = input;
+  const counts: Record<string, number> = {};
+  if (!daily.length) return { zones: [], counts };
+
+  const dailyAtr = atr(daily.slice(-STRUCTURE_WINDOW_BARS));
+
+  const build = (candles: Candle[] | undefined, tf: ZoneTimeframe): SupportResistanceZone[] => {
+    // A series shorter than the swing detector's own window cannot produce a
+    // pivot; returning [] is honest, whereas building from 3 bars is not.
+    if (!candles || candles.length < ZONE_SWING_LOOKBACK * 2 + 2) {
+      counts[tf] = 0;
+      return [];
+    }
+    const zones = buildSupportResistanceZones(candles, buildVolumeProfile(candles), tf);
+    // Re-classify higher-timeframe status against DAILY price action.
+    if ((tf === "1W" || tf === "1M") && dailyAtr !== null && dailyAtr > 0) {
+      for (const z of zones) z.status = classifyZoneStatus(z, daily, dailyAtr);
+    }
+    counts[tf] = zones.length;
+    return zones;
+  };
+
+  const monthlyZones = build(monthly, "1M");
+  const weeklyZones = build(weekly, "1W");
+  const higher = [...monthlyZones, ...weeklyZones];
+
+  // Daily/4H keep their EXISTING construction path, including mergeTimeframeZones,
+  // so current behaviour is preserved bit-for-bit when no higher series is given.
+  const dailyZones = buildSupportResistanceZones(daily, buildVolumeProfile(daily), "1D");
+  let base =
+    fourH && fourH.length
+      ? mergeTimeframeZones(dailyZones, buildSupportResistanceZones(fourH, null, "4H"), daily)
+      : dailyZones;
+  counts["1D/4H"] = base.length;
+
+  base = tagHigherTimeframeConfluence(base, higher);
+
+  return {
+    zones: [...base, ...higher].sort((a, b) => a.priceLow - b.priceLow),
+    counts,
+  };
 }

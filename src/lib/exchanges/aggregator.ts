@@ -31,6 +31,8 @@ import {
   ASSET_CONCURRENCY,
   mapWithConcurrency,
 } from "../net/concurrency";
+import { fetchDeepDailyCandles } from "../providers/okxDeepHistory";
+import { resampleToWeekly, resampleToMonthly } from "../technicals/resample";
 import { swr } from "../cache/swr";
 import { computeBasisPct } from "../providers/dexscreener";
 import { resolveSpotWithConfidence } from "../providers/spotPrice";
@@ -98,6 +100,7 @@ import {
   buildSupportResistanceZones,
   mergeTimeframeZones,
   SupportResistanceZone,
+  buildMultiTimeframeStructure,
 } from "../technicals/marketStructure";
 import {
   detectWalls,
@@ -1511,10 +1514,47 @@ async function buildLiquidityMap(
    * this poll, so this costs no extra requests.
    */
   const dailyZones = buildSupportResistanceZones(candles, volumeProfile, "1D");
-  const supportResistance =
+  const baseStructure =
     candles4h.length > 0
       ? mergeTimeframeZones(dailyZones, buildSupportResistanceZones(candles4h, null, "4H"), candles)
       : dailyZones;
+
+  /*
+   * HIGHER-TIMEFRAME STRUCTURE (Phase 1/2, 2026-11-28).
+   *
+   * The daily series above is the live 300-bar feed — ~10 months, which cannot
+   * contain a weekly or monthly level. Deep history comes from OKX's
+   * history-candles endpoint (2,557 daily bars / 7 years for BTC) and is
+   * resampled rather than fetched as separate W/M series, so all timeframes
+   * agree about what a period contained.
+   *
+   * COST: one extra request path, cached 6h/48h — roughly four fetches a day
+   * per asset, not one per poll. Deep bars are immutable; only the newest
+   * changes, and weekly structure does not turn on today's close.
+   *
+   * DEGRADES TO EXACTLY TODAY'S BEHAVIOUR. If the deep fetch fails or returns
+   * too little, `baseStructure` is returned unchanged — the same zones this
+   * function produced before this block existed. A higher-timeframe read is
+   * an enhancement; losing it must never cost the daily/4H read that the
+   * trade planner already depends on.
+   */
+  let supportResistance = baseStructure;
+  try {
+    const deepDaily = await fetchDeepDailyCandles(asset);
+    if (deepDaily.length > candles.length) {
+      const weekly = resampleToWeekly(deepDaily).candles;
+      const monthly = resampleToMonthly(deepDaily).candles;
+      const multi = buildMultiTimeframeStructure({
+        daily: candles,
+        fourH: candles4h.length > 0 ? candles4h : undefined,
+        weekly,
+        monthly,
+      });
+      if (multi.zones.length) supportResistance = multi.zones;
+    }
+  } catch (err) {
+    console.warn(`[aggregator] higher-timeframe structure unavailable for ${asset}:`, err);
+  }
 
   const walls = await buildLiquidityWallRead(asset, bookDepth, supportResistance);
   return { volumeProfile, supportResistance, walls };
