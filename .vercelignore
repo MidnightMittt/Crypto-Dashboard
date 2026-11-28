@@ -1,0 +1,8 @@
+# Vercel CLI deploys the working DIRECTORY, not the git tree. .gitignore alone
+# did not keep local runtime state out of a deployment: a paper position opened
+# on a laptop shipped to production and was then promoted into shared KV on
+# first read. Scratch state is not source.
+.swing-state.json
+.swing-state.json.tmp
+.env.local
+/tmp
