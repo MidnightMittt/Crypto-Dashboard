@@ -20,6 +20,9 @@ export const dynamic = "force-dynamic";
  */
 export const maxDuration = 60;
 
+/** Mirrors the scanner's exclusion. A refusal that only lives in the UI is not a refusal. */
+const SWING_EXCLUDED = new Set(["BNB"]);
+
 /**
  * POST /api/swing/action — the only mutating surface a user can trigger.
  *
@@ -73,6 +76,9 @@ export async function POST(request: Request) {
     const { opportunityId, asset } = body;
     if (!opportunityId || !asset) {
       return NextResponse.json({ error: "opportunityId and asset required." }, { status: 400 });
+    }
+    if (SWING_EXCLUDED.has(asset.toUpperCase())) {
+      return NextResponse.json({ error: `${asset} is excluded from swing trading.` }, { status: 403 });
     }
 
     const [daily, fourH, deep] = await Promise.all([

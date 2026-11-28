@@ -24,6 +24,18 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 /**
+ * Assets the swing desk will not trade, whatever the setup looks like.
+ *
+ * His instruction, 2026-11-28: "We will not be trading bnb."
+ *
+ * Excluded HERE rather than by editing ALL_ASSETS, because that list is shared
+ * with every other view in the app and an asset he will not SWING TRADE is not
+ * the same as an asset he does not want to SEE. A scanner-level exclusion
+ * keeps the market data intact and removes only the trade suggestion.
+ */
+const SWING_EXCLUDED = new Set(["BNB"]);
+
+/**
  * GET /api/swing — the whole dashboard payload in one call.
  *
  * ── WHY ONE ENDPOINT ────────────────────────────────────────────────────
@@ -50,7 +62,7 @@ export const maxDuration = 60;
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const limit = Math.min(Number(url.searchParams.get("assets") ?? 4), ALL_ASSETS.length);
-  const assets = ALL_ASSETS.slice(0, limit) as AssetSymbol[];
+  const assets = ALL_ASSETS.filter((a) => !SWING_EXCLUDED.has(a)).slice(0, limit) as AssetSymbol[];
 
   let state = await loadState();
   const opportunities: SwingOpportunity[] = [];
