@@ -14,3 +14,7 @@ scripts/backtest/report.md
 .env*
 scripts/backtest/executionReport.md
 scripts/ingest/data
+
+# Swing desk runtime state — paper positions, not source.
+.swing-state.json
+.swing-state.json.tmp

@@ -1,0 +1,123 @@
+import { NextResponse } from "next/server";
+import { ALL_ASSETS } from "@/lib/exchanges/registry";
+import { AssetSymbol } from "@/types/market";
+import { fetchOkxDailyCandles, fetchOkx4hCandles } from "@/lib/providers/okxCandles";
+import { fetchDeepDailyCandles } from "@/lib/providers/okxDeepHistory";
+import { scanAsset, rankOpportunities } from "@/lib/swing/scanner";
+import { stepPaperPosition, unrealisedPnl, remainingRisk } from "@/lib/swing/paper";
+import { describeTransition } from "@/lib/swing/lifecycle";
+import { loadState, saveState, noteTransition, updatePosition, storeBackend } from "@/lib/swing/store";
+import { computePerformance, performanceBreakdowns } from "@/lib/swing/journal";
+import { SwingOpportunity } from "@/lib/swing/types";
+
+export const dynamic = "force-dynamic";
+
+/**
+ * GET /api/swing — the whole dashboard payload in one call.
+ *
+ * ── WHY ONE ENDPOINT ────────────────────────────────────────────────────
+ *
+ * Opportunities, positions, watchlist and performance are all derived from
+ * ONE scan against ONE set of candles. Splitting them across routes would let
+ * the views disagree — the opportunity list built from a 10:00 scan sitting
+ * beside positions marked against a 10:05 price. One payload, one timestamp.
+ *
+ * ── THIS ROUTE MUTATES, DELIBERATELY ────────────────────────────────────
+ *
+ * It advances open positions against the newest closed bar and records
+ * lifecycle transitions. That is the "monitoring" half of the workflow and it
+ * has to happen somewhere; doing it on read means the dashboard is the thing
+ * that keeps the ledger current, with no background job required.
+ *
+ * Every mutation is idempotent (see store.ts): stepping the same bar twice
+ * cannot double-book a partial exit, and a repeated ENTRY_CONFIRMED cannot
+ * mint two positions.
+ *
+ * NOTHING HERE PLACES A REAL ORDER. There is no brokerage import in this file
+ * or anywhere under lib/swing/.
+ */
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const limit = Math.min(Number(url.searchParams.get("assets") ?? 6), ALL_ASSETS.length);
+  const assets = ALL_ASSETS.slice(0, limit) as AssetSymbol[];
+
+  let state = await loadState();
+  const opportunities: SwingOpportunity[] = [];
+  const marks: Record<string, number> = {};
+  const failures: string[] = [];
+
+  for (const asset of assets) {
+    try {
+      const [daily, fourH, deep] = await Promise.all([
+        fetchOkxDailyCandles(asset),
+        fetchOkx4hCandles(asset).catch(() => []),
+        fetchDeepDailyCandles(asset).catch(() => []),
+      ]);
+      if (!daily.length) { failures.push(asset); continue; }
+      marks[asset] = daily[daily.length - 1].close;
+
+      // Advance open positions on this asset against the newest CLOSED bar.
+      const bar = daily[daily.length - 1];
+      for (const p of state.positions) {
+        if (p.asset !== asset) continue;
+        if (p.state !== "ACTIVE" && p.state !== "PARTIALLY_EXITED") continue;
+        const r = stepPaperPosition({ position: p, bar, config: state.config });
+        if (r.fills.length) {
+          state = updatePosition(state, r.position);
+          for (const e of r.events) {
+            const res = noteTransition(state, `${p.id}:${e}`, r.position.state, `${asset}: ${e}`);
+            state = res.state;
+          }
+        }
+      }
+
+      const found = scanAsset({
+        asset, daily, fourH, deepDaily: deep, config: state.config,
+        riskState: {
+          openPositions: state.positions,
+          realisedToday: 0,
+          realisedThisWeek: 0,
+        },
+      });
+      for (const o of found) {
+        const prev = state.lastStates[o.id] ?? null;
+        const msg = describeTransition(prev, o.state, o.asset, o.direction);
+        state = noteTransition(state, o.id, o.state, msg).state;
+      }
+      opportunities.push(...found);
+    } catch (err) {
+      console.warn(`[api/swing] ${asset} failed:`, err);
+      failures.push(asset);
+    }
+  }
+
+  await saveState(state);
+
+  const ranked = rankOpportunities(opportunities);
+  const live = state.positions.filter((p) => p.state === "ACTIVE" || p.state === "PARTIALLY_EXITED");
+
+  return NextResponse.json({
+    generatedAt: Date.now(),
+    backend: storeBackend(),
+    assetsScanned: assets.length,
+    failures,
+    config: state.config,
+    opportunities: ranked,
+    watchlist: state.watchlist,
+    notifications: state.notifications.slice(0, 40),
+    positions: state.positions.map((p) => ({
+      ...p,
+      markPrice: marks[p.asset] ?? null,
+      unrealised: marks[p.asset] != null ? unrealisedPnl(p, marks[p.asset]) : null,
+      remainingRisk: remainingRisk(p),
+    })),
+    openCount: live.length,
+    // Evidence classes kept separate by construction — see journal.ts.
+    performance: {
+      paper: computePerformance(state.positions, "paper"),
+      breakdowns: performanceBreakdowns(state.positions),
+    },
+    /** Equities are deliberately absent. See the Phase 4 report. */
+    equitiesAvailable: false,
+  });
+}
