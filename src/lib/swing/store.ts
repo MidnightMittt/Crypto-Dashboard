@@ -102,12 +102,27 @@ export async function loadState(): Promise<SwingState> {
         "KV_REST_API_TOKEN (or the UPSTASH_* equivalents)."
     );
   }
+  /*
+   * CONFIG IS MERGED FIELD-BY-FIELD, NOT REPLACED.
+   *
+   * A top-level spread swaps the whole config object, so any setting added
+   * AFTER a state was written comes back undefined forever. Seen immediately:
+   * `autoPaper` read as undefined against stored config that predated it.
+   * Harmless there because undefined is falsy, but the next flag might
+   * default to ON and silently read as off — or worse, the reverse.
+   */
+  const hydrate = (s: SwingState): SwingState => ({
+    ...EMPTY_STATE,
+    ...s,
+    config: { ...DEFAULT_RISK_CONFIG, ...(s.config ?? {}) },
+  });
+
   if (kvConfigured()) {
     const s = await kvGet<SwingState>(KEY);
-    if (s) return { ...EMPTY_STATE, ...s };
+    if (s) return hydrate(s);
   }
   const local = readFile();
-  return local ? { ...EMPTY_STATE, ...local } : { ...EMPTY_STATE };
+  return local ? hydrate(local) : { ...EMPTY_STATE };
 }
 
 export async function saveState(state: SwingState): Promise<void> {
