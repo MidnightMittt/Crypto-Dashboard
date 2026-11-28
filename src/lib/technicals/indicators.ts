@@ -51,6 +51,21 @@ export function ema(values: number[], period: number): number | null {
   return acc;
 }
 
+/**
+ * Simple moving average of the LAST `period` values.
+ *
+ * Added 2026-11-28 because the 200 SMA was the one requested average with no
+ * implementation here. It is not interchangeable with `ema(values, 200)`:
+ * the EMA weights recent bars exponentially and the SMA weights every bar in
+ * its window equally, so on a trending series they sit at visibly different
+ * prices — which is exactly why traders watch both, and why substituting one
+ * for the other would have been wrong rather than merely approximate.
+ */
+export function sma(values: number[], period: number): number | null {
+  if (period <= 0 || values.length < period) return null;
+  return mean(values.slice(values.length - period));
+}
+
 /** Full EMA series (same seeding as `ema`), oldest-first, starting at index `period - 1`. */
 function emaSeries(values: number[], period: number): number[] {
   if (period <= 0 || values.length < period) return [];
